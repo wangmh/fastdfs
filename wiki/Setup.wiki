@@ -1,0 +1,132 @@
+= Setup =
+{{{
+#step 1. download FastDFS source package and unpack it
+tar xzf FastDFS_v1.0.tar.gz
+
+#step 2. enter the FastDFS dir
+cd FastDFS
+
+#step 3. make all
+#for Linux execute:
+./make.sh
+#for FreeBSD execute:
+./make.sh -f Makefile.freebsd
+
+#step 4. make install
+./make.sh install
+
+#step 5. edit/modify the config file of tracker and storage
+
+#step 6. run server programs
+#start the tracker server:
+/usr/local/bin/fdfs_trackerd <tracker_conf_filename>
+
+#start the storage server:
+/usr/local/bin/fdfs_storaged <storage_conf_filename>
+
+#step 7. run test program
+#run the client test program:
+/usr/local/bin/fdfs_test <storage_conf_filename>
+
+#step 8. run monitor program
+#run the monitor program:
+/usr/local/bin/fdfs_monitor <storage_conf_filename>
+}}}
+= Config =
+== tracker server config file sample ==
+{{{
+###start of tracker server config###
+disabled=false
+bind_addr=
+port=22122
+network_timeout=20
+base_path=/home/yuqing/FastDFS
+max_connections=1024
+
+#0: round robin
+#1: specify group
+#2: load balance
+store_lookup=0
+
+#when store_lookup set to 1(specify group), must set store_group to the group name
+store_group=group2
+###end of tracker server config###
+
+* storage server config file sample:
+###start of storage server config###
+disabled=false
+group_name=group1
+bind_addr=
+port=23000
+network_timeout=20
+heart_beat_interval=30
+stat_report_interval=600
+base_path=/home/yuqing/FastDFS
+sync_wait_msec=200
+max_connections=1024
+
+tracker_server=10.62.164.83:22122
+tracker_server=10.62.164.84:22122
+###end of storage server config###
+}}}
+== Item detail ==
+=== 1. common items ===
+-------------------------------------------
+|  item name    |  type  | default | Must |
+-------------------------------------------
+|disabled       | boolean| false   |  N   |
+-------------------------------------------
+|bind_addr      | string |         |  N   |
+-------------------------------------------
+|network_timeout| int    |30(s)    |  N   |
+-------------------------------------------
+|base_path      | string |         |  Y   |
+-------------------------------------------
+|max_connections| int    |256      |  N   |
+-------------------------------------------
+memo:
+   base_path is the base path of sub dirs: 
+   data and logs. base_path must exist and it's 
+   sub dirs will be automatically created if not exist.
+   $base_path/data: store data files
+   $base_path/logs: store log files
+
+* 2. tracker server items
+-------------------------------------------
+|  item name    |  type  | default | Must |
+-------------------------------------------
+|port           | int    | 22000   |  N   |
+-------------------------------------------
+|store_lookup   | int    |  0      |  N   |
+-------------------------------------------
+|store_group    | string |         |  N   |
+-------------------------------------------
+memo: 
+  the value of store_lookup is:
+    0: round robin (default)
+    1: specify group
+    2: load balance (not supported now)
+  store_group is the name of group to store files.
+  when store_lookup set to 1(specify group), 
+  store_group must be set to a specified group name.
+
+* 3. storage server items
+------------------------------------------------
+|  item name         |  type  | default | Must |
+------------------------------------------------
+|port                | int    | 23000   |  N   |
+------------------------------------------------
+|group_name          | string |         |  Y   |
+------------------------------------------------
+|heart_beat_interval | int    |  30(s)  |  N   |
+------------------------------------------------
+|stat_report_interval| int    | 300(s)  |  N   |
+------------------------------------------------
+|sync_wait_msec      | int    | 100(ms) |  N   |
+------------------------------------------------
+|tracker_server      | string |         |  Y   |
+------------------------------------------------
+memo:
+  tracker_server can ocur more than once, and
+  tracker_server format is "host:port", host can be
+  hostname or ip address.
