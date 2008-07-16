@@ -1,13 +1,11 @@
-#summary One-sentence summary of this page.
 #labels Phase-Design,Phase-Implementation
+FastDFS is an open source high performance distributed file system. It's major functions include: file storing, file syncing and file accessing, and design for high capacity and load balancing.
 
 = Introduction =
 
-FastDFS is an open source high performance distributed file system. It's major functions include: file storing, file syncing and file accessing, and design for high capacity and load balancing.
+FastDFS is an open source high performance distributed file system. It's major functions include: file storing, file syncing and file accessing (file uploading and file downloading), and it can resolve the high capacity and load balancing problem. FastDFS should meet the requirement of the website whose service based on files such as photo sharing site and vidio sharing site.
 
 = Details =
-
-FastDFS is an open source high performance distributed file system. It's major functions include: file storing, file syncing and file accessing (file uploading and file downloading), and it can resolve the high capacity and load balancing problem. FastDFS should meet the requirement of the website whose service based on files such as photo sharing site and vidio sharing site.
 
 FastDFS has two roles: tracker and storage. The tracker takes charge of scheduling and load balancing for file access. The storage store files and it's function is file management including: file storing, file syncing, providing file access interface. It also manage the meta data which are attributes representing as key value pair of the file. For example: width=1024, the key is "width" and the value is "1024".
 
