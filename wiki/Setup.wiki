@@ -69,6 +69,7 @@ tracker_server=10.62.164.83:22122
 tracker_server=10.62.164.84:22122
 ###end of storage server config###
 }}}
+
 == Item detail ==
 === 1. common items ===
 
@@ -93,32 +94,22 @@ tracker_server=10.62.164.84:22122
 ||store_lookup   || int    ||  0      ||  N   ||
 ||store_group    || string ||         ||  N   ||
 
-memo: 
-  the value of store_lookup is:
-    0: round robin (default)
-    1: specify group
-    2: load balance (not supported now)
-  store_group is the name of group to store files.
-  when store_lookup set to 1(specify group), 
-  store_group must be set to a specified group name.
+==== memo ====
+  * the value of store_lookup is:
+    * 0: round robin (default)
+    * 1: specify group
+    * 2: load balance (not supported now)
+  * store_group is the name of group to store files. when store_lookup set to 1(specify group), store_group must be set to a specified group name.
 
-* 3. storage server items
-------------------------------------------------
-|  item name         |  type  | default | Must |
-------------------------------------------------
-|port                | int    | 23000   |  N   |
-------------------------------------------------
-|group_name          | string |         |  Y   |
-------------------------------------------------
-|heart_beat_interval | int    |  30(s)  |  N   |
-------------------------------------------------
-|stat_report_interval| int    | 300(s)  |  N   |
-------------------------------------------------
-|sync_wait_msec      | int    | 100(ms) |  N   |
-------------------------------------------------
-|tracker_server      | string |         |  Y   |
-------------------------------------------------
-memo:
-  tracker_server can ocur more than once, and
-  tracker_server format is "host:port", host can be
-  hostname or ip address.
+=== 3. storage server items ===
+
+||item name           ||  type  || default || Must ||
+||port                || int    || 23000   ||  N   ||
+||group_name          || string ||         ||  Y   ||
+||heart_beat_interval || int    ||  30(s)  ||  N   ||
+||stat_report_interval|| int    || 300(s)  ||  N   ||
+||sync_wait_msec      || int    || 100(ms) ||  N   ||
+||tracker_server      || string ||         ||  Y   ||
+
+==== memo ====
+  * tracker_server can ocur more than once, and tracker_server format is "host:port", host can be hostname or ip address.
