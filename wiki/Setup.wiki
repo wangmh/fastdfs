@@ -71,36 +71,28 @@ tracker_server=10.62.164.84:22122
 }}}
 == Item detail ==
 === 1. common items ===
--------------------------------------------
-|  item name    |  type  | default | Must |
--------------------------------------------
-|disabled       | boolean| false   |  N   |
--------------------------------------------
-|bind_addr      | string |         |  N   |
--------------------------------------------
-|network_timeout| int    |30(s)    |  N   |
--------------------------------------------
-|base_path      | string |         |  Y   |
--------------------------------------------
-|max_connections| int    |256      |  N   |
--------------------------------------------
-memo:
-   base_path is the base path of sub dirs: 
-   data and logs. base_path must exist and it's 
-   sub dirs will be automatically created if not exist.
-   $base_path/data: store data files
-   $base_path/logs: store log files
 
-* 2. tracker server items
--------------------------------------------
-|  item name    |  type  | default | Must |
--------------------------------------------
-|port           | int    | 22000   |  N   |
--------------------------------------------
-|store_lookup   | int    |  0      |  N   |
--------------------------------------------
-|store_group    | string |         |  N   |
--------------------------------------------
+||item name      ||  type  || default || Must ||
+||disabled       || boolean|| false   ||  N   ||
+||bind_addr      || string ||         ||  N   ||
+||network_timeout|| int    ||30(s)    ||  N   ||
+||base_path      || string ||         ||  Y   ||
+||max_connections|| int    ||256      ||  N   ||
+
+==== memo ===
+   * base_path is the base path of sub dirs: 
+   * data and logs. base_path must exist and it's 
+   * sub dirs will be automatically created if not exist.
+   * $base_path/data: store data files
+   * $base_path/logs: store log files
+
+=== 2. tracker server items ===
+
+||item name      ||  type  || default || Must ||
+||port           || int    || 22000   ||  N   ||
+||store_lookup   || int    ||  0      ||  N   ||
+||store_group    || string ||         ||  N   ||
+
 memo: 
   the value of store_lookup is:
     0: round robin (default)
