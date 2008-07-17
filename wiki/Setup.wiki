@@ -36,7 +36,6 @@ cd FastDFS
 = Config =
 == tracker server config file sample ==
 {{{
-###start of tracker server config###
 disabled=false
 bind_addr=
 port=22122
@@ -51,10 +50,10 @@ store_lookup=0
 
 #when store_lookup set to 1(specify group), must set store_group to the group name
 store_group=group2
-###end of tracker server config###
+}}}
 
 * storage server config file sample:
-###start of storage server config###
+{{{
 disabled=false
 group_name=group1
 bind_addr=
@@ -68,7 +67,6 @@ max_connections=1024
 
 tracker_server=10.62.164.83:22122
 tracker_server=10.62.164.84:22122
-###end of storage server config###
 }}}
 
 == Item detail ==
