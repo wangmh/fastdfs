@@ -111,13 +111,12 @@ tracker_server=10.62.164.84:22122
     * 1: specify group
     * 2: load balance (supported since V1.1)
   * store_group is the name of group to store files. when store_lookup set to 1(specify group), store_group must be set to a specified group name.
-  * reserved_storage_space is the reserved storage space for system or other applications. if the free(available) space of any stoarge server in a group <= reserved_storage_space, no file can be uploaded to this group (since V1.1)
-    bytes unit can be one of follows:
+  * reserved_storage_space is the reserved storage space for system or other applications. if the free(available) space of any stoarge server in a group <= reserved_storage_space, no file can be uploaded to this group (since V1.1). bytes unit can be one of follows:
     * G or g for gigabyte(GB)
     * M or m for megabyte(MB)
     * K or k for kilobyte(KB)
     * no unit for byte(B)
-    for example: 4GB or 4G
+   for example: 4GB or 4G
 
 === 3. storage server items ===
 
