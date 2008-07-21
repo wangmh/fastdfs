@@ -52,6 +52,16 @@ store_lookup=0
 
 #when store_lookup set to 1(specify group), must set store_group to the group name
 store_group=group2
+
+#reserved storage space for system or other applications.
+#if the free(available) space of any stoarge server in a group <= reserved_storage_space,
+#no file can be uploaded to this group.
+#bytes unit can be one of follows:
+### G or g for gigabyte(GB)
+### M or m for megabyte(MB)
+### K or k for kilobyte(KB)
+### no unit for byte(B)
+reserved_storage_space = 4GB
 }}}
 
 * storage server config file sample:
