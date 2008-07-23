@@ -1,6 +1,9 @@
-* Version 1.1  2008-07-20
+* Version 1.1 == 2008-07-20
+{{{
   * implement storage disk report
-  * storing load balance between storage groups(volumes) when set store_lookup to 2
-
-* Version 1.0  2008-07-12
+ * storing load balance between storage groups(volumes) when set store_lookup to 2
+}}}
+* Version 1.0 == 2008-07-12
+{{{
   * first version
+}}}
