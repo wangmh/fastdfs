@@ -29,7 +29,9 @@ cd FastDFS
 
 #step 7. run test program
 #run the client test program:
-/usr/local/bin/fdfs_test <storage_conf_filename>
+/usr/local/bin/fdfs_test <storage_conf_filename> <operation>
+#for example, upload a file:
+/usr/local/bin/fdfs_test conf/storage.conf upload /usr/include/stdlib.h 
 
 #step 8. run monitor program
 #run the monitor program:
