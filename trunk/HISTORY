@@ -1,0 +1,11 @@
+
+Version 1.2  2008-07-27
+  * add client function storage_set_metadata to support setting metadata(overwrite or merge)
+
+Version 1.1  2008-07-20
+  * implement storage disk report
+  * storing load balance between storage groups(volumes) when set store_lookup to 2
+
+Version 1.0  2008-07-12
+  * first version
+

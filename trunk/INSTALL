@@ -1,0 +1,153 @@
+Copy right 2008 Happy Fish / YuQing
+
+FastDFS may be copied only under the terms of the GNU General
+Public License V3, which may be found in the FastDFS source kit.
+Please visit the FastDFS Home Page for more detail.
+English language: http://english.csource.org/
+Chinese language: http://www.csource.org/
+
+
+#step 1. download FastDFS source package and unpack it
+tar xzf FastDFS_v1.x.tar.gz
+#for example:
+tar xzf FastDFS_v1.1.tar.gz
+
+#step 2. enter the FastDFS dir
+cd FastDFS
+
+#step 3. make all
+#for Linux execute:
+./make.sh
+#for FreeBSD execute:
+./make.sh -f Makefile.freebsd
+
+#step 4. make install
+./make.sh install
+
+#step 5. edit/modify the config file of tracker and storage
+
+#step 6. run server programs
+#start the tracker server:
+/usr/local/bin/fdfs_trackerd <tracker_conf_filename>
+
+#start the storage server:
+/usr/local/bin/fdfs_storaged <storage_conf_filename>
+
+#step 7. run test program
+#run the client test program:
+/usr/local/bin/fdfs_test <storage_conf_filename> <operation>
+#for example, upload a file:
+/usr/local/bin/fdfs_test conf/storage.conf upload /usr/include/stdlib.h
+
+#step 8. run monitor program
+#run the monitor program:
+/usr/local/bin/fdfs_monitor <storage_conf_filename>
+
+
+tracker server config file sample:
+###start of tracker server config###
+disabled=false
+bind_addr=
+port=22122
+network_timeout=20
+base_path=/home/yuqing/FastDFS
+max_connections=1024
+
+#0: round robin
+#1: specify group
+#2: load balance
+store_lookup=0
+
+#when store_lookup set to 1(specify group), must set store_group to the group name
+store_group=group2
+###end of tracker server config###
+
+storage server config file sample:
+###start of storage server config###
+disabled=false
+group_name=group1
+bind_addr=
+port=23000
+network_timeout=20
+heart_beat_interval=30
+stat_report_interval=600
+base_path=/home/yuqing/FastDFS
+sync_wait_msec=200
+max_connections=1024
+
+tracker_server=10.62.164.83:22122
+tracker_server=10.62.164.84:22122
+###end of storage server config###
+
+Item detail
+1. common items
+-------------------------------------------
+|  item name    |  type  | default | Must |
+-------------------------------------------
+|disabled       | boolean| false   |  N   |
+-------------------------------------------
+|bind_addr      | string |         |  N   |
+-------------------------------------------
+|network_timeout| int    |30(s)    |  N   |
+-------------------------------------------
+|base_path      | string |         |  Y   |
+-------------------------------------------
+|max_connections| int    |256      |  N   |
+-------------------------------------------
+memo:
+   * base_path is the base path of sub dirs: 
+     data and logs. base_path must exist and it's sub dirs will 
+     be automatically created if not exist.
+       $base_path/data: store data files
+       $base_path/logs: store log files
+
+2. tracker server items
+--------------------------------------------------
+|  item name           |  type  | default | Must |
+--------------------------------------------------
+|port                  | int    | 22000   |  N   |
+--------------------------------------------------
+|store_lookup          | int    |  0      |  N   |
+--------------------------------------------------
+|store_group           | string |         |  N   |
+--------------------------------------------------
+|reserved_storage_space| string |  1GB    |  N   |
+--------------------------------------------------
+memo: 
+  * the value of store_lookup is:
+    0: round robin (default)
+    1: specify group
+    2: load balance (supported since V1.1)
+  * store_group is the name of group to store files.
+    when store_lookup set to 1(specify group), 
+    store_group must be set to a specified group name.
+  * reserved_storage_space is the reserved storage space for system 
+    or other applications. if the free(available) space of any stoarge
+    server in a group <= reserved_storage_space, no file can be uploaded
+    to this group (since V1.1)
+    bytes unit can be one of follows:
+      # G or g for gigabyte(GB)
+      # M or m for megabyte(MB)
+      # K or k for kilobyte(KB)
+      # no unit for byte(B)
+
+3. storage server items
+------------------------------------------------
+|  item name         |  type  | default | Must |
+------------------------------------------------
+|port                | int    | 23000   |  N   |
+------------------------------------------------
+|group_name          | string |         |  Y   |
+------------------------------------------------
+|heart_beat_interval | int    |  30(s)  |  N   |
+------------------------------------------------
+|stat_report_interval| int    | 300(s)  |  N   |
+------------------------------------------------
+|sync_wait_msec      | int    | 100(ms) |  N   |
+------------------------------------------------
+|tracker_server      | string |         |  Y   |
+------------------------------------------------
+memo:
+  * tracker_server can ocur more than once, and tracker_server format is
+    "host:port", host can be hostname or ip address.
+ 
