@@ -1,4 +1,8 @@
 #labels Featured
+* Version 1.2 == 2008-07-27
+{{{
+  * add client function storage_set_metadata to support setting metadata(overwrite or merge)
+}}}
 * Version 1.1 == 2008-07-20
 {{{
   * implement storage disk report
