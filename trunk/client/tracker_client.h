@@ -25,18 +25,19 @@ typedef struct
 } FDFSStorageInfo;
 
 /**
-* close all connections to tracker servers
-* params:
-* return:
-**/
-void tracker_close_all_connections();
-
-/**
 * get a connection to tracker server
 * params:
 * return: != NULL for success, NULL for fail
 **/
 TrackerServerInfo *tracker_get_connection();
+
+/**
+* connect to the tracker server
+* params:
+*	pTrackerServer: tracker server
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_connect_server(TrackerServerInfo *pTrackerServer);
 
 /**
 * close all connections to tracker servers
@@ -47,12 +48,11 @@ TrackerServerInfo *tracker_get_connection();
 void tracker_disconnect_server(TrackerServerInfo *pTrackerServer);
 
 /**
-* connect to the tracker server
+* close all connections to tracker servers
 * params:
-*	pTrackerServer: tracker server
-* return: 0 success, !=0 fail, return the error code
+* return:
 **/
-int tracker_connect_server(TrackerServerInfo *pTrackerServer);
+void tracker_close_all_connections();
 
 /**
 * list all groups

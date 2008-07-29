@@ -70,6 +70,28 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 			const char *group_name, const char *filename);
 
 /**
+* set metadata items to storage server
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*	group_name: the group name of storage server
+*	filename: filename on storage server
+*	meta_list: meta item array
+*       meta_count: meta item count
+*       op_flag:
+*            # STORAGE_SET_METADATA_FLAG_OVERWRITE('O'): overwrite all old 
+*				metadata items
+*            # STORAGE_SET_METADATA_FLAG_MERGE ('M'): merge, insert when
+*				the metadata item not exist, otherwise update it
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer, \
+			const char *group_name, const char *filename, \
+			FDFSMetaData *meta_list, const int meta_count, \
+			const char op_flag);
+
+/**
 * download file from storage server
 * params:
 *       pTrackerServer: tracker server
@@ -101,28 +123,6 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 			const char *group_name, const char *filename, \
 			FDFSMetaData **meta_list, \
 			int *meta_count);
-
-/**
-* set metadata items to storage server
-* params:
-*       pTrackerServer: tracker server
-*       pStorageServer: storage server
-*	group_name: the group name of storage server
-*	filename: filename on storage server
-*	meta_list: meta item array
-*       meta_count: meta item count
-*       op_flag:
-*            # STORAGE_SET_METADATA_FLAG_OVERWRITE('O'): overwrite all old 
-*				metadata items
-*            # STORAGE_SET_METADATA_FLAG_MERGE ('M'): merge, insert when
-*				the metadata item not exist, otherwise update it
-* return: 0 success, !=0 fail, return the error code
-**/
-int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
-			const char *group_name, const char *filename, \
-			FDFSMetaData *meta_list, const int meta_count, \
-			const char op_flag);
 
 #ifdef __cplusplus
 }
