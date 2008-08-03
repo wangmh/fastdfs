@@ -183,11 +183,12 @@ int tcpsenddata(int sock,void* data,int size,int timeout)
 #endif
 		return(-1);
 	}
-	p=(unsigned char*)data;
-	byteleft=size;
+
+	p = (unsigned char*)data;
+	byteleft = size;
 	FD_ZERO(&write_set);
 	FD_ZERO(&exception_set);
-	while(byteleft>0)
+	while(byteleft > 0)
 	{
 		FD_CLR(sock,&write_set);
 		FD_CLR(sock,&exception_set);
@@ -237,6 +238,7 @@ int tcpsenddata(int sock,void* data,int size,int timeout)
 		/*exception not support*/
 		return(-1);
 	}
+
 	return(1);
 }
 

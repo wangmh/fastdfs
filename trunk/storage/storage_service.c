@@ -383,6 +383,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 	int meta_bytes;
 	int filename_len;
 
+	memset(&resp, 0, sizeof(resp));
 	in_buff = NULL;
 	while (1)
 	{
@@ -552,6 +553,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	int file_bytes;
 	int filename_len;
 
+	memset(&resp, 0, sizeof(resp));
 	in_buff = NULL;
 	filename[0] = '\0';
 	filename_len = 0;
@@ -651,11 +653,12 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	if (resp.status == 0)
 	{
-		out_len = filename_len;
+		out_len = FDFS_GROUP_NAME_MAX_LEN + filename_len;
 		sprintf(resp.pkg_len, "%x", out_len);
 
 		memcpy(out_buff, &resp, sizeof(resp));
-		memcpy(out_buff+sizeof(resp), filename, filename_len);
+		memcpy(out_buff+sizeof(resp), g_group_name, FDFS_GROUP_NAME_MAX_LEN);
+		memcpy(out_buff+sizeof(resp)+FDFS_GROUP_NAME_MAX_LEN, filename, filename_len);
 	}
 	else
 	{
@@ -702,6 +705,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 	int filename_len;
 	int file_bytes;
 
+	memset(&resp, 0, sizeof(resp));
 	in_buff = NULL;
 	while (1)
 	{
@@ -882,6 +886,7 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 	char *file_buff;
 	int file_bytes;
 
+	memset(&resp, 0, sizeof(resp));
 	file_buff = NULL;
 	file_bytes = 0;
 	while (1)
@@ -987,21 +992,22 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 		return resp.status;
 	}
 
-	result = tcpsenddata(pClientInfo->sock, \
-		file_buff, file_bytes, g_network_timeout);
+
 	if (file_buff != NULL)
 	{
+		result = tcpsenddata(pClientInfo->sock, \
+			file_buff, file_bytes, g_network_timeout);
 		free(file_buff);
-	}
-	if(result != 1)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, send data fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
+		if(result != 1)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, send data fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pClientInfo->ip_addr, \
+				errno, strerror(errno));
 
-		return errno != 0 ? errno : EPIPE;
+			return errno != 0 ? errno : EPIPE;
+		}
 	}
 
 	return resp.status;
@@ -1024,6 +1030,7 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 	char *file_buff;
 	int file_bytes;
 
+	memset(&resp, 0, sizeof(resp));
 	file_buff = NULL;
 	file_bytes = 0;
 	while (1)
@@ -1153,6 +1160,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)];
 	char *filename;
 
+	memset(&resp, 0, sizeof(resp));
 	while (1)
 	{
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
@@ -1275,6 +1283,7 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 	char meta_filename[MAX_PATH_SIZE+sizeof(in_buff)];
 	char *filename;
 
+	memset(&resp, 0, sizeof(resp));
 	while (1)
 	{
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
@@ -1357,14 +1366,14 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 				full_filename);
 		if (unlink(meta_filename) != 0)
 		{
-			logError("file: "__FILE__", line: %d, " \
-				"client ip: %s, delete file %s fail," \
-				"errno: %d, error info: %s", \
-				__LINE__, \
-				pClientInfo->ip_addr, meta_filename, \
-				errno, strerror(errno));
 			if (errno != ENOENT)
 			{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s, delete file %s fail," \
+					"errno: %d, error info: %s", \
+					__LINE__, \
+					pClientInfo->ip_addr, meta_filename, \
+					errno, strerror(errno));
 				resp.status = errno != 0 ? errno : EACCES;
 				break;
 			}
@@ -1425,9 +1434,11 @@ data buff (struct)
 	
 	getPeerIpaddr(client_info.sock, \
 				client_info.ip_addr, FDFS_IPADDR_SIZE);
+
 	count = 0;
 	while (g_continue_flag)
 	{
+		//memset(&header, 0, sizeof(header));
 		result = tcprecvdata(client_info.sock, &header, \
 				sizeof(header), g_network_timeout);
 		if (result == 0)
@@ -1437,6 +1448,16 @@ data buff (struct)
 
 		if (result != 1)
 		{
+			/*
+			unsigned char *p;
+			unsigned char *pEnd = (unsigned char *)&header + sizeof(header);
+			for (p=(unsigned char *)&header; p<pEnd; p++)
+			{
+				fprintf(stderr, "%02X ", *p);
+			}
+			fprintf(stderr, "\n");
+			*/
+
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
 				"errno: %d, error info: %s.", \

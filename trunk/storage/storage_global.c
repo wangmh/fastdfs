@@ -19,7 +19,7 @@ int g_storage_count = 0;
 FDFSStorageBrief g_storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
 FDFSStorageBrief *g_sorted_storages[FDFS_MAX_SERVERS_EACH_GROUP];
 
-char g_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+char g_group_name[FDFS_GROUP_NAME_MAX_LEN + 1] = {0};
 int g_tracker_reporter_count = 0;
 int g_heart_beat_interval  = STORAGE_BEAT_DEF_INTERVAL;
 int g_stat_report_interval = STORAGE_REPORT_DEF_INTERVAL;
