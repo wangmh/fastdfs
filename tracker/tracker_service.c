@@ -41,6 +41,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 	FDFSStorageBrief *pDestServer;
 	int out_len;
 
+	memset(&resp, 0, sizeof(resp));
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 	resp.status = status;
 
@@ -142,6 +143,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 	int server_count;
 	FDFSStorageBrief briefServers[FDFS_MAX_SERVERS_EACH_GROUP];
 
+	memset(&resp, 0, sizeof(resp));
 	while (1)
 	{
 		if ((nInPackLen <= 0) || \
@@ -365,8 +367,8 @@ static int tracker_check_logined(TrackerClientInfo *pClientInfo)
 		return 0;
 	}
 
+	memset(&resp, 0, sizeof(resp));
 	resp.pkg_len[0] = '0';
-	resp.pkg_len[1] = '\0';
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 	resp.status = EACCES;
 	if (tcpsenddata(pClientInfo->sock, &resp, sizeof(resp), \
@@ -397,6 +399,7 @@ static int tracker_deal_server_list_group_storages( \
 	FDFSStorageStatBuff *pStatBuff;
 	int out_len;
 
+	memset(&resp, 0, sizeof(resp));
 	pDest = stats;
 	while (1)
 	{
@@ -533,6 +536,7 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 	FDFSStorageDetail *pStorageServer;
 	char out_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_BODY_LEN];
 
+	memset(&resp, 0, sizeof(resp));
 	pGroup = NULL;
 	pStorageServer = NULL;
 	while (1)
@@ -659,6 +663,7 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 	char out_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_BODY_LEN];
 	bool bHaveActiveServer;
 
+	memset(&resp, 0, sizeof(resp));
 	pStoreGroup = NULL;
 	pStorageServer = NULL;
 	while (1)
@@ -865,6 +870,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 	TrackerGroupStat *pDest;
 	int out_len;
 
+	memset(&resp, 0, sizeof(resp));
 	pDest = groupStats;
 	while (1)
 	{

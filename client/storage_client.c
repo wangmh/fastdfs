@@ -433,19 +433,22 @@ int storage_upload_by_filebuff(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	if (in_bytes == 0 || in_bytes >= sizeof(in_buff))
+	if (in_bytes <= FDFS_GROUP_NAME_MAX_LEN)
 	{
 		logError("storage server %s:%d response data " \
-			"length: %d is invalid.", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, in_bytes);
+			"length: %d is invalid, should > %d.", \
+			pStorageServer->ip_addr, pStorageServer->port, \
+			in_bytes, FDFS_GROUP_NAME_MAX_LEN);
 		result = EINVAL;
 		break;
 	}
 
 	in_buff[in_bytes] = '\0';
-	strcpy(group_name, pStorageServer->group_name);
-	memcpy(remote_filename, in_buff, in_bytes+1);
+	memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
+	group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
+
+	memcpy(remote_filename, in_buff + FDFS_GROUP_NAME_MAX_LEN, \
+		in_bytes - FDFS_GROUP_NAME_MAX_LEN + 1);
 
 	break;
 	}
