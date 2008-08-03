@@ -1,4 +1,13 @@
 #labels Featured
+
+Version 1.3  2008-08-03
+{{{
+  * fix bug: when meta data is empty, get meta data return error
+  * support java client
+    # memset response header to 0
+    # add group_name to upload file response package
+}}}
+
 * Version 1.2 == 2008-07-27
 {{{
   * add client function storage_set_metadata to support setting metadata(overwrite or merge)
