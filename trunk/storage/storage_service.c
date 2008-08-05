@@ -717,7 +717,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
-				STORAGE_PROTO_CMD_SYNC_CREATE_FILE, \
+				proto_cmd, \
 				pClientInfo->ip_addr,  nInPackLen, \
 				2 * TRACKER_PROTO_PKG_LEN_SIZE + \
 					FDFS_GROUP_NAME_MAX_LEN);
@@ -812,7 +812,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 				"cmd=%d, client ip: %s, data file: %s " \
 				"already exists, ignore it", \
 				__LINE__, \
-				STORAGE_PROTO_CMD_SYNC_CREATE_FILE, \
+				proto_cmd, \
 				pClientInfo->ip_addr, full_filename);
 			resp.status = EEXIST;
 			break;
