@@ -1559,7 +1559,7 @@ data buff (struct)
 			g_storage_stat.last_source_update = time(NULL);
 			CHECK_AND_WRITE_TO_STAT_FILE
 		}
-		else if (header.cmd == TRACKER_PROTO_CMD_STORAGE_QUIT)
+		else if (header.cmd == FDFS_PROTO_CMD_QUIT)
 		{
 			break;
 		}

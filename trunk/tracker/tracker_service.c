@@ -1521,7 +1521,7 @@ data buff (struct)
 				break;
 			}
 		}
-		else if (header.cmd == TRACKER_PROTO_CMD_STORAGE_QUIT)
+		else if (header.cmd == FDFS_PROTO_CMD_QUIT)
 		{
 			break;
 		}
