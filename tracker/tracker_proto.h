@@ -14,7 +14,7 @@
 #include "tracker_types.h"
 
 #define TRACKER_PROTO_CMD_STORAGE_JOIN          81
-#define TRACKER_PROTO_CMD_STORAGE_QUIT          82
+#define FDFS_PROTO_CMD_QUIT          82
 #define TRACKER_PROTO_CMD_STORAGE_BEAT          83  //heart beat
 #define TRACKER_PROTO_CMD_STORAGE_REPORT        84
 #define TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG   85  //repl new storage servers

@@ -121,7 +121,7 @@ int tracker_quit(TrackerServerInfo *pTrackerServer)
 
 	header.pkg_len[0] = '0';
 	header.pkg_len[1] = '\0';
-	header.cmd = TRACKER_PROTO_CMD_STORAGE_QUIT;
+	header.cmd = FDFS_PROTO_CMD_QUIT;
 	header.status = 0;
 	result = tcpsenddata(pTrackerServer->sock, &header, sizeof(header), \
 				g_network_timeout);
