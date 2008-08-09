@@ -182,8 +182,8 @@ const char *get_storage_status_caption(const int status)
 			return "OFFLINE";
 		case FDFS_STORAGE_STATUS_ONLINE:
 			return "ONLINE";
-		case FDFS_STORAGE_STATUS_DEACTIVE:
-			return "DEACTIVE";
+		case FDFS_STORAGE_STATUS_DELETED:
+			return "DELETED";
 		case FDFS_STORAGE_STATUS_ACTIVE:
 			return "ACTIVE";
 		default:
