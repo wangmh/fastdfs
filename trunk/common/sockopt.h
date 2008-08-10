@@ -30,6 +30,10 @@ in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize);
 int socketServer(const char *bind_ipaddr, const int port, \
 		const char *szLogFilePrefix);
 
+int tcpsendfile(int sock, const char *filename, const int file_bytes);
+int tcprecvfile(int sock, const char *filename, const int file_bytes);
+int tcpdiscard(int sock, const int bytes);
+
 #ifdef __cplusplus
 }
 #endif

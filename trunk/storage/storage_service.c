@@ -113,7 +113,7 @@ static int storage_sort_metadata_buff(char *meta_buff, const int meta_size)
 }
 
 static int storage_save_file(StorageClientInfo *pClientInfo, \
-			const char *file_buff, const int file_size, \
+			const int file_size, \
 			char *meta_buff, const int meta_size, \
 			char *filename, int *filename_len)
 {
@@ -147,7 +147,7 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 		return ENOENT;
 	}
 
-	if ((result=writeToFile(full_filename, file_buff, file_size)) != 0)
+	if ((result=tcprecvfile(pClientInfo->sock, full_filename, file_size)) != 0)
 	{
 		*filename = '\0';
 		*filename_len = 0;
@@ -537,7 +537,6 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 9 bytes: file size 
 meta data bytes: each meta data seperated by \x01,
 		 name and value seperated by \x02
-1 bytes: pad byte, should be \0
 file size bytes: file content
 **/
 static int storage_upload_file(StorageClientInfo *pClientInfo, \
@@ -545,7 +544,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 {
 	TrackerHeader resp;
 	int out_len;
-	char *in_buff;
+	char in_buff[2 * TRACKER_PROTO_PKG_LEN_SIZE + 1];
 	char *meta_buff;
 	char out_buff[128];
 	char filename[128];
@@ -554,34 +553,27 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	int filename_len;
 
 	memset(&resp, 0, sizeof(resp));
-	in_buff = NULL;
+	meta_buff = NULL;
 	filename[0] = '\0';
 	filename_len = 0;
 	while (1)
 	{
-		if (nInPackLen <= 0)
+		if (nInPackLen < 2 * TRACKER_PROTO_PKG_LEN_SIZE)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, package size %d " \
 				"is not correct, " \
-				"expect length > 0", \
+				"expect length > %d", \
 				__LINE__, \
 				STORAGE_PROTO_CMD_UPLOAD_FILE, \
 				pClientInfo->ip_addr,  \
-				nInPackLen);
+				nInPackLen, 2 * TRACKER_PROTO_PKG_LEN_SIZE);
 			resp.status = EINVAL;
 			break;
 		}
 
-		in_buff = (char *)malloc(nInPackLen + 1);
-		if (in_buff == NULL)
-		{
-			resp.status = errno != 0 ? errno : ENOMEM;
-			break;
-		}
-
 		if (tcprecvdata(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout) != 1)
+			2 * TRACKER_PROTO_PKG_LEN_SIZE, g_network_timeout) != 1)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -592,14 +584,15 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		*(in_buff + nInPackLen) = '\0';
+		*(in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE) = '\0';
 		meta_bytes = strtol(in_buff, NULL, 16);
 		file_bytes = strtol(in_buff + TRACKER_PROTO_PKG_LEN_SIZE, \
 				NULL, 16);
 		if (meta_bytes < 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"client ip:%s, invalid meta bytes: %d", \
+				"client ip:%s, pkg length is not correct, " \
+				"invalid meta bytes: %d", \
 				__LINE__, pClientInfo->ip_addr, \
 				meta_bytes);
 			resp.status = EINVAL;
@@ -607,20 +600,42 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 		}
 
 		if (file_bytes < 0 || file_bytes != nInPackLen - \
-			(2 * TRACKER_PROTO_PKG_LEN_SIZE + meta_bytes + 1))
+			(2 * TRACKER_PROTO_PKG_LEN_SIZE + meta_bytes))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"client ip:%s, invalid file bytes: %d", \
+				"client ip:%s, pkg length is not correct, " \
+				"invalid file bytes: %d", \
 				__LINE__, pClientInfo->ip_addr, \
 				file_bytes);
 			resp.status = EINVAL;
 			break;
 		}
 
-		meta_buff = in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE;
-		*(meta_buff + meta_bytes) = '\0';
+		if (meta_bytes > 0)
+		{
+			meta_buff = (char *)malloc(meta_bytes + 1);
+			if (meta_buff == NULL)
+			{
+				resp.status = errno != 0 ? errno : ENOMEM;
+				break;
+			}
+
+			if (tcprecvdata(pClientInfo->sock, meta_buff, \
+				meta_bytes, g_network_timeout) != 1)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip:%s, recv data fail, " \
+					"errno: %d, error info: %s.", \
+					__LINE__, pClientInfo->ip_addr, \
+					errno, strerror(errno));
+				resp.status = errno != 0 ? errno : EPIPE;
+				break;
+			}
+
+			*(meta_buff + meta_bytes) = '\0';
+		}
+
 		resp.status = storage_save_file(pClientInfo,  \
-			meta_buff + meta_bytes + 1, \
 			file_bytes, meta_buff, meta_bytes, \
 			filename, &filename_len);
 
@@ -667,9 +682,9 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 		memcpy(out_buff, &resp, sizeof(resp));
 	}
 
-	if (in_buff != NULL)
+	if (meta_buff != NULL)
 	{
-		free(in_buff);
+		free(meta_buff);
 	}
 
 	if (tcpsenddata(pClientInfo->sock, out_buff, \
@@ -697,8 +712,8 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			const int nInPackLen, const char proto_cmd)
 {
 	TrackerHeader resp;
-	char *in_buff;
-	char *pBuff;
+	char in_buff[2 * TRACKER_PROTO_PKG_LEN_SIZE + \
+			FDFS_GROUP_NAME_MAX_LEN + 1];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char filename[128];
 	char full_filename[MAX_PATH_SIZE];
@@ -706,7 +721,6 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 	int file_bytes;
 
 	memset(&resp, 0, sizeof(resp));
-	in_buff = NULL;
 	while (1)
 	{
 		if (nInPackLen <= 2 * TRACKER_PROTO_PKG_LEN_SIZE + \
@@ -725,15 +739,9 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		in_buff = (char *)malloc(nInPackLen + 1);
-		if (in_buff == NULL)
-		{
-			resp.status = errno != 0 ? errno : ENOMEM;
-			break;
-		}
-
 		if (tcprecvdata(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout) != 1)
+			2*TRACKER_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN, \
+			g_network_timeout) != 1)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
@@ -746,12 +754,11 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		*(in_buff + nInPackLen) = '\0';
-		pBuff = in_buff;
-		filename_len = strtol(pBuff, NULL, 16);
-		pBuff += TRACKER_PROTO_PKG_LEN_SIZE;
-		file_bytes = strtol(pBuff, NULL, 16);
-		pBuff += TRACKER_PROTO_PKG_LEN_SIZE;
+		*(in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE + \
+			FDFS_GROUP_NAME_MAX_LEN) = '\0';
+		filename_len = strtol(in_buff, NULL, 16);
+		file_bytes = strtol(in_buff + TRACKER_PROTO_PKG_LEN_SIZE, \
+					NULL, 16);
 
 		if (filename_len < 0 || filename_len >= sizeof(filename))
 		{
@@ -775,8 +782,8 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		memcpy(group_name, pBuff, FDFS_GROUP_NAME_MAX_LEN);
-		pBuff += FDFS_GROUP_NAME_MAX_LEN;
+		memcpy(group_name, in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE, \
+				FDFS_GROUP_NAME_MAX_LEN);
 		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
 		if (strcmp(group_name, g_group_name) != 0)
 		{
@@ -789,21 +796,33 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		memcpy(filename, pBuff, filename_len);
-		filename[filename_len] = '\0';
-		snprintf(full_filename, sizeof(full_filename), \
-				"%s/data/%s", g_base_path, filename);
-		pBuff += filename_len;
-		if (file_bytes != nInPackLen - (pBuff - in_buff))
+		if (file_bytes != nInPackLen - (2*TRACKER_PROTO_PKG_LEN_SIZE + \
+					FDFS_GROUP_NAME_MAX_LEN + filename_len))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, in request pkg, " \
 				"file size: %d != remain bytes: %d", \
 				__LINE__, pClientInfo->ip_addr, file_bytes, \
-				nInPackLen - (pBuff - in_buff));
+				nInPackLen - (2*TRACKER_PROTO_PKG_LEN_SIZE + \
+				FDFS_GROUP_NAME_MAX_LEN + filename_len));
 			resp.status = EPIPE;
 			break;
 		}
+
+		if (tcprecvdata(pClientInfo->sock, filename, \
+			filename_len, g_network_timeout) != 1)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, recv filename fail, " \
+				"errno: %d, error info: %s.", \
+				__LINE__, pClientInfo->ip_addr, \
+				errno, strerror(errno));
+			resp.status = errno != 0 ? errno : EPIPE;
+			break;
+		}
+		filename[filename_len] = '\0';
+		snprintf(full_filename, sizeof(full_filename), \
+				"%s/data/%s", g_base_path, filename);
 
 		if ((proto_cmd == STORAGE_PROTO_CMD_SYNC_CREATE_FILE) && \
 			fileExists(full_filename))
@@ -814,13 +833,32 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 				__LINE__, \
 				proto_cmd, \
 				pClientInfo->ip_addr, full_filename);
+
+			if ((resp.status=tcpdiscard(pClientInfo->sock, \
+					file_bytes)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s, discard buff fail, " \
+					"buff size: %d, " \
+					"errno: %d, error info: %s.", \
+					__LINE__, pClientInfo->ip_addr, \
+					file_bytes, \
+					resp.status, strerror(resp.status));
+				break;
+			}
+
 			resp.status = EEXIST;
 			break;
 		}
 
-		if ((resp.status=writeToFile(full_filename, \
-				pBuff, file_bytes)) != 0)
+		if ((resp.status=tcprecvfile(pClientInfo->sock, \
+				full_filename, file_bytes)) != 0)
 		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, recv file buff fail, " \
+				"file size: %d, errno: %d, error info: %s.", \
+				__LINE__, pClientInfo->ip_addr, \
+				file_bytes, resp.status, strerror(resp.status));
 			break;
 		}
 
@@ -840,14 +878,8 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		break;
 	}
 
-	if (in_buff != NULL)
-	{
-		free(in_buff);
-	}
-
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	resp.pkg_len[0] = '0';
-	resp.pkg_len[1] = '\0';
 	if (tcpsenddata(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout) != 1)
 	{

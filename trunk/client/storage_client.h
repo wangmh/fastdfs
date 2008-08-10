@@ -48,8 +48,15 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 *	remote_filename: return the new created filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_upload_by_filebuff(TrackerServerInfo *pTrackerServer, \
+#define storage_upload_by_filebuff(pTrackerServer, pStorageServer, file_buff, \
+		file_size, meta_list, meta_count, group_name, remote_filename) \
+	storage_upload_by_filebuff(pTrackerServer, pStorageServer, false, \
+		file_buff, file_size, meta_list, meta_count, group_name, \
+		remote_filename)
+
+int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
+			const bool bFilename, \
 			const char *file_buff, const int file_size, \
 			const FDFSMetaData *meta_list, \
 			const int meta_count, \
