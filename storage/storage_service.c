@@ -12,12 +12,14 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <time.h>
 #include <sys/time.h>
+#include <unistd.h>
 #include "fdfs_define.h"
 #include "logger.h"
 #include "fdfs_global.h"
@@ -1059,11 +1061,10 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 32];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)+16];
-	char *file_buff;
 	int file_bytes;
+	struct stat stat_buf;
 
 	memset(&resp, 0, sizeof(resp));
-	file_buff = NULL;
 	file_bytes = 0;
 	while (1)
 	{
@@ -1123,8 +1124,18 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 		*(in_buff + nInPackLen) = '\0';
 		sprintf(full_filename, "%s/data/%s", g_base_path, \
 				in_buff+FDFS_GROUP_NAME_MAX_LEN);
-		resp.status=getFileContent(full_filename, \
-				&file_buff, &file_bytes);
+		if ((resp.status=stat(full_filename, &stat_buf)) == 0)
+		{
+			file_bytes = stat_buf.st_size;
+		}
+		else
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"call stat fail, file: %s, "\
+				"error no: %d, error info: %s", \
+				__LINE__, full_filename, \
+				errno, strerror(errno));
+		}
 		break;
 	}
 
@@ -1139,39 +1150,25 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
 			errno, strerror(errno));
-
-		if (file_buff != NULL)
-		{
-			free(file_buff);
-		}
 		return errno != 0 ? errno : EPIPE;
 	}
 
 	if (resp.status != 0)
 	{
-		if (file_buff != NULL)
-		{
-			free(file_buff);
-		}
-
 		return resp.status;
 	}
 
-	result = tcpsenddata(pClientInfo->sock, \
-		file_buff, file_bytes, g_network_timeout);
-	if (file_buff != NULL)
-	{
-		free(file_buff);
-	}
-	if(result != 1)
+	result = tcpsendfile(pClientInfo->sock, \
+		full_filename, file_bytes);
+	if(result != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, send data fail, " \
+			"client ip: %s, send file fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
+			result, strerror(result));
 
-		return errno != 0 ? errno : EPIPE;
+		return result;
 	}
 
 	return resp.status;
