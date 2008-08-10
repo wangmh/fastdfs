@@ -22,6 +22,7 @@
 #include <netdb.h>
 #include "sockopt.h"
 #include "logger.h"
+#include "fdfs_global.h"
 
 int tcpgets(int sock,char* s,int size,int timeout)
 {
@@ -76,14 +77,7 @@ int tcprecvdata(int sock,void* data,int size,int timeout)
 	fd_set read_set;
 	fd_set exception_set;
 	struct timeval t;
-	if(sock<0)
-	{
-#ifdef __DEBUG__
-		fprintf(stderr,"%s,%d:tcprecvdata argument sock<0.\n",
-			__FILE__,__LINE__);
-#endif
-		return(-1);
-	}
+
 	if(data==NULL)
 	{
 #ifdef __DEBUG__
@@ -167,14 +161,7 @@ int tcpsenddata(int sock,void* data,int size,int timeout)
 	fd_set write_set;
 	fd_set exception_set;
 	struct timeval t;
-	if(sock<0)
-	{
-#ifdef __DEBUG__
-		fprintf(stderr,"%s,%d:tcpsenddata argument sock<0.\n",
-			__FILE__,__LINE__);
-#endif
-		return(-1);
-	}
+
 	if(data==NULL)
 	{
 #ifdef __DEBUG__
@@ -451,5 +438,132 @@ int socketServer(const char *bind_ipaddr, const int port, \
 	}
 	
 	return sock;
+}
+
+int tcprecvfile(int sock, const char *filename, const int file_bytes)
+{
+	int fd;
+	char buff[128 * 1024];
+	int remain_bytes;
+	int recv_bytes;
+	int result;
+
+	fd = open(filename, O_WRONLY | O_CREAT, 0644);
+	if (fd < 0)
+	{
+		return errno != 0 ? errno : EACCES;
+	}
+
+	remain_bytes = file_bytes;
+	while (remain_bytes > 0)
+	{
+		if (remain_bytes > sizeof(buff))
+		{
+			recv_bytes = sizeof(buff);
+		}
+		else
+		{
+			recv_bytes = remain_bytes;
+		}
+
+		if (tcprecvdata(sock, buff, recv_bytes, g_network_timeout) != 1)
+		{
+			result = errno;
+			close(fd);
+			unlink(filename);
+			return result != 0 ? result : EIO;
+		}
+
+		if (write(fd, buff, recv_bytes) != recv_bytes)
+		{
+			result = errno;
+			close(fd);
+			unlink(filename);
+			return result != 0 ? result : EIO;
+		}
+
+		remain_bytes -= recv_bytes;
+	}
+
+	close(fd);
+	return 0;
+}
+
+int tcpdiscard(int sock, const int bytes)
+{
+	char buff[128 * 1024];
+	int remain_bytes;
+	int recv_bytes;
+	int result;
+
+	remain_bytes = bytes;
+	while (remain_bytes > 0)
+	{
+		if (remain_bytes > sizeof(buff))
+		{
+			recv_bytes = sizeof(buff);
+		}
+		else
+		{
+			recv_bytes = remain_bytes;
+		}
+
+		if (tcprecvdata(sock, buff, recv_bytes, g_network_timeout) != 1)
+		{
+			result = errno;
+			return result != 0 ? result : EIO;
+		}
+
+		remain_bytes -= recv_bytes;
+	}
+
+	return 0;
+}
+
+int tcpsendfile(int sock, const char *filename, const int file_bytes)
+{
+	int fd;
+	char buff[128 * 1024];
+	int remain_bytes;
+	int send_bytes;
+	int result;
+
+	fd = open(filename, O_RDONLY);
+	if (fd < 0)
+	{
+		return errno != 0 ? errno : EACCES;
+	}
+
+	remain_bytes = file_bytes;
+	while (remain_bytes > 0)
+	{
+		if (remain_bytes > sizeof(buff))
+		{
+			send_bytes = sizeof(buff);
+		}
+		else
+		{
+			send_bytes = remain_bytes;
+		}
+
+		if (read(fd, buff, send_bytes) != send_bytes)
+		{
+			result = errno;
+			close(fd);
+			return result != 0 ? result : EIO;
+		}
+
+		if (tcpsenddata(sock, buff, send_bytes, g_network_timeout) != 1)
+		{
+			result = errno;
+			close(fd);
+			return result != 0 ? result : EIO;
+		}
+
+		remain_bytes -= send_bytes;
+	}
+
+	close(fd);
+	return 0;
 }
 

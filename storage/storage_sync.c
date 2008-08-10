@@ -20,6 +20,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <unistd.h>
 #include "fdfs_define.h"
 #include "logger.h"
 #include "fdfs_global.h"
@@ -71,33 +72,37 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	TrackerHeader header;
 	int result;
 	int in_bytes;
-	int file_size;
-	char *file_buff;
 	char *p;
 	char *pBuff;
 	char full_filename[MAX_PATH_SIZE];
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+256];
 	char in_buff[1];
+	struct stat stat_buf;
 
 	snprintf(full_filename, sizeof(full_filename), \
 			"%s/data/%s", g_base_path, pRecord->filename);
-	if (!fileExists(full_filename))
+	if (stat(full_filename, &stat_buf) != 0)
 	{
-		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE)
+		if (errno == ENOENT)
+		{
+			if(pRecord->op_type==STORAGE_OP_TYPE_SOURCE_CREATE_FILE)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"sync data file, file: %s not exists, "\
+					"maybe deleted later?", \
+					__LINE__, full_filename);
+			}
+		}
+		else
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"sync data file, file: %s not exists, " \
-				"maybe deleted later?", \
-				__LINE__, full_filename);
+				"call stat fail, file: %s, "\
+				"error no: %d, error info: %s", \
+				__LINE__, full_filename, \
+				errno, strerror(errno));
 		}
 
 		return 0;
-	}
-
-	if ((result=getFileContent(full_filename, \
-			&file_buff, &file_size)) != 0)
-	{
-		return result;
 	}
 
 	//printf("sync create file: %s\n", pRecord->filename);
@@ -105,7 +110,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	{
 		sprintf(header.pkg_len, "%x", 2 * TRACKER_PROTO_PKG_LEN_SIZE + \
 				FDFS_GROUP_NAME_MAX_LEN + \
-				pRecord->filename_len + file_size);
+				pRecord->filename_len + (int)stat_buf.st_size);
 		header.cmd = proto_cmd;
 		header.status = 0;
 		memcpy(out_buff, &header, sizeof(TrackerHeader));
@@ -113,7 +118,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		p = out_buff + sizeof(TrackerHeader);
 		sprintf(p, "%x", pRecord->filename_len);
 		p += TRACKER_PROTO_PKG_LEN_SIZE;
-		sprintf(p, "%x", file_size);
+		sprintf(p, "%x", (int)stat_buf.st_size);
 		p += TRACKER_PROTO_PKG_LEN_SIZE;
 		sprintf(p, "%s", pStorageServer->group_name);
 		p += FDFS_GROUP_NAME_MAX_LEN;
@@ -134,8 +139,9 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 			break;
 		}
 
-		if((file_size > 0) && (tcpsenddata(pStorageServer->sock, \
-			file_buff, file_size, g_network_timeout) != 1))
+		if((stat_buf.st_size > 0) && ((result=tcpsendfile( \
+			pStorageServer->sock, full_filename, \
+			stat_buf.st_size)) != 0))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"sync data to storage server %s:%d fail, " \
@@ -157,8 +163,6 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 
 		break;
 	}
-
-	free(file_buff);
 
 	//printf("sync create file end!\n");
 	if (result == EEXIST)

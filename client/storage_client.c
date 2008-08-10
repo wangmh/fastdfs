@@ -9,6 +9,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdio.h>
@@ -16,6 +17,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <unistd.h>
 #include "fdfs_define.h"
 #include "logger.h"
 #include "fdfs_global.h"
@@ -304,11 +306,11 @@ int storage_download_file(TrackerServerInfo *pTrackerServer, \
 9 bytes: file size
 meta data bytes: each meta data seperated by \x01,
                  name and value seperated by \x02
-1 bytes: pad byte, should be \0
 file size bytes: file content
 **/
-int storage_upload_by_filebuff(TrackerServerInfo *pTrackerServer, \
+int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
+			const bool bFilename, \
 			const char *file_buff, const int file_size, \
 			const FDFSMetaData *meta_list, \
 			const int meta_count, \
@@ -386,7 +388,7 @@ int storage_upload_by_filebuff(TrackerServerInfo *pTrackerServer, \
 	sprintf(pMetaData + TRACKER_PROTO_PKG_LEN_SIZE, "%x", file_size);
 
 	sprintf(header.pkg_len, "%x", 2 * TRACKER_PROTO_PKG_LEN_SIZE + \
-			meta_bytes + 1 + file_size);
+			meta_bytes + file_size);
 	header.cmd = STORAGE_PROTO_CMD_UPLOAD_FILE;
 	header.status = 0;
 	if (tcpsenddata(pStorageServer->sock, &header, sizeof(header), \
@@ -402,7 +404,7 @@ int storage_upload_by_filebuff(TrackerServerInfo *pTrackerServer, \
 	}
 
 	if (tcpsenddata(pStorageServer->sock, pMetaData, \
-			2 * TRACKER_PROTO_PKG_LEN_SIZE + meta_bytes + 1, \
+			2 * TRACKER_PROTO_PKG_LEN_SIZE + meta_bytes, \
 			g_network_timeout) != 1)
 	{
 		logError("send data to storage server %s:%d fail, " \
@@ -414,16 +416,26 @@ int storage_upload_by_filebuff(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	if (tcpsenddata(pStorageServer->sock, (char *)file_buff, \
-				file_size, g_network_timeout) != 1)
+	if (bFilename)
 	{
-		logError("send data to storage server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, \
-			errno, strerror(errno));
-		result = errno != 0 ? errno : EPIPE;
-		break;
+		if ((result=tcpsendfile(pStorageServer->sock, file_buff, file_size)) != 0)
+		{
+			break;
+		}
+	}
+	else
+	{
+		if (tcpsenddata(pStorageServer->sock, (char *)file_buff, \
+				file_size, g_network_timeout) != 1)
+		{
+			logError("send data to storage server %s:%d fail, " \
+				"errno: %d, error info: %s", \
+				pStorageServer->ip_addr, \
+				pStorageServer->port, \
+				errno, strerror(errno));
+			result = errno != 0 ? errno : EPIPE;
+			break;
+		}
 	}
 
 	pInBuff = in_buff;
@@ -475,25 +487,26 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 			char *remote_filename)
 
 {
-	char *file_buff;
-	int file_size;
-	int result;
+	struct stat stat_buf;
 
-	if ((result=getFileContent(local_filename, \
-			&file_buff, &file_size)) != 0)
+	if (stat(local_filename, &stat_buf) != 0)
 	{
 		group_name[0] = '\0';
 		remote_filename[0] = '\0';
-		return result;
+		return errno;
 	}
 
-	result = storage_upload_by_filebuff(pTrackerServer, \
-			pStorageServer, file_buff, file_size, \
+	if (!S_ISREG(stat_buf.st_mode))
+	{
+		group_name[0] = '\0';
+		remote_filename[0] = '\0';
+		return EINVAL;
+	}
+
+	return storage_do_upload_file(pTrackerServer, \
+			pStorageServer, true, local_filename, stat_buf.st_size, \
 			meta_list, meta_count, \
 			group_name, remote_filename);
-	free(file_buff);
-
-	return result;
 }
 
 /**
