@@ -534,6 +534,8 @@ int tcpsendfile(int sock, const char *filename, const int file_bytes)
 		return errno != 0 ? errno : EACCES;
 	}
 
+	//printf("file_bytes=%d\n", file_bytes);
+
 	remain_bytes = file_bytes;
 	while (remain_bytes > 0)
 	{
@@ -553,6 +555,8 @@ int tcpsendfile(int sock, const char *filename, const int file_bytes)
 			return result != 0 ? result : EIO;
 		}
 
+		//printf("send bytes=%d, total send1: %d, remain_bytes1=%d\n", send_bytes, file_bytes - remain_bytes, remain_bytes);
+
 		if (tcpsenddata(sock, buff, send_bytes, g_network_timeout) != 1)
 		{
 			result = errno;
@@ -561,6 +565,7 @@ int tcpsendfile(int sock, const char *filename, const int file_bytes)
 		}
 
 		remain_bytes -= send_bytes;
+		//printf("total send2: %d, remain_bytes2=%d\n\n", file_bytes - remain_bytes, remain_bytes);
 	}
 
 	close(fd);

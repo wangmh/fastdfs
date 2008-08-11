@@ -10,7 +10,7 @@ Chinese language: http://www.csource.org/
 #step 1. download FastDFS source package and unpack it
 tar xzf FastDFS_v1.x.tar.gz
 #for example:
-tar xzf FastDFS_v1.1.tar.gz
+tar xzf FastDFS_v1.4.tar.gz
 
 #step 2. enter the FastDFS dir
 cd FastDFS
