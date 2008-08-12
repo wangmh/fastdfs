@@ -196,7 +196,6 @@ body format:
       @ TRACKER_PROTO_PKG_LEN_SIZE bytes: file size
       @ meta data bytes: each meta data seperated by \x01,
                          name and value seperated by \x02
-      @ 1 bytes: pad byte, should be \0
       @ file size bytes: file content
   # response body:
      @ FDFS_GROUP_NAME_MAX_LEN bytes: group name
