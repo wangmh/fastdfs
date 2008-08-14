@@ -177,15 +177,21 @@ int main(int argc, char *argv[])
 
 		if (strcmp(operation, "download") == 0)
 		{
-			if ((result=storage_download_file(pTrackerServer, \
-				&storageServer, group_name, remote_filename, \
-				&file_buff, &file_size)) == 0)
+			if (argc >= 6)
 			{
-				if (argc >= 6)
-				{
-					local_filename = argv[5];
-				}
-				else
+				local_filename = argv[5];
+				result = storage_download_file_to_file( \
+					pTrackerServer, &storageServer, \
+					group_name, remote_filename, \
+					local_filename, &file_size);
+			}
+			else
+			{
+				file_buff = NULL;
+				if ((result=storage_download_file_to_buff( \
+					pTrackerServer, &storageServer, \
+					group_name, remote_filename, \
+					&file_buff, &file_size)) == 0)
 				{
 					local_filename = strrchr( \
 							remote_filename, '/');
@@ -197,17 +203,19 @@ int main(int argc, char *argv[])
 					{
 						local_filename=remote_filename;
 					}
-				}
 
-				if (writeToFile(local_filename, file_buff, \
-						file_size) == 0)
-				{
-					printf("download file success, " \
-						"file size=%d, " \
-						"file save to %s\n", \
-						 file_size, local_filename);
+					result = writeToFile(local_filename, file_buff, \
+							file_size);
+
+					free(file_buff);
 				}
-				free(file_buff);
+			}
+
+			if (result == 0)
+			{
+				printf("download file success, " \
+					"file size=%d, file save to %s\n", \
+					 file_size, local_filename);
 			}
 			else
 			{

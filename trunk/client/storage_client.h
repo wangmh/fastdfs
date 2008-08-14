@@ -104,15 +104,42 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
 *	group_name: the group name of storage server
-*	filename: filename on storage server
+*	remote_filename: filename on storage server
 *       file_buff: return file content/buff, must be freed
 *       file_size: return file size (bytes)
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_download_file(TrackerServerInfo *pTrackerServer, \
+#define storage_download_file(pTrackerServer, pStorageServer, group_name, \
+			remote_filename, file_buff, file_size)  \
+	storage_do_download_file(pTrackerServer, pStorageServer, false, \
+			group_name, remote_filename, file_buff, file_size)
+
+#define storage_download_file_to_buff(pTrackerServer, pStorageServer, group_name, \
+			remote_filename, file_buff, file_size)  \
+	storage_do_download_file(pTrackerServer, pStorageServer, false, \
+			group_name, remote_filename, file_buff, file_size)
+
+int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
-			const char *group_name, const char *filename, \
+			const bool bFilename, \
+			const char *group_name, const char *remote_filename, \
 			char **file_buff, int *file_size);
+
+/**
+* download file from storage server
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*	group_name: the group name of storage server
+*	remote_filename: filename on storage server
+*	local_filename: local filename to write
+*       file_size: return file size (bytes)
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer, \
+			const char *group_name, const char *remote_filename, \
+			const char *local_filename, int *file_size);
 
 /**
 * get all metadata items from storage server
