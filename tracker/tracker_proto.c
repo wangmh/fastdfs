@@ -23,12 +23,9 @@
 #include "tracker_types.h"
 #include "tracker_proto.h"
 
-int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
-		char **buff, const int buff_size, \
-		int *in_bytes)
+int tracker_recv_header(TrackerServerInfo *pTrackerServer, int *in_bytes)
 {
 	TrackerHeader resp;
-	bool bMalloced;
 
 	if (tcprecvdata(pTrackerServer->sock, &resp, \
 		sizeof(resp), g_network_timeout) != 1)
@@ -59,11 +56,28 @@ int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, *in_bytes);
 		*in_bytes = 0;
-		return errno != 0 ? errno : EINVAL;
+		return EINVAL;
 	}
+
+	return resp.status;
+}
+
+int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
+		char **buff, const int buff_size, \
+		int *in_bytes)
+{
+	int result;
+	bool bMalloced;
+
+	result = tracker_recv_header(pTrackerServer, in_bytes);
+	if (result != 0)
+	{
+		return result;
+	}
+
 	if (*in_bytes == 0)
 	{
-		return resp.status;
+		return 0;
 	}
 
 	if (*buff == NULL)
@@ -87,7 +101,7 @@ int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
 				__LINE__, pTrackerServer->ip_addr, \
 				pTrackerServer->port, *in_bytes, buff_size);
 			*in_bytes = 0;
-			return errno != 0 ? errno : EINVAL;
+			return ENOSPC;
 		}
 
 		bMalloced = false;
@@ -111,7 +125,7 @@ int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
 		return errno != 0 ? errno : EPIPE;
 	}
 
-	return resp.status;
+	return 0;
 }
 
 int tracker_quit(TrackerServerInfo *pTrackerServer)

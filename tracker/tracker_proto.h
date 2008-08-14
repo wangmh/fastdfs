@@ -105,6 +105,8 @@ int metadata_cmp_by_name(const void *p1, const void *p2);
 
 const char *get_storage_status_caption(const int status);
 
+int tracker_recv_header(TrackerServerInfo *pTrackerServer, int *in_bytes);
+
 int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
 		char **buff, const int buff_size, \
 		int *in_bytes);

@@ -216,10 +216,10 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_download_file(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
-			const char *group_name, const char *filename, \
-			char **file_buff, int *file_size)
+int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const bool bFilename, \
+		const char *group_name, const char *remote_filename, \
+		char **file_buff, int *file_size)
 {
 	TrackerHeader header;
 	int result;
@@ -228,12 +228,11 @@ int storage_download_file(TrackerServerInfo *pTrackerServer, \
 	int in_bytes;
 	int filename_len;
 
-	*file_buff = NULL;
 	*file_size = 0;
 	if (pStorageServer == NULL)
 	{
 		if ((result=tracker_query_storage_fetch(pTrackerServer, \
-		                &storageServer, group_name, filename)) != 0)
+		                &storageServer, group_name, remote_filename)) != 0)
 			
 		{
 			return result;
@@ -261,7 +260,7 @@ int storage_download_file(TrackerServerInfo *pTrackerServer, \
 	filename_len = snprintf(out_buff + sizeof(TrackerHeader) + \
 			FDFS_GROUP_NAME_MAX_LEN, \
 			sizeof(out_buff) - sizeof(TrackerHeader) - \
-			FDFS_GROUP_NAME_MAX_LEN,  "%s", filename);
+			FDFS_GROUP_NAME_MAX_LEN,  "%s", remote_filename);
 
 	sprintf(header.pkg_len, "%x", FDFS_GROUP_NAME_MAX_LEN + \
 			filename_len);
@@ -282,10 +281,28 @@ int storage_download_file(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	if ((result=tracker_recv_response(pStorageServer, \
-		file_buff, 0, &in_bytes)) != 0)
+	if (bFilename)
 	{
-		break;
+		if ((result=tracker_recv_header(pStorageServer, \
+			&in_bytes)) != 0)
+		{
+			break;
+		}
+
+		if ((result=tcprecvfile(pStorageServer->sock, \
+				*file_buff, in_bytes)) != 0)
+		{
+			break;
+		}
+	}
+	else
+	{
+		*file_buff = NULL;
+		if ((result=tracker_recv_response(pStorageServer, \
+			file_buff, 0, &in_bytes)) != 0)
+		{
+			break;
+		}
 	}
 
 	*file_size = in_bytes;
@@ -299,6 +316,18 @@ int storage_download_file(TrackerServerInfo *pTrackerServer, \
 	}
 
 	return result;
+}
+
+int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer, \
+			const char *group_name, const char *remote_filename, \
+			const char *local_filename, int *file_size)
+{
+	char *pLocalFilename;
+	pLocalFilename = (char *)local_filename;
+	return storage_do_download_file(pTrackerServer, pStorageServer, \
+			true, group_name, remote_filename, \
+			&pLocalFilename, file_size);
 }
 
 /**
