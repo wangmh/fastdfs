@@ -68,8 +68,8 @@ int _hash_alloc_buckets(HashArray *pHash)
 
 int hash_init(HashArray *pHash, HashFunc hash_func, const unsigned int capacity, const double load_factor)
 {
-	int *pprime;
-	int *prime_end;
+	unsigned int *pprime;
+	unsigned int *prime_end;
 
 	if (pHash == NULL || hash_func == NULL)
 	{
@@ -213,7 +213,8 @@ void hash_stat_print(HashArray *pHash)
                max_length, (double)bucket_used * 100.00 / (double)*pHash->capacity);
 }
 
-int _rehash1(HashArray *pHash, const int old_capacity, int *new_capacity)
+static int _rehash1(HashArray *pHash, const int old_capacity, \
+		unsigned int *new_capacity)
 {
 	ChainList *old_items;
 	ChainList *plist;
@@ -254,16 +255,16 @@ int _rehash1(HashArray *pHash, const int old_capacity, int *new_capacity)
 	return 0;
 }
 
-int _rehash(HashArray *pHash)
+static int _rehash(HashArray *pHash)
 {
 	int result;
-	int *pOldCapacity;
+	unsigned int *pOldCapacity;
 
 	pOldCapacity = pHash->capacity;
 	if (pHash->is_malloc_capacity)
 	{
-		int *pprime;
-		int *prime_end;
+		unsigned int *pprime;
+		unsigned int *prime_end;
 
 		pHash->capacity = NULL;
 

@@ -44,7 +44,7 @@ void printBuffHex(const char *s, const int len);
 char int2base62(const int i);
 
 void int2buff(const int n, char *buff);
-int buff2int(const unsigned char *buff);
+int buff2int(const char *buff);
 
 char *trim_left(char *pStr);
 char *trim_right(char *pStr);

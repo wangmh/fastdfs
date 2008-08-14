@@ -261,10 +261,11 @@ int connectserverbyip(int sock, char* ip, short port)
 	return(1);
 }
 
-in_addr_t getIpaddr(getnamefunc getname, int sock, char *buff, const int bufferSize)
+in_addr_t getIpaddr(getnamefunc getname, int sock, \
+		char *buff, const int bufferSize)
 {
 	struct sockaddr_in addr;
-	int addrlen;
+	socklen_t addrlen;
 
 	memset(&addr, 0, sizeof(addr));
 	addrlen = sizeof(addr);
