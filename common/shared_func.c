@@ -832,10 +832,12 @@ void int2buff(const int n, char *buff)
 	*p++ = n & 0xFF;
 }
 
-int buff2int(const unsigned char *buff)
+int buff2int(const char *buff)
 {
-	return  ((*buff) << 24) | (*(buff+1) << 16) |  \
-		(*(buff+2) << 8) | *(buff+3);
+	return  (((unsigned char)(*buff)) << 24) | \
+		(((unsigned char)(*(buff+1))) << 16) |  \
+		(((unsigned char)(*(buff+2))) << 8) | \
+		((unsigned char)(*(buff+3)));
 }
 
 int fd_gets(int fd, char *buff, const int size, int once_bytes)

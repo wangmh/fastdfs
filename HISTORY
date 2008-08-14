@@ -1,4 +1,7 @@
 
+Version 1.5  2008-08-14
+  * remove warning info compiled by gcc 4.2
+
 Version 1.4  2008-08-10
   * storage server recv file method change 
      old method: recv the whole file content/buff before write to file
