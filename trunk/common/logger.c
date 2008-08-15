@@ -65,12 +65,14 @@ static void doLog(const char* prefix, const char* text)
 		umask(0);
 		if ((fp = fopen(logfile, "a")) == NULL)
 		{
-			fp = stderr;
+			fprintf(stderr, "%s %s\n", dateBuffer, text);
+			return;
 		}
 	}
 	else
 	{
-		fp = stderr;
+		fprintf(stderr, "%s %s\n", dateBuffer, text);
+		return;
 	}
 	
 	fd = fileno(fp);
@@ -78,7 +80,7 @@ static void doLog(const char* prefix, const char* text)
 	lock.l_type = F_WRLCK;
 	lock.l_whence = SEEK_SET;
 	lock.l_start = 0;
-	lock.l_len = 10;
+	lock.l_len = 0;
 	if (fcntl(fd, F_SETLKW, &lock) == 0)
 	{
 		fprintf(fp, "%s %s\n", dateBuffer, text);
@@ -86,10 +88,7 @@ static void doLog(const char* prefix, const char* text)
 	
 	lock.l_type = F_UNLCK;
 	fcntl(fd, F_SETLKW, &lock);
-	if (fp != stderr)
-	{
-		fclose(fp);
-	}
+	fclose(fp);
 }
 
 void periodLog( const char* prefix, const char *date_format, \
@@ -120,7 +119,7 @@ void periodLog( const char* prefix, const char *date_format, \
 	lock.l_type = F_WRLCK;
 	lock.l_whence = SEEK_SET;
 	lock.l_start = 0;
-	lock.l_len = 10;
+	lock.l_len = 0;
 	if (fcntl(fd, F_SETLKW, &lock) == 0)
 	{
 		fprintf(fp, "%s %s\n", dateBuffer, text);

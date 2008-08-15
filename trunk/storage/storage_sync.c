@@ -539,7 +539,7 @@ int storage_binlog_write(const char op_type, const char *filename)
 	lock.l_type = F_WRLCK;
 	lock.l_whence = SEEK_SET;
 	lock.l_start = 0;
-	lock.l_len = 10;
+	lock.l_len = 0;
 	if (fcntl(fd, F_SETLKW, &lock) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
