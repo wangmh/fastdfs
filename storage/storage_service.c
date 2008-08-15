@@ -76,7 +76,7 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 
 	memcpy(filename, buff, len);
 	memcpy(filename+len, encoded, *filename_len+1);
-        *filename_len += len;
+	*filename_len += len;
 
 	return 0;
 }
