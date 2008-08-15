@@ -74,8 +74,7 @@ int main(int argc, char *argv[])
 		return result;
 	}
 	
-	sock = socketServer(bind_addr, g_server_port, \
-			TRACKER_ERROR_LOG_FILENAME);
+	sock = socketServer(bind_addr, g_server_port);
 	if (sock < 0)
 	{
 		return 5;

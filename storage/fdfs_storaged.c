@@ -73,8 +73,7 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	sock = socketServer(bind_addr, g_server_port, \
-			STORAGE_ERROR_LOG_FILENAME);
+	sock = socketServer(bind_addr, g_server_port);
 	if (sock < 0)
 	{
 		return EINVAL;

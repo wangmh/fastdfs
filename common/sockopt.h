@@ -27,8 +27,7 @@ int connectserverbyip(int sock, char* ip, short port);
 int nbaccept(int sock, int timeout, int *err_no);
 in_addr_t getIpaddr(getnamefunc getname, int sock, char *buff, const int bufferSize);
 in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize);
-int socketServer(const char *bind_ipaddr, const int port, \
-		const char *szLogFilePrefix);
+int socketServer(const char *bind_ipaddr, const int port);
 
 int tcpsendfile(int sock, const char *filename, const int file_bytes);
 int tcprecvfile(int sock, const char *filename, const int file_bytes);

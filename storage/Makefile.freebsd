@@ -1,6 +1,6 @@
 .SUFFIXES: .c .o
 
-COMPILE = $(CC) -Wall -O2 -DOS_FREEBSD
+COMPILE = $(CC) -Wall -O2 -DOS_FREEBSD -DUSE_SENDFILE
 #COMPILE = $(CC) -Wall -g -DOS_FREEBSD -D__DEBUG__
 INC_PATH = -I../common -I../tracker -I/usr/local/include
 LIB_PATH = -L/usr/local/lib -lc_r
