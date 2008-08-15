@@ -38,6 +38,12 @@
 #include "logger.h"
 #include "fdfs_global.h"
 
+#ifdef OS_LINUX
+#define FDFS_BUFF_SIZE  64 * 1024
+#else
+#define FDFS_BUFF_SIZE  32 * 1024
+#endif
+
 int tcpgets(int sock,char* s,int size,int timeout)
 {
 	int result;
@@ -456,7 +462,7 @@ int socketServer(const char *bind_ipaddr, const int port)
 int tcprecvfile(int sock, const char *filename, const int file_bytes)
 {
 	int fd;
-	char buff[128 * 1024];
+	char buff[FDFS_BUFF_SIZE];
 	int remain_bytes;
 	int recv_bytes;
 	int result;
@@ -504,7 +510,7 @@ int tcprecvfile(int sock, const char *filename, const int file_bytes)
 
 int tcpdiscard(int sock, const int bytes)
 {
-	char buff[128 * 1024];
+	char buff[FDFS_BUFF_SIZE];
 	int remain_bytes;
 	int recv_bytes;
 	int result;
@@ -536,7 +542,7 @@ int tcpdiscard(int sock, const int bytes)
 int tcpsendfile(int sock, const char *filename, const int file_bytes)
 {
 	int fd;
-	char buff[128 * 1024];
+	char buff[FDFS_BUFF_SIZE];
 	int remain_bytes;
 	int send_bytes;
 	int result;
