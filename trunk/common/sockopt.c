@@ -14,12 +14,26 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/types.h>
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <fcntl.h>
+
+#ifdef USE_SENDFILE
+
+#ifdef OS_LINUX
+#include <netinet/tcp.h>
+#include <sys/sendfile.h>
+#else
+#ifdef OS_FREEBSD
+#include <sys/uio.h>
+#endif
+#endif
+
+#endif
+
 #include "sockopt.h"
 #include "logger.h"
 #include "fdfs_global.h"
@@ -369,8 +383,7 @@ int nbaccept(int sock, int timeout, int *err_no)
 	return result;
 }
 
-int socketServer(const char *bind_ipaddr, const int port, \
-		const char *szLogFilePrefix)
+int socketServer(const char *bind_ipaddr, const int port)
 {
 	struct sockaddr_in bindaddr;
 	int sock;
@@ -379,16 +392,16 @@ int socketServer(const char *bind_ipaddr, const int port, \
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock < 0)
 	{
-		logErrorEx(szLogFilePrefix, "file: "__FILE__", line: %d, " \
+		logError("file: "__FILE__", line: %d, " \
 			"socket create failed, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		return -1;
 	}
-	
-	result = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &result, sizeof(int));
-	if(result<0)
+
+	result = 1;
+	if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &result, sizeof(int)) < 0)
 	{
-		logErrorEx(szLogFilePrefix, "file: "__FILE__", line: %d, " \
+		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		close(sock);
@@ -405,8 +418,7 @@ int socketServer(const char *bind_ipaddr, const int port, \
 	{
 		if (inet_aton(bind_ipaddr, &bindaddr.sin_addr) == 0)
 		{
-			logErrorEx(szLogFilePrefix, \
-				"file: "__FILE__", line: %d, " \
+			logError("file: "__FILE__", line: %d, " \
 				"invalid ip addr %s, " \
 				"errno: %d, error info: %s.", \
 				__LINE__, bind_ipaddr, \
@@ -419,7 +431,7 @@ int socketServer(const char *bind_ipaddr, const int port, \
 	result = bind(sock, (struct sockaddr*)&bindaddr, sizeof(bindaddr));
 	if(result<0)
 	{
-		logErrorEx(szLogFilePrefix, "file: "__FILE__", line: %d, " \
+		logError("file: "__FILE__", line: %d, " \
 			"bind port %d failed, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, port, errno, strerror(errno));
@@ -430,7 +442,7 @@ int socketServer(const char *bind_ipaddr, const int port, \
 	result = listen(sock, 5);
 	if(result < 0)
 	{
-		logErrorEx(szLogFilePrefix, "file: "__FILE__", line: %d, " \
+		logError("file: "__FILE__", line: %d, " \
 			"listen port %d failed, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, port, errno, strerror(errno));
@@ -528,6 +540,9 @@ int tcpsendfile(int sock, const char *filename, const int file_bytes)
 	int remain_bytes;
 	int send_bytes;
 	int result;
+#ifdef USE_SENDFILE
+	off_t offset;
+#endif
 
 	fd = open(filename, O_RDONLY);
 	if (fd < 0)
@@ -535,6 +550,49 @@ int tcpsendfile(int sock, const char *filename, const int file_bytes)
 		return errno != 0 ? errno : EACCES;
 	}
 
+#ifdef USE_SENDFILE
+
+#ifdef OS_LINUX
+	/*
+	result = 1;
+	if (setsockopt(sock, SOL_TCP, TCP_CORK, &result, sizeof(int)) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s.", \
+			__LINE__, errno, strerror(errno));
+		close(fd);
+		return errno != 0 ? errno : EIO;
+	}
+	*/
+
+	offset = 0;
+	send_bytes = sendfile(sock, fd, &offset, file_bytes);
+	close(fd);
+	if (send_bytes != file_bytes)
+	{
+		return errno != 0 ? errno : EIO;
+	}
+	else
+	{
+		return 0;
+	}
+#else
+#ifdef OS_FREEBSD
+	offset = 0;
+	result = sendfile(fd, sock, offset, file_bytes, NULL, NULL, 0);
+	close(fd);
+	if (result != 0)
+	{
+		return errno != 0 ? errno : EIO;
+	}
+	else
+	{
+		return 0;
+	}
+#endif
+#endif
+
+#endif
 	//printf("file_bytes=%d\n", file_bytes);
 
 	remain_bytes = file_bytes;
