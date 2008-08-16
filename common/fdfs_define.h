@@ -46,6 +46,8 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 #define PTHREAD_MUTEX_ERRORCHECK PTHREAD_MUTEX_ERRORCHECK_NP
 #endif
 
+//#define USE_SENDFILE
+
 #define MAX_PATH_SIZE				256
 
 #define FDFS_BASE_FILE_PATH			"/usr/local/FastDFS"

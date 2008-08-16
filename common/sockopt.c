@@ -538,8 +538,6 @@ int tcpdiscard(int sock, const int bytes)
 int tcpsendfile(int sock, const char *filename, const int file_bytes)
 {
 	int fd;
-	char buff[FDFS_BUFF_SIZE];
-	int remain_bytes;
 	int send_bytes;
 	int result;
 #ifdef USE_SENDFILE
@@ -595,8 +593,12 @@ int tcpsendfile(int sock, const char *filename, const int file_bytes)
 #endif
 
 #endif
+
 	//printf("file_bytes=%d\n", file_bytes);
 
+	{
+	char buff[FDFS_BUFF_SIZE];
+	int remain_bytes;
 	remain_bytes = file_bytes;
 	while (remain_bytes > 0)
 	{
@@ -627,6 +629,7 @@ int tcpsendfile(int sock, const char *filename, const int file_bytes)
 
 		remain_bytes -= send_bytes;
 		//printf("total send2: %d, remain_bytes2=%d\n\n", file_bytes - remain_bytes, remain_bytes);
+	}
 	}
 
 	close(fd);
