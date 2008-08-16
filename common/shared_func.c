@@ -703,38 +703,90 @@ void chopPath(char *filePath)
 int init_pthread_lock(pthread_mutex_t *pthread_lock)
 {
 	pthread_mutexattr_t mat;
+	int result;
 
-	if (pthread_mutexattr_init(&mat) != 0)
+	if ((result=pthread_mutexattr_init(&mat)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutexattr_init fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
 	}
-	if (pthread_mutexattr_settype(&mat, PTHREAD_MUTEX_ERRORCHECK) != 0)
+	if ((result=pthread_mutexattr_settype(&mat, \
+			PTHREAD_MUTEX_ERRORCHECK)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutexattr_settype fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
 	}
-	if (pthread_mutex_init(pthread_lock, &mat) != 0)
+	if ((result=pthread_mutex_init(pthread_lock, &mat)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_init fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
 	}
-	if (pthread_mutexattr_destroy(&mat) != 0)
+	if ((result=pthread_mutexattr_destroy(&mat)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call thread_mutexattr_destroy fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	return 0;
+}
+
+int init_pthread_attr(pthread_attr_t *pattr)
+{
+	int stack_size;
+	int result;
+
+	if ((result=pthread_attr_init(pattr)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_attr_init fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	if ((result=pthread_attr_getstacksize(pattr, &stack_size)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_attr_getstacksize fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	printf("get size=%d\n", stack_size);
+	if (stack_size < 1024 * 1024)
+	{
+		printf("set stack_size=%d\n", 1024 * 1024);
+		if ((result=pthread_attr_setstacksize(pattr, 1024 * 1024)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"call pthread_attr_setstacksize fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, strerror(result));
+			return result;
+		}
+	}
+
+	if ((result=pthread_attr_setdetachstate(pattr, \
+			PTHREAD_CREATE_DETACHED)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_attr_setdetachstate fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
 	}
 
 	return 0;

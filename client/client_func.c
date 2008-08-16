@@ -147,8 +147,7 @@ int fdfs_client_init(const char *filename)
 
 	if ((result=iniLoadItems(filename, &items, &nItemCount)) != 0)
 	{
-		logError( \
-			"load conf file \"%s\" fail, ret code: %d", \
+		logError("load conf file \"%s\" fail, ret code: %d", \
 			filename, result);
 		return result;
 	}
@@ -158,8 +157,7 @@ int fdfs_client_init(const char *filename)
 		pBasePath = iniGetStrValue("base_path", items, nItemCount);
 		if (pBasePath == NULL)
 		{
-			logError( \
-				"conf file \"%s\" must have item " \
+			logError("conf file \"%s\" must have item " \
 				"\"base_path\"!", filename);
 			result = ENOENT;
 			break;
@@ -169,16 +167,14 @@ int fdfs_client_init(const char *filename)
 		chopPath(g_base_path);
 		if (!fileExists(g_base_path))
 		{
-			logError( \
-				"\"%s\" can't be accessed, error info: %s", \
-				strerror(errno), g_base_path);
+			logError("\"%s\" can't be accessed, error info: %s", \
+				g_base_path, strerror(errno));
 			result = errno != 0 ? errno : ENOENT;
 			break;
 		}
 		if (!isDir(g_base_path))
 		{
-			logError( \
-				"\"%s\" is not a directory!", g_base_path);
+			logError("\"%s\" is not a directory!", g_base_path);
 			result = ENOTDIR;
 			break;
 		}
@@ -194,8 +190,7 @@ int fdfs_client_init(const char *filename)
 			items, nItemCount, ppTrackerServers, \
 			FDFS_MAX_TRACKERS)) <= 0)
 		{
-			logError( \
-				"conf file \"%s\", " \
+			logError("conf file \"%s\", " \
 				"get item \"tracker_server\" fail", \
 				filename);
 			result = ENOENT;
