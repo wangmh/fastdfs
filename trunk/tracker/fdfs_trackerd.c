@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 {
 	char *conf_filename;
 	char bind_addr[FDFS_IPADDR_SIZE];
-	pthread_attr_t pattr;
+	pthread_attr_t thread_attr;
 	int incomesock;
 	
 	int result;
@@ -90,8 +90,10 @@ int main(int argc, char *argv[])
 	}
 	
 	g_tracker_thread_count = 0;
-	pthread_attr_init(&pattr);
-	pthread_attr_setdetachstate(&pattr, PTHREAD_CREATE_DETACHED);
+	if ((result=init_pthread_attr(&thread_attr)) != 0)
+	{
+		return result;
+	}
 
 	signal(SIGHUP, sigHupHandler);
 	signal(SIGUSR1, sigUsrHandler);
@@ -156,7 +158,7 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			result = pthread_create(&tid, &pattr, \
+			result = pthread_create(&tid, &thread_attr, \
 				tracker_thread_entrance, (void*)incomesock);
 			if(result != 0)
 			{
@@ -188,7 +190,7 @@ int main(int argc, char *argv[])
 	//gc_destroy();
 	tracker_mem_destroy();
 
-	pthread_attr_destroy(&pattr);
+	pthread_attr_destroy(&thread_attr);
 	pthread_mutex_destroy(&g_tracker_thread_lock);
 	
 	logInfo(TRACKER_ERROR_LOG_FILENAME, "exit nomally.\n");

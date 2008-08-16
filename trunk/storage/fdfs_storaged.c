@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 {
 	char *conf_filename;
 	char bind_addr[FDFS_IPADDR_SIZE];
-	pthread_attr_t pattr;
+	pthread_attr_t thread_attr;
 	int incomesock;
 	
 	int result;
@@ -120,10 +120,14 @@ int main(int argc, char *argv[])
 	umask(0);
 	
 	g_storage_thread_count = 0;
-	pthread_attr_init(&pattr);
-	result = pthread_attr_setdetachstate(&pattr, PTHREAD_CREATE_DETACHED);
-
 	if ((result=tracker_report_thread_start()) != 0)
+	{
+		g_continue_flag = false;
+		storage_close_storage_stat();
+		return result;
+	}
+
+	if ((result=init_pthread_attr(&thread_attr)) != 0)
 	{
 		g_continue_flag = false;
 		storage_close_storage_stat();
@@ -195,7 +199,7 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			result = pthread_create(&tid, &pattr, \
+			result = pthread_create(&tid, &thread_attr, \
 				storage_thread_entrance, (void*)incomesock);
 			if(result != 0)
 			{
@@ -236,7 +240,7 @@ int main(int argc, char *argv[])
 		g_tracker_servers = NULL;
 	}
 
-	pthread_attr_destroy(&pattr);
+	pthread_attr_destroy(&thread_attr);
 	pthread_mutex_destroy(&g_storage_thread_lock);
 	
 	storage_sync_destroy();
