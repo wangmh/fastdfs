@@ -1,7 +1,6 @@
 .SUFFIXES: .c .o
 
 COMPILE = $(CC) -Wall -O2 -DOS_LINUX
-#COMPILE = $(CC) -Wall -O2 -DOS_LINUX -DUSE_SENDFILE
 #COMPILE = $(CC) -Wall -g -DOS_LINUX -D__DEBUG__
 INC_PATH = -I../common -I/usr/local/include
 LIB_PATH = -L/usr/local/lib -lpthread
