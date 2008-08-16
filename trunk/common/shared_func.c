@@ -765,10 +765,8 @@ int init_pthread_attr(pthread_attr_t *pattr)
 		return result;
 	}
 
-	printf("get size=%d\n", stack_size);
 	if (stack_size < 1024 * 1024)
 	{
-		printf("set stack_size=%d\n", 1024 * 1024);
 		if ((result=pthread_attr_setstacksize(pattr, 1024 * 1024)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \

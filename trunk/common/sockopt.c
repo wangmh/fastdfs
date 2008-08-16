@@ -38,11 +38,7 @@
 #include "logger.h"
 #include "fdfs_global.h"
 
-#ifdef OS_LINUX
-#define FDFS_BUFF_SIZE  64 * 1024
-#else
-#define FDFS_BUFF_SIZE  32 * 1024
-#endif
+#define FDFS_BUFF_SIZE  128 * 1024
 
 int tcpgets(int sock,char* s,int size,int timeout)
 {
@@ -467,7 +463,7 @@ int tcprecvfile(int sock, const char *filename, const int file_bytes)
 	int recv_bytes;
 	int result;
 
-	fd = open(filename, O_WRONLY | O_CREAT, 0644);
+	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (fd < 0)
 	{
 		return errno != 0 ? errno : EACCES;
