@@ -744,7 +744,7 @@ int init_pthread_lock(pthread_mutex_t *pthread_lock)
 
 int init_pthread_attr(pthread_attr_t *pattr)
 {
-	int stack_size;
+	size_t stack_size;
 	int result;
 
 	if ((result=pthread_attr_init(pattr)) != 0)
