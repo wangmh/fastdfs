@@ -29,8 +29,8 @@ fi
 
 program=`/bin/echo $1 | $AWK -F '/' '{print $NF;}'`
 count=`/bin/ps auxww | $GREP -w $program | $GREP -v grep | /usr/bin/wc -l`
-i=0
 if [ $count -gt 0 ]; then
+  i=0
   /bin/echo "stopping $program ..."
   while [ 1 -eq 1 ]; do
     if [ $i -eq 0 ]; then
