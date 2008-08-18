@@ -7,6 +7,7 @@
 **/
 
 //socketopt.c
+#include "fdfs_define.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -441,7 +442,7 @@ int socketServer(const char *bind_ipaddr, const int port)
 		return -4;
 	}
 	
-	result = listen(sock, 5);
+	result = listen(sock, 128);
 	if(result < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -552,6 +553,7 @@ int tcpsendfile(int sock, const char *filename, const int file_bytes)
 
 #ifdef USE_SENDFILE
 
+	//printf("sendfile.............., file_bytes=%d\n", file_bytes);
 #ifdef OS_LINUX
 	/*
 	result = 1;
