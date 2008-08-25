@@ -1,4 +1,8 @@
 
+Version 1.6  2008-08-24
+  * add restart daemon shell script: restart.sh
+  * use setrlimit to increase max open files when necessary
+
 Version 1.5  2008-08-17
   * add client function storage_download_file_to_file
   * use pthread_attr_setstacksize to increase thread stack size to 1 MB

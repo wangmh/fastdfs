@@ -952,3 +952,34 @@ int fd_gets(int fd, char *buff, const int size, int once_bytes)
 	return pDest - buff;
 }
 
+int set_rlimit(int resource, const rlim_t value)
+{
+	struct rlimit limit;
+
+	if (getrlimit(resource, &limit) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call getrlimit fail, resource=%d, " \
+			"errno: %d, error info: %s", \
+			__LINE__, resource, errno, strerror(errno));
+		return errno != 0 ? errno : EPERM;
+	}
+
+	if (limit.rlim_cur == RLIM_INFINITY || limit.rlim_cur >= value)
+	{
+		return 0;
+	}
+
+	limit.rlim_cur = value;
+	if (setrlimit(resource, &limit) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call setrlimit fail, resource=%d, " \
+			"errno: %d, error info: %s", \
+			__LINE__, resource, errno, strerror(errno));
+		return errno != 0 ? errno : EPERM;
+	}
+
+	return 0;
+}
+
