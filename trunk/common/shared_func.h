@@ -66,6 +66,9 @@ FILE *openConfFile(const char *szFilename);
 bool fileExists(const char *filename);
 bool isDir(const char *filename);
 bool isFile(const char *filename);
+bool is_filename_secure(const char *filename, const int len);
+int fdfs_check_data_filename(const char *filename, const int len);
+
 void chopPath(char *filePath);
 int getFileContent(const char *filename, char **buff, int *file_size);
 int writeToFile(const char *filename, const char *buff, const int file_size);

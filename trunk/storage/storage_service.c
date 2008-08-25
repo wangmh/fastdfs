@@ -477,6 +477,11 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 		memcpy(filename, in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE + 1 + \
 			FDFS_GROUP_NAME_MAX_LEN, filename_len);
 		*(filename + filename_len) = '\0';
+		if ((resp.status=fdfs_check_data_filename(filename, \
+			filename_len)) != 0)
+		{
+			break;
+		}
 
 		meta_buff = in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE + 1 + \
 				FDFS_GROUP_NAME_MAX_LEN + filename_len;
@@ -822,7 +827,13 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			resp.status = errno != 0 ? errno : EPIPE;
 			break;
 		}
-		filename[filename_len] = '\0';
+		*(filename + filename_len) = '\0';
+		if ((resp.status=fdfs_check_data_filename(filename, \
+			filename_len)) != 0)
+		{
+			break;
+		}
+
 		snprintf(full_filename, sizeof(full_filename), \
 				"%s/data/%s", g_base_path, filename);
 
@@ -918,6 +929,7 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)+32];
 	char *file_buff;
+	char *filename;
 	int file_bytes;
 
 	memset(&resp, 0, sizeof(resp));
@@ -979,8 +991,14 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 		}
 
 		*(in_buff + nInPackLen) = '\0';
-		sprintf(full_filename, "%s/data/%s", \
-				g_base_path, in_buff+FDFS_GROUP_NAME_MAX_LEN);
+		filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
+		if ((resp.status=fdfs_check_data_filename(filename, \
+			nInPackLen - FDFS_GROUP_NAME_MAX_LEN)) != 0)
+		{
+			break;
+		}
+
+		sprintf(full_filename, "%s/data/%s", g_base_path, filename);
 		if (!fileExists(full_filename))
 		{
 			resp.status = ENOENT;
@@ -1061,6 +1079,7 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 32];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)+16];
+	char *filename;
 	int file_bytes;
 	struct stat stat_buf;
 
@@ -1099,12 +1118,12 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 		if (tcprecvdata(pClientInfo->sock, in_buff, \
 				nInPackLen, g_network_timeout) != 1)
 		{
+			resp.status = errno != 0 ? errno : EPIPE;
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
 				"errno: %d, error info: %s.", \
 				__LINE__, pClientInfo->ip_addr, \
 				errno, strerror(errno));
-			resp.status = errno != 0 ? errno : EPIPE;
 			break;
 		}
 
@@ -1122,20 +1141,39 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 		}
 
 		*(in_buff + nInPackLen) = '\0';
-		sprintf(full_filename, "%s/data/%s", g_base_path, \
-				in_buff+FDFS_GROUP_NAME_MAX_LEN);
-		if ((resp.status=stat(full_filename, &stat_buf)) == 0)
+		filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
+		if ((resp.status=fdfs_check_data_filename(filename, \
+			nInPackLen - FDFS_GROUP_NAME_MAX_LEN)) != 0)
 		{
+			break;
+		}
+
+		sprintf(full_filename, "%s/data/%s", g_base_path, filename);
+		if (stat(full_filename, &stat_buf) == 0)
+		{
+			if (!S_ISREG(stat_buf.st_mode))
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"%s is not a regular file", \
+					__LINE__, full_filename);
+				resp.status = EISDIR;
+				break;
+			}
+
+			resp.status = 0;
 			file_bytes = stat_buf.st_size;
 		}
 		else
 		{
+			resp.status = errno != 0 ? errno : ENOENT;
+
 			logError("file: "__FILE__", line: %d, " \
 				"call stat fail, file: %s, "\
 				"error no: %d, error info: %s", \
 				__LINE__, full_filename, \
 				errno, strerror(errno));
 		}
+
 		break;
 	}
 
@@ -1247,6 +1285,12 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 
 		*(in_buff + nInPackLen) = '\0';
 		filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
+		if ((resp.status=fdfs_check_data_filename(filename, \
+			nInPackLen - FDFS_GROUP_NAME_MAX_LEN)) != 0)
+		{
+			break;
+		}
+
 		sprintf(full_filename, "%s/data/%s", \
 			g_base_path, filename);
 		if (unlink(full_filename) != 0)
@@ -1370,6 +1414,12 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 
 		*(in_buff + nInPackLen) = '\0';
 		filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
+		if ((resp.status=fdfs_check_data_filename(filename, \
+			nInPackLen - FDFS_GROUP_NAME_MAX_LEN)) != 0)
+		{
+			break;
+		}
+
 		sprintf(full_filename, "%s/data/%s", \
 			g_base_path, filename);
 		if (unlink(full_filename) != 0)
