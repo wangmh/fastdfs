@@ -2,6 +2,10 @@
 Version 1.6  2008-08-24
   * add restart daemon shell script: restart.sh
   * use setrlimit to increase max open files when necessary
+  * security enhancement: the format of data filename must be: HH/HH/filename,
+    eg. B9/F4/SLI2NAAMRPR9r8.d
+  * fix bug: errno is not correct where the downloaded file does not exist,
+             communication is broken when the download file is a directory
 
 Version 1.5  2008-08-17
   * add client function storage_download_file_to_file

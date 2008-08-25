@@ -80,6 +80,8 @@ typedef char  bool;
 #define ubyte unsigned char
 #endif
 
+#define IS_UPPER_HEX(ch) ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F'))
+
 typedef struct tagIdName
 {
 	int id;
