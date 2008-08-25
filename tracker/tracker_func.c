@@ -226,7 +226,12 @@ int tracker_load_from_conf_file(const char *filename, \
 		{
 			g_max_connections = FDFS_DEF_MAX_CONNECTONS;
 		}
-		
+	
+		if ((result=set_rlimit(RLIMIT_NOFILE, g_max_connections)) != 0)
+		{
+			break;
+		}
+	
 		logInfo(TRACKER_ERROR_LOG_FILENAME, \
 			"FastDFS v%d.%d, base_path=%s, " \
 			"network_timeout=%d, "    \

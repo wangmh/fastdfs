@@ -12,6 +12,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include "fdfs_define.h"
 
 #ifdef __cplusplus
@@ -70,6 +73,8 @@ int fd_gets(int fd, char *buff, const int size, int once_bytes);
 
 int init_pthread_lock(pthread_mutex_t *pthread_lock);
 int init_pthread_attr(pthread_attr_t *pattr);
+
+int set_rlimit(int resource, const rlim_t value);
 
 #ifdef __cplusplus
 }
