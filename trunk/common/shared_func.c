@@ -792,83 +792,80 @@ int init_pthread_attr(pthread_attr_t *pattr)
 
 int getFileContent(const char *filename, char **buff, int *file_size)
 {
-	FILE *fp;
+	int fd;
 	
-	fp = fopen(filename, "rb");
-	if (fp == NULL)
+	fd = open(filename, O_RDONLY);
+	if (fd < 0)
 	{
 		*buff = NULL;
 		*file_size = 0;
 		return errno != 0 ? errno : ENOENT;
 	}
 
-	if (fseek(fp, 0, SEEK_END) != 0)
+	if ((*file_size=lseek(fd, 0, SEEK_END)) < 0)
 	{
 		*buff = NULL;
 		*file_size = 0;
-		fclose(fp);
-		return errno != 0 ? errno : ENOENT;
-	}
-
-	*file_size = ftell(fp);
-	if (*file_size < 0)
-	{
-		*buff = NULL;
-		*file_size = 0;
-		fclose(fp);
-		return errno != 0 ? errno : ENOENT;
+		close(fd);
+		return errno != 0 ? errno : EIO;
 	}
 
 	*buff = (char *)malloc(*file_size + 1);
 	if (*buff == NULL)
 	{
 		*file_size = 0;
-		fclose(fp);
+		close(fd);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
-	rewind(fp);
-	if (fread(*buff, 1, *file_size, fp) != *file_size)
+	if (lseek(fd, 0, SEEK_SET) < 0)
+	{
+		*buff = NULL;
+		*file_size = 0;
+		close(fd);
+		return errno != 0 ? errno : EIO;
+	}
+	if (read(fd, *buff, *file_size) != *file_size)
 	{
 		free(*buff);
 		*buff = NULL;
 		*file_size = 0;
-		fclose(fp);
-		return errno != 0 ? errno : ENOENT;
+		close(fd);
+		return errno != 0 ? errno : EIO;
 	}
 
 	(*buff)[*file_size] = '\0';
-	fclose(fp);
+	close(fd);
 
 	return 0;
 }
 
 int writeToFile(const char *filename, const char *buff, const int file_size)
 {
-	FILE *fp;
-	fp = fopen(filename, "wb");
-	if (fp == NULL)
+	int fd;
+	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (fd < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"open file %s fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, filename, \
 			errno, strerror(errno));
-		return errno != 0 ? errno : ENOENT;
+		return errno != 0 ? errno : EACCES;
 	}
 
-	if (fwrite(buff, 1, file_size, fp) != file_size)
+	if (write(fd, buff, file_size) != file_size)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"write file %s fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, filename, \
 			errno, strerror(errno));
-		fclose(fp);
-		return errno != 0 ? errno : ENOENT;
+		close(fd);
+		return errno != 0 ? errno : EIO;
 	}
 
-	fclose(fp);
+	close(fd);
 	return 0;
 }
 

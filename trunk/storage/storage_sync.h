@@ -45,7 +45,7 @@ typedef struct
 	int filename_len;
 } BinLogRecord;
 
-extern FILE *g_fp_binlog;
+extern int g_binlog_fd;
 extern int g_binlog_index;
 
 extern int g_storage_sync_thread_count;

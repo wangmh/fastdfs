@@ -16,6 +16,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include "fdfs_define.h"
 #include "logger.h"
@@ -362,13 +363,16 @@ static int tracker_load_data()
 static int tracker_save_groups()
 {
 	char filname[MAX_PATH_SIZE];
-	FILE *fp;
+	char buff[FDFS_GROUP_NAME_MAX_LEN + 16];
+	int fd;
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppEnd;
+	int result;
+	int len;
 
 	snprintf(filname, sizeof(filname), "%s/data/%s", \
 		g_base_path, STORAGE_GROUPS_LIST_FILENAME);
-	if ((fp=fopen(filname, "w")) == NULL)
+	if ((fd=open(filname, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
@@ -377,29 +381,34 @@ static int tracker_save_groups()
 		return errno != 0 ? errno : ENOENT;
 	}
 
+	result = 0;
 	ppEnd = g_groups.sorted_groups + g_groups.count;
 	for (ppGroup=g_groups.sorted_groups; ppGroup<ppEnd; ppGroup++)
 	{
-		if (fprintf(fp, "%s%c%d\n", (*ppGroup)->group_name, \
+		len = sprintf(buff, "%s%c%d\n", (*ppGroup)->group_name, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppGroup)->storage_port) <= 0)
+				(*ppGroup)->storage_port);
+		if (write(fd, buff, len) != len)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"write to file \"%s\" fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, filname, errno, strerror(errno));
-			return errno != 0 ? errno : ENOENT;
+			result = errno != 0 ? errno : EIO;
+			break;
 		}
 	}
 
-	fclose(fp);
-	return 0;
+	close(fd);
+	return result;
 }
 
 int tracker_save_storages()
 {
 	char filname[MAX_PATH_SIZE];
-	FILE *fp;
+	char buff[256];
+	int fd;
+	int len;
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppGroupEnd;
 	FDFSStorageDetail **ppStorage;
@@ -408,7 +417,7 @@ int tracker_save_storages()
 
 	snprintf(filname, sizeof(filname), "%s/data/%s", \
 		g_base_path, STORAGE_SERVERS_LIST_FILENAME);
-	if ((fp=fopen(filname, "w")) == NULL)
+	if ((fd=open(filname, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
@@ -426,7 +435,7 @@ int tracker_save_storages()
 		for (ppStorage=(*ppGroup)->sorted_servers; \
 			ppStorage<ppStorageEnd; ppStorage++)
 		{
-			if (fprintf(fp, \
+			len = sprintf(buff, \
 				"%s%c" \
 				"%s%c" \
 				"%d%c" \
@@ -477,21 +486,23 @@ int tracker_save_storages()
 				STORAGE_DATA_FIELD_SEPERATOR, \
 				(int)((*ppStorage)->stat.last_source_update), \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(int)((*ppStorage)->stat.last_sync_update)
-			    ) <= 0)
+				(int)((*ppStorage)->stat.last_sync_update) \
+	 		    );
+
+			if (write(fd, buff, len) != len)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"write to file \"%s\" fail, " \
 					"errno: %d, error info: %s", \
 					__LINE__, filname, \
 					errno, strerror(errno));
-				result = errno != 0 ? errno : ENOENT;
+				result = errno != 0 ? errno : EIO;
 				break;
 			}
 		}
 	}
 
-	fclose(fp);
+	close(fd);
 	return result;
 }
 

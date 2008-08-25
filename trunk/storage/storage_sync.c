@@ -48,7 +48,7 @@
 #define MARK_ITEM_SCAN_ROW_COUNT	"scan_row_count"
 #define MARK_ITEM_SYNC_ROW_COUNT	"sync_row_count"
 
-FILE *g_fp_binlog = NULL;
+int g_binlog_fd = -1;
 int g_binlog_index = 0;
 static int binlog_file_size = 0;
 
@@ -312,12 +312,14 @@ static int storage_sync_data(BinLogReader *pReader, \
 static int write_to_binlog_index()
 {
 	char full_filename[MAX_PATH_SIZE];
-	FILE *fp;
+	char buff[16];
+	int fd;
+	int len;
 
 	snprintf(full_filename, sizeof(full_filename), \
 			"%s/data/"SYNC_DIR_NAME"/%s", g_base_path, \
 			SYNC_BINLOG_INDEX_FILENAME);
-	if ((fp=fopen(full_filename, "wb")) == NULL)
+	if ((fd=open(full_filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"open file \"%s\" fail, " \
@@ -327,18 +329,19 @@ static int write_to_binlog_index()
 		return errno != 0 ? errno : ENOENT;
 	}
 
-	if (fprintf(fp, "%d", g_binlog_index) <= 0)
+	len = sprintf(buff, "%d", g_binlog_index);
+	if (write(fd, buff, len) != len)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"write to file \"%s\" fail, " \
 			"errno: %d, error info: %s",  \
 			__LINE__, full_filename, \
 			errno, strerror(errno));
-		fclose(fp);
-		return errno != 0 ? errno : ENOENT;
+		close(fd);
+		return errno != 0 ? errno : EIO;
 	}
 
-	fclose(fp);
+	close(fd);
 	return 0;
 }
 
@@ -382,15 +385,15 @@ static int open_next_writable_binlog()
 			__LINE__, full_filename);
 	}
 
-	g_fp_binlog = fopen(full_filename, "a");
-	if (g_fp_binlog == NULL)
+	g_binlog_fd = open(full_filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (g_binlog_fd < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"open file \"%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, full_filename, \
 			errno, strerror(errno));
-		return errno != 0 ? errno : ENOENT;
+		return errno != 0 ? errno : EACCES;
 	}
 
 	return 0;
@@ -404,7 +407,7 @@ int storage_sync_init()
 	char file_buff[64];
 	int bytes;
 	int result;
-	FILE *fp;
+	int fd;
 
 	snprintf(data_path, sizeof(data_path), \
 			"%s/data", g_base_path);
@@ -438,19 +441,20 @@ int storage_sync_init()
 
 	snprintf(full_filename, sizeof(full_filename), \
 			"%s/%s", sync_path, SYNC_BINLOG_INDEX_FILENAME);
-	if ((fp=fopen(full_filename, "rb")) != NULL)
+	if ((fd=open(full_filename, O_RDONLY)) >= 0)
 	{
-		if ((bytes=fread(file_buff, 1, sizeof(file_buff)-1, fp)) <= 0)
+		bytes = read(fd, file_buff, sizeof(file_buff) - 1);
+		close(fd);
+		if (bytes <= 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"read file \"%s\" fail, bytes read: %d", \
 				__LINE__, full_filename, bytes);
-			return errno != 0 ? errno : ENOENT;
+			return errno != 0 ? errno : EIO;
 		}
 
 		file_buff[bytes] = '\0';
 		g_binlog_index = atoi(file_buff);
-		fclose(fp);
 		if (g_binlog_index < 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -469,18 +473,18 @@ int storage_sync_init()
 	}
 
 	get_writable_binlog_filename(full_filename);
-	g_fp_binlog = fopen(full_filename, "a");
-	if (g_fp_binlog == NULL)
+	g_binlog_fd = open(full_filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (g_binlog_fd < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"open file \"%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, full_filename, \
 			errno, strerror(errno));
-		return errno != 0 ? errno : ENOENT;
+		return errno != 0 ? errno : EACCES;
 	}
 
-	binlog_file_size = ftell(g_fp_binlog);
+	binlog_file_size = lseek(g_binlog_fd, 0, SEEK_END);
 	if (binlog_file_size < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -489,7 +493,7 @@ int storage_sync_init()
 			__LINE__, full_filename, \
 			errno, strerror(errno));
 		storage_sync_destroy();
-		return errno != 0 ? errno : ENOENT;
+		return errno != 0 ? errno : EIO;
 	}
 
 	/*
@@ -509,10 +513,10 @@ int storage_sync_init()
 
 int storage_sync_destroy()
 {
-	if (g_fp_binlog != NULL)
+	if (g_binlog_fd >= 0)
 	{
-		fclose(g_fp_binlog);
-		g_fp_binlog = NULL;
+		close(g_binlog_fd);
+		g_binlog_fd = -1;
 	}
 
 	if (pthread_mutex_destroy(&sync_thread_lock) != 0)
@@ -529,46 +533,44 @@ int storage_sync_destroy()
 
 int storage_binlog_write(const char op_type, const char *filename)
 {
-	int fd;
 	struct flock lock;
+	char buff[128];
 	int write_bytes;
 	int result;
 
-	fd = fileno(g_fp_binlog);
-	
 	lock.l_type = F_WRLCK;
 	lock.l_whence = SEEK_SET;
 	lock.l_start = 0;
 	lock.l_len = 0;
-	if (fcntl(fd, F_SETLKW, &lock) != 0)
+	if (fcntl(g_binlog_fd, F_SETLKW, &lock) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"lock binlog file \"%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, get_writable_binlog_filename(NULL), \
 			errno, strerror(errno));
-		return errno != 0 ? errno : ENOENT;
+		return errno != 0 ? errno : EACCES;
 	}
 	
-	write_bytes = fprintf(g_fp_binlog, "%d %c %s\n", \
+	write_bytes = snprintf(buff, sizeof(buff), "%d %c %s\n", \
 			(int)time(NULL), op_type, filename);
-	if (write_bytes <= 0)
+	if (write(g_binlog_fd, buff, write_bytes) != write_bytes)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"write to binlog file \"%s\" fail, " \
 			"errno: %d, error info: %s",  \
 			__LINE__, get_writable_binlog_filename(NULL), \
 			errno, strerror(errno));
-		result = errno != 0 ? errno : ENOENT;
+		result = errno != 0 ? errno : EIO;
 	}
-	else if (fflush(g_fp_binlog) != 0)
+	else if (fsync(g_binlog_fd) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"sync to binlog file \"%s\" fail, " \
 			"errno: %d, error info: %s",  \
 			__LINE__, get_writable_binlog_filename(NULL), \
 			errno, strerror(errno));
-		result = errno != 0 ? errno : ENOENT;
+		result = errno != 0 ? errno : EIO;
 	}
 	else
 	{
@@ -599,7 +601,7 @@ int storage_binlog_write(const char op_type, const char *filename)
 	}
 
 	lock.l_type = F_UNLCK;
-	if (fcntl(fd, F_SETLKW, &lock) != 0)
+	if (fcntl(g_binlog_fd, F_SETLKW, &lock) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"unlock binlog file \"%s\" fail, " \
@@ -949,7 +951,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 
 	pReader->last_write_row_count = pReader->scan_row_count;
 
-	pReader->mark_fd = open(full_filename, O_WRONLY | O_CREAT, 0644);
+	pReader->mark_fd = open(full_filename, O_WRONLY|O_CREAT|O_TRUNC, 0644);
 	if (pReader->mark_fd < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \

@@ -189,7 +189,7 @@ int storage_open_storage_stat()
 		memset(&g_storage_stat, 0, sizeof(g_storage_stat));
 	}
 
-	storage_stat_fd = open(full_filename, O_WRONLY | O_CREAT, 0644);
+	storage_stat_fd = open(full_filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (storage_stat_fd < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -253,8 +253,8 @@ int storage_write_to_stat_file()
 		STAT_ITEM_SUCCESS_DELETE, g_storage_stat.success_delete_count, \
 		STAT_ITEM_TOTAL_GET_META, g_storage_stat.total_get_meta_count, \
 		STAT_ITEM_SUCCESS_GET_META, \
-		g_storage_stat.success_get_meta_count
-		);
+		g_storage_stat.success_get_meta_count \
+	    );
 
 	return storage_write_to_fd(storage_stat_fd, \
 			get_storage_stat_filename, NULL, buff, len);
@@ -263,11 +263,13 @@ int storage_write_to_stat_file()
 int storage_write_to_sync_ini_file()
 {
 	char full_filename[MAX_PATH_SIZE];
-	FILE *fp;
+	char buff[256];
+	int fd;
+	int len;
 
 	snprintf(full_filename, sizeof(full_filename), \
 		"%s/data/%s", g_base_path, DATA_DIR_INITED_FILENAME);
-	if ((fp=fopen(full_filename, "w")) == NULL)
+	if ((fd=open(full_filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"open file \"%s\" fail, " \
@@ -277,7 +279,7 @@ int storage_write_to_sync_ini_file()
 		return errno != 0 ? errno : ENOENT;
 	}
 
-	if (fprintf(fp, "%s=%d\n" \
+	len = sprintf(buff, "%s=%d\n" \
 		"%s=%d\n"  \
 		"%s=%s\n"  \
 		"%s=%d\n", \
@@ -285,18 +287,19 @@ int storage_write_to_sync_ini_file()
 		INIT_ITEM_SYNC_OLD_DONE, g_sync_old_done, \
 		INIT_ITEM_SYNC_SRC_SERVER, g_sync_src_ip_addr, \
 		INIT_ITEM_SYNC_UNTIL_TIMESTAMP, g_sync_until_timestamp \
-		) <= 0)
+	    );
+	if (write(fd, buff, len) != len)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"write to file \"%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, full_filename, \
 			errno, strerror(errno));
-		fclose(fp);
-		return errno != 0 ? errno : ENOENT;
+		close(fd);
+		return errno != 0 ? errno : EIO;
 	}
 
-	fclose(fp);
+	close(fd);
 	return 0;
 }
 
