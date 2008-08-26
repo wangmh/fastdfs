@@ -66,13 +66,6 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	snprintf(g_error_file_prefix, sizeof(g_error_file_prefix), \
-			"%s", STORAGE_ERROR_LOG_FILENAME);
-	if ((result=check_and_mk_log_dir()) != 0)
-	{
-		return result;
-	}
-
 	sock = socketServer(bind_addr, g_server_port);
 	if (sock < 0)
 	{
@@ -246,7 +239,7 @@ int main(int argc, char *argv[])
 	storage_sync_destroy();
 	storage_close_storage_stat();
 
-	logInfo(STORAGE_ERROR_LOG_FILENAME, "exit nomally.\n");
+	logInfo("exit nomally.\n");
 	
 	return 0;
 }
@@ -264,7 +257,7 @@ void sigHupHandler(int sig)
 void sigUsrHandler(int sig)
 {
 	/*
-	logInfo(STORAGE_ERROR_LOG_FILENAME, "current thread count=%d, " \
+	logInfo("current thread count=%d, " \
 		"mo count=%d, success count=%d", g_storage_thread_count, \
 		nMoCount, nSuccMoCount);
 	*/

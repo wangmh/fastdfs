@@ -649,6 +649,12 @@ int storage_load_from_conf_file(const char *filename, \
 			break;
 		}
 
+		fdfs_load_log_level(items, nItemCount);
+		if ((result=log_init(STORAGE_ERROR_LOG_FILENAME)) != 0)
+		{
+			break;
+		}
+
 		g_network_timeout = iniGetIntValue("network_timeout", \
 				items, nItemCount, DEFAULT_NETWORK_TIMEOUT);
 		if (g_network_timeout <= 0)
@@ -767,8 +773,7 @@ int storage_load_from_conf_file(const char *filename, \
 			break;
 		}
 	
-		logInfo(STORAGE_ERROR_LOG_FILENAME, \
-			"FastDFS v%d.%d, base_path=%s, " \
+		logInfo("FastDFS v%d.%d, base_path=%s, " \
 			"group_name=%s, " \
 			"network_timeout=%d, "\
 			"port=%d, bind_addr=%s, " \

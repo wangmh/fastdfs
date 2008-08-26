@@ -10,18 +10,23 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+#include <syslog.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern char g_error_file_prefix[64];
+extern int g_log_level;
+extern int g_log_fd;
 
-int check_and_mk_log_dir();
-void logError(const char* format, ...) ;
-void logErrorEx(const char* prefix, const char* format, ...);
-void logInfo(const char* prefix, const char* format, ...) ;
-void logDaily(const char* prefix, const char* format, ...) ;
-void logMonthly(const char* prefix, const char* format, ...);
+int log_init(const char *filename_prefix);
+void log_destory();
+
+void log_it(const int priority, const char* format, ...);
+
+void logError(const char* format, ...);
+void logWarning(const char* format, ...);
+void logInfo(const char* format, ...) ;
 
 #ifdef __cplusplus
 }

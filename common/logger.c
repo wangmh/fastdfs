@@ -13,6 +13,7 @@
 #include <string.h>
 #include <time.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -22,9 +23,10 @@
 #include "shared_func.h"
 #include "logger.h"
 
-char g_error_file_prefix[64] = {'\0'};
+int g_log_level = LOG_INFO;
+int g_log_fd = STDERR_FILENO;
 
-int check_and_mk_log_dir()
+static int check_and_mk_log_dir()
 {
 	char data_path[MAX_PATH_SIZE];
 
@@ -36,148 +38,203 @@ int check_and_mk_log_dir()
 			fprintf(stderr, "mkdir \"%s\" fail, " \
 				"errno: %d, error info: %s", \
 				data_path, errno, strerror(errno));
-			return errno != 0 ? errno : ENOENT;
+			return errno != 0 ? errno : EPERM;
 		}
 	}
 
 	return 0;
 }
 
-static void doLog(const char* prefix, const char* text)
+int log_init(const char *filename_prefix)
 {
-	time_t t;
-	struct tm *pCurrentTime;
-	char dateBuffer[32];
+	int result;
 	char logfile[MAX_PATH_SIZE];
-	FILE *fp;
-	int fd;
-	struct flock lock;
 
-	t = time(NULL);
-	pCurrentTime = localtime(&t);
-	strftime(dateBuffer, sizeof(dateBuffer), "[%Y-%m-%d %X]", pCurrentTime);
-
-	if (*prefix != '\0')
+	if ((result=check_and_mk_log_dir()) != 0)
 	{
-		snprintf(logfile, MAX_PATH_SIZE, "%s/logs/%s.log", \
-				g_base_path, prefix);
+		return result;
+	}
 
-		umask(0);
-		if ((fp = fopen(logfile, "a")) == NULL)
-		{
-			fprintf(stderr, "%s %s\n", dateBuffer, text);
-			return;
-		}
+	log_destory();
+
+	snprintf(logfile, MAX_PATH_SIZE, "%s/logs/%s.log", \
+		g_base_path, filename_prefix);
+
+	if ((g_log_fd = open(logfile, O_WRONLY | O_CREAT | O_APPEND, 0644)) < 0)
+	{
+		fprintf(stderr, "open log file \"%s\" to write fail, " \
+			"errno: %d, error info: %s", \
+			logfile, errno, strerror(errno));
+		g_log_fd = STDERR_FILENO;
+		result = errno != 0 ? errno : EACCES;
 	}
 	else
 	{
-		fprintf(stderr, "%s %s\n", dateBuffer, text);
-		return;
+		result = 0;
 	}
-	
-	fd = fileno(fp);
-	
-	lock.l_type = F_WRLCK;
-	lock.l_whence = SEEK_SET;
-	lock.l_start = 0;
-	lock.l_len = 0;
-	if (fcntl(fd, F_SETLKW, &lock) == 0)
-	{
-		fprintf(fp, "%s %s\n", dateBuffer, text);
-	}
-	
-	lock.l_type = F_UNLCK;
-	fcntl(fd, F_SETLKW, &lock);
-	fclose(fp);
+
+	return result;
 }
 
-void periodLog( const char* prefix, const char *date_format, \
-		const char *szDatetimeFormat, const char* text )
+void log_destory()
+{
+	if (g_log_fd >= 0 && g_log_fd != STDERR_FILENO)
+	{
+		close(g_log_fd);
+		g_log_fd = STDERR_FILENO;
+	}
+}
+
+static void doLog(const char *prefix, const char* text, const int text_len)
 {
 	time_t t;
 	struct tm *pCurrentTime;
-	char dateBuffer[32];
-	char logfile[MAX_PATH_SIZE];
-	FILE *fp;
-	int fd;
+	char buff[64];
+	int len;
+	int prefix_len;
 	struct flock lock;
-	
+
 	t = time(NULL);
 	pCurrentTime = localtime(&t);
-	strftime((char *)dateBuffer, sizeof(dateBuffer), date_format, pCurrentTime);
-	snprintf(logfile, MAX_PATH_SIZE, "%s/logs/%s%s.log", g_base_path, prefix, dateBuffer);
-	strftime((char *)dateBuffer, sizeof(dateBuffer), szDatetimeFormat, pCurrentTime);
-
-	umask(0);
-	if (( fp=fopen(logfile,"a")) == NULL)
+	len = strftime(buff, sizeof(buff), "[%Y-%m-%d %X] ", pCurrentTime);
+	if (len > 0)
 	{
-		return;
+		prefix_len = strlen(prefix);
+		if (prefix_len > sizeof(buff) - 3 - len)
+		{
+			prefix_len = sizeof(buff) - 3 - len;
+		}
+		memcpy(buff+len, prefix, prefix_len);
+		len += prefix_len;
+		memcpy(buff+len, " - ", 3);
+		len += 3;
 	}
-	
-	fd = fileno(fp);
-	
-	lock.l_type = F_WRLCK;
-	lock.l_whence = SEEK_SET;
-	lock.l_start = 0;
-	lock.l_len = 0;
-	if (fcntl(fd, F_SETLKW, &lock) == 0)
+
+	if (g_log_fd != STDERR_FILENO)
 	{
-		fprintf(fp, "%s %s\n", dateBuffer, text);
+		lock.l_type = F_WRLCK;
+		lock.l_whence = SEEK_SET;
+		lock.l_start = 0;
+		lock.l_len = 0;
+		if (fcntl(g_log_fd, F_SETLKW, &lock) != 0)
+		{
+			fprintf(stderr, "file: "__FILE__", line: %d, " \
+				"call fcntl fail, errno: %d, error info: %s\n",\
+				 __LINE__, errno, strerror(errno));
+		}
 	}
-	
-	lock.l_type = F_UNLCK;
-	fcntl(fd, F_SETLKW, &lock);
 
-	fclose(fp);
+	if (write(g_log_fd, buff, len) != len)
+	{
+		fprintf(stderr, "file: "__FILE__", line: %d, " \
+			"call write fail, errno: %d, error info: %s\n",\
+			 __LINE__, errno, strerror(errno));
+	}
+
+	if (write(g_log_fd, text, text_len) != text_len)
+	{
+		fprintf(stderr, "file: "__FILE__", line: %d, " \
+			"call write fail, errno: %d, error info: %s\n",\
+			 __LINE__, errno, strerror(errno));
+	}
+
+	if (write(g_log_fd, "\n", 1) != 1)
+	{
+		fprintf(stderr, "file: "__FILE__", line: %d, " \
+			"call write fail, errno: %d, error info: %s\n",\
+			 __LINE__, errno, strerror(errno));
+	}
+
+	if (g_log_fd != STDERR_FILENO)
+	{
+		lock.l_type = F_UNLCK;
+		fcntl(g_log_fd, F_SETLKW, &lock);
+	}
+
+	if (fsync(g_log_fd) != 0)
+	{
+		fprintf(stderr, "file: "__FILE__", line: %d, " \
+			"call fsync fail, errno: %d, error info: %s\n",\
+			 __LINE__, errno, strerror(errno));
+	}
 }
 
-void logError(const char* format, ...)
+void log_it(const int priority, const char* format, ...)
 {
-	char logBuffer[LINE_MAX];
+	char text[LINE_MAX];
+	char *caption;
+	int len;
+
 	va_list ap;
 	va_start(ap, format);
-	vsnprintf(logBuffer, sizeof(logBuffer), format, ap);    
-	doLog(g_error_file_prefix, logBuffer);
+	len = vsnprintf(text, sizeof(text), format, ap);
 	va_end(ap);
+
+	switch(priority)
+	{
+		case LOG_DEBUG:
+			caption = "DEBUG";
+			break;
+		case LOG_INFO:
+			caption = "INFO";
+			break;
+		case LOG_NOTICE:
+			caption = "NOTICE";
+			break;
+		case LOG_WARNING:
+			caption = "WARNING";
+			break;
+		case LOG_ERR:
+			caption = "ERROR";
+			break;
+		case LOG_CRIT:
+			caption = "CRIT";
+			break;
+		case LOG_ALERT:
+			caption = "ALERT";
+			break;
+		case LOG_EMERG:
+			caption = "EMERG";
+			break;
+		default:
+			caption = "UNKOWN";
+			break;
+	}
+
+	doLog(caption, text, len);
 }
 
-void logErrorEx(const char* prefix, const char* format, ...)
+#define _DO_LOG(priority, caption) \
+	char text[LINE_MAX]; \
+	int len; \
+\
+	if (g_log_level < priority) \
+	{ \
+		return; \
+	} \
+\
+	{ \
+	va_list ap; \
+	va_start(ap, format); \
+	len = vsnprintf(text, sizeof(text), format, ap);  \
+	va_end(ap); \
+	} \
+\
+	doLog(caption, text, len); \
+
+
+void logError(const char *format, ...)
 {
-	char logBuffer[LINE_MAX];
-	va_list ap;
-	va_start(ap, format);
-	vsnprintf(logBuffer, sizeof(logBuffer), format, ap);    
-	doLog(prefix, logBuffer);
-	va_end(ap);
+	_DO_LOG(LOG_ERR, "ERROR")
 }
 
-void logInfo(const char* prefix, const char* format, ...)
+void logWarning(const char *format, ...)
 {
-	char logBuffer[LINE_MAX];
-	va_list ap;
-	va_start(ap, format);
-	vsnprintf(logBuffer, sizeof(logBuffer), format, ap);    
-	doLog(prefix, logBuffer);
-	va_end(ap);
+	_DO_LOG(LOG_WARNING, "WARNING")
 }
 
-void logDaily(const char* prefix, const char* format, ...)
+void logInfo(const char *format, ...)
 {
-	char logBuffer[LINE_MAX];
-	va_list ap;
-	va_start(ap, format);
-	vsnprintf(logBuffer, sizeof(logBuffer), format, ap);    
-	periodLog(prefix, "%Y%m%d", "[%X]", logBuffer);
-	va_end(ap);
-}
-
-void logMonthly(const char* prefix, const char* format, ...)
-{
-	char logBuffer[LINE_MAX];
-	va_list ap;
-	va_start(ap, format);
-	vsnprintf(logBuffer, sizeof(logBuffer), format, ap);    
-	periodLog(prefix, "%Y%m", "[%Y-%m-%d %X]", logBuffer);
-	va_end(ap);
+	_DO_LOG(LOG_INFO, "INFO")
 }
 
