@@ -61,14 +61,6 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	snprintf(g_error_file_prefix, sizeof(g_error_file_prefix), \
-			"%s", TRACKER_ERROR_LOG_FILENAME);
-
-	if ((result=check_and_mk_log_dir()) != 0)
-	{
-		return result;
-	}
-
 	if ((result=tracker_mem_init()) != 0)
 	{
 		return result;
@@ -193,7 +185,7 @@ int main(int argc, char *argv[])
 	pthread_attr_destroy(&thread_attr);
 	pthread_mutex_destroy(&g_tracker_thread_lock);
 	
-	logInfo(TRACKER_ERROR_LOG_FILENAME, "exit nomally.\n");
+	logInfo("exit nomally.\n");
 	
 	return 0;
 }
@@ -211,7 +203,7 @@ void sigHupHandler(int sig)
 void sigUsrHandler(int sig)
 {
 	/*
-	logInfo(TRACKER_ERROR_LOG_FILENAME, "current thread count=%d, " \
+	logInfo("current thread count=%d, " \
 		"mo count=%d, success count=%d", g_tracker_thread_count, \nMoCount, nSuccMoCount);
 	*/
 }
