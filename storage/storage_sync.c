@@ -951,7 +951,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 
 	pReader->last_write_row_count = pReader->scan_row_count;
 
-	pReader->mark_fd = open(full_filename, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+	pReader->mark_fd = open(full_filename, O_WRONLY | O_CREAT, 0644);
 	if (pReader->mark_fd < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
