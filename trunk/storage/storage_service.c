@@ -409,19 +409,18 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 		in_buff = (char *)malloc(nInPackLen + 1);
 		if (in_buff == NULL)
 		{
-			resp.status = errno != 0 ? errno : ENOMEM;
+			resp.status = ENOMEM;
 			break;
 		}
 
-		if (tcprecvdata(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout) != 1)
+		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
 				"errno: %d, error info: %s.", \
 				__LINE__, pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			resp.status = errno != 0 ? errno : EPIPE;
+				resp.status, strerror(resp.status));
 			break;
 		}
 
@@ -471,7 +470,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 				"not correct, should be: %s", \
 				__LINE__, pClientInfo->ip_addr, \
 				group_name, g_group_name);
-			resp.status = errno != 0 ? errno : EINVAL;
+			resp.status = EINVAL;
 			break;
 		}
 
@@ -581,15 +580,14 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (tcprecvdata(pClientInfo->sock, in_buff, \
-			2 * TRACKER_PROTO_PKG_LEN_SIZE, g_network_timeout) != 1)
+		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+			2*TRACKER_PROTO_PKG_LEN_SIZE, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
 				"errno: %d, error info: %s.", \
 				__LINE__, pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			resp.status = errno != 0 ? errno : EPIPE;
+				resp.status, strerror(resp.status));
 			break;
 		}
 
@@ -625,19 +623,18 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			meta_buff = (char *)malloc(meta_bytes + 1);
 			if (meta_buff == NULL)
 			{
-				resp.status = errno != 0 ? errno : ENOMEM;
+				resp.status = ENOMEM;
 				break;
 			}
 
-			if (tcprecvdata(pClientInfo->sock, meta_buff, \
-				meta_bytes, g_network_timeout) != 1)
+			if ((resp.status=tcprecvdata(pClientInfo->sock, \
+				meta_buff, meta_bytes, g_network_timeout)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"client ip:%s, recv data fail, " \
 					"errno: %d, error info: %s.", \
 					__LINE__, pClientInfo->ip_addr, \
-					errno, strerror(errno));
-				resp.status = errno != 0 ? errno : EPIPE;
+					resp.status, strerror(resp.status));
 				break;
 			}
 
@@ -749,18 +746,17 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
 			2*TRACKER_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN, \
-			g_network_timeout) != 1)
+			g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
 				"expect pkg length: %d, " \
-				"errno: %d, error info: %s.", \
+				"errno: %d, error info: %s", \
 				__LINE__, \
 				pClientInfo->ip_addr, nInPackLen, \
-				errno, strerror(errno));
-			resp.status = errno != 0 ? errno : EPIPE;
+				resp.status, strerror(resp.status));
 			break;
 		}
 
@@ -819,15 +815,14 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (tcprecvdata(pClientInfo->sock, filename, \
-			filename_len, g_network_timeout) != 1)
+		if ((resp.status=tcprecvdata(pClientInfo->sock, filename, \
+			filename_len, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv filename fail, " \
 				"errno: %d, error info: %s.", \
 				__LINE__, pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			resp.status = errno != 0 ? errno : EPIPE;
+				resp.status, strerror(resp.status));
 			break;
 		}
 		*(filename + filename_len) = '\0';
@@ -843,7 +838,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		if ((proto_cmd == STORAGE_PROTO_CMD_SYNC_CREATE_FILE) && \
 			fileExists(full_filename))
 		{
-			logError("file: "__FILE__", line: %d, " \
+			logWarning("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, data file: %s " \
 				"already exists, ignore it", \
 				__LINE__, \
@@ -968,15 +963,14 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (tcprecvdata(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout) != 1)
+		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
 				"errno: %d, error info: %s.", \
 				__LINE__, pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			resp.status = errno != 0 ? errno : EPIPE;
+				resp.status, strerror(resp.status));
 			break;
 		}
 
@@ -1118,15 +1112,14 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (tcprecvdata(pClientInfo->sock, in_buff, \
-				nInPackLen, g_network_timeout) != 1)
+		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+				nInPackLen, g_network_timeout)) != 0)
 		{
-			resp.status = errno != 0 ? errno : EPIPE;
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
 				"errno: %d, error info: %s.", \
 				__LINE__, pClientInfo->ip_addr, \
-				errno, strerror(errno));
+				resp.status, strerror(resp.status));
 			break;
 		}
 
@@ -1139,7 +1132,7 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 				"not correct, should be: %s", \
 				__LINE__, pClientInfo->ip_addr, \
 				group_name, g_group_name);
-			resp.status = errno != 0 ? errno : EINVAL;
+			resp.status = EINVAL;
 			break;
 		}
 
@@ -1260,17 +1253,16 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 				nInPackLen, sizeof(in_buff));
 			resp.status = EINVAL;
 			break;
-			}
+		}
 
-		if (tcprecvdata(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout) != 1)
+		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
 				"errno: %d, error info: %s.", \
 				__LINE__, pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			resp.status = errno != 0 ? errno : EPIPE;
+				resp.status, strerror(resp.status));
 			break;
 		}
 
@@ -1301,7 +1293,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 		{
 			if (errno == ENOENT)
 			{
-				logError("file: "__FILE__", line: %d, " \
+				logWarning("file: "__FILE__", line: %d, " \
 					"cmd=%d, client ip: %s, file %s not exist, " \
 					"maybe delete later?", \
 					__LINE__, \
@@ -1392,15 +1384,14 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (tcprecvdata(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout) != 1)
+		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
 				"errno: %d, error info: %s.", \
 				__LINE__, pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			resp.status = errno != 0 ? errno : EPIPE;
+				resp.status, strerror(resp.status));
 			break;
 		}
 
@@ -1512,6 +1503,8 @@ data buff (struct)
 	int result;
 	int nInPackLen;
 	int count;
+	int recv_bytes;
+	int log_level;
 	
 	memset(&client_info, 0, sizeof(client_info));
 	client_info.sock = (int)arg;
@@ -1522,19 +1515,18 @@ data buff (struct)
 	count = 0;
 	while (g_continue_flag)
 	{
-		//memset(&header, 0, sizeof(header));
-		result = tcprecvdata(client_info.sock, &header, \
-				sizeof(header), g_network_timeout);
-		if (result == 0)
+		result = tcprecvdata_ex(client_info.sock, &header, \
+			sizeof(header), g_network_timeout, &recv_bytes);
+		if (result == ETIMEDOUT)
 		{
 			continue;
 		}
 
-		if (result != 1)
+		if (result != 0)
 		{
 			/*
 			unsigned char *p;
-			unsigned char *pEnd = (unsigned char *)&header + sizeof(header);
+			unsigned char *pEnd = (unsigned char *)&header + recv_bytes);
 			for (p=(unsigned char *)&header; p<pEnd; p++)
 			{
 				fprintf(stderr, "%02X ", *p);
@@ -1542,11 +1534,19 @@ data buff (struct)
 			fprintf(stderr, "\n");
 			*/
 
-			logError("file: "__FILE__", line: %d, " \
+			if (result == ENOTCONN && recv_bytes == 0)
+			{
+				log_level = LOG_WARNING;
+			}
+			else
+			{
+				log_level = LOG_ERR;
+			}
+			log_it(log_level, "file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
-				"errno: %d, error info: %s.", \
+				"errno: %d, error info: %s", \
 				__LINE__, client_info.ip_addr, \
-				errno, strerror(errno));
+				result, strerror(result));
 			break;
 		}
 

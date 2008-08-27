@@ -157,7 +157,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 				__LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG, \
 				pClientInfo->ip_addr, nInPackLen);
-			resp.status = errno != 0 ? errno : EINVAL;
+			resp.status = EINVAL;
 			break;
 		}
 
@@ -168,19 +168,18 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 				"client ip addr: %s, return storage count: %d" \
 				" exceed max: %d", pClientInfo->ip_addr, \
 				__LINE__, FDFS_MAX_SERVERS_EACH_GROUP);
-			resp.status = errno != 0 ? errno : EINVAL;
+			resp.status = EINVAL;
 			break;
 		}
 
-		if (tcprecvdata(pClientInfo->sock, briefServers, \
-			nInPackLen, g_network_timeout) != 1)
+		if ((resp.status=tcprecvdata(pClientInfo->sock, briefServers, \
+			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip addr: %s, recv data fail, " \
 				"errno: %d, error info: %s.", \
 				__LINE__, pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			resp.status = errno != 0 ? errno : EPIPE;
+				resp.status, strerror(resp.status));
 			break;
 		}
 
@@ -222,19 +221,18 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 			"expect length: %d.", pClientInfo->ip_addr,  \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_JOIN, \
 			nInPackLen, sizeof(body));
-		status = errno != 0 ? errno : EINVAL;
+		status = EINVAL;
 		break;
 	}
 
-	if (tcprecvdata(pClientInfo->sock, &body, \
-		nInPackLen, g_network_timeout) != 1)
+	if ((status=tcprecvdata(pClientInfo->sock, &body, \
+		nInPackLen, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, recv data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		status = errno != 0 ? errno : EPIPE;
+			status, strerror(status));
 		break;
 	}
 
@@ -257,7 +255,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 			"client ip: %s, invalid port: %d", \
 			__LINE__, pClientInfo->ip_addr, \
 			pClientInfo->storage_port);
-		status = errno != 0 ? errno : EINVAL;
+		status = EINVAL;
 		break;
 	}
 
@@ -290,15 +288,14 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 		break;
 	}
 
-	if (tcprecvdata(pClientInfo->sock, &body, \
-			nInPackLen, g_network_timeout) != 1)
+	if ((status=tcprecvdata(pClientInfo->sock, &body, \
+			nInPackLen, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, recv data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		status = errno != 0 ? errno : EPIPE;
+			status, strerror(status));
 		break;
 	}
 
@@ -418,19 +415,18 @@ static int tracker_deal_server_list_group_storages( \
 				TRACKER_PROTO_CMD_SERVER_LIST_STORAGE, \
 				pClientInfo->ip_addr,  \
 				nInPackLen, FDFS_GROUP_NAME_MAX_LEN+1);
-			resp.status = errno != 0 ? errno : EINVAL;
+			resp.status = EINVAL;
 			break;
 		}
 
-		if (tcprecvdata(pClientInfo->sock, group_name, \
-			nInPackLen, g_network_timeout) != 1)
+		if ((resp.status=tcprecvdata(pClientInfo->sock, group_name, \
+			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			resp.status = errno != 0 ? errno : EPIPE;
+				resp.status, strerror(resp.status));
 			break;
 		}
 
@@ -442,7 +438,7 @@ static int tracker_deal_server_list_group_storages( \
 				"client ip: %s, invalid group_name: %s", \
 				__LINE__, pClientInfo->ip_addr, \
 				pClientInfo->group_name);
-			resp.status = errno != 0 ? errno : EINVAL;
+			resp.status = EINVAL;
 			break;
 		}
 
@@ -575,15 +571,14 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (tcprecvdata(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout) != 1)
+		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			resp.status = errno != 0 ? errno : EPIPE;
+				resp.status, strerror(resp.status));
 			break;
 		}
 		in_buff[nInPackLen] = '\0';
@@ -980,8 +975,8 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (tcprecvdata(pClientInfo->sock, dest_ip_addr, \
-			nInPackLen, g_network_timeout) != 1)
+		if ((pResp->status=tcprecvdata(pClientInfo->sock, dest_ip_addr, \
+			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip addr: %s, recv data fail, " \
@@ -989,8 +984,8 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 				__LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ, \
 				pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			return errno != 0 ? errno : EPIPE;
+				pResp->status, strerror(pResp->status));
+			break;
 		}
 
 		dest_ip_addr[FDFS_IPADDR_SIZE-1] = '\0';
@@ -1099,7 +1094,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 
 	sprintf(pResp->pkg_len, "%x", out_len - sizeof(TrackerHeader));
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
-	if((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata(pClientInfo->sock, \
 		out_buff, out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1123,8 +1118,8 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 		return pResp->status;
 	}
 
-	if(tcprecvdata(pClientInfo->sock, pResp, \
-		sizeof(TrackerHeader), g_network_timeout) != 1)
+	if ((result=tcprecvdata(pClientInfo->sock, pResp, \
+		sizeof(TrackerHeader), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip addr: %s, recv data fail, " \
@@ -1132,8 +1127,8 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 			__LINE__, \
 			TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ, \
 			pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	if (pResp->cmd != TRACKER_PROTO_CMD_STORAGE_RESP)
@@ -1144,7 +1139,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 			"expect cmd: %d",  \
 			__LINE__, pClientInfo->ip_addr, \
 			pResp->cmd, TRACKER_PROTO_CMD_STORAGE_RESP);
-		return errno != 0 ? errno : EPIPE;
+		return EINVAL;
 	}
 
 	if (pResp->status != 0)
@@ -1220,8 +1215,8 @@ static int tracker_deal_storage_report(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if(tcprecvdata(pClientInfo->sock, &statBuff, \
-			nInPackLen, g_network_timeout) != 1)
+		if ((status=tcprecvdata(pClientInfo->sock, &statBuff, \
+			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip addr: %s, recv data fail, " \
@@ -1229,8 +1224,7 @@ static int tracker_deal_storage_report(TrackerClientInfo *pClientInfo, \
 				__LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_REPORT, \
 				pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			status = errno != 0 ? errno : EPIPE;
+				status, strerror(status));
 			break;
 		}
 
@@ -1317,8 +1311,8 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if(tcprecvdata(pClientInfo->sock, &statBuff, \
-			sizeof(FDFSStorageStatBuff), g_network_timeout) != 1)
+		if ((status=tcprecvdata(pClientInfo->sock, &statBuff, \
+			sizeof(FDFSStorageStatBuff), g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip addr: %s, recv data fail, " \
@@ -1326,8 +1320,7 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 				__LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_BEAT, \
 				pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			status = errno != 0 ? errno : EPIPE;
+				status, strerror(status));
 			break;
 		}
 
@@ -1397,6 +1390,8 @@ data buff (struct)
 	int result;
 	int nInPackLen;
 	int count;
+	int recv_bytes;
+	int log_level;
 	
 	memset(&client_info, 0, sizeof(client_info));
 	client_info.sock = (int)arg;
@@ -1406,20 +1401,28 @@ data buff (struct)
 	count = 0;
 	while (g_continue_flag)
 	{
-		result = tcprecvdata(client_info.sock, &header, \
-				sizeof(header), g_network_timeout);
-		if (result == 0 && count > 0)
+		result = tcprecvdata_ex(client_info.sock, &header, \
+			sizeof(header), g_network_timeout, &recv_bytes);
+		if (result == ETIMEDOUT && count > 0)
 		{
 			continue;
 		}
 
-		if (result != 1)
+		if (result != 0)
 		{
-			logError("file: "__FILE__", line: %d, " \
+			if (result == ENOTCONN && recv_bytes == 0)
+			{
+				log_level = LOG_WARNING;
+			}
+			else
+			{
+				log_level = LOG_ERR;
+			}
+			log_it(log_level, "file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, client_info.ip_addr, \
-				errno, strerror(errno));
+				result, strerror(result));
 			break;
 		}
 

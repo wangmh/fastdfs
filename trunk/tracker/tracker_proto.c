@@ -26,18 +26,19 @@
 int tracker_recv_header(TrackerServerInfo *pTrackerServer, int *in_bytes)
 {
 	TrackerHeader resp;
+	int result;
 
-	if (tcprecvdata(pTrackerServer->sock, &resp, \
-		sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcprecvdata(pTrackerServer->sock, &resp, \
+		sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"server: %s:%d, recv data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
+			result, strerror(result));
 		*in_bytes = 0;
-		return errno != 0 ? errno : EPIPE;
+		return result;
 	}
 
 	if (resp.status != 0)
@@ -107,22 +108,22 @@ int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
 		bMalloced = false;
 	}
 
-	if (tcprecvdata(pTrackerServer->sock, *buff, \
-		*in_bytes, g_network_timeout) != 1)
+	if ((result=tcprecvdata(pTrackerServer->sock, *buff, \
+		*in_bytes, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server: %s:%d, recv data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
+			result, strerror(result));
 		*in_bytes = 0;
 		if (bMalloced)
 		{
 			free(*buff);
 			*buff = NULL;
 		}
-		return errno != 0 ? errno : EPIPE;
+		return result;
 	}
 
 	return 0;

@@ -325,15 +325,15 @@ int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 	}
 
 
-	if (tcprecvdata(pTrackerServer->sock, &resp, \
-			sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcprecvdata(pTrackerServer->sock, &resp, \
+			sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, recv data fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			pTrackerServer->port, result, strerror(result));
+		return result;
 	}
 
 	if (resp.pkg_len[0] != '0' && resp.pkg_len[1] != '\0')
@@ -344,7 +344,7 @@ int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 			"expect pkg len 0, but recv pkg len: 0x%s", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, resp.pkg_len);
-		return errno != 0 ? errno : EINVAL;
+		return EINVAL;
 	}
 
 	return resp.status;
@@ -496,18 +496,19 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer)
 	int nInPackLen;
 	TrackerHeader resp;
 	int server_count;
+	int result;
 	FDFSStorageBrief briefServers[FDFS_MAX_SERVERS_EACH_GROUP];
 
-	if (tcprecvdata(pTrackerServer->sock, &resp, \
-			sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcprecvdata(pTrackerServer->sock, &resp, \
+			sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, recv data fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port,    \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	//printf("resp status=%d\n", resp.status);
@@ -544,16 +545,16 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer)
 		return EINVAL;
 	}
 
-	if (tcprecvdata(pTrackerServer->sock, briefServers, \
-			nInPackLen, g_network_timeout) != 1)
+	if ((result=tcprecvdata(pTrackerServer->sock, briefServers, \
+			nInPackLen, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, recv data fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	/*

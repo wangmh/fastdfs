@@ -8,7 +8,7 @@ Version 1.7  2008-08-25
   * log function enhancement: 
      # support log level
      # parameter "log_level" added to server config file
-     # keep the log file opened
+     # keep the log file opened to increase performance
   * Makefile add compile flag -D_FILE_OFFSET_BITS=64 to support large files
 
 Version 1.6  2008-08-24
