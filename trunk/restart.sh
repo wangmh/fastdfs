@@ -27,6 +27,12 @@ else
   GREP=/usr/bin/grep
 fi
 
+if [ -f /bin/expr ]; then
+  EXPR=/bin/expr
+else
+  EXPR=/usr/bin/expr
+fi
+
 program=`/bin/echo $1 | $AWK -F '/' '{print $NF;}'`
 count=`/bin/ps auxww | $GREP -w $program | $GREP -v grep | /usr/bin/wc -l`
 if [ $count -gt 0 ]; then
@@ -45,7 +51,7 @@ if [ $count -gt 0 ]; then
 
     /usr/bin/printf .
     /bin/sleep 1
-    let i=$i+1
+    i=`$EXPR $i + 1`
   done
 fi
 

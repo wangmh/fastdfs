@@ -133,7 +133,7 @@ int tracker_load_from_conf_file(const char *filename, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"\"%s\" can't be accessed, error info: %s", \
-				__LINE__, strerror(errno), g_base_path);
+				__LINE__, g_base_path, strerror(errno));
 			result = errno != 0 ? errno : ENOENT;
 			break;
 		}
