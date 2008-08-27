@@ -87,7 +87,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		{
 			if(pRecord->op_type==STORAGE_OP_TYPE_SOURCE_CREATE_FILE)
 			{
-				logError("file: "__FILE__", line: %d, " \
+				logWarning("file: "__FILE__", line: %d, " \
 					"sync data file, file: %s not exists, "\
 					"maybe deleted later?", \
 					__LINE__, full_filename);
@@ -167,7 +167,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	{
 		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE)
 		{
-			logError("file: "__FILE__", line: %d, " \
+			logWarning("file: "__FILE__", line: %d, " \
 				"storage server ip: %s:%d, data file: %s " \
 				"already exists, maybe some mistake?", \
 				__LINE__, pStorageServer->ip_addr, \
@@ -204,7 +204,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 	{
 		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_DELETE_FILE)
 		{
-			logError("file: "__FILE__", line: %d, " \
+			logWarning("file: "__FILE__", line: %d, " \
 				"sync data file, file: %s exists, " \
 				"maybe created later?", \
 				__LINE__, full_filename);
@@ -1196,7 +1196,8 @@ static void* storage_sync_thread_entrance(void* arg)
 	BinLogRecord record;
 	TrackerServerInfo storage_server;
 	char local_ip_addr[FDFS_IPADDR_SIZE];
-	int result;
+	int read_result;
+	int sync_result;
 	int record_len;
 
 	memset(local_ip_addr, 0, sizeof(local_ip_addr));
@@ -1292,18 +1293,18 @@ static void* storage_sync_thread_entrance(void* arg)
 			}
 		}
 
+		sync_result = 0;
 		while (g_continue_flag)
 		{
-			result = storage_binlog_read(&reader, \
+			read_result = storage_binlog_read(&reader, \
 					&record, &record_len);
-			if (result == ENOENT)
+			if (read_result == ENOENT)
 			{
 				if (reader.need_sync_old && \
 					!reader.sync_old_done)
 				{
 				reader.sync_old_done = true;
-				result = storage_write_to_mark_file(&reader);
-				if (result != 0)
+				if (storage_write_to_mark_file(&reader) != 0)
 				{
 					g_continue_flag = false;
 					break;
@@ -1323,17 +1324,17 @@ static void* storage_sync_thread_entrance(void* arg)
 				usleep(g_sync_wait_usec);
 				continue;
 			}
-			else if (result != 0)
+			else if (read_result != 0)
 			{
 				g_continue_flag = false;
 				break;
 			}
 
-			if ((result=storage_sync_data(&reader, \
+			if ((sync_result=storage_sync_data(&reader, \
 				&storage_server, &record)) != 0)
 			{
-				if ((result=rewind_to_prev_rec_end( \
-					&reader, record_len)) != 0)
+				if (rewind_to_prev_rec_end( \
+					&reader, record_len) != 0)
 				{
 					g_continue_flag = false;
 				}
@@ -1344,9 +1345,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			reader.binlog_offset += record_len;
 			if (++reader.scan_row_count % 100 == 0)
 			{
-				result = storage_write_to_mark_file( \
-					&reader);
-				if (result != 0)
+				if (storage_write_to_mark_file(&reader) != 0)
 				{
 					g_continue_flag = false;
 					break;
@@ -1354,11 +1353,9 @@ static void* storage_sync_thread_entrance(void* arg)
 			}
 		}
 
-		if (reader.last_write_row_count != \
-			reader.scan_row_count)
+		if (reader.last_write_row_count != reader.scan_row_count)
 		{
-			if ((result=storage_write_to_mark_file( \
-					&reader)) != 0)
+			if (storage_write_to_mark_file(&reader) != 0)
 			{
 				g_continue_flag = false;
 				break;
@@ -1374,7 +1371,10 @@ static void* storage_sync_thread_entrance(void* arg)
 			break;
 		}
 
-		sleep(60);
+		if (!(sync_result == ENOTCONN || sync_result == EIO))
+		{
+			sleep(60);
+		}
 	}
 
 	if (storage_server.sock >= 0)

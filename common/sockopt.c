@@ -56,7 +56,7 @@ int tcpgets(int sock, char* s, int size, int timeout)
 		return EINVAL;
 	}
 
-	while(i < size)
+	while (i < size)
 	{
 		result = tcprecvdata(sock, &t, 1, timeout);
 		if (result != 0)
@@ -90,11 +90,12 @@ int tcpgets(int sock, char* s, int size, int timeout)
 	return 0;
 }
 
-int tcprecvdata(int sock,void* data,int size,int timeout)
+int tcprecvdata_ex(int sock, void *data, int size, int timeout, int *count)
 {
 	int left_bytes;
 	int read_bytes;
-	int result;
+	int res;
+	int ret_code;
 	unsigned char* p;
 	fd_set read_set;
 	fd_set exception_set;
@@ -109,9 +110,13 @@ int tcprecvdata(int sock,void* data,int size,int timeout)
 		return EINVAL;
 	}
 
+	FD_ZERO(&read_set);
+	FD_ZERO(&exception_set);
+
+	ret_code = 0;
 	p = (unsigned char*)data;
 	left_bytes = size;
-	while(left_bytes > 0)
+	while (left_bytes > 0)
 	{
 		FD_CLR(sock, &read_set);
 		FD_CLR(sock, &exception_set);
@@ -119,32 +124,34 @@ int tcprecvdata(int sock,void* data,int size,int timeout)
 		FD_SET(sock, &exception_set);
 		if (timeout <= 0)
 		{
-			result = select(sock+1, &read_set, NULL, \
+			res = select(sock+1, &read_set, NULL, \
 					&exception_set, NULL);
 		}
 		else
 		{
 			t.tv_usec = 0;
 			t.tv_sec = timeout;
-			result = select(sock+1, &read_set, NULL, \
+			res = select(sock+1, &read_set, NULL, \
 					&exception_set, &t);
 		}
 		
-		if (result < 0)
+		if (res < 0)
 		{
 #ifdef __DEBUG__
 			fprintf(stderr,"%s,%d:tcprecvdata call select failed:%s.\n",
 				__FILE__,__LINE__,strerror(errno));
 #endif
-			return errno != 0 ? errno : EINTR;
+			ret_code = errno != 0 ? errno : EINTR;
+			break;
 		}
-		else if (result == 0)
+		else if (res == 0)
 		{
 #ifdef __DEBUG__
 			fprintf(stderr,"%s,%d:tcprecvdata call select timeout.\n",
 				__FILE__,__LINE__);
 #endif
-			return ETIMEDOUT;
+			ret_code = ETIMEDOUT;
+			break;
 		}
 		
 		if (FD_ISSET(sock, &read_set))
@@ -156,7 +163,8 @@ int tcprecvdata(int sock,void* data,int size,int timeout)
 				fprintf(stderr,"%s,%d:tcprecvdata call read failed:%s.\n",
 					__FILE__,__LINE__,strerror(errno));
 #endif
-				return errno != 0 ? errno : EINTR;
+				ret_code = errno != 0 ? errno : EINTR;
+				break;
 			}
 			if (read_bytes == 0)
 			{
@@ -164,7 +172,8 @@ int tcprecvdata(int sock,void* data,int size,int timeout)
 				fprintf(stderr, "%s,%d:tcprecvdata call read return 0, remote close connection? errno:%d, error info:%s.\n",
 					__FILE__, __LINE__, errno, strerror(errno));
 #endif
-				return ENOTCONN;
+				ret_code = ENOTCONN;
+				break;
 			}
 
 			left_bytes -= read_bytes;
@@ -173,11 +182,16 @@ int tcprecvdata(int sock,void* data,int size,int timeout)
 		else
 		{
 			/*exception not support*/
-			return EINTR;
+			ret_code = EINTR;
+			break;
 		}
 	}
 
-	return 0;
+	if (count != NULL)
+	{
+		*count = size - left_bytes;
+	}
+	return ret_code;
 }
 
 int tcpsenddata(int sock, void* data, int size, int timeout)
@@ -198,6 +212,9 @@ int tcpsenddata(int sock, void* data, int size, int timeout)
 #endif
 		return EINVAL;
 	}
+
+	FD_ZERO(&write_set);
+	FD_ZERO(&exception_set);
 
 	p = (unsigned char*)data;
 	left_bytes = size;
