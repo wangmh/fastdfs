@@ -40,6 +40,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 	FDFSStorageBrief briefServers[FDFS_MAX_SERVERS_EACH_GROUP];
 	FDFSStorageBrief *pDestServer;
 	int out_len;
+	int result;
 
 	memset(&resp, 0, sizeof(resp));
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
@@ -50,15 +51,15 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 	{
 		resp.pkg_len[0] = '0';
 		resp.pkg_len[1] = '\0';
-		if (tcpsenddata(pClientInfo->sock, \
-			&resp, sizeof(resp), g_network_timeout) != 1)
+		if ((result=tcpsenddata(pClientInfo->sock, \
+			&resp, sizeof(resp), g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, send data fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pClientInfo->ip_addr, \
-				errno, strerror(errno));
-			return errno != 0 ? errno : EPIPE;
+				result, strerror(result));
+			return result;
 		}
 
 		return status;
@@ -80,26 +81,26 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 
 	out_len = sizeof(FDFSStorageBrief) * pClientInfo->pGroup->count;
 	sprintf(resp.pkg_len, "%x", out_len);
-	if (tcpsenddata(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
-	if (tcpsenddata(pClientInfo->sock, \
-		briefServers, out_len, g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		briefServers, out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	pClientInfo->pStorage->version = pClientInfo->pGroup->version;
@@ -142,6 +143,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 	TrackerHeader resp;
 	int server_count;
 	FDFSStorageBrief briefServers[FDFS_MAX_SERVERS_EACH_GROUP];
+	int result;
 
 	memset(&resp, 0, sizeof(resp));
 	while (1)
@@ -190,14 +192,15 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 	resp.pkg_len[0] = '0';
 	resp.pkg_len[1] = '\0';
-	if (tcpsenddata(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, pClientInfo->ip_addr, errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			__LINE__, pClientInfo->ip_addr, \
+			result, strerror(result));
+		return result;
 	}
 
 	return resp.status;
@@ -361,6 +364,7 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 static int tracker_check_logined(TrackerClientInfo *pClientInfo)
 {
 	TrackerHeader resp;
+	int result;
 
 	if (pClientInfo->pGroup != NULL && pClientInfo->pStorage != NULL)
 	{
@@ -371,15 +375,15 @@ static int tracker_check_logined(TrackerClientInfo *pClientInfo)
 	resp.pkg_len[0] = '0';
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 	resp.status = EACCES;
-	if (tcpsenddata(pClientInfo->sock, &resp, sizeof(resp), \
-		g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, &resp, sizeof(resp), \
+		g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s.",  \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return resp.status;
@@ -398,6 +402,7 @@ static int tracker_deal_server_list_group_storages( \
 	TrackerStorageStat *pDest;
 	FDFSStorageStatBuff *pStatBuff;
 	int out_len;
+	int result;
 
 	memset(&resp, 0, sizeof(resp));
 	pDest = stats;
@@ -488,15 +493,15 @@ static int tracker_deal_server_list_group_storages( \
 	out_len = (pDest - stats) * sizeof(TrackerStorageStat);
 	sprintf(resp.pkg_len, "%x", out_len);
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
-	if (tcpsenddata(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	if (out_len == 0)
@@ -504,15 +509,15 @@ static int tracker_deal_server_list_group_storages( \
 		return resp.status;
 	}
 
-	if (tcpsenddata(pClientInfo->sock, \
-		stats, out_len, g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		stats, out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return resp.status;
@@ -535,6 +540,7 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 	FDFSGroupInfo *pGroup;
 	FDFSStorageDetail *pStorageServer;
 	char out_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_BODY_LEN];
+	int result;
 
 	memset(&resp, 0, sizeof(resp));
 	pGroup = NULL;
@@ -637,15 +643,15 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 		memcpy(out_buff, &resp, sizeof(resp));
 	}
 
-	if (tcpsenddata(pClientInfo->sock, \
-		out_buff, sizeof(resp) + out_len, g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		out_buff, sizeof(resp) + out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return resp.status;
@@ -662,6 +668,7 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 	FDFSStorageDetail *pStorageServer;
 	char out_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_BODY_LEN];
 	bool bHaveActiveServer;
+	int result;
 
 	memset(&resp, 0, sizeof(resp));
 	pStoreGroup = NULL;
@@ -846,15 +853,15 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 		memcpy(out_buff, &resp, sizeof(resp));
 	}
 
-	if (tcpsenddata(pClientInfo->sock, \
-		out_buff, sizeof(resp) + out_len, g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		out_buff, sizeof(resp) + out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return resp.status;
@@ -869,6 +876,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 	TrackerGroupStat groupStats[FDFS_MAX_GROUPS];
 	TrackerGroupStat *pDest;
 	int out_len;
+	int result;
 
 	memset(&resp, 0, sizeof(resp));
 	pDest = groupStats;
@@ -911,15 +919,15 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 	out_len = (pDest - groupStats) * sizeof(TrackerGroupStat);
 	sprintf(resp.pkg_len, "%x", out_len);
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
-	if (tcpsenddata(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	if (out_len == 0)
@@ -927,15 +935,15 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 		return resp.status;
 	}
 
-	if (tcpsenddata(pClientInfo->sock, \
-		groupStats, out_len, g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		groupStats, out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return resp.status;
@@ -950,6 +958,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 	TrackerStorageSyncReqBody *pBody;
 	FDFSStorageDetail *pDestStorage;
 	int out_len;
+	int result;
 
 	memset(out_buff, 0, sizeof(out_buff));
 	pResp = (TrackerHeader *)out_buff;
@@ -1016,15 +1025,15 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 
 	sprintf(pResp->pkg_len, "%x", out_len - sizeof(TrackerHeader));
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
-	if (tcpsenddata(pClientInfo->sock, \
-		out_buff, out_len, g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		out_buff, out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return 0;
@@ -1039,6 +1048,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 	int out_len;
 	int sync_until_timestamp;
 	FDFSStorageDetail *pSrcStorage;
+	int result;
 
 	sync_until_timestamp = 0;
 	memset(out_buff, 0, sizeof(out_buff));
@@ -1089,15 +1099,15 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 
 	sprintf(pResp->pkg_len, "%x", out_len - sizeof(TrackerHeader));
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
-	if(tcpsenddata(pClientInfo->sock, \
-		out_buff, out_len, g_network_timeout) != 1)
+	if((result=tcpsenddata(pClientInfo->sock, \
+		out_buff, out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	if (pSrcStorage == NULL)

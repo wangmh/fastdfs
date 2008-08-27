@@ -66,10 +66,10 @@ int main(int argc, char *argv[])
 		return result;
 	}
 	
-	sock = socketServer(bind_addr, g_server_port);
+	sock = socketServer(bind_addr, g_server_port, &result);
 	if (sock < 0)
 	{
-		return 5;
+		return result;
 	}
 	
 	daemon_init(false);

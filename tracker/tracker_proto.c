@@ -139,14 +139,14 @@ int tracker_quit(TrackerServerInfo *pTrackerServer)
 	header.status = 0;
 	result = tcpsenddata(pTrackerServer->sock, &header, sizeof(header), \
 				g_network_timeout);
-	if(result != 1)
+	if(result != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return 0;

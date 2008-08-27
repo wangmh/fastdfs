@@ -117,7 +117,7 @@ static void* tracker_report_thread_entrance(void* arg)
 
 		if (connectserverbyip(pTrackerServer->sock, \
 			pTrackerServer->ip_addr, \
-			pTrackerServer->port) != 1)
+			pTrackerServer->port) != 0)
 		{
 			sleep(g_heart_beat_interval);
 			continue;
@@ -295,32 +295,33 @@ int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 {
 	TrackerHeader resp;
 	int out_len;
+	int result;
 
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG;
 	resp.status = 0;
 
 	out_len = sizeof(FDFSStorageBrief) * server_count;
 	sprintf(resp.pkg_len, "%x", out_len);
-	if (tcpsenddata(pTrackerServer->sock, &resp, sizeof(resp), \
-			g_network_timeout) != 1)
+	if ((result=tcpsenddata(pTrackerServer->sock, &resp, sizeof(resp), \
+			g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"trackert server %s:%d, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			pTrackerServer->port, result, strerror(result));
+		return result;
 	}
 
-	if (tcpsenddata(pTrackerServer->sock, \
-		briefServers, out_len, g_network_timeout) != 1)
+	if ((result=tcpsenddata(pTrackerServer->sock, \
+		briefServers, out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"trackert server %s:%d, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			pTrackerServer->port, result, strerror(result));
+		return result;
 	}
 
 
@@ -587,16 +588,16 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 	sprintf(pHeader->pkg_len, "%x", FDFS_IPADDR_SIZE);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ;
 	strcpy(out_buff + sizeof(TrackerHeader), pReader->ip_addr);
-	if (tcpsenddata(pTrackerServer->sock, out_buff, sizeof(out_buff), \
-			g_network_timeout) != 1)
+	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \
+			sizeof(out_buff), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	pBuff = (char *)&syncReqbody;
@@ -648,16 +649,16 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 	memset(&header, 0, sizeof(header));
 	header.pkg_len[0] = '0';
 	header.cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ;
-	if (tcpsenddata(pTrackerServer->sock, &header, sizeof(header), \
-				g_network_timeout) != 1)
+	if ((result=tcpsenddata(pTrackerServer->sock, &header, \
+			sizeof(header), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	pBuff = (char *)&syncReqbody;
@@ -693,16 +694,16 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 	memset(&header, 0, sizeof(header));
 	header.pkg_len[0] = '0';
 	header.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
-	if (tcpsenddata(pTrackerServer->sock, &header, sizeof(header), \
-				g_network_timeout) != 1)
+	if ((result=tcpsenddata(pTrackerServer->sock, &header, sizeof(header), \
+				g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return 0;
@@ -713,6 +714,7 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageSyncReqBody)];
 	TrackerHeader *pHeader;
 	TrackerStorageSyncReqBody *pReqBody;
+	int result;
 
 	pHeader = (TrackerHeader *)out_buff;
 	pReqBody = (TrackerStorageSyncReqBody*)(out_buff+sizeof(TrackerHeader));
@@ -723,16 +725,16 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 	strcpy(pReqBody->src_ip_addr, g_sync_src_ip_addr);
 	sprintf(pReqBody->until_timestamp, "%x", g_sync_until_timestamp);
 
-	if (tcpsenddata(pTrackerServer->sock, out_buff, sizeof(out_buff), \
-				g_network_timeout) != 1)
+	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \
+			sizeof(out_buff), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return tracker_check_response(pTrackerServer);
@@ -743,6 +745,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer)
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageJoinBody)];
 	TrackerHeader *pHeader;
 	TrackerStorageJoinBody *pReqBody;
+	int result;
 
 	pHeader = (TrackerHeader *)out_buff;
 	pReqBody = (TrackerStorageJoinBody *)(out_buff+sizeof(TrackerHeader));
@@ -753,16 +756,16 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer)
 	strcpy(pReqBody->group_name, g_group_name);
 	sprintf(pReqBody->storage_port, "%x", g_server_port);
 
-	if (tcpsenddata(pTrackerServer->sock, out_buff, sizeof(out_buff), \
-				g_network_timeout) != 1)
+	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \
+			sizeof(out_buff), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return tracker_check_response(pTrackerServer);
@@ -774,6 +777,7 @@ static int tracker_report_stat(TrackerServerInfo *pTrackerServer)
 	TrackerHeader *pHeader;
 	TrackerStatReportReqBody *pStatBuff;
 	struct statfs sbuf;
+	int result;
 
 	if (statfs(g_base_path, &sbuf) != 0)
 	{
@@ -795,16 +799,16 @@ static int tracker_report_stat(TrackerServerInfo *pTrackerServer)
 	int2buff((int)(((double)(sbuf.f_bavail) * sbuf.f_bsize) / FDFS_ONE_MB),\
 		pStatBuff->sz_free_mb);
 
-	if(tcpsenddata(pTrackerServer->sock, out_buff, \
-		sizeof(out_buff), g_network_timeout) != 1)
+	if((result=tcpsenddata(pTrackerServer->sock, out_buff, \
+		sizeof(out_buff), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return tracker_check_response(pTrackerServer);
@@ -817,6 +821,7 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader *pHeader;
 	FDFSStorageStatBuff *pStatBuff;
 	int body_len;
+	int result;
 
 	pHeader = (TrackerHeader *)out_buff;
 	if (*pstat_chg_sync_count != g_stat_change_count)
@@ -860,16 +865,16 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_BEAT;
 	pHeader->status = 0;
 
-	if(tcpsenddata(pTrackerServer->sock, out_buff, \
-		sizeof(TrackerHeader) + body_len, g_network_timeout) != 1)
+	if((result=tcpsenddata(pTrackerServer->sock, out_buff, \
+		sizeof(TrackerHeader) + body_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return tracker_check_response(pTrackerServer);

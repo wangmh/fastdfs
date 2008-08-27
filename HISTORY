@@ -1,11 +1,15 @@
 
 Version 1.7  2008-08-25
   * opt: change fopen to syscall open
-  * Makefile add compile flag -D_FILE_OFFSET_BITS=64 to support large files
+  * change the return value of socket funtions such as tcpsenddata, 
+    tcprecvdata and connectserverbyip
+      old return value: result=1 for success, result != 1 fail
+      new return value: result=0 for success, result != 0 fail, return the error code
   * log function enhancement: 
      # support log level
      # parameter "log_level" added to server config file
      # keep the log file opened
+  * Makefile add compile flag -D_FILE_OFFSET_BITS=64 to support large files
 
 Version 1.6  2008-08-24
   * add restart daemon shell script: restart.sh

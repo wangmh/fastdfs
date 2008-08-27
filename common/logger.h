@@ -24,9 +24,14 @@ void log_destory();
 
 void log_it(const int priority, const char* format, ...);
 
+void logEmerg(const char* format, ...);
+void logCrit(const char* format, ...);
+void logAlert(const char* format, ...);
 void logError(const char* format, ...);
 void logWarning(const char* format, ...);
-void logInfo(const char* format, ...) ;
+void logNotice(const char* format, ...);
+void logInfo(const char* format, ...);
+void logDebug(const char* format, ...);
 
 #ifdef __cplusplus
 }
