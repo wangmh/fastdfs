@@ -98,7 +98,6 @@ int tcprecvdata_ex(int sock, void *data, int size, int timeout, int *count)
 	int ret_code;
 	unsigned char* p;
 	fd_set read_set;
-	fd_set exception_set;
 	struct timeval t;
 
 	if (data == NULL)
@@ -111,28 +110,23 @@ int tcprecvdata_ex(int sock, void *data, int size, int timeout, int *count)
 	}
 
 	FD_ZERO(&read_set);
-	FD_ZERO(&exception_set);
+	FD_SET(sock, &read_set);
 
+	read_bytes = 0;
 	ret_code = 0;
 	p = (unsigned char*)data;
 	left_bytes = size;
 	while (left_bytes > 0)
 	{
-		FD_CLR(sock, &read_set);
-		FD_CLR(sock, &exception_set);
-		FD_SET(sock, &read_set);
-		FD_SET(sock, &exception_set);
 		if (timeout <= 0)
 		{
-			res = select(sock+1, &read_set, NULL, \
-					&exception_set, NULL);
+			res = select(sock+1, &read_set, NULL, NULL, NULL);
 		}
 		else
 		{
 			t.tv_usec = 0;
 			t.tv_sec = timeout;
-			res = select(sock+1, &read_set, NULL, \
-					&exception_set, &t);
+			res = select(sock+1, &read_set, NULL, NULL, &t);
 		}
 		
 		if (res < 0)
@@ -154,7 +148,7 @@ int tcprecvdata_ex(int sock, void *data, int size, int timeout, int *count)
 			break;
 		}
 		
-		if (FD_ISSET(sock, &read_set))
+		//if (FD_ISSET(sock, &read_set))
 		{
 			read_bytes = read(sock, p, left_bytes);
 			if (read_bytes < 0)
@@ -179,12 +173,6 @@ int tcprecvdata_ex(int sock, void *data, int size, int timeout, int *count)
 			left_bytes -= read_bytes;
 			p += read_bytes;
 		}
-		else
-		{
-			/*exception not support*/
-			ret_code = EINTR;
-			break;
-		}
 	}
 
 	if (count != NULL)
@@ -201,7 +189,6 @@ int tcpsenddata(int sock, void* data, int size, int timeout)
 	int result;
 	unsigned char* p;
 	fd_set write_set;
-	fd_set exception_set;
 	struct timeval t;
 
 	if (data == NULL)
@@ -214,27 +201,21 @@ int tcpsenddata(int sock, void* data, int size, int timeout)
 	}
 
 	FD_ZERO(&write_set);
-	FD_ZERO(&exception_set);
+	FD_SET(sock, &write_set);
 
 	p = (unsigned char*)data;
 	left_bytes = size;
 	while (left_bytes > 0)
 	{
-		FD_CLR(sock, &write_set);
-		FD_CLR(sock, &exception_set);
-		FD_SET(sock, &write_set);
-		FD_SET(sock, &exception_set);
 		if (timeout <= 0)
 		{
-			result = select(sock+1, NULL, &write_set, \
-					&exception_set, NULL);
+			result = select(sock+1, NULL, &write_set, NULL, NULL);
 		}
 		else
 		{
 			t.tv_usec = 0;
 			t.tv_sec = timeout;
-			result = select(sock+1, NULL, &write_set, \
-					&exception_set, &t);
+			result = select(sock+1, NULL, &write_set, NULL, &t);
 		}
 		if (result < 0)
 		{
@@ -253,7 +234,7 @@ int tcpsenddata(int sock, void* data, int size, int timeout)
 			return ETIMEDOUT;
 		}
 
-		if (FD_ISSET(sock, &write_set))
+		//if (FD_ISSET(sock, &write_set))
 		{
 			write_bytes = write(sock, p, left_bytes);
 			if (write_bytes < 0)
@@ -267,11 +248,6 @@ int tcpsenddata(int sock, void* data, int size, int timeout)
 
 			left_bytes -= write_bytes;
 			p += write_bytes;
-		}
-		else
-		{
-			/*exception not support*/
-			return EINTR;
 		}
 	}
 
@@ -372,7 +348,6 @@ int nbaccept(int sock, int timeout, int *err_no)
 	struct sockaddr_in inaddr;
 	unsigned int sockaddr_len;
 	fd_set read_set;
-	fd_set exception_set;
 	struct timeval t;
 	int result;
 	
@@ -382,11 +357,9 @@ int nbaccept(int sock, int timeout, int *err_no)
 		t.tv_sec = timeout;
 		
 		FD_ZERO(&read_set);
-		FD_ZERO(&exception_set);
 		FD_SET(sock, &read_set);
-		FD_SET(sock, &exception_set);
 		
-		result = select(sock+1, &read_set, NULL, &exception_set, &t);
+		result = select(sock+1, &read_set, NULL, NULL, &t);
 		if (result == 0)  //timeout
 		{
 			*err_no = ETIMEDOUT;
@@ -397,12 +370,14 @@ int nbaccept(int sock, int timeout, int *err_no)
 			*err_no = errno != 0 ? errno : EINTR;
 			return -1;
 		}
-		
+	
+		/*	
 		if (!FD_ISSET(sock, &read_set))
 		{
 			*err_no = EAGAIN;
 			return -1;
 		}
+		*/
 	}
 	
 	sockaddr_len = sizeof(inaddr);
