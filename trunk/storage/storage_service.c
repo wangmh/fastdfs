@@ -384,6 +384,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 	char *meta_buff;
 	int meta_bytes;
 	int filename_len;
+	int result;
 
 	memset(&resp, 0, sizeof(resp));
 	in_buff = NULL;
@@ -525,15 +526,15 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 		free(in_buff);
 	}
 
-	if (tcpsenddata(pClientInfo->sock, (void *)&resp, \
-		sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, (void *)&resp, \
+		sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return resp.status;
@@ -558,6 +559,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	int meta_bytes;
 	int file_bytes;
 	int filename_len;
+	int result;
 
 	memset(&resp, 0, sizeof(resp));
 	meta_buff = NULL;
@@ -694,15 +696,15 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 		free(meta_buff);
 	}
 
-	if (tcpsenddata(pClientInfo->sock, out_buff, \
-		sizeof(resp) + out_len, g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, out_buff, \
+		sizeof(resp) + out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	return resp.status;
@@ -726,6 +728,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 	char full_filename[MAX_PATH_SIZE];
 	int filename_len;
 	int file_bytes;
+	int result;
 
 	memset(&resp, 0, sizeof(resp));
 	while (1)
@@ -893,15 +896,15 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	resp.pkg_len[0] = '0';
-	if (tcpsenddata(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	if (resp.status == EEXIST)
@@ -1018,20 +1021,20 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	sprintf(resp.pkg_len, "%x", file_bytes);
 
-	if (tcpsenddata(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
+			result, strerror(result));
 
 		if (file_buff != NULL)
 		{
 			free(file_buff);
 		}
-		return errno != 0 ? errno : EPIPE;
+		return result;
 	}
 
 	if (resp.status != 0)
@@ -1050,15 +1053,15 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 		result = tcpsenddata(pClientInfo->sock, \
 			file_buff, file_bytes, g_network_timeout);
 		free(file_buff);
-		if(result != 1)
+		if(result != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, send data fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pClientInfo->ip_addr, \
-				errno, strerror(errno));
+				result, strerror(result));
 
-			return errno != 0 ? errno : EPIPE;
+			return result;
 		}
 	}
 
@@ -1180,15 +1183,15 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	sprintf(resp.pkg_len, "%x", file_bytes);
 
-	if (tcpsenddata(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	if (resp.status != 0)
@@ -1226,6 +1229,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)];
 	char *filename;
+	int result;
 
 	memset(&resp, 0, sizeof(resp));
 	while (1)
@@ -1325,16 +1329,16 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	strcpy(resp.pkg_len, "0");
 
-	if (tcpsenddata(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
+			result, strerror(result));
 
-		return errno != 0 ? errno : EPIPE;
+		return result;
 	}
 
 	return resp.status;
@@ -1355,6 +1359,7 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)];
 	char meta_filename[MAX_PATH_SIZE+sizeof(in_buff)];
 	char *filename;
+	int result;
 
 	memset(&resp, 0, sizeof(resp));
 	while (1)
@@ -1469,16 +1474,16 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	strcpy(resp.pkg_len, "0");
 
-	if (tcpsenddata(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout) != 1)
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			errno, strerror(errno));
+			result, strerror(result));
 
-		return errno != 0 ? errno : EPIPE;
+		return result;
 	}
 
 	return resp.status;

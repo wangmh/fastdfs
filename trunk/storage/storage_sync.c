@@ -125,17 +125,16 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		memcpy(p, pRecord->filename, pRecord->filename_len);
 		p += pRecord->filename_len;
 
-		if(tcpsenddata(pStorageServer->sock, out_buff, \
-			p - out_buff, g_network_timeout) != 1)
+		if((result=tcpsenddata(pStorageServer->sock, out_buff, \
+			p - out_buff, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"sync data to storage server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pStorageServer->ip_addr, \
 				pStorageServer->port, \
-				errno, strerror(errno));
+				result, strerror(result));
 
-			result = errno != 0 ? errno : EPIPE;
 			break;
 		}
 
@@ -148,9 +147,8 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 				"errno: %d, error info: %s", \
 				__LINE__, pStorageServer->ip_addr, \
 				pStorageServer->port, \
-				errno, strerror(errno));
+				result, strerror(result));
 
-			result = errno != 0 ? errno : EPIPE;
 			break;
 		}
 
@@ -229,17 +227,16 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
 
-	if (tcpsenddata(pStorageServer->sock, out_buff, \
+	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
-		pRecord->filename_len, g_network_timeout) != 1)
+		pRecord->filename_len, g_network_timeout)) != 0)
 	{
 		logError("FILE: "__FILE__", line: %d, " \
 			"send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			errno, strerror(errno));
-		result = errno != 0 ? errno : EPIPE;
+			result, strerror(result));
 		break;
 	}
 
@@ -721,8 +718,7 @@ static int storage_report_storage_status(const char *ip_addr, \
 			}
 
 			if (connectserverbyip(pTServer->sock, \
-				pTServer->ip_addr, \
-				pTServer->port) == 1)
+				pTServer->ip_addr, pTServer->port) == 0)
 			{
 				break;
 			}
@@ -797,8 +793,7 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 			}
 
 			if (connectserverbyip(pTServer->sock, \
-				pTServer->ip_addr, \
-				pTServer->port) == 1)
+				pTServer->ip_addr, pTServer->port) == 0)
 			{
 				break;
 			}
@@ -1245,8 +1240,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			}
 
 			if (connectserverbyip(storage_server.sock, \
-				storage_server.ip_addr, \
-				g_server_port) == 1)
+				storage_server.ip_addr, g_server_port) == 0)
 			{
 				break;
 			}

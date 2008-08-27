@@ -87,17 +87,16 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
 
-	if (tcpsenddata(pStorageServer->sock, out_buff, \
+	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
 			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
-			filename_len, g_network_timeout) != 1)
+			filename_len, g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			errno, strerror(errno));
+			result, strerror(result));
 
-		result = errno != 0 ? errno : EPIPE;
 		break;
 	}
 
@@ -184,16 +183,15 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
 
-	if (tcpsenddata(pStorageServer->sock, out_buff, \
+	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
-		filename_len, g_network_timeout) != 1)
+		filename_len, g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			errno, strerror(errno));
-		result = errno != 0 ? errno : EPIPE;
+			result, strerror(result));
 		break;
 	}
 
@@ -268,16 +266,15 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
 
-	if (tcpsenddata(pStorageServer->sock, out_buff, \
+	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
-		filename_len, g_network_timeout) != 1)
+		filename_len, g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			errno, strerror(errno));
-		result = errno != 0 ? errno : EPIPE;
+			result, strerror(result));
 		break;
 	}
 
@@ -420,28 +417,26 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 			meta_bytes + file_size);
 	header.cmd = STORAGE_PROTO_CMD_UPLOAD_FILE;
 	header.status = 0;
-	if (tcpsenddata(pStorageServer->sock, &header, sizeof(header), \
-				g_network_timeout) != 1)
+	if ((result=tcpsenddata(pStorageServer->sock, &header, sizeof(header), \
+				g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			errno, strerror(errno));
-		result = errno != 0 ? errno : EPIPE;
+			result, strerror(result));
 		break;
 	}
 
-	if (tcpsenddata(pStorageServer->sock, pMetaData, \
+	if ((result=tcpsenddata(pStorageServer->sock, pMetaData, \
 			2 * TRACKER_PROTO_PKG_LEN_SIZE + meta_bytes, \
-			g_network_timeout) != 1)
+			g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			errno, strerror(errno));
-		result = errno != 0 ? errno : EPIPE;
+			result, strerror(result));
 		break;
 	}
 
@@ -454,15 +449,14 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	}
 	else
 	{
-		if (tcpsenddata(pStorageServer->sock, (char *)file_buff, \
-				file_size, g_network_timeout) != 1)
+		if ((result=tcpsenddata(pStorageServer->sock, (char *)file_buff, \
+				file_size, g_network_timeout)) != 0)
 		{
 			logError("send data to storage server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				pStorageServer->ip_addr, \
 				pStorageServer->port, \
-				errno, strerror(errno));
-			result = errno != 0 ? errno : EPIPE;
+				result, strerror(result));
 			break;
 		}
 	}
@@ -629,29 +623,27 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
 
-	if (tcpsenddata(pStorageServer->sock, out_buff, \
-			p - out_buff, g_network_timeout) != 1)
+	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
+			p - out_buff, g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			errno, strerror(errno));
+			result, strerror(result));
 
-		result = errno != 0 ? errno : EPIPE;
 		break;
 	}
 
-	if (meta_bytes > 0 && tcpsenddata(pStorageServer->sock, meta_buff, \
-			meta_bytes, g_network_timeout) != 1)
+	if (meta_bytes > 0 && (result=tcpsenddata(pStorageServer->sock, \
+			meta_buff, meta_bytes, g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			errno, strerror(errno));
+			result, strerror(result));
 
-		result = errno != 0 ? errno : EPIPE;
 		break;
 	}
 

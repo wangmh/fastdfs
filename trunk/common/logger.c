@@ -85,29 +85,29 @@ void log_destory()
 	}
 }
 
-static void doLog(const char *prefix, const char* text, const int text_len)
+static void doLog(const char *caption, const char* text, const int text_len)
 {
 	time_t t;
 	struct tm *pCurrentTime;
 	char buff[64];
-	int len;
-	int prefix_len;
+	int buff_len;
+	int caption_len;
 	struct flock lock;
 
 	t = time(NULL);
 	pCurrentTime = localtime(&t);
-	len = strftime(buff, sizeof(buff), "[%Y-%m-%d %X] ", pCurrentTime);
-	if (len > 0)
+	buff_len = strftime(buff, sizeof(buff), "[%Y-%m-%d %X] ", pCurrentTime);
+	if (buff_len > 0)
 	{
-		prefix_len = strlen(prefix);
-		if (prefix_len > sizeof(buff) - 3 - len)
+		caption_len = strlen(caption);
+		if (caption_len > sizeof(buff) - 3 - buff_len)
 		{
-			prefix_len = sizeof(buff) - 3 - len;
+			caption_len = sizeof(buff) - 3 - buff_len;
 		}
-		memcpy(buff+len, prefix, prefix_len);
-		len += prefix_len;
-		memcpy(buff+len, " - ", 3);
-		len += 3;
+		memcpy(buff+buff_len, caption, caption_len);
+		buff_len += caption_len;
+		memcpy(buff+buff_len, " - ", 3);
+		buff_len += 3;
 	}
 
 	if (g_log_fd != STDERR_FILENO)
@@ -124,7 +124,7 @@ static void doLog(const char *prefix, const char* text, const int text_len)
 		}
 	}
 
-	if (write(g_log_fd, buff, len) != len)
+	if (write(g_log_fd, buff, buff_len) != buff_len)
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call write fail, errno: %d, error info: %s\n",\
@@ -223,6 +223,21 @@ void log_it(const int priority, const char* format, ...)
 	doLog(caption, text, len); \
 
 
+void logEmerg(const char* format, ...)
+{
+	_DO_LOG(LOG_EMERG, "EMERG")
+}
+
+void logAlert(const char* format, ...)
+{
+	_DO_LOG(LOG_ALERT, "ALERT")
+}
+
+void logCrit(const char* format, ...)
+{
+	_DO_LOG(LOG_CRIT, "CRIT")
+}
+
 void logError(const char *format, ...)
 {
 	_DO_LOG(LOG_ERR, "ERROR")
@@ -233,8 +248,18 @@ void logWarning(const char *format, ...)
 	_DO_LOG(LOG_WARNING, "WARNING")
 }
 
+void logNotice(const char* format, ...)
+{
+	_DO_LOG(LOG_NOTICE, "NOTICE")
+}
+
 void logInfo(const char *format, ...)
 {
 	_DO_LOG(LOG_INFO, "INFO")
+}
+
+void logDebug(const char* format, ...)
+{
+	_DO_LOG(LOG_DEBUG, "DEBUG")
 }
 

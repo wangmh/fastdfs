@@ -66,10 +66,10 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	sock = socketServer(bind_addr, g_server_port);
+	sock = socketServer(bind_addr, g_server_port, &result);
 	if (sock < 0)
 	{
-		return EINVAL;
+		return result;
 	}
 	
 	if ((result=storage_sync_init()) != 0)

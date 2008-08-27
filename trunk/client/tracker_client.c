@@ -37,6 +37,8 @@ void tracker_disconnect_server(TrackerServerInfo *pTrackerServer)
 
 int tracker_connect_server(TrackerServerInfo *pTrackerServer)
 {
+	int result;
+
 	if (pTrackerServer->sock > 0)
 	{
 		close(pTrackerServer->sock);
@@ -49,16 +51,16 @@ int tracker_connect_server(TrackerServerInfo *pTrackerServer)
 		return errno != 0 ? errno : EPERM;
 	}
 
-	if (connectserverbyip(pTrackerServer->sock, \
-		pTrackerServer->ip_addr, pTrackerServer->port) != 1)
+	if ((result=connectserverbyip(pTrackerServer->sock, \
+		pTrackerServer->ip_addr, pTrackerServer->port)) != 0)
 	{
 		logError("connect to %s:%d fail, errno: %d, " \
 			"error info: %s", pTrackerServer->ip_addr, \
-			pTrackerServer->port, errno, strerror(errno));
+			pTrackerServer->port, result, strerror(result));
 
 		close(pTrackerServer->sock);
 		pTrackerServer->sock = -1;
-		return errno != 0 ? errno : ECONNREFUSED;
+		return result;
 	}
 
 	return 0;
@@ -143,28 +145,28 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	header.status = 0;
 	sprintf(header.pkg_len, "%x", FDFS_GROUP_NAME_MAX_LEN + 1);
 	header.cmd = TRACKER_PROTO_CMD_SERVER_LIST_STORAGE;
-	if (tcpsenddata(pTrackerServer->sock, &header, sizeof(header), \
-			g_network_timeout) != 1)
+	if ((result=tcpsenddata(pTrackerServer->sock, &header, \
+			sizeof(header), g_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
+			result, strerror(result));
 		*storage_count = 0;
-		return errno != 0 ? errno : EPIPE;
+		return result;
 	}
 
-	if (tcpsenddata(pTrackerServer->sock, group_name, \
-		FDFS_GROUP_NAME_MAX_LEN + 1, g_network_timeout) != 1)
+	if ((result=tcpsenddata(pTrackerServer->sock, group_name, \
+		FDFS_GROUP_NAME_MAX_LEN + 1, g_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
+			result, strerror(result));
 		*storage_count = 0;
-		return errno != 0 ? errno : EPIPE;
+		return result;
 	}
 
 	pInBuff = (char *)stats;
@@ -258,16 +260,16 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	header.pkg_len[1] = '\0';
 	header.cmd = TRACKER_PROTO_CMD_SERVER_LIST_GROUP;
 	header.status = 0;
-	if (tcpsenddata(pTrackerServer->sock, &header, sizeof(header), \
-			g_network_timeout) != 1)
+	if ((result=tcpsenddata(pTrackerServer->sock, &header, \
+			sizeof(header), g_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
+			result, strerror(result));
 		*group_count = 0;
-		return errno != 0 ? errno : EPIPE;
+		return result;
 	}
 
 	pInBuff = (char *)stats;
@@ -343,16 +345,16 @@ int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
 	header.cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH;
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
-	if (tcpsenddata(pTrackerServer->sock, out_buff, \
+	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
-		filename_len, g_network_timeout) != 1)
+		filename_len, g_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	pInBuff = in_buff;
@@ -397,15 +399,15 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 	header.pkg_len[1] = '\0';
 	header.cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_STORE;
 	header.status = 0;
-	if (tcpsenddata(pTrackerServer->sock, &header, sizeof(header), \
-			g_network_timeout) != 1)
+	if ((result=tcpsenddata(pTrackerServer->sock, &header, \
+			sizeof(header), g_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EPIPE;
+			result, strerror(result));
+		return result;
 	}
 
 	pInBuff = in_buff;
