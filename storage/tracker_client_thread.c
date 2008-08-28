@@ -77,6 +77,9 @@ static void* tracker_report_thread_entrance(void* arg)
 	time_t current_time;
 	time_t last_report_time;
 	time_t last_beat_time;
+	int result;
+	int previousCode;
+	int nContinuousFail;
 
 	stat_chg_sync_count = 0;
 
@@ -95,6 +98,9 @@ static void* tracker_report_thread_entrance(void* arg)
 		pTrackerServer->ip_addr, pTrackerServer->port);
 	*/
 
+	result = 0;
+	previousCode = 0;
+	nContinuousFail = 0;
 	sleep_secs = g_heart_beat_interval < g_stat_report_interval ? \
 			g_heart_beat_interval : g_stat_report_interval;
 
@@ -107,21 +113,42 @@ static void* tracker_report_thread_entrance(void* arg)
 		pTrackerServer->sock = socket(AF_INET, SOCK_STREAM, 0);
 		if(pTrackerServer->sock < 0)
 		{
-			logError("file: "__FILE__", line: %d, " \
+			logCrit("file: "__FILE__", line: %d, " \
 				"socket create failed, errno: %d, " \
-				"error info: %s.", \
+				"error info: %s. program exit!", \
 				__LINE__, errno, strerror(errno));
 			g_continue_flag = false;
 			break;
 		}
 
-		if (connectserverbyip(pTrackerServer->sock, \
+		if ((result=connectserverbyip(pTrackerServer->sock, \
 			pTrackerServer->ip_addr, \
-			pTrackerServer->port) != 0)
+			pTrackerServer->port)) != 0)
 		{
+			if (previousCode != result)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"connect to tracker server %s:%d fail" \
+					", errno: %d, error info: %s", \
+					__LINE__, pTrackerServer->ip_addr, \
+					pTrackerServer->port, \
+					result, strerror(result));
+				previousCode = result;
+			}
+
+			nContinuousFail++;
 			sleep(g_heart_beat_interval);
 			continue;
 		}
+
+		logInfo("file: "__FILE__", line: %d, " \
+			"successfully connect to tracker server %s:%d, " \
+			"continuous fail count: %d", __LINE__, \
+			pTrackerServer->ip_addr, pTrackerServer->port, \
+			nContinuousFail);
+
+		previousCode = 0;
+		nContinuousFail = 0;
 
 		getSockIpaddr(pTrackerServer->sock, \
 				tracker_client_ip, FDFS_IPADDR_SIZE);
@@ -162,6 +189,11 @@ static void* tracker_report_thread_entrance(void* arg)
 					if (storage_write_to_sync_ini_file() \
 						!= 0)
 					{
+					logCrit("file: "__FILE__", line: %d, " \
+						"storage_write_to_sync_ini_file"\
+						"  fail, program exit!", \
+						__LINE__);
+
 						g_continue_flag = false;
 						pthread_mutex_unlock( \
 							&reporter_thread_lock);
@@ -239,6 +271,16 @@ static void* tracker_report_thread_entrance(void* arg)
 		{
 			sleep(sleep_secs);
 		}
+	}
+
+	if (nContinuousFail > 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"connect to tracker server %s:%d fail, try count: %d" \
+			", errno: %d, error info: %s", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, nContinuousFail, \
+			result, strerror(result));
 	}
 
 	if (pthread_mutex_lock(&reporter_thread_lock) != 0)
@@ -541,7 +583,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer)
 			" exceed max: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			FDFS_MAX_SERVERS_EACH_GROUP);
+			server_count, FDFS_MAX_SERVERS_EACH_GROUP);
 		return EINVAL;
 	}
 
@@ -620,7 +662,7 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
-			"recv body length: %d is invalid", \
+			"recv body length: %d is invalid, " \
 			"expect body length: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
@@ -678,7 +720,7 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
-			"recv body length: %d is invalid", \
+			"recv body length: %d is invalid, " \
 			"expect body length: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \

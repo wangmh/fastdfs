@@ -74,24 +74,33 @@ int main(int argc, char *argv[])
 	
 	if ((result=storage_sync_init()) != 0)
 	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"storage_sync_init fail, program exit!", __LINE__);
 		g_continue_flag = false;
 		return result;
 	}
 
 	if ((result=tracker_report_init()) != 0)
 	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"tracker_report_init fail, program exit!", __LINE__);
 		g_continue_flag = false;
 		return result;
 	}
 
 	if ((result=storage_check_and_make_data_dirs()) != 0)
 	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"storage_check_and_make_data_dirs fail, " \
+			"program exit!", __LINE__);
 		g_continue_flag = false;
 		return result;
 	}
 
 	if ((result=init_pthread_lock(&g_storage_thread_lock)) != 0)
 	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"init_pthread_lock fail, program exit!", __LINE__);
 		g_continue_flag = false;
 		return result;
 	}
@@ -99,12 +108,17 @@ int main(int argc, char *argv[])
 	base64_init_ex(0, '.', '_', '-');
 	if ((result=setRandSeed()) != 0)
 	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"setRandSeed fail, program exit!", __LINE__);
 		g_continue_flag = false;
 		return result;
 	}
 
 	if ((result=storage_open_storage_stat()) != 0)
 	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"storage_open_storage_stat fail, " \
+			"program exit!", __LINE__);
 		g_continue_flag = false;
 		return result;
 	}
@@ -115,6 +129,9 @@ int main(int argc, char *argv[])
 	g_storage_thread_count = 0;
 	if ((result=tracker_report_thread_start()) != 0)
 	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"tracker_report_thread_start fail, " \
+			"program exit!", __LINE__);
 		g_continue_flag = false;
 		storage_close_storage_stat();
 		return result;
@@ -122,6 +139,8 @@ int main(int argc, char *argv[])
 
 	if ((result=init_pthread_attr(&thread_attr)) != 0)
 	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"init_pthread_attr fail, program exit!", __LINE__);
 		g_continue_flag = false;
 		storage_close_storage_stat();
 		return result;

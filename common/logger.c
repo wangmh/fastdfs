@@ -88,27 +88,17 @@ void log_destory()
 static void doLog(const char *caption, const char* text, const int text_len)
 {
 	time_t t;
-	struct tm *pCurrentTime;
+	struct tm tm;
 	char buff[64];
 	int buff_len;
-	int caption_len;
 	struct flock lock;
 
 	t = time(NULL);
-	pCurrentTime = localtime(&t);
-	buff_len = strftime(buff, sizeof(buff), "[%Y-%m-%d %X] ", pCurrentTime);
-	if (buff_len > 0)
-	{
-		caption_len = strlen(caption);
-		if (caption_len > sizeof(buff) - 3 - buff_len)
-		{
-			caption_len = sizeof(buff) - 3 - buff_len;
-		}
-		memcpy(buff+buff_len, caption, caption_len);
-		buff_len += caption_len;
-		memcpy(buff+buff_len, " - ", 3);
-		buff_len += 3;
-	}
+	localtime_r(&t, &tm);
+	buff_len = snprintf(buff, sizeof(buff), \
+			"[%04d-%02d-%02d %02d:%02d:%02d] %s - ", \
+			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
+			tm.tm_hour, tm.tm_min, tm.tm_sec, caption);
 
 	if (g_log_fd != STDERR_FILENO)
 	{
@@ -204,6 +194,9 @@ void log_it(const int priority, const char* format, ...)
 	doLog(caption, text, len);
 }
 
+
+#ifndef LOG_FORMAT_CHECK
+
 #define _DO_LOG(priority, caption) \
 	char text[LINE_MAX]; \
 	int len; \
@@ -262,4 +255,6 @@ void logDebug(const char* format, ...)
 {
 	_DO_LOG(LOG_DEBUG, "DEBUG")
 }
+
+#endif
 

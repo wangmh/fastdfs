@@ -166,8 +166,9 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip addr: %s, return storage count: %d" \
-				" exceed max: %d", pClientInfo->ip_addr, \
-				__LINE__, FDFS_MAX_SERVERS_EACH_GROUP);
+				" exceed max: %d", __LINE__, \
+				pClientInfo->ip_addr, server_count, \
+				FDFS_MAX_SERVERS_EACH_GROUP);
 			resp.status = EINVAL;
 			break;
 		}
@@ -217,10 +218,9 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd: %d, client ip: %s, package size %d " \
-			"is not correct, " \
-			"expect length: %d.", pClientInfo->ip_addr,  \
+			"is not correct, expect length: %d.", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_JOIN, \
-			nInPackLen, sizeof(body));
+			pClientInfo->ip_addr, nInPackLen, sizeof(body));
 		status = EINVAL;
 		break;
 	}
@@ -280,10 +280,9 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd: %d, client ip: %s, package size %d " \
-			"is not correct, " \
-			"expect length: %d.", pClientInfo->ip_addr,  \
+			"is not correct, expect length: %d.", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY, \
-			nInPackLen, sizeof(body));
+			pClientInfo->ip_addr, nInPackLen, sizeof(body));
 		status = EINVAL;
 		break;
 	}

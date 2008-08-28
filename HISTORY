@@ -11,6 +11,8 @@ Version 1.7  2008-08-25
      # support log level
      # parameter "log_level" added to server config file
      # keep the log file opened to increase performance
+  * fix log format and parameter mismatched bug (check by printf)
+  * log CRIT message to log file when program exit unexpectedly
   * Makefile add compile flag -D_FILE_OFFSET_BITS=64 to support large files
   * restart.sh modified: use external command "expr" to replace shell command "let"
 
