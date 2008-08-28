@@ -24,6 +24,19 @@ void log_destory();
 
 void log_it(const int priority, const char* format, ...);
 
+#ifdef LOG_FORMAT_CHECK  /*only for format check*/
+
+#define logEmerg   printf
+#define logCrit    printf
+#define logAlert   printf
+#define logError   printf
+#define logWarning printf
+#define logNotice  printf
+#define logInfo    printf
+#define logDebug   printf
+
+#else
+
 void logEmerg(const char* format, ...);
 void logCrit(const char* format, ...);
 void logAlert(const char* format, ...);
@@ -32,6 +45,8 @@ void logWarning(const char* format, ...);
 void logNotice(const char* format, ...);
 void logInfo(const char* format, ...);
 void logDebug(const char* format, ...);
+
+#endif
 
 #ifdef __cplusplus
 }

@@ -584,9 +584,9 @@ int storage_binlog_write(const char op_type, const char *filename)
 			if (result != 0)
 			{
 				g_continue_flag = false;
-				logError("file: "__FILE__", line: %d, " \
+				logCrit("file: "__FILE__", line: %d, " \
 					"open binlog file \"%s\" fail, " \
-					"process exit!", \
+					"program exit!", \
 					__LINE__, \
 					get_writable_binlog_filename(NULL));
 			}
@@ -698,6 +698,7 @@ static int storage_report_storage_status(const char *ip_addr, \
 	strcpy(briefServers[0].ip_addr, ip_addr);
 	briefServers[0].status = status;
 
+	result = 0;
 	pTServer = &trackerServer;
 	pTServerEnd = g_tracker_servers + g_tracker_server_count;
 	for (pGlobalServer=g_tracker_servers; pGlobalServer<pTServerEnd; \
@@ -709,16 +710,16 @@ static int storage_report_storage_status(const char *ip_addr, \
 			pTServer->sock = socket(AF_INET, SOCK_STREAM, 0);
 			if(pTServer->sock < 0)
 			{
+				result = errno != 0 ? errno : EPERM;
 				logError("file: "__FILE__", line: %d, " \
 					"socket create failed, errno: %d, " \
 					"error info: %s.", \
-					__LINE__, errno, strerror(errno));
-				result = errno != 0 ? errno : EPERM;
+					__LINE__, result, strerror(result));
 				break;
 			}
 
-			if (connectserverbyip(pTServer->sock, \
-				pTServer->ip_addr, pTServer->port) == 0)
+			if ((result=connectserverbyip(pTServer->sock, \
+				pTServer->ip_addr, pTServer->port)) == 0)
 			{
 				break;
 			}
@@ -730,6 +731,12 @@ static int storage_report_storage_status(const char *ip_addr, \
 
 		if (pTServer->sock < 0)
 		{
+			logError("file: "__FILE__", line: %d, " \
+				"connect to tracker server %s:%d fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pTServer->ip_addr, pTServer->port, \
+				result, strerror(result));
+
 			continue;
 		}
 
@@ -758,6 +765,7 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 	TrackerServerInfo *pTServerEnd;
 	char tracker_client_ip[FDFS_IPADDR_SIZE];
 	int result;
+	int conn_ret;
 
 	pTrackerServers = (TrackerServerInfo *)malloc( \
 		sizeof(TrackerServerInfo) * g_tracker_server_count);
@@ -783,20 +791,26 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 			pTServer->sock = socket(AF_INET, SOCK_STREAM, 0);
 			if(pTServer->sock < 0)
 			{
-				logError("file: "__FILE__", line: %d, " \
+				logCrit("file: "__FILE__", line: %d, " \
 					"socket create failed, errno: %d, " \
-					"error info: %s.", \
+					"error info: %s. program exit!", \
 					__LINE__, errno, strerror(errno));
 				g_continue_flag = false;
 				result = errno != 0 ? errno : EPERM;
 				break;
 			}
 
-			if (connectserverbyip(pTServer->sock, \
-				pTServer->ip_addr, pTServer->port) == 0)
+			if ((conn_ret=connectserverbyip(pTServer->sock, \
+				pTServer->ip_addr, pTServer->port)) == 0)
 			{
 				break;
 			}
+
+			logError("file: "__FILE__", line: %d, " \
+				"connect to tracker server %s:%d fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pTServer->ip_addr, pTServer->port, \
+				conn_ret, strerror(conn_ret));
 
 			close(pTServer->sock);
 
@@ -1198,7 +1212,10 @@ static void* storage_sync_thread_entrance(void* arg)
 	char local_ip_addr[FDFS_IPADDR_SIZE];
 	int read_result;
 	int sync_result;
+	int conn_result;
 	int record_len;
+	int previousCode;
+	int nContinuousFail;
 
 	memset(local_ip_addr, 0, sizeof(local_ip_addr));
 	memset(&reader, 0, sizeof(reader));
@@ -1213,6 +1230,9 @@ static void* storage_sync_thread_entrance(void* arg)
 	{
 		if (storage_reader_init(pStorage, &reader) != 0)
 		{
+			logCrit("file: "__FILE__", line: %d, " \
+				"storage_reader_init fail, program exit!", \
+				__LINE__);
 			g_continue_flag = false;
 			break;
 		}
@@ -1225,30 +1245,62 @@ static void* storage_sync_thread_entrance(void* arg)
 			sleep(10);
 		}
 
+		previousCode = 0;
+		nContinuousFail = 0;
+		conn_result = 0;
 		while (g_continue_flag)
 		{
 			storage_server.sock = \
 				socket(AF_INET, SOCK_STREAM, 0);
 			if(storage_server.sock < 0)
 			{
-				logError("file: "__FILE__", line: %d," \
-					" socket create failed, " \
-					"errno: %d, error info: %s.", \
-					__LINE__, \
+				logCrit("file: "__FILE__", line: %d," \
+					" socket create fail, " \
+					"errno: %d, error info: %s. " \
+					"program exit!", __LINE__, \
 					errno, strerror(errno));
 				g_continue_flag = false;
 				break;
 			}
 
-			if (connectserverbyip(storage_server.sock, \
-				storage_server.ip_addr, g_server_port) == 0)
+			if ((conn_result=connectserverbyip(storage_server.sock,\
+				storage_server.ip_addr, g_server_port)) == 0)
 			{
+				logInfo("file: "__FILE__", line: %d, " \
+					"successfully connect to " \
+					"storage server %s:%d, " \
+					"continuous fail count: %d", __LINE__, \
+					storage_server.ip_addr, \
+					g_server_port, nContinuousFail);
+				nContinuousFail = 0;
 				break;
 			}
 
+			if (previousCode != conn_result)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"connect to storage server %s:%d fail" \
+					", errno: %d, error info: %s", \
+					__LINE__, \
+					storage_server.ip_addr, g_server_port, \
+					conn_result, strerror(conn_result));
+				previousCode = conn_result;
+			}
+
+			nContinuousFail++;
 			sleep(5);
 			close(storage_server.sock);
 			storage_server.sock = -1;
+		}
+
+		if (nContinuousFail > 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"connect to storage server %s:%d fail, " \
+				"try count: %d, errno: %d, error info: %s", \
+				__LINE__, storage_server.ip_addr, \
+				g_server_port, nContinuousFail, \
+				conn_result, strerror(conn_result));
 		}
 
 		if (!g_continue_flag)
@@ -1306,6 +1358,10 @@ static void* storage_sync_thread_entrance(void* arg)
 				reader.sync_old_done = true;
 				if (storage_write_to_mark_file(&reader) != 0)
 				{
+					logCrit("file: "__FILE__", line: %d, " \
+						"storage_write_to_mark_file " \
+						"fail, program exit!", \
+						__LINE__);
 					g_continue_flag = false;
 					break;
 				}
@@ -1326,6 +1382,9 @@ static void* storage_sync_thread_entrance(void* arg)
 			}
 			else if (read_result != 0)
 			{
+				logCrit("file: "__FILE__", line: %d, " \
+					"storage_binlog_read fail, " \
+					"program exit!", __LINE__);
 				g_continue_flag = false;
 				break;
 			}
@@ -1336,6 +1395,9 @@ static void* storage_sync_thread_entrance(void* arg)
 				if (rewind_to_prev_rec_end( \
 					&reader, record_len) != 0)
 				{
+					logCrit("file: "__FILE__", line: %d, " \
+						"rewind_to_prev_rec_end fail, "\
+						"program exit!", __LINE__);
 					g_continue_flag = false;
 				}
 
@@ -1347,6 +1409,10 @@ static void* storage_sync_thread_entrance(void* arg)
 			{
 				if (storage_write_to_mark_file(&reader) != 0)
 				{
+					logCrit("file: "__FILE__", line: %d, " \
+						"storage_write_to_mark_file " \
+						"fail, program exit!", \
+						__LINE__);
 					g_continue_flag = false;
 					break;
 				}
@@ -1357,6 +1423,9 @@ static void* storage_sync_thread_entrance(void* arg)
 		{
 			if (storage_write_to_mark_file(&reader) != 0)
 			{
+				logCrit("file: "__FILE__", line: %d, " \
+					"storage_write_to_mark_file fail, " \
+					"program exit!", __LINE__);
 				g_continue_flag = false;
 				break;
 			}

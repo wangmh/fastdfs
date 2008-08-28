@@ -974,7 +974,7 @@ int set_rlimit(int resource, const rlim_t value)
 		logError("file: "__FILE__", line: %d, " \
 			"call setrlimit fail, resource=%d, value=%d, " \
 			"errno: %d, error info: %s", \
-			__LINE__, resource, value, \
+			__LINE__, resource, (int)value, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : EPERM;
 	}
