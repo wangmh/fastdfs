@@ -10,7 +10,7 @@ Chinese language: http://www.csource.org/
 #step 1. download FastDFS source package and unpack it
 tar xzf FastDFS_v1.x.tar.gz
 #for example:
-tar xzf FastDFS_v1.4.tar.gz
+tar xzf FastDFS_v1.7.tar.gz
 
 #step 2. enter the FastDFS dir
 cd FastDFS
@@ -59,8 +59,31 @@ max_connections=1024
 store_lookup=0
 
 #when store_lookup set to 1(specify group), must set store_group to the group name
-store_group=group2
+store_group=group1
+
+#reserved storage space for system or other applications.
+#if the free(available) space of any stoarge server in a group <= reserved_storage_space,
+#no file can be uploaded to this group.
+#bytes unit can be one of follows:
+### G or g for gigabyte(GB)
+### M or m for megabyte(MB)
+### K or k for kilobyte(KB)
+### no unit for byte(B)
+reserved_storage_space = 4GB
+
+#standard log level as syslog, case insensitive, value list:
+### emerg for emergency
+### alert
+### crit for critical
+### error
+### warn for warning
+### notice
+### info
+### debug
+log_level=info
+
 ###end of tracker server config###
+
 
 storage server config file sample:
 ###start of storage server config###
@@ -77,22 +100,37 @@ max_connections=1024
 
 tracker_server=10.62.164.83:22122
 tracker_server=10.62.164.84:22122
+
+#standard log level as syslog, case insensitive, value list:
+### emerg for emergency
+### alert
+### crit for critical
+### error
+### warn for warning
+### notice
+### info
+### debug
+log_level=info
+
 ###end of storage server config###
+
 
 Item detail
 1. common items
 -------------------------------------------
 |  item name    |  type  | default | Must |
 -------------------------------------------
+|base_path      | string |         |  Y   |
+-------------------------------------------
 |disabled       | boolean| false   |  N   |
 -------------------------------------------
 |bind_addr      | string |         |  N   |
 -------------------------------------------
-|network_timeout| int    |30(s)    |  N   |
+|network_timeout| int    | 30(s)   |  N   |
 -------------------------------------------
-|base_path      | string |         |  Y   |
+|max_connections| int    | 256     |  N   |
 -------------------------------------------
-|max_connections| int    |256      |  N   |
+|log_level      | string | info    |  N   |
 -------------------------------------------
 memo:
    * base_path is the base path of sub dirs: 
@@ -100,6 +138,15 @@ memo:
      be automatically created if not exist.
        $base_path/data: store data files
        $base_path/logs: store log files
+   * log_level is the standard log level as syslog, case insensitive
+     # emerg: for emergency
+     # alert
+     # crit: for critical
+     # error
+     # warn: for warning
+     # notice
+     # info
+     # debug
 
 2. tracker server items
 --------------------------------------------------
@@ -135,17 +182,17 @@ memo:
 ------------------------------------------------
 |  item name         |  type  | default | Must |
 ------------------------------------------------
-|port                | int    | 23000   |  N   |
-------------------------------------------------
 |group_name          | string |         |  Y   |
+------------------------------------------------
+|tracker_server      | string |         |  Y   |
+------------------------------------------------
+|port                | int    | 23000   |  N   |
 ------------------------------------------------
 |heart_beat_interval | int    |  30(s)  |  N   |
 ------------------------------------------------
 |stat_report_interval| int    | 300(s)  |  N   |
 ------------------------------------------------
 |sync_wait_msec      | int    | 100(ms) |  N   |
-------------------------------------------------
-|tracker_server      | string |         |  Y   |
 ------------------------------------------------
 memo:
   * tracker_server can ocur more than once, and tracker_server format is
