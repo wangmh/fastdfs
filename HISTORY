@@ -14,6 +14,7 @@ Version 1.7  2008-08-25
   * fix log format and parameter mismatched bug (check by printf)
   * log CRIT message to log file when program exit unexpectedly
   * Makefile add compile flag -D_FILE_OFFSET_BITS=64 to support large files
+  * fix client Makefile to compile library correctly
   * restart.sh modified: use external command "expr" to replace shell command "let"
 
 Version 1.6  2008-08-24
