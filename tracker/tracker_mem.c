@@ -526,6 +526,9 @@ int tracker_mem_init()
 			sizeof(FDFSGroupInfo) * g_groups.alloc_size);
 	if (g_groups.groups == NULL)
 	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, program exit!", \
+			__LINE__, sizeof(FDFSGroupInfo) * g_groups.alloc_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -536,6 +539,10 @@ int tracker_mem_init()
 	{
 		free(g_groups.groups);
 		g_groups.groups = NULL;
+
+		logCrit("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, program exit!", \
+			__LINE__, sizeof(int));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -552,6 +559,10 @@ int tracker_mem_init()
 	{
 		free(g_groups.groups);
 		g_groups.groups = NULL;
+
+		logCrit("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, program exit!", __LINE__, \
+			sizeof(FDFSGroupInfo *) * g_groups.alloc_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -586,8 +597,12 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 			malloc(sizeof(FDFSStorageDetail) * pGroup->alloc_size);
 	if (pGroup->all_servers == NULL)
 	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, \
+			sizeof(FDFSStorageDetail) * pGroup->alloc_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
+
 	memset(pGroup->all_servers, 0, \
 		sizeof(FDFSStorageDetail) * pGroup->alloc_size);
 
@@ -595,6 +610,9 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 		malloc(sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
 	if (pGroup->sorted_servers == NULL)
 	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, \
+			sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 	memset(pGroup->sorted_servers, 0, \
@@ -604,6 +622,9 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 		malloc(sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
 	if (pGroup->active_servers == NULL)
 	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, \
+			sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 	memset(pGroup->active_servers, 0, \
@@ -612,6 +633,9 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 	ref_count = (int *)malloc(sizeof(int));
 	if (ref_count == NULL)
 	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", \
+			__LINE__, sizeof(int));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -708,6 +732,9 @@ int tracker_mem_realloc_groups()
 	new_groups = (FDFSGroupInfo *)malloc(sizeof(FDFSGroupInfo) * new_size);
 	if (new_groups == NULL)
 	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", \
+			__LINE__, sizeof(FDFSGroupInfo) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -715,6 +742,9 @@ int tracker_mem_realloc_groups()
 	if (new_sorted_groups == NULL)
 	{
 		free(new_groups);
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", \
+			__LINE__, sizeof(FDFSGroupInfo *) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -723,6 +753,9 @@ int tracker_mem_realloc_groups()
 	{
 		free(new_groups);
 		free(new_sorted_groups);
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", \
+			__LINE__, sizeof(int));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -856,6 +889,9 @@ int tracker_mem_realloc_store_server(FDFSGroupInfo *pGroup, const int inc_count)
 		malloc(sizeof(FDFSStorageDetail) * new_size);
 	if (new_servers == NULL)
 	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", \
+			__LINE__, sizeof(FDFSStorageDetail) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -864,6 +900,9 @@ int tracker_mem_realloc_store_server(FDFSGroupInfo *pGroup, const int inc_count)
 	if (new_sorted_servers == NULL)
 	{
 		free(new_servers);
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", \
+			__LINE__, sizeof(FDFSStorageDetail *) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -873,6 +912,10 @@ int tracker_mem_realloc_store_server(FDFSGroupInfo *pGroup, const int inc_count)
 	{
 		free(new_servers);
 		free(new_sorted_servers);
+
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", \
+			__LINE__, sizeof(FDFSStorageDetail *) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -906,6 +949,10 @@ int tracker_mem_realloc_store_server(FDFSGroupInfo *pGroup, const int inc_count)
 		free(new_servers);
 		free(new_sorted_servers);
 		free(new_active_servers);
+
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", \
+			__LINE__, sizeof(int));
 		return errno != 0 ? errno : ENOMEM;
 	}
 	*new_ref_count = 0;

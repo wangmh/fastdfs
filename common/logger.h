@@ -24,6 +24,8 @@ void log_destory();
 
 void log_it(const int priority, const char* format, ...);
 
+//#define LOG_FORMAT_CHECK
+
 #ifdef LOG_FORMAT_CHECK  /*only for format check*/
 
 #define logEmerg   printf

@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include "chain.h"
 //#include "use_mmalloc.h"
 
@@ -64,13 +65,13 @@ int insertNodePrior(ChainList *pList, void *data)
 	ChainNode *pNode;
 	if (pList == NULL)
 	{
-		return -1;
+		return EINVAL;
 	}
 
 	pNode = (ChainNode *)malloc(sizeof(ChainNode));
 	if (pNode == NULL)
 	{
-		return -2;
+		return ENOMEM;
 	}
 	
 	pNode->data = data;
@@ -90,13 +91,13 @@ int appendNode(ChainList *pList, void *data)
 	ChainNode *pNode;
 	if (pList == NULL)
 	{
-		return -1;
+		return EINVAL;
 	}
 
 	pNode = (ChainNode *)malloc(sizeof(ChainNode));
 	if (pNode == NULL)
 	{
-		return -2;
+		return ENOMEM;
 	}
 	
 	pNode->data = data;
@@ -123,13 +124,13 @@ int insertNodeAsc(ChainList *pList, void *data)
 	ChainNode *pPrevious;
 	if (pList == NULL || pList->compareFunc == NULL)
 	{
-		return -1;
+		return EINVAL;
 	}
 
 	pNew = (ChainNode *)malloc(sizeof(ChainNode));
 	if (pNew == NULL)
 	{
-		return -2;
+		return ENOMEM;
 	}
 	
 	pNew->data = data;
@@ -273,7 +274,7 @@ int deleteNode(ChainList *pList, void *data, bool bDeleteAll)
 
 	if (pList == NULL || pList->compareFunc == NULL)
 	{
-		return -1;
+		return EINVAL;
 	}
 
 	nCount = 0;

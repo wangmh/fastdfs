@@ -771,6 +771,9 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 		sizeof(TrackerServerInfo) * g_tracker_server_count);
 	if (pTrackerServers == NULL)
 	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, \
+			sizeof(TrackerServerInfo) * g_tracker_server_count);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1266,12 +1269,22 @@ static void* storage_sync_thread_entrance(void* arg)
 			if ((conn_result=connectserverbyip(storage_server.sock,\
 				storage_server.ip_addr, g_server_port)) == 0)
 			{
+				char szFailPrompt[36];
+				if (nContinuousFail == 0)
+				{
+					*szFailPrompt = '\0';
+				}
+				else
+				{
+					sprintf(szFailPrompt, \
+						", continuous fail count: %d", \
+						nContinuousFail);
+				}
 				logInfo("file: "__FILE__", line: %d, " \
 					"successfully connect to " \
-					"storage server %s:%d, " \
-					"continuous fail count: %d", __LINE__, \
+					"storage server %s:%d%s", __LINE__, \
 					storage_server.ip_addr, \
-					g_server_port, nContinuousFail);
+					g_server_port, szFailPrompt);
 				nContinuousFail = 0;
 				break;
 			}

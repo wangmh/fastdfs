@@ -87,6 +87,10 @@ int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
 		if (*buff == NULL)
 		{
 			*in_bytes = 0;
+
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", \
+				__LINE__, (*in_bytes) + 1);
 			return errno != 0 ? errno : ENOMEM;
 		}
 
@@ -226,6 +230,10 @@ FDFSMetaData *fdfs_split_metadata_ex(char *meta_buff, \
 	{
 		*meta_count = 0;
 		*err_no = ENOMEM;
+
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", \
+			__LINE__, sizeof(FDFSMetaData) * (*meta_count));
 		return NULL;
 	}
 
@@ -235,6 +243,10 @@ FDFSMetaData *fdfs_split_metadata_ex(char *meta_buff, \
 		free(meta_list);
 		*meta_count = 0;
 		*err_no = ENOMEM;
+
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", \
+			__LINE__, sizeof(char *) * (*meta_count));
 		return NULL;
 	}
 
@@ -291,6 +303,10 @@ char *fdfs_pack_metadata(const FDFSMetaData *meta_list, const int meta_count, \
 		if (meta_buff == NULL)
 		{
 			*buff_bytes = 0;
+
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", \
+				__LINE__, sizeof(FDFSMetaData) * meta_count);
 			return NULL;
 		}
 	}

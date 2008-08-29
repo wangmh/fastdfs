@@ -71,6 +71,7 @@ static void* tracker_report_thread_entrance(void* arg)
 {
 	TrackerServerInfo *pTrackerServer;
 	char tracker_client_ip[FDFS_IPADDR_SIZE];
+	char szFailPrompt[36];
 	bool sync_old_done;
 	int stat_chg_sync_count;
 	int sleep_secs;
@@ -141,11 +142,19 @@ static void* tracker_report_thread_entrance(void* arg)
 			continue;
 		}
 
+		if (nContinuousFail == 0)
+		{
+			*szFailPrompt = '\0';
+		}
+		else
+		{
+			sprintf(szFailPrompt, ", continuous fail count: %d", \
+				nContinuousFail);
+		}
 		logInfo("file: "__FILE__", line: %d, " \
-			"successfully connect to tracker server %s:%d, " \
-			"continuous fail count: %d", __LINE__, \
-			pTrackerServer->ip_addr, pTrackerServer->port, \
-			nContinuousFail);
+			"successfully connect to tracker server %s:%d%s", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, szFailPrompt);
 
 		previousCode = 0;
 		nContinuousFail = 0;

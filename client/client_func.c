@@ -202,6 +202,9 @@ int fdfs_client_init(const char *filename)
 		if (g_tracker_servers == NULL)
 		{
 			result = errno != 0 ? errno : ENOMEM;
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", __LINE__, \
+				sizeof(TrackerServerInfo)*g_tracker_server_count);
 			break;
 		}
 

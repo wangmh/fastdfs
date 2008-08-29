@@ -14,6 +14,7 @@
 #include <string.h>
 #include <errno.h>
 #include "shared_func.h"
+#include "logger.h"
 #include "ini_file_reader.h"
 
 #define _LINE_BUFFER_SIZE	512
@@ -41,6 +42,10 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 	{
 		*nItemCount = -1;
 		*ppItems = NULL;
+
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, \
+			sizeof(IniItemInfo) * alloc_items);
 		return errno != 0 ? errno : ENOMEM;
 	}
 	
