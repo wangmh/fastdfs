@@ -397,6 +397,11 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 		if (pMetaData == NULL)
 		{
 			result= errno != 0 ? errno : ENOMEM;
+
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", __LINE__, \
+				2 * TRACKER_PROTO_PKG_LEN_SIZE + \
+				sizeof(FDFSMetaData) * meta_count + 2);
 			break;
 		}
 	}

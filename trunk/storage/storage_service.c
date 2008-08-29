@@ -292,6 +292,10 @@ static int storage_do_set_metadata(StorageClientInfo *pClientInfo, \
 		free(file_buff);
 		free(old_meta_list);
 		free(new_meta_list);
+
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, sizeof(FDFSMetaData) \
+			 * (old_meta_count + new_meta_count));
 		return ENOMEM;
 	}
 
@@ -410,6 +414,10 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 		if (in_buff == NULL)
 		{
 			resp.status = ENOMEM;
+
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", \
+				__LINE__, nInPackLen + 1);
 			break;
 		}
 
@@ -624,6 +632,10 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			if (meta_buff == NULL)
 			{
 				resp.status = ENOMEM;
+
+				logError("file: "__FILE__", line: %d, " \
+					"malloc %d bytes fail", \
+					__LINE__, meta_bytes + 1);
 				break;
 			}
 

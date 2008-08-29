@@ -97,6 +97,13 @@ char *getAppAbsolutePath(const char *exeName, char *szAbsPath, const int pathSiz
 	char cwd[256];
 	
 	szPath = (char *)malloc(strlen(exeName) + 1);
+	if (szPath == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, \
+			strlen(exeName) + 1);
+		return NULL;
+	}
 	
 	p = rindex(exeName, '/');
 	if (p == NULL)
@@ -172,6 +179,14 @@ int getUserProcIds(const char *progName, const bool bAllOwners, int pids[], cons
 	}
 	
 	pTargetProg = (char *)malloc(strlen(progName) + 1);
+	if (pTargetProg == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, \
+			strlen(progName) + 1);
+		return -1;
+	}
+
 	ptr = rindex(progName, '/');
 	if (ptr == NULL)
 	{
@@ -392,6 +407,13 @@ char *trim_left(char *pStr)
 	
 	nDestLen = ilength - i;
 	pTemp = (char *)malloc(nDestLen + 1);
+	if (pTemp == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, nDestLen + 1);
+		return pStr + i;
+	}
+
 	strcpy(pTemp, pStr + i);
 	strcpy(pStr, pTemp);
 	free(pTemp);
@@ -490,6 +512,14 @@ char **split(char *src, const char seperator, const int nMaxCols, int *nColCount
 	}
 	
 	pCurrent = pCols = (char **)malloc(sizeof(char *) * (*nColCount));
+	if (pCols == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, \
+			sizeof(char *) * (*nColCount));
+		return NULL;
+	}
+
 	p = src;
 	nLastIndex = *nColCount - 1;
 	for (i=0; i<*nColCount; i++)
@@ -815,6 +845,10 @@ int getFileContent(const char *filename, char **buff, int *file_size)
 	{
 		*file_size = 0;
 		close(fd);
+
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, \
+			*file_size + 1);
 		return errno != 0 ? errno : ENOMEM;
 	}
 

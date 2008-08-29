@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 static unsigned int prime_array[] = {
     1,              /* 0 */
@@ -54,7 +55,7 @@ int _hash_alloc_buckets(HashArray *pHash)
 	pHash->items = (ChainList *)malloc(sizeof(ChainList) * (*pHash->capacity));
 	if (pHash->items == NULL)
 	{
-		return -1;
+		return ENOMEM;
 	}
 
 	list_end = pHash->items + (*pHash->capacity);
@@ -70,10 +71,11 @@ int hash_init(HashArray *pHash, HashFunc hash_func, const unsigned int capacity,
 {
 	unsigned int *pprime;
 	unsigned int *prime_end;
+	int result;
 
 	if (pHash == NULL || hash_func == NULL)
 	{
-		return -1;
+		return EINVAL;
 	}
 
 	memset(pHash, 0, sizeof(HashArray));
@@ -89,12 +91,12 @@ int hash_init(HashArray *pHash, HashFunc hash_func, const unsigned int capacity,
 
 	if (pHash->capacity == NULL)
 	{
-		return -2;
+		return EINVAL;
 	}
 
-	if (_hash_alloc_buckets(pHash) != 0)
+	if ((result=_hash_alloc_buckets(pHash)) != 0)
 	{
-		return -3;
+		return result;
 	}
 
 	pHash->hash_func = hash_func;
@@ -222,13 +224,14 @@ static int _rehash1(HashArray *pHash, const int old_capacity, \
 	ChainNode *pnode;
 	HashData *hash_data;
 	ChainList *pNewList;
+	int result;
 
 	old_items = pHash->items;
 	pHash->capacity = new_capacity;
-	if (_hash_alloc_buckets(pHash) != 0)
+	if ((result=_hash_alloc_buckets(pHash)) != 0)
 	{
 		pHash->items = old_items;
-		return -1;
+		return result;
 	}
 
 	//printf("old: %d, new: %d\n", old_capacity, *pHash->capacity);
@@ -358,6 +361,7 @@ int hash_best_op(HashArray *pHash, const int suggest_capacity)
 	int old_capacity;
 	int conflict_count;
 	unsigned int *new_capacity;
+	int result;
 
 	if ((conflict_count=_hash_conflict_count(pHash)) == 0)
 	{
@@ -368,7 +372,7 @@ int hash_best_op(HashArray *pHash, const int suggest_capacity)
 	new_capacity = (unsigned int *)malloc(sizeof(unsigned int));
 	if (new_capacity == NULL)
 	{
-		return -1;
+		return -ENOMEM;
 	}
 
 	if ((suggest_capacity > 2) && (suggest_capacity >= pHash->item_count))
@@ -389,13 +393,15 @@ int hash_best_op(HashArray *pHash, const int suggest_capacity)
 		do
 		{
 			*new_capacity += 2;
-		} while ((*new_capacity % 3 == 0) || (*new_capacity % 5 == 0) || (*new_capacity % 7 == 0));
+		} while ((*new_capacity % 3 == 0) || (*new_capacity % 5 == 0) \
+			 || (*new_capacity % 7 == 0));
 
-		if (_rehash1(pHash, old_capacity, new_capacity) != 0)
+		if ((result=_rehash1(pHash, old_capacity, new_capacity)) != 0)
 		{
-			pHash->is_malloc_capacity = (pHash->capacity == new_capacity);
+			pHash->is_malloc_capacity = \
+					(pHash->capacity == new_capacity);
 			*pHash->capacity = old_capacity;
-			return -1;
+			return -1 * result;
 		}
 
 		old_capacity = *new_capacity;
@@ -408,7 +414,8 @@ int hash_best_op(HashArray *pHash, const int suggest_capacity)
 	return 1;
 }
 
-HashData *_chain_find_entry(ChainList *plist, const void *key, const int key_len, const unsigned int hash_code)
+HashData *_chain_find_entry(ChainList *plist, const void *key, \
+		const int key_len, const unsigned int hash_code)
 {
 	ChainNode *pnode;
 	HashData *hash_data;
@@ -459,10 +466,11 @@ int hash_insert(HashArray *pHash, const void *key, const int key_len, void *valu
 	ChainList *plist;
 	HashData *hash_data;
 	char *pBuff;
+	int result;
 
 	if (pHash == NULL || key == NULL || key_len < 0)
 	{
-		return -1;
+		return -EINVAL;
 	}
 
 	hash_code = pHash->hash_func(key, key_len);
@@ -477,7 +485,7 @@ int hash_insert(HashArray *pHash, const void *key, const int key_len, void *valu
 	pBuff = (char *)malloc(sizeof(HashData) + key_len);
 	if (pBuff == NULL)
 	{
-		return -2;
+		return -ENOMEM;
 	}
 
 	hash_data = (HashData *)pBuff;
@@ -488,10 +496,10 @@ int hash_insert(HashArray *pHash, const void *key, const int key_len, void *valu
 	hash_data->hash_code = hash_code;
 	hash_data->value = value;
 
-	if (addNode(plist, hash_data) != 0) //fail to add node
+	if ((result=addNode(plist, hash_data)) != 0) //fail to add node
 	{
 		free(hash_data);
-		return -4;
+		return -1 * result;
 	}
 
 	pHash->item_count++;
@@ -514,7 +522,7 @@ int hash_delete(HashArray *pHash, const void *key, const int key_len)
 
 	if (pHash == NULL || key == NULL || key_len < 0)
 	{
-		return -1;
+		return -EINVAL;
 	}
 
 	hash_code = pHash->hash_func(key, key_len);

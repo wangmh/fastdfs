@@ -740,6 +740,10 @@ int storage_load_from_conf_file(const char *filename, \
 			sizeof(TrackerServerInfo) * g_tracker_server_count);
 		if (g_tracker_servers == NULL)
 		{
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", __LINE__, \
+				sizeof(TrackerServerInfo)*g_tracker_server_count);
+
 			result = errno != 0 ? errno : ENOMEM;
 			break;
 		}
