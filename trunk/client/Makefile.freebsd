@@ -1,4 +1,4 @@
-.SUFFIXES: .c .o
+.SUFFIXES: .c .o .lo
 
 COMPILE = $(CC) -Wall -O2 -D_FILE_OFFSET_BITS=64 -DOS_FREEBSD
 #COMPILE = $(CC) -Wall -g -D_FILE_OFFSET_BITS=64 -DOS_FREEBSD -D__DEBUG__
@@ -7,33 +7,43 @@ LIB_PATH = -L/usr/local/lib -lc_r
 TARGET_PATH = /usr/local/bin
 
 COMMON_LIB =
-SHARED_OBJS = ../common/hash.o ../common/fdfs_define.o ../common/chain.o \
+STATIC_OBJS = ../common/hash.o ../common/fdfs_define.o ../common/chain.o \
               ../common/shared_func.o ../common/ini_file_reader.o \
               ../common/logger.o ../common/sockopt.o ../common/fdfs_global.o \
               ../common/fdfs_base64.o \
               ../tracker/tracker_proto.o tracker_client.o client_func.o \
               client_global.o storage_client.o
 
+SHARED_OBJS = ../common/hash.lo ../common/fdfs_define.lo ../common/chain.lo \
+              ../common/shared_func.lo ../common/ini_file_reader.lo \
+              ../common/logger.lo ../common/sockopt.lo ../common/fdfs_global.lo\
+              ../common/fdfs_base64.lo \
+              ../tracker/tracker_proto.lo tracker_client.lo client_func.lo \
+              client_global.lo storage_client.lo
+
 HEADER_FILES = ../common/fdfs_define.h ../common/fdfs_global.h \
                ../common/fdfs_base64.h ../common/shared_func.h \
+               ../common/ini_file_reader.h \
                ../tracker/tracker_types.h ../tracker/tracker_proto.h \
                tracker_client.h storage_client.h client_func.h \
                client_global.h fdfs_client.h
 
-ALL_OBJS = $(SHARED_OBJS)
+ALL_OBJS = $(STATIC_OBJS) $(SHARED_OBJS)
 ALL_LIBS = libfdfsclient.so.1
 
 ALL_PRGS = fdfs_monitor fdfs_test
 
 all: $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS)
 libfdfsclient.so.1:
-	$(COMPILE) -o $@ $< -shared -fPIC $(SHARED_OBJS) $(COMMON_LIB) $(LIB_PATH)
+	$(COMPILE) -o $@ $< -shared -Wl,-soname,libfdfsclient.so.1 $(SHARED_OBJS) $(COMMON_LIB) $(LIB_PATH)
 .o:
-	$(COMPILE) -o $@ $<  $(SHARED_OBJS) $(COMMON_LIB) $(LIB_PATH) $(INC_PATH)
+	$(COMPILE) -o $@ $<  $(STATIC_OBJS) $(COMMON_LIB) $(LIB_PATH) $(INC_PATH)
 .c:
-	$(COMPILE) -o $@ $<  $(ALL_OBJS) $(COMMON_LIB) $(LIB_PATH) $(INC_PATH)
+	$(COMPILE) -o $@ $<  $(STATIC_OBJS) $(COMMON_LIB) $(LIB_PATH) $(INC_PATH)
 .c.o:
 	$(COMPILE) -c -o $@ $<  $(INC_PATH)
+.c.lo:
+	$(COMPILE) -c -fPIC -o $@ $<  $(INC_PATH)
 install:
 	cp -f $(ALL_PRGS) $(TARGET_PATH)
 	cp -f $(ALL_LIBS) /usr/local/lib/
