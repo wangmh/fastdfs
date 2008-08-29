@@ -284,6 +284,10 @@ static int tracker_load_storages(const char *data_path)
 			if (pStorageSyncs == NULL)
 			{
 				result = errno != 0 ? errno : ENOMEM;
+				logError("file: "__FILE__", line: %d, " \
+					"realloc %d bytes fail", __LINE__, \
+					sizeof(FDFSStorageSync) * \
+					nStorageSyncSize);
 				break;
 			}
 		}
@@ -993,6 +997,10 @@ int tracker_mem_realloc_store_server(FDFSGroupInfo *pGroup, const int inc_count)
 			if (pStorageSyncs == NULL)
 			{
 				result = errno != 0 ? errno : ENOMEM;
+				logError("file: "__FILE__", line: %d, " \
+					"realloc %d bytes fail", __LINE__, \
+					sizeof(FDFSStorageSync) * \
+					nStorageSyncSize);
 				break;
 			}
 		}

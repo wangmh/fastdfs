@@ -103,6 +103,10 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 				fclose(fp);
 				*nItemCount = -1;
 				*ppItems = NULL;
+
+				logError("file: "__FILE__", line: %d, " \
+					"realloc %d bytes fail", __LINE__, \
+					sizeof(IniItemInfo) * alloc_items);
 				return errno != 0 ? errno : ENOMEM;
 			}
 
