@@ -564,7 +564,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	char out_buff[128];
 	char filename[128];
 	int meta_bytes;
-	off_t file_bytes;
+	int file_bytes;
 	int filename_len;
 	int result;
 
