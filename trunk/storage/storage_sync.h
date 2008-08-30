@@ -31,7 +31,7 @@ typedef struct
 	int mark_fd;
 	int binlog_index;
 	int binlog_fd;
-	int binlog_offset;
+	off_t binlog_offset;
 	int scan_row_count;
 	int sync_row_count;
 	int last_write_row_count;

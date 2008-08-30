@@ -265,7 +265,13 @@ int main(int argc, char *argv[])
 
 void sigQuitHandler(int sig)
 {
-	g_continue_flag = false;
+	if (g_continue_flag)
+	{
+		g_continue_flag = false;
+		logCrit("file: "__FILE__", line: %d, " \
+			"catch signal %d, program exiting...", \
+			__LINE__, sig);
+	}
 }
 
 void sigHupHandler(int sig)
