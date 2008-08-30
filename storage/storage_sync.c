@@ -50,7 +50,7 @@
 
 int g_binlog_fd = -1;
 int g_binlog_index = 0;
-static int binlog_file_size = 0;
+static off_t binlog_file_size = 0;
 
 int g_storage_sync_thread_count = 0;
 static pthread_mutex_t sync_thread_lock;
@@ -1025,7 +1025,7 @@ static int storage_write_to_mark_file(BinLogReader *pReader)
 
 	len = sprintf(buff, 
 		"%s=%d\n"  \
-		"%s=%d\n"  \
+		"%s=%lld\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
@@ -1455,7 +1455,7 @@ static void* storage_sync_thread_entrance(void* arg)
 
 		if (!(sync_result == ENOTCONN || sync_result == EIO))
 		{
-			sleep(60);
+			sleep(10);
 		}
 	}
 

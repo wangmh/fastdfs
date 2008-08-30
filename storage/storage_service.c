@@ -198,7 +198,7 @@ static int storage_do_set_metadata(StorageClientInfo *pClientInfo, \
 	FDFSMetaData *pNewMetaEnd;
 	char *file_buff;
 	char *all_meta_buff;
-	int file_bytes;
+	off_t file_bytes;
 	int old_meta_count;
 	int new_meta_count;
 	int all_meta_bytes;
@@ -564,7 +564,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	char out_buff[128];
 	char filename[128];
 	int meta_bytes;
-	int file_bytes;
+	off_t file_bytes;
 	int filename_len;
 	int result;
 
@@ -940,7 +940,7 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)+32];
 	char *file_buff;
 	char *filename;
-	int file_bytes;
+	off_t file_bytes;
 
 	memset(&resp, 0, sizeof(resp));
 	file_buff = NULL;
@@ -1025,7 +1025,7 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 	}
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
-	sprintf(resp.pkg_len, "%x", file_bytes);
+	sprintf(resp.pkg_len, "%llx", file_bytes);
 
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)

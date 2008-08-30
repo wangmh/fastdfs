@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -72,7 +73,7 @@ int fdfs_check_data_filename(const char *filename, const int len);
 void fdfs_load_log_level(IniItemInfo *items, const int nItemCount);
 
 void chopPath(char *filePath);
-int getFileContent(const char *filename, char **buff, int *file_size);
+int getFileContent(const char *filename, char **buff, off_t *file_size);
 int writeToFile(const char *filename, const char *buff, const int file_size);
 int fd_gets(int fd, char *buff, const int size, int once_bytes);
 
