@@ -701,11 +701,11 @@ static int storage_report_storage_status(const char *ip_addr, \
 	result = 0;
 	pTServer = &trackerServer;
 	pTServerEnd = g_tracker_servers + g_tracker_server_count;
-	for (pGlobalServer=g_tracker_servers; pGlobalServer<pTServerEnd; \
+	for (pGlobalServer=g_tracker_servers; pGlobalServer < pTServerEnd; \
 			pGlobalServer++)
 	{
 		memcpy(pTServer, pGlobalServer, sizeof(TrackerServerInfo));
-		for (i=0; i<3; i++)
+		for (i=0; i < 3; i++)
 		{
 			pTServer->sock = socket(AF_INET, SOCK_STREAM, 0);
 			if(pTServer->sock < 0)
@@ -726,7 +726,7 @@ static int storage_report_storage_status(const char *ip_addr, \
 
 			close(pTServer->sock);
 			pTServer->sock = -1;
-			sleep(10);
+			sleep(5);
 		}
 
 		if (pTServer->sock < 0)
@@ -1219,7 +1219,7 @@ static void* storage_sync_thread_entrance(void* arg)
 	int record_len;
 	int previousCode;
 	int nContinuousFail;
-
+	
 	memset(local_ip_addr, 0, sizeof(local_ip_addr));
 	memset(&reader, 0, sizeof(reader));
 
@@ -1245,7 +1245,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			pStorage->status != FDFS_STORAGE_STATUS_WAIT_SYNC && \
 			pStorage->status != FDFS_STORAGE_STATUS_SYNCING))
 		{
-			sleep(10);
+			sleep(1);
 		}
 
 		previousCode = 0;
@@ -1301,9 +1301,9 @@ static void* storage_sync_thread_entrance(void* arg)
 			}
 
 			nContinuousFail++;
-			sleep(5);
 			close(storage_server.sock);
 			storage_server.sock = -1;
+			sleep(1);
 		}
 
 		if (nContinuousFail > 0)
@@ -1455,7 +1455,7 @@ static void* storage_sync_thread_entrance(void* arg)
 
 		if (!(sync_result == ENOTCONN || sync_result == EIO))
 		{
-			sleep(10);
+			sleep(1);
 		}
 	}
 

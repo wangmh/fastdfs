@@ -129,6 +129,23 @@ int tcprecvdata_ex(int sock, void *data, int size, int timeout, int *count)
 			res = select(sock+1, &read_set, NULL, NULL, &t);
 		}
 		
+		/*	
+		struct timespec ts;
+		sigset_t sigmask;
+
+		sigemptyset(&sigmask);
+		if (timeout <= 0)
+		{
+			res = pselect(sock+1, &read_set, NULL, NULL, NULL, &sigmask);
+		}
+		else
+		{
+			ts.tv_nsec = 0;
+			ts.tv_sec = timeout;
+			res = pselect(sock+1, &read_set, NULL, NULL, &ts, &sigmask);
+		}
+		*/
+	
 		if (res < 0)
 		{
 #ifdef __DEBUG__

@@ -267,7 +267,7 @@ static void* tracker_report_thread_entrance(void* arg)
 				last_report_time = current_time;
 			}
 
-			sleep(sleep_secs);
+			sleep(1);
 		}
 
 		if ((!g_continue_flag) && tracker_quit(pTrackerServer) != 0)
