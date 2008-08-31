@@ -1,5 +1,5 @@
 
-Version 1.7  2008-08-30
+Version 1.7  2008-08-31
   * performance optimizing: 
      # change fopen to syscall open
      # increase the efficiency of socket functions tcpsenddata and tcprecvdata
