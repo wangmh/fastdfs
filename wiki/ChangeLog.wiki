@@ -1,4 +1,26 @@
 #labels Featured
+* Version 1.7  === 2008-08-31
+{{{
+  * performance optimizing:
+     # change fopen to syscall open
+     # increase the efficiency of socket functions tcpsenddata and tcprecvdata
+  * change the return value of socket funtions such as tcpsenddata,
+    tcprecvdata and connectserverbyip
+      old return value: result=1 for success, result != 1 fail
+      new return value: result=0 for success, result != 0 fail, return the error code
+  * log function enhancement:
+     # support log level
+     # parameter "log_level" added to server config file
+     # keep the log file opened to increase performance
+  * fix log format and parameter mismatched bug (check by printf)
+  * log CRIT message to log file when program exit unexpectedly
+  * Makefile add compile flag -D_FILE_OFFSET_BITS=64 to support large files
+  * change the type of file_size and file_offset to off_t
+  * change signal to sigaction
+  * fix client Makefile to compile library correctly
+  * restart.sh modified: use external command "expr" to replace shell command "let"
+}}}
+
 * Version 1.6  === 2008-08-24
 {{{
   * add restart daemon shell script: restart.sh
