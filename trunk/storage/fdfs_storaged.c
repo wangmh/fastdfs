@@ -36,10 +36,10 @@
 
 bool bReloadFlag = false;
 
-void sigQuitHandler(int sig);
-void sigHupHandler(int sig);
-void sigUsrHandler(int sig);
-int setRandSeed();
+static void sigQuitHandler(int sig);
+static void sigHupHandler(int sig);
+static void sigUsrHandler(int sig);
+static int setRandSeed();
 
 int main(int argc, char *argv[])
 {
@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
 	int result;
 	int sock;
 	pthread_t tid;
+	struct sigaction act;
 
 	if (argc < 2)
 	{
@@ -126,6 +127,48 @@ int main(int argc, char *argv[])
 	daemon_init(false);
 	umask(0);
 	
+	memset(&act, 0, sizeof(act));
+	sigemptyset(&act.sa_mask);
+
+	act.sa_handler = sigUsrHandler;
+	if(sigaction(SIGUSR1, &act, NULL) < 0 || \
+		sigaction(SIGUSR2, &act, NULL) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call sigaction fail, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno;
+	}
+
+	act.sa_handler = sigHupHandler;
+	if(sigaction(SIGHUP, &act, NULL) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call sigaction fail, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno;
+	}
+	
+	act.sa_handler = SIG_IGN;
+	if(sigaction(SIGPIPE, &act, NULL) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call sigaction fail, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno;
+	}
+
+	act.sa_handler = sigQuitHandler;
+	if(sigaction(SIGINT, &act, NULL) < 0 || \
+		sigaction(SIGTERM, &act, NULL) < 0 || \
+		sigaction(SIGQUIT, &act, NULL) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call sigaction fail, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno;
+	}
+
 	g_storage_thread_count = 0;
 	if ((result=tracker_report_thread_start()) != 0)
 	{
@@ -146,14 +189,6 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	signal(SIGHUP, sigHupHandler);
-	signal(SIGUSR1, sigUsrHandler);
-	signal(SIGUSR2, sigUsrHandler);
-	signal(SIGINT, sigQuitHandler);
-	signal(SIGTERM, sigQuitHandler);
-	signal(SIGQUIT, sigQuitHandler);
-	signal(SIGPIPE, SIG_IGN);
-	
 	while (g_continue_flag)
 	{
 		/*
@@ -263,7 +298,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void sigQuitHandler(int sig)
+static void sigQuitHandler(int sig)
 {
 	if (g_continue_flag)
 	{
@@ -274,12 +309,12 @@ void sigQuitHandler(int sig)
 	}
 }
 
-void sigHupHandler(int sig)
+static void sigHupHandler(int sig)
 {
 	bReloadFlag = true;
 }
 
-void sigUsrHandler(int sig)
+static void sigUsrHandler(int sig)
 {
 	/*
 	logInfo("current thread count=%d, " \
@@ -288,7 +323,7 @@ void sigUsrHandler(int sig)
 	*/
 }
 
-int setRandSeed()
+static int setRandSeed()
 {
 	struct timeval tv;
 

@@ -15,6 +15,7 @@ Version 1.7  2008-08-30
   * log CRIT message to log file when program exit unexpectedly
   * Makefile add compile flag -D_FILE_OFFSET_BITS=64 to support large files
   * change the type of file_size and file_offset to off_t
+  * change signal to sigaction
   * fix client Makefile to compile library correctly
   * restart.sh modified: use external command "expr" to replace shell command "let"
 
