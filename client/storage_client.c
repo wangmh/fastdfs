@@ -622,8 +622,8 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	filename_len = snprintf(p, pEnd - p, "%s", filename);
 	p += filename_len;
 
-	sprintf(header.pkg_len, "%x", p - (out_buff + sizeof(TrackerHeader)) \
-				 + meta_bytes);
+	sprintf(header.pkg_len, "%x", (int)(p - (out_buff + \
+			sizeof(TrackerHeader))) + meta_bytes);
 	header.cmd = STORAGE_PROTO_CMD_SET_METADATA;
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));

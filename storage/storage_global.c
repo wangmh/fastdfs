@@ -122,8 +122,8 @@ void print_local_host_ip_addrs()
 		FDFS_IPADDR_SIZE * g_local_host_ip_count;
 	for (p=g_local_host_ip_addrs; p<pEnd; p+=FDFS_IPADDR_SIZE)
 	{
-		printf("%d. %s\n", (p-g_local_host_ip_addrs)/ \
-				FDFS_IPADDR_SIZE+1, p);
+		printf("%d. %s\n", (int)((p-g_local_host_ip_addrs)/ \
+				FDFS_IPADDR_SIZE)+1, p);
 	}
 
 	printf("\n");

@@ -772,7 +772,7 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 	pReqBody = (TrackerStorageSyncReqBody*)(out_buff+sizeof(TrackerHeader));
 
 	memset(out_buff, 0, sizeof(out_buff));
-	sprintf(pHeader->pkg_len, "%x", sizeof(TrackerStorageSyncReqBody));
+	sprintf(pHeader->pkg_len, "%x", (int)sizeof(TrackerStorageSyncReqBody));
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY;
 	strcpy(pReqBody->src_ip_addr, g_sync_src_ip_addr);
 	sprintf(pReqBody->until_timestamp, "%x", g_sync_until_timestamp);
@@ -803,7 +803,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer)
 	pReqBody = (TrackerStorageJoinBody *)(out_buff+sizeof(TrackerHeader));
 
 	memset(out_buff, 0, sizeof(out_buff));
-	sprintf(pHeader->pkg_len, "%x", sizeof(TrackerStorageJoinBody));
+	sprintf(pHeader->pkg_len, "%x", (int)sizeof(TrackerStorageJoinBody));
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_JOIN;
 	strcpy(pReqBody->group_name, g_group_name);
 	sprintf(pReqBody->storage_port, "%x", g_server_port);
@@ -842,7 +842,7 @@ static int tracker_report_stat(TrackerServerInfo *pTrackerServer)
 	pHeader = (TrackerHeader *)out_buff;
 	pStatBuff = (TrackerStatReportReqBody*) \
 			(out_buff + sizeof(TrackerHeader));
-	sprintf(pHeader->pkg_len, "%x", sizeof(TrackerStatReportReqBody));
+	sprintf(pHeader->pkg_len, "%x", (int)sizeof(TrackerStatReportReqBody));
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_REPORT;
 	pHeader->status = 0;
 
