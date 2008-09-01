@@ -655,7 +655,7 @@ static int storage_open_readable_binlog(BinLogReader *pReader)
 		logError("file: "__FILE__", line: %d, " \
 			"seek binlog file \"%s\" fail, file offset=%d, " \
 			"errno: %d, error info: %s", \
-			__LINE__, full_filename, pReader->binlog_offset, \
+			__LINE__, full_filename, (int)pReader->binlog_offset, \
 			errno, strerror(errno));
 
 		close(pReader->binlog_fd);
@@ -947,7 +947,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 				"in mark file \"%s\", " \
 				"binlog_offset: %d < 0", \
 				__LINE__, full_filename, \
-				pReader->binlog_offset);
+				(int)pReader->binlog_offset);
 			return EINVAL;
 		}
 
@@ -1025,14 +1025,14 @@ static int storage_write_to_mark_file(BinLogReader *pReader)
 
 	len = sprintf(buff, 
 		"%s=%d\n"  \
-		"%s=%lld\n"  \
+		"%s=%d\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n", \
 		MARK_ITEM_BINLOG_FILE_INDEX, pReader->binlog_index, \
-		MARK_ITEM_BINLOG_FILE_OFFSET, pReader->binlog_offset, \
+		MARK_ITEM_BINLOG_FILE_OFFSET, (int)pReader->binlog_offset, \
 		MARK_ITEM_NEED_SYNC_OLD, pReader->need_sync_old, \
 		MARK_ITEM_SYNC_OLD_DONE, pReader->sync_old_done, \
 		MARK_ITEM_UNTIL_TIMESTAMP, pReader->until_timestamp, \
@@ -1058,7 +1058,7 @@ static int rewind_to_prev_rec_end(BinLogReader *pReader, \
 			"file offset: %d, " \
 			"errno: %d, error info: %s", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
-			pReader->binlog_offset, \
+			(int)pReader->binlog_offset, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
@@ -1084,7 +1084,8 @@ static int storage_binlog_read(BinLogReader *pReader, \
 				"error no: %d, error info: %s", \
 				__LINE__, \
 				get_binlog_readable_filename(pReader, NULL), \
-				pReader->binlog_offset, errno, strerror(errno));
+				(int)pReader->binlog_offset, \
+				errno, strerror(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
 
@@ -1128,7 +1129,7 @@ static int storage_binlog_read(BinLogReader *pReader, \
 			"file offset: %d, " \
 			"no new line char, line length: %d", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
-			pReader->binlog_offset, *record_length);
+			(int)pReader->binlog_offset, *record_length);
 		return ENOENT;
 	}
 
@@ -1139,7 +1140,7 @@ static int storage_binlog_read(BinLogReader *pReader, \
 			"file offset: %d, " \
 			"read item count: %d < 3", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
-			pReader->binlog_offset, result);
+			(int)pReader->binlog_offset, result);
 		return ENOENT;
 	}
 
@@ -1153,7 +1154,7 @@ static int storage_binlog_read(BinLogReader *pReader, \
 			"file \"%s\" is invalid, file offset: %d, " \
 			"filename length: %d > %d", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
-			pReader->binlog_offset, \
+			(int)pReader->binlog_offset, \
 			pRecord->filename_len, sizeof(pRecord->filename)-1);
 		return EINVAL;
 	}
