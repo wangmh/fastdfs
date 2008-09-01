@@ -848,7 +848,7 @@ int getFileContent(const char *filename, char **buff, off_t *file_size)
 
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
-			*file_size + 1);
+			(int)(*file_size + 1));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
