@@ -1017,7 +1017,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 
 	//printf("deal sync request, status=%d\n", pResp->status);
 
-	sprintf(pResp->pkg_len, "%x", out_len - sizeof(TrackerHeader));
+	sprintf(pResp->pkg_len, "%x", out_len - (int)sizeof(TrackerHeader));
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		out_buff, out_len, g_network_timeout)) != 0)
@@ -1091,7 +1091,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 
 	//printf("deal sync request, status=%d\n", pResp->status);
 
-	sprintf(pResp->pkg_len, "%x", out_len - sizeof(TrackerHeader));
+	sprintf(pResp->pkg_len, "%x", out_len - (int)sizeof(TrackerHeader));
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		out_buff, out_len, g_network_timeout)) != 0)
