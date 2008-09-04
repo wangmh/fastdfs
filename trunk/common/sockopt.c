@@ -41,7 +41,7 @@
 
 #define FDFS_BUFF_SIZE  128 * 1024
 
-int tcpgets(int sock, char* s, int size, int timeout)
+int tcpgets(int sock, char* s, const int size, const int timeout)
 {
 	int result;
 	char t;
@@ -90,7 +90,8 @@ int tcpgets(int sock, char* s, int size, int timeout)
 	return 0;
 }
 
-int tcprecvdata_ex(int sock, void *data, int size, int timeout, int *count)
+int tcprecvdata_ex(int sock, void *data, const int size, \
+		const int timeout, int *count)
 {
 	int left_bytes;
 	int read_bytes;
@@ -199,7 +200,7 @@ int tcprecvdata_ex(int sock, void *data, int size, int timeout, int *count)
 	return ret_code;
 }
 
-int tcpsenddata(int sock, void* data, int size, int timeout)
+int tcpsenddata(int sock, void* data, const int size, const int timeout)
 {
 	int left_bytes;
 	int write_bytes;
@@ -360,7 +361,7 @@ in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize)
 	return ip_addr.s_addr;
 }
 
-int nbaccept(int sock, int timeout, int *err_no)
+int nbaccept(int sock, const int timeout, int *err_no)
 {
 	struct sockaddr_in inaddr;
 	unsigned int sockaddr_len;
@@ -664,6 +665,68 @@ int tcpsendfile(int sock, const char *filename, const int file_bytes)
 	}
 
 	close(fd);
+	return 0;
+}
+
+int tcpsetnonblockopt(int fd, const int timeout)
+{
+	int result;
+	int flags;
+	struct linger linger;
+	struct timeval waittime;
+
+	linger.l_onoff = 1;
+	linger.l_linger = timeout * 100;
+	result = setsockopt(fd, SOL_SOCKET, SO_LINGER, \
+                      &linger, (socklen_t)sizeof(struct linger));
+	if (result < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, result info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	waittime.tv_sec = timeout;
+	waittime.tv_usec = 0;
+
+	result = setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
+                      &waittime, (socklen_t)sizeof(struct timeval));
+	if (result < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, result info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	result = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
+                      &waittime, (socklen_t)sizeof(struct timeval));
+	if (result < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, result info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	flags = fcntl(fd, F_GETFL, 0);
+	if (flags < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"fcntl failed, errno: %d, result info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EACCES;
+	}
+
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"fcntl failed, errno: %d, result info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EACCES;
+	}
+
 	return 0;
 }
 

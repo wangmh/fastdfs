@@ -1,4 +1,7 @@
 
+Version 1.8  2008-09-04
+  * sockopt.c add function tcpsetnonblockopt
+
 Version 1.7  2008-08-31
   * performance optimizing: 
      # change fopen to syscall open
