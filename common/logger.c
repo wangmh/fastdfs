@@ -137,15 +137,16 @@ static void doLog(const char *caption, const char* text, const int text_len)
 
 	if (g_log_fd != STDERR_FILENO)
 	{
+
+		if (fsync(g_log_fd) != 0)
+		{
+			fprintf(stderr, "file: "__FILE__", line: %d, " \
+				"call fsync fail, errno: %d, error info: %s\n",\
+				 __LINE__, errno, strerror(errno));
+		}
+
 		lock.l_type = F_UNLCK;
 		fcntl(g_log_fd, F_SETLKW, &lock);
-	}
-
-	if (fsync(g_log_fd) != 0)
-	{
-		fprintf(stderr, "file: "__FILE__", line: %d, " \
-			"call fsync fail, errno: %d, error info: %s\n",\
-			 __LINE__, errno, strerror(errno));
 	}
 }
 

@@ -15,17 +15,25 @@
 extern "C" {
 #endif
 
-typedef int (*getnamefunc)(int socket, struct sockaddr *address, socklen_t *address_len);
+typedef int (*getnamefunc)(int socket, struct sockaddr *address, \
+		socklen_t *address_len);
 
-#define getSockIpaddr(sock, buff, bufferSize) getIpaddr(getsockname, sock, buff, bufferSize)
-#define getPeerIpaddr(sock, buff, bufferSize) getIpaddr(getpeername, sock, buff, bufferSize)
+#define getSockIpaddr(sock, buff, bufferSize) \
+	getIpaddr(getsockname, sock, buff, bufferSize)
 
-int tcpgets(int sock, char *s, int size, int timeout);
-int tcprecvdata_ex(int sock, void *data, int size, int timeout, int *count);
-int tcpsenddata(int sock, void* data, int size, int timeout);
+#define getPeerIpaddr(sock, buff, bufferSize) \
+	getIpaddr(getpeername, sock, buff, bufferSize)
+
+int tcpgets(int sock, char *s, const int size, const int timeout);
+int tcprecvdata_ex(int sock, void *data, const int size, \
+		const int timeout, int *count);
+int tcpsenddata(int sock, void* data, const int size, const int timeout);
 int connectserverbyip(int sock, char* ip, short port);
-int nbaccept(int sock, int timeout, int *err_no);
-in_addr_t getIpaddr(getnamefunc getname, int sock, char *buff, const int bufferSize);
+int nbaccept(int sock, const int timeout, int *err_no);
+int tcpsetnonblockopt(int fd, const int timeout);
+
+in_addr_t getIpaddr(getnamefunc getname, int sock, \
+		char *buff, const int bufferSize);
 in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize);
 int socketServer(const char *bind_ipaddr, const int port, int *err_no);
 
