@@ -710,6 +710,37 @@ int tcpsetnonblockopt(int fd, const int timeout)
 		return errno != 0 ? errno : ENOMEM;
 	}
 
+	/*
+	{
+	int bytes;
+	int size;
+
+	bytes = 0;
+	size = sizeof(int);
+	result = getsockopt(fd, SOL_SOCKET, SO_SNDBUF,
+			&bytes, (socklen_t *)&size);
+	if (result < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"getsockopt failed, errno: %d, result info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+	printf("send buff size: %d\n", bytes);
+
+	result = getsockopt(fd, SOL_SOCKET, SO_RCVBUF,
+			&bytes, (socklen_t *)&size);
+	if (result < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"getsockopt failed, errno: %d, result info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+	printf("recv buff size: %d\n", bytes);
+	}
+	*/
+
 	flags = fcntl(fd, F_GETFL, 0);
 	if (flags < 0)
 	{
