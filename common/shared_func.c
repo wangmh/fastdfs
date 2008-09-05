@@ -391,7 +391,7 @@ char *trim_left(char *pStr)
 	
 	ilength = strlen(pStr);
 	
-	for ( i=0; i<ilength; i++ )
+	for (i=0; i<ilength; i++ )
 	{
 		ch = pStr[i];
 		if (!(' ' == ch || '\n' == ch || '\r' == ch || '\t' == ch))
@@ -1116,5 +1116,29 @@ void fdfs_load_log_level(IniItemInfo *items, const int nItemCount)
 			g_log_level = LOG_EMERG;
 		}
 	}
+}
+
+int set_nonblock(int fd)
+{
+	int flags;
+
+	flags = fcntl(fd, F_GETFL, 0);
+	if (flags < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"fcntl failed, errno: %d, result info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EACCES;
+	}
+
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"fcntl failed, errno: %d, result info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EACCES;
+	}
+
+	return 0;
 }
 

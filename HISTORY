@@ -1,6 +1,7 @@
 
 Version 1.8  2008-09-04
   * sockopt.c add function tcpsetnonblockopt
+  * shared_func.c add function set_nonblock
 
 Version 1.7  2008-08-31
   * performance optimizing: 
