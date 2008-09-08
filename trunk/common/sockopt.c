@@ -673,7 +673,6 @@ int tcpsetnonblockopt(int fd, const int timeout)
 	int result;
 	int flags;
 
-	/*
 	struct linger linger;
 	struct timeval waittime;
 
@@ -711,7 +710,6 @@ int tcpsetnonblockopt(int fd, const int timeout)
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
-	*/
 
 	/*
 	{
