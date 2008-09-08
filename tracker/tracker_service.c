@@ -379,6 +379,11 @@ static int tracker_check_logined(TrackerClientInfo *pClientInfo)
 	return resp.status;
 }
 
+/**
+pkg format:
+Header
+FDFS_GROUP_NAME_MAX_LEN bytes: group_name
+**/
 static int tracker_deal_server_list_group_storages( \
 		TrackerClientInfo *pClientInfo, const int64_t nInPackLen)
 {
@@ -445,32 +450,32 @@ static int tracker_deal_server_list_group_storages( \
 			pDest->status = (*ppServer)->status;
 			memcpy(pDest->ip_addr, (*ppServer)->ip_addr, \
 				FDFS_IPADDR_SIZE);
-			int2buff((*ppServer)->total_mb, pDest->sz_total_mb);
-			int2buff((*ppServer)->free_mb, pDest->sz_free_mb);
+			long2buff((*ppServer)->total_mb, pDest->sz_total_mb);
+			long2buff((*ppServer)->free_mb, pDest->sz_free_mb);
 
-			int2buff(pStorageStat->total_upload_count, \
+			long2buff(pStorageStat->total_upload_count, \
 				 pStatBuff->sz_total_upload_count);
-			int2buff(pStorageStat->success_upload_count, \
+			long2buff(pStorageStat->success_upload_count, \
 				 pStatBuff->sz_success_upload_count);
-			int2buff(pStorageStat->total_set_meta_count, \
+			long2buff(pStorageStat->total_set_meta_count, \
 				 pStatBuff->sz_total_set_meta_count);
-			int2buff(pStorageStat->success_set_meta_count, \
+			long2buff(pStorageStat->success_set_meta_count, \
 				 pStatBuff->sz_success_set_meta_count);
-			int2buff(pStorageStat->total_delete_count, \
+			long2buff(pStorageStat->total_delete_count, \
 				 pStatBuff->sz_total_delete_count);
-			int2buff(pStorageStat->success_delete_count, \
+			long2buff(pStorageStat->success_delete_count, \
 				 pStatBuff->sz_success_delete_count);
-			int2buff(pStorageStat->total_download_count, \
+			long2buff(pStorageStat->total_download_count, \
 				 pStatBuff->sz_total_download_count);
-			int2buff(pStorageStat->success_download_count, \
+			long2buff(pStorageStat->success_download_count, \
 				 pStatBuff->sz_success_download_count);
-			int2buff(pStorageStat->total_get_meta_count, \
+			long2buff(pStorageStat->total_get_meta_count, \
 				 pStatBuff->sz_total_get_meta_count);
-			int2buff(pStorageStat->success_get_meta_count, \
+			long2buff(pStorageStat->success_get_meta_count, \
 				 pStatBuff->sz_success_get_meta_count);
-			int2buff(pStorageStat->last_source_update, \
+			long2buff(pStorageStat->last_source_update, \
 				 pStatBuff->sz_last_source_update);
-			int2buff(pStorageStat->last_sync_update, \
+			long2buff(pStorageStat->last_sync_update, \
 				 pStatBuff->sz_last_sync_update);
 			pDest++;
 		}
@@ -1220,8 +1225,8 @@ static int tracker_deal_storage_report(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		pClientInfo->pStorage->total_mb=buff2int(statBuff.sz_total_mb);
-		pClientInfo->pStorage->free_mb = buff2int(statBuff.sz_free_mb);
+		pClientInfo->pStorage->total_mb=buff2long(statBuff.sz_total_mb);
+		pClientInfo->pStorage->free_mb = buff2long(statBuff.sz_free_mb);
 
 		if ((pClientInfo->pGroup->free_mb == 0) ||
 			(pClientInfo->pStorage->free_mb < \
@@ -1319,29 +1324,29 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 		pStat = &(pClientInfo->pStorage->stat);
 
 		pStat->total_upload_count = \
-			buff2int(statBuff.sz_total_upload_count);
+			buff2long(statBuff.sz_total_upload_count);
 		pStat->success_upload_count = \
-			buff2int(statBuff.sz_success_upload_count);
+			buff2long(statBuff.sz_success_upload_count);
 		pStat->total_download_count = \
-			buff2int(statBuff.sz_total_download_count);
+			buff2long(statBuff.sz_total_download_count);
 		pStat->success_download_count = \
-			buff2int(statBuff.sz_success_download_count);
+			buff2long(statBuff.sz_success_download_count);
 		pStat->total_set_meta_count = \
-			buff2int(statBuff.sz_total_set_meta_count);
+			buff2long(statBuff.sz_total_set_meta_count);
 		pStat->success_set_meta_count = \
-			buff2int(statBuff.sz_success_set_meta_count);
+			buff2long(statBuff.sz_success_set_meta_count);
 		pStat->total_delete_count = \
-			buff2int(statBuff.sz_total_delete_count);
+			buff2long(statBuff.sz_total_delete_count);
 		pStat->success_delete_count = \
-			buff2int(statBuff.sz_success_delete_count);
+			buff2long(statBuff.sz_success_delete_count);
 		pStat->total_get_meta_count = \
-			buff2int(statBuff.sz_total_get_meta_count);
+			buff2long(statBuff.sz_total_get_meta_count);
 		pStat->success_get_meta_count = \
-			buff2int(statBuff.sz_success_get_meta_count);
+			buff2long(statBuff.sz_success_get_meta_count);
 		pStat->last_source_update = \
-			buff2int(statBuff.sz_last_source_update);
+			buff2long(statBuff.sz_last_source_update);
 		pStat->last_sync_update = \
-			buff2int(statBuff.sz_last_sync_update);
+			buff2long(statBuff.sz_last_sync_update);
 
 		if (++g_storage_stat_chg_count % TRACKER_SYNC_TO_FILE_FREQ == 0)
 		{

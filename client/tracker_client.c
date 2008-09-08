@@ -209,32 +209,32 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 		pDest->status = pSrc->status;
 		memcpy(pDest->ip_addr, pSrc->ip_addr, \
 				FDFS_IPADDR_SIZE - 1);
-		pDest->total_mb = buff2int(pSrc->sz_total_mb);
-		pDest->free_mb = buff2int(pSrc->sz_free_mb);
+		pDest->total_mb = buff2long(pSrc->sz_total_mb);
+		pDest->free_mb = buff2long(pSrc->sz_free_mb);
 
-		pStorageStat->total_upload_count = buff2int( \
+		pStorageStat->total_upload_count = buff2long( \
 			pStatBuff->sz_total_upload_count);
-		pStorageStat->success_upload_count = buff2int( \
+		pStorageStat->success_upload_count = buff2long( \
 			pStatBuff->sz_success_upload_count);
-		pStorageStat->total_set_meta_count = buff2int( \
+		pStorageStat->total_set_meta_count = buff2long( \
 			pStatBuff->sz_total_set_meta_count);
-		pStorageStat->success_set_meta_count = buff2int( \
+		pStorageStat->success_set_meta_count = buff2long( \
 			pStatBuff->sz_success_set_meta_count);
-		pStorageStat->total_delete_count = buff2int( \
+		pStorageStat->total_delete_count = buff2long( \
 			pStatBuff->sz_total_delete_count);
-		pStorageStat->success_delete_count = buff2int( \
+		pStorageStat->success_delete_count = buff2long( \
 			pStatBuff->sz_success_delete_count);
-		pStorageStat->total_download_count = buff2int( \
+		pStorageStat->total_download_count = buff2long( \
 			pStatBuff->sz_total_download_count);
-		pStorageStat->success_download_count = buff2int( \
+		pStorageStat->success_download_count = buff2long( \
 			pStatBuff->sz_success_download_count);
-		pStorageStat->total_get_meta_count = buff2int( \
+		pStorageStat->total_get_meta_count = buff2long( \
 			pStatBuff->sz_total_get_meta_count);
-		pStorageStat->success_get_meta_count = buff2int( \
+		pStorageStat->success_get_meta_count = buff2long( \
 			pStatBuff->sz_success_get_meta_count);
-		pStorageStat->last_source_update = buff2int( \
+		pStorageStat->last_source_update = buff2long( \
 			pStatBuff->sz_last_source_update);
-		pStorageStat->last_sync_update = buff2int( \
+		pStorageStat->last_sync_update = buff2long( \
 			pStatBuff->sz_last_sync_update);
 
 		pDest++;
