@@ -841,9 +841,9 @@ static int tracker_report_stat(TrackerServerInfo *pTrackerServer)
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_REPORT;
 	pHeader->status = 0;
 
-	int2buff((int)(((double)(sbuf.f_blocks) * sbuf.f_bsize) / FDFS_ONE_MB),\
+	long2buff((((int64_t)(sbuf.f_blocks) * sbuf.f_bsize) / FDFS_ONE_MB),\
 		pStatBuff->sz_total_mb);
-	int2buff((int)(((double)(sbuf.f_bavail) * sbuf.f_bsize) / FDFS_ONE_MB),\
+	long2buff((((int64_t)(sbuf.f_bavail) * sbuf.f_bsize) / FDFS_ONE_MB),\
 		pStatBuff->sz_free_mb);
 
 	if((result=tcpsenddata(pTrackerServer->sock, out_buff, \
@@ -875,29 +875,29 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 	{
 		pStatBuff = (FDFSStorageStatBuff *)( \
 				out_buff + sizeof(TrackerHeader));
-		int2buff(g_storage_stat.total_upload_count, \
+		long2buff(g_storage_stat.total_upload_count, \
 			pStatBuff->sz_total_upload_count);
-		int2buff(g_storage_stat.success_upload_count, \
+		long2buff(g_storage_stat.success_upload_count, \
 			pStatBuff->sz_success_upload_count);
-		int2buff(g_storage_stat.total_download_count, \
+		long2buff(g_storage_stat.total_download_count, \
 			pStatBuff->sz_total_download_count);
-		int2buff(g_storage_stat.success_download_count, \
+		long2buff(g_storage_stat.success_download_count, \
 			pStatBuff->sz_success_download_count);
-		int2buff(g_storage_stat.total_set_meta_count, \
+		long2buff(g_storage_stat.total_set_meta_count, \
 			pStatBuff->sz_total_set_meta_count);
-		int2buff(g_storage_stat.success_set_meta_count, \
+		long2buff(g_storage_stat.success_set_meta_count, \
 			pStatBuff->sz_success_set_meta_count);
-		int2buff(g_storage_stat.total_delete_count, \
+		long2buff(g_storage_stat.total_delete_count, \
 			pStatBuff->sz_total_delete_count);
-		int2buff(g_storage_stat.success_delete_count, \
+		long2buff(g_storage_stat.success_delete_count, \
 			pStatBuff->sz_success_delete_count);
-		int2buff(g_storage_stat.total_get_meta_count, \
+		long2buff(g_storage_stat.total_get_meta_count, \
 			pStatBuff->sz_total_get_meta_count);
-		int2buff(g_storage_stat.success_get_meta_count, \
+		long2buff(g_storage_stat.success_get_meta_count, \
 		 	pStatBuff->sz_success_get_meta_count);
-		int2buff(g_storage_stat.last_source_update, \
+		long2buff(g_storage_stat.last_source_update, \
 			pStatBuff->sz_last_source_update);
-		int2buff(g_storage_stat.last_sync_update, \
+		long2buff(g_storage_stat.last_sync_update, \
 			pStatBuff->sz_last_sync_update);
 
 		*pstat_chg_sync_count = g_stat_change_count;

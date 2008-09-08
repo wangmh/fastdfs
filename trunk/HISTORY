@@ -2,6 +2,7 @@
 Version 1.8  2008-09-07
   * communication protocol changed: 
      # all integer field is 8 bytes big-endian
+     # group name fixed length: FDFS_GROUP_NAME_MAX_LEN bytes
   * sockopt.c add function tcpsetnonblockopt
   * shared_func.c add function set_nonblock
 
