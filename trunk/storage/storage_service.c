@@ -198,7 +198,7 @@ static int storage_do_set_metadata(StorageClientInfo *pClientInfo, \
 	FDFSMetaData *pNewMetaEnd;
 	char *file_buff;
 	char *all_meta_buff;
-	off_t file_bytes;
+	int64_t file_bytes;
 	int old_meta_count;
 	int new_meta_count;
 	int all_meta_bytes;
@@ -375,7 +375,7 @@ meta data bytes: each meta data seperated by \x01,
 		 name and value seperated by \x02
 **/
 static int storage_set_metadata(StorageClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	char *in_buff;
@@ -398,7 +398,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 					FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -416,7 +416,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 			resp.status = ENOMEM;
 
 			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail", \
+				"malloc %lld bytes fail", \
 				__LINE__, nInPackLen + 1);
 			break;
 		}
@@ -433,9 +433,8 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 		}
 
 		*(in_buff + nInPackLen) = '\0';
-		filename_len = strtol(in_buff, NULL, 16);
-		meta_bytes = strtol(in_buff + TRACKER_PROTO_PKG_LEN_SIZE, \
-				NULL, 16);
+		filename_len = buff2long(in_buff);
+		meta_bytes = buff2long(in_buff + TRACKER_PROTO_PKG_LEN_SIZE);
 		if (filename_len <= 0 || filename_len >= sizeof(filename))
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -468,7 +467,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		memcpy(group_name, in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE + 1, \
+		memcpy(group_name, in_buff + 2*TRACKER_PROTO_PKG_LEN_SIZE+1, \
 			FDFS_GROUP_NAME_MAX_LEN);
 		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
 		if (strcmp(group_name, g_group_name) != 0)
@@ -526,7 +525,6 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 	}
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
-	sprintf(resp.pkg_len, "%x", 0);
 
 	if (in_buff != NULL)
 	{
@@ -555,7 +553,7 @@ meta data bytes: each meta data seperated by \x01,
 file size bytes: file content
 **/
 static int storage_upload_file(StorageClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	int out_len;
@@ -564,7 +562,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	char out_buff[128];
 	char filename[128];
 	int meta_bytes;
-	int file_bytes;
+	int64_t file_bytes;
 	int filename_len;
 	int result;
 
@@ -577,7 +575,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen < 2 * TRACKER_PROTO_PKG_LEN_SIZE)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -599,10 +597,8 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		*(in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE) = '\0';
-		meta_bytes = strtol(in_buff, NULL, 16);
-		file_bytes = strtol(in_buff + TRACKER_PROTO_PKG_LEN_SIZE, \
-				NULL, 16);
+		meta_bytes = buff2long(in_buff);
+		file_bytes = buff2long(in_buff + TRACKER_PROTO_PKG_LEN_SIZE);
 		if (meta_bytes < 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -618,8 +614,8 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			(2 * TRACKER_PROTO_PKG_LEN_SIZE + meta_bytes))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"client ip:%s, pkg length is not correct, " \
-				"invalid file bytes: %d", \
+				"client ip: %s, pkg length is not correct, " \
+				"invalid file bytes: %lld", \
 				__LINE__, pClientInfo->ip_addr, \
 				file_bytes);
 			resp.status = EINVAL;
@@ -687,7 +683,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	if (resp.status == 0)
 	{
 		out_len = FDFS_GROUP_NAME_MAX_LEN + filename_len;
-		sprintf(resp.pkg_len, "%x", out_len);
+		long2buff(out_len, resp.pkg_len);
 
 		memcpy(out_buff, &resp, sizeof(resp));
 		memcpy(out_buff+sizeof(resp), g_group_name, FDFS_GROUP_NAME_MAX_LEN);
@@ -696,7 +692,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	else
 	{
 		out_len = 0;
-		sprintf(resp.pkg_len, "%x", out_len);
+		long2buff(out_len, resp.pkg_len);
 		memcpy(out_buff, &resp, sizeof(resp));
 	}
 
@@ -727,7 +723,7 @@ filename bytes : filename
 file size bytes: file content
 **/
 static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
-			const int nInPackLen, const char proto_cmd)
+			const int64_t nInPackLen, const char proto_cmd)
 {
 	TrackerHeader resp;
 	char in_buff[2 * TRACKER_PROTO_PKG_LEN_SIZE + \
@@ -736,7 +732,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 	char filename[128];
 	char full_filename[MAX_PATH_SIZE];
 	int filename_len;
-	int file_bytes;
+	int64_t file_bytes;
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
@@ -746,7 +742,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 					FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -764,7 +760,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
-				"expect pkg length: %d, " \
+				"expect pkg length: %lld, " \
 				"errno: %d, error info: %s", \
 				__LINE__, \
 				pClientInfo->ip_addr, nInPackLen, \
@@ -772,11 +768,8 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		*(in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE + \
-			FDFS_GROUP_NAME_MAX_LEN) = '\0';
-		filename_len = strtol(in_buff, NULL, 16);
-		file_bytes = strtol(in_buff + TRACKER_PROTO_PKG_LEN_SIZE, \
-					NULL, 16);
+		filename_len = buff2long(in_buff);
+		file_bytes = buff2long(in_buff + TRACKER_PROTO_PKG_LEN_SIZE);
 
 		if (filename_len < 0 || filename_len >= sizeof(filename))
 		{
@@ -794,7 +787,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, in request pkg, " \
-				"file size: %d is invalid, which < 0", \
+				"file size: %lld is invalid, which < 0", \
 				__LINE__, pClientInfo->ip_addr, file_bytes);
 			resp.status = EPIPE;
 			break;
@@ -819,7 +812,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, in request pkg, " \
-				"file size: %d != remain bytes: %d", \
+				"file size: %lld != remain bytes: %lld", \
 				__LINE__, pClientInfo->ip_addr, file_bytes, \
 				nInPackLen - (2*TRACKER_PROTO_PKG_LEN_SIZE + \
 				FDFS_GROUP_NAME_MAX_LEN + filename_len));
@@ -862,7 +855,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"client ip: %s, discard buff fail, " \
-					"buff size: %d, " \
+					"buff size: %lld, " \
 					"errno: %d, error info: %s.", \
 					__LINE__, pClientInfo->ip_addr, \
 					file_bytes, \
@@ -879,7 +872,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv file buff fail, " \
-				"file size: %d, errno: %d, error info: %s.", \
+				"file size: %lld, errno: %d, error info: %s.", \
 				__LINE__, pClientInfo->ip_addr, \
 				file_bytes, resp.status, strerror(resp.status));
 			break;
@@ -902,7 +895,6 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 	}
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
-	resp.pkg_len[0] = '0';
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
@@ -931,7 +923,7 @@ FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename
 **/
 static int storage_get_metadata(StorageClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	int result;
@@ -940,7 +932,7 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)+32];
 	char *file_buff;
 	char *filename;
-	off_t file_bytes;
+	int64_t file_bytes;
 
 	memset(&resp, 0, sizeof(resp));
 	file_buff = NULL;
@@ -950,7 +942,7 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -964,7 +956,7 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is too large, " \
 				"expect length should < %d", \
 				__LINE__, \
@@ -1025,8 +1017,7 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 	}
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
-	sprintf(resp.pkg_len, "%llx", file_bytes);
-
+	long2buff(file_bytes, resp.pkg_len);
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
@@ -1081,7 +1072,7 @@ FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename
 **/
 static int storage_download_file(StorageClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	int result;
@@ -1089,7 +1080,7 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)+16];
 	char *filename;
-	int file_bytes;
+	int64_t file_bytes;
 	struct stat stat_buf;
 
 	memset(&resp, 0, sizeof(resp));
@@ -1099,7 +1090,7 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -1113,7 +1104,7 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is too large, " \
 				"expect length should < %d", \
 				__LINE__, \
@@ -1186,7 +1177,7 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 	}
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
-	sprintf(resp.pkg_len, "%x", file_bytes);
+	long2buff(file_bytes, resp.pkg_len);
 
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
@@ -1227,7 +1218,7 @@ FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename
 **/
 static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 32];
@@ -1242,7 +1233,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length <= %d", \
 				__LINE__, \
@@ -1256,7 +1247,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is too large, " \
 				"expect length should < %d", \
 				__LINE__, \
@@ -1331,7 +1322,6 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 	}
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
-	strcpy(resp.pkg_len, "0");
 
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
@@ -1355,7 +1345,7 @@ FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename
 **/
 static int storage_delete_file(StorageClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 32];
@@ -1371,7 +1361,7 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length <= %d", \
 				__LINE__, \
@@ -1385,7 +1375,7 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is too large, " \
 				"expect length should < %d", \
 				__LINE__, \
@@ -1475,7 +1465,6 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 	}
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
-	strcpy(resp.pkg_len, "0");
 
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
@@ -1513,7 +1502,7 @@ data buff (struct)
 	StorageClientInfo client_info;
 	TrackerHeader header;
 	int result;
-	int nInPackLen;
+	int64_t nInPackLen;
 	int count;
 	int recv_bytes;
 	int log_level;
@@ -1562,8 +1551,7 @@ data buff (struct)
 			break;
 		}
 
-		header.pkg_len[sizeof(header.pkg_len)-1] = '\0';
-		nInPackLen = strtol(header.pkg_len, NULL, 16);
+		nInPackLen = buff2long(header.pkg_len);
 
 		if (header.cmd == STORAGE_PROTO_CMD_DOWNLOAD_FILE)
 		{

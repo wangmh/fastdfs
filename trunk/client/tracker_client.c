@@ -132,7 +132,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	FDFSStorageStat *pStorageStat;
 	FDFSStorageInfo *pDest;
 	FDFSStorageStatBuff *pStatBuff;
-	int in_bytes;
+	int64_t in_bytes;
 
 	memset(group_name, 0, sizeof(group_name));
 	name_len = strlen(szGroupName);
@@ -143,7 +143,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	memcpy(group_name, szGroupName, name_len);
 
 	header.status = 0;
-	sprintf(header.pkg_len, "%x", FDFS_GROUP_NAME_MAX_LEN + 1);
+	long2buff(FDFS_GROUP_NAME_MAX_LEN, header.pkg_len);
 	header.cmd = TRACKER_PROTO_CMD_SERVER_LIST_STORAGE;
 	if ((result=tcpsenddata(pTrackerServer->sock, &header, \
 			sizeof(header), g_network_timeout)) != 0)
@@ -158,7 +158,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	}
 
 	if ((result=tcpsenddata(pTrackerServer->sock, group_name, \
-		FDFS_GROUP_NAME_MAX_LEN + 1, g_network_timeout)) != 0)
+		FDFS_GROUP_NAME_MAX_LEN, g_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -180,7 +180,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes % sizeof(TrackerStorageStat) != 0)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: %d is invalid.", \
+			"length: %lld is invalid.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes);
 		*storage_count = 0;
@@ -254,10 +254,9 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	TrackerGroupStat *pEnd;
 	FDFSGroupStat *pDest;
 	int result;
-	int in_bytes;
+	int64_t in_bytes;
 
-	header.pkg_len[0] = '0';
-	header.pkg_len[1] = '\0';
+	memset(&header, 0, sizeof(header));
 	header.cmd = TRACKER_PROTO_CMD_SERVER_LIST_GROUP;
 	header.status = 0;
 	if ((result=tcpsenddata(pTrackerServer->sock, &header, \
@@ -283,7 +282,7 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes % sizeof(TrackerGroupStat) != 0)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: %d is invalid.", \
+			"length: %lld is invalid.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes);
 		*group_count = 0;
@@ -308,11 +307,12 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	{
 		memcpy(pDest->group_name, pSrc->group_name, \
 				FDFS_GROUP_NAME_MAX_LEN);
-		pDest->free_mb = strtol(pSrc->sz_free_mb, NULL, 16);
-		pDest->count= strtol(pSrc->sz_count, NULL, 16);
-		pDest->storage_port= strtol(pSrc->sz_storage_port, NULL, 16);
-		pDest->active_count = strtol(pSrc->sz_active_count, NULL, 16);
-		pDest->current_write_server = strtol(pSrc->sz_current_write_server, NULL, 16);
+		pDest->free_mb = buff2long(pSrc->sz_free_mb);
+		pDest->count= buff2long(pSrc->sz_count);
+		pDest->storage_port= buff2long(pSrc->sz_storage_port);
+		pDest->active_count = buff2long(pSrc->sz_active_count);
+		pDest->current_write_server = buff2long( \
+				pSrc->sz_current_write_server);
 
 		pDest++;
 	}
@@ -328,7 +328,7 @@ int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 32];
 	char in_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_BODY_LEN];
 	char *pInBuff;
-	int in_bytes;
+	int64_t in_bytes;
 	int result;
 	int filename_len;
 
@@ -341,7 +341,7 @@ int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
 			sizeof(out_buff) - sizeof(TrackerHeader) - \
 			FDFS_GROUP_NAME_MAX_LEN,  "%s", filename);
 	
-	sprintf(header.pkg_len, "%x", FDFS_GROUP_NAME_MAX_LEN + filename_len);
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, header.pkg_len);
 	header.cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH;
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
@@ -367,7 +367,7 @@ int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes != TRACKER_QUERY_STORAGE_BODY_LEN)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: %d is invalid, expect length: %d.", \
+			"length: %lld is invalid, expect length: %d.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
 			TRACKER_QUERY_STORAGE_BODY_LEN);
@@ -378,8 +378,8 @@ int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
 			FDFS_GROUP_NAME_MAX_LEN);
 	memcpy(pStorageServer->ip_addr, in_buff + \
 			FDFS_GROUP_NAME_MAX_LEN, FDFS_IPADDR_SIZE-1);
-	pStorageServer->port = strtol(in_buff + FDFS_GROUP_NAME_MAX_LEN \
-			+ FDFS_IPADDR_SIZE - 1, NULL, 16);
+	pStorageServer->port = (int)buff2long(in_buff + \
+			FDFS_GROUP_NAME_MAX_LEN + FDFS_IPADDR_SIZE - 1);
 	return 0;
 }
 
@@ -389,16 +389,13 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 
 	TrackerHeader header;
 	char in_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_BODY_LEN];
-	char szPort[TRACKER_PROTO_PKG_LEN_SIZE];
 	char *pInBuff;
-	int in_bytes;
+	int64_t in_bytes;
 	int result;
 
+	memset(&header, 0, sizeof(header));
 	memset(pStorageServer, 0, sizeof(TrackerServerInfo));
-	header.pkg_len[0] = '0';
-	header.pkg_len[1] = '\0';
 	header.cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_STORE;
-	header.status = 0;
 	if ((result=tcpsenddata(pTrackerServer->sock, &header, \
 			sizeof(header), g_network_timeout)) != 0)
 	{
@@ -420,7 +417,7 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes != TRACKER_QUERY_STORAGE_BODY_LEN)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: %d is invalid, expect length: %d.", \
+			"length: %lld is invalid, expect length: %d.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
 			TRACKER_QUERY_STORAGE_BODY_LEN);
@@ -431,10 +428,7 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 			FDFS_GROUP_NAME_MAX_LEN);
 	memcpy(pStorageServer->ip_addr, in_buff + \
 			FDFS_GROUP_NAME_MAX_LEN, FDFS_IPADDR_SIZE-1);
-	memcpy(szPort, in_buff + FDFS_GROUP_NAME_MAX_LEN \
-                        + FDFS_IPADDR_SIZE - 1, TRACKER_PROTO_PKG_LEN_SIZE-1);
-	szPort[TRACKER_PROTO_PKG_LEN_SIZE-1] = '\0';
-	pStorageServer->port = strtol(szPort, NULL, 16);
+	pStorageServer->port = (int)buff2long(in_buff + \
+				FDFS_GROUP_NAME_MAX_LEN + FDFS_IPADDR_SIZE - 1);
 	return 0;
-}
-
+} 

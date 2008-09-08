@@ -57,7 +57,7 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const bool bFilename, \
-			const char *file_buff, const int file_size, \
+			const char *file_buff, const int64_t file_size, \
 			const FDFSMetaData *meta_list, \
 			const int meta_count, \
 			char *group_name, \
@@ -114,8 +114,8 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	storage_do_download_file(pTrackerServer, pStorageServer, false, \
 			group_name, remote_filename, file_buff, file_size)
 
-#define storage_download_file_to_buff(pTrackerServer, pStorageServer, group_name, \
-			remote_filename, file_buff, file_size)  \
+#define storage_download_file_to_buff(pTrackerServer, pStorageServer, \
+			group_name, remote_filename, file_buff, file_size)  \
 	storage_do_download_file(pTrackerServer, pStorageServer, false, \
 			group_name, remote_filename, file_buff, file_size)
 
@@ -123,7 +123,7 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const bool bFilename, \
 			const char *group_name, const char *remote_filename, \
-			char **file_buff, int *file_size);
+			char **file_buff, int64_t *file_size);
 
 /**
 * download file from storage server
@@ -139,7 +139,7 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const char *group_name, const char *remote_filename, \
-			const char *local_filename, int *file_size);
+			const char *local_filename, int64_t *file_size);
 
 /**
 * get all metadata items from storage server

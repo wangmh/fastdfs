@@ -50,6 +50,8 @@ char int2base62(const int i);
 
 void int2buff(const int n, char *buff);
 int buff2int(const char *buff);
+void long2buff(int64_t n, char *buff);
+int64_t buff2long(const char *buff);
 
 char *trim_left(char *pStr);
 char *trim_right(char *pStr);

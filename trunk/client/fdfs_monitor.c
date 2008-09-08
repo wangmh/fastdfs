@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 	{
 		printf( "\nGroup %d:\n" \
 			"group name = %s\n" \
-			"free space = %d GB\n" \
+			"free space = %lld GB\n" \
 			"storage server count = %d\n" \
 			"active server count = %d\n" \
 			"storage_port = %d\n" \
@@ -105,16 +105,16 @@ int main(int argc, char *argv[])
 				"\t\tip_addr = %s  %s\n" \
 				"\t\ttotal storage = %dGB\n" \
 				"\t\tfree storage = %dGB\n" \
-				"\t\ttotal_upload_count = %d\n"   \
-				"\t\tsuccess_upload_count = %d\n" \
-				"\t\ttotal_set_meta_count = %d\n" \
-				"\t\tsuccess_set_meta_count = %d\n" \
-				"\t\ttotal_delete_count = %d\n" \
-				"\t\tsuccess_delete_count = %d\n" \
-				"\t\ttotal_download_count = %d\n" \
-				"\t\tsuccess_download_count = %d\n" \
-				"\t\ttotal_get_meta_count = %d\n" \
-				"\t\tsuccess_get_meta_count = %d\n" \
+				"\t\ttotal_upload_count = %lld\n"   \
+				"\t\tsuccess_upload_count = %lld\n" \
+				"\t\ttotal_set_meta_count = %lld\n" \
+				"\t\tsuccess_set_meta_count = %lld\n" \
+				"\t\ttotal_delete_count = %lld\n" \
+				"\t\tsuccess_delete_count = %lld\n" \
+				"\t\ttotal_download_count = %lld\n" \
+				"\t\tsuccess_download_count = %lld\n" \
+				"\t\ttotal_get_meta_count = %lld\n" \
+				"\t\tsuccess_get_meta_count = %lld\n" \
 				"\t\tlast_source_update = %s\n" \
 				"\t\tlast_sync_update = %s\n",  \
 				++k, pStorage->ip_addr, \

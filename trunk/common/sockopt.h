@@ -40,8 +40,8 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no);
 #define tcprecvdata(sock, data, size, timeout) \
 	tcprecvdata_ex(sock, data, size, timeout, NULL)
 
-int tcpsendfile(int sock, const char *filename, const int file_bytes);
-int tcprecvfile(int sock, const char *filename, const int file_bytes);
+int tcpsendfile(int sock, const char *filename, const int64_t file_bytes);
+int tcprecvfile(int sock, const char *filename, const int64_t file_bytes);
 int tcpdiscard(int sock, const int bytes);
 
 #ifdef __cplusplus

@@ -348,11 +348,11 @@ int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 	int out_len;
 	int result;
 
+	memset(&resp, 0, sizeof(resp));
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG;
-	resp.status = 0;
 
 	out_len = sizeof(FDFSStorageBrief) * server_count;
-	sprintf(resp.pkg_len, "%x", out_len);
+	long2buff(out_len, resp.pkg_len);
 	if ((result=tcpsenddata(pTrackerServer->sock, &resp, sizeof(resp), \
 			g_network_timeout)) != 0)
 	{
@@ -387,14 +387,14 @@ int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 		return result;
 	}
 
-	if (resp.pkg_len[0] != '0' && resp.pkg_len[1] != '\0')
+	if (memcmp(resp.pkg_len, "\0\0\0\0\0\0\0\0", \
+		TRACKER_PROTO_PKG_LEN_SIZE) != 0)
 	{
-		resp.pkg_len[TRACKER_PROTO_PKG_LEN_SIZE-1] = '\0';
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
-			"expect pkg len 0, but recv pkg len: 0x%s", \
+			"expect pkg len 0, but recv pkg len != 0", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, resp.pkg_len);
+			pTrackerServer->port);
 		return EINVAL;
 	}
 
@@ -544,7 +544,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 
 static int tracker_check_response(TrackerServerInfo *pTrackerServer)
 {
-	int nInPackLen;
+	int64_t nInPackLen;
 	TrackerHeader resp;
 	int server_count;
 	int result;
@@ -568,13 +568,12 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer)
 		return resp.status;
 	}
 
-	resp.pkg_len[TRACKER_PROTO_PKG_LEN_SIZE-1] = '\0';
-	nInPackLen = strtol(resp.pkg_len, NULL, 16);
+	nInPackLen = buff2long(resp.pkg_len);
 	if ((nInPackLen < 0) || (nInPackLen % sizeof(FDFSStorageBrief) != 0))
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
-			"package size %d is not correct", \
+			"package size %lld is not correct", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, nInPackLen);
 		return EINVAL;
@@ -632,12 +631,12 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader *pHeader;
 	TrackerStorageSyncReqBody syncReqbody;
 	char *pBuff;
-	int in_bytes;
+	int64_t in_bytes;
 	int result;
 
 	memset(out_buff, 0, sizeof(out_buff));
 	pHeader = (TrackerHeader *)out_buff;
-	sprintf(pHeader->pkg_len, "%x", FDFS_IPADDR_SIZE);
+	long2buff(FDFS_IPADDR_SIZE, pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ;
 	strcpy(out_buff + sizeof(TrackerHeader), pReader->ip_addr);
 	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \
@@ -671,7 +670,7 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
-			"recv body length: %d is invalid, " \
+			"recv body length: %lld is invalid, " \
 			"expect body length: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
@@ -681,11 +680,10 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 
 	memcpy(sync_src_ip_addr, syncReqbody.src_ip_addr, FDFS_IPADDR_SIZE);
 	sync_src_ip_addr[FDFS_IPADDR_SIZE-1] = '\0';
-	syncReqbody.until_timestamp[TRACKER_PROTO_PKG_LEN_SIZE-1] = '\0';
 
 	pReader->need_sync_old = is_local_host_ip(sync_src_ip_addr);
-       	pReader->until_timestamp = strtol( \
-			syncReqbody.until_timestamp, NULL, 16);
+       	pReader->until_timestamp = (time_t)buff2long( \
+					syncReqbody.until_timestamp);
 
 	return 0;
 }
@@ -695,11 +693,10 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 	TrackerHeader header;
 	TrackerStorageSyncReqBody syncReqbody;
 	char *pBuff;
-	int in_bytes;
+	int64_t in_bytes;
 	int result;
 
 	memset(&header, 0, sizeof(header));
-	header.pkg_len[0] = '0';
 	header.cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ;
 	if ((result=tcpsenddata(pTrackerServer->sock, &header, \
 			sizeof(header), g_network_timeout)) != 0)
@@ -729,7 +726,7 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
-			"recv body length: %d is invalid, " \
+			"recv body length: %lld is invalid, " \
 			"expect body length: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
@@ -740,11 +737,9 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 	memcpy(g_sync_src_ip_addr, syncReqbody.src_ip_addr, FDFS_IPADDR_SIZE);
 	g_sync_src_ip_addr[FDFS_IPADDR_SIZE-1] = '\0';
 
-	syncReqbody.until_timestamp[TRACKER_PROTO_PKG_LEN_SIZE-1] = '\0';
-	g_sync_until_timestamp = strtol(syncReqbody.until_timestamp, NULL, 16);
+	g_sync_until_timestamp = (time_t)buff2long(syncReqbody.until_timestamp);
 
 	memset(&header, 0, sizeof(header));
-	header.pkg_len[0] = '0';
 	header.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 	if ((result=tcpsenddata(pTrackerServer->sock, &header, sizeof(header), \
 				g_network_timeout)) != 0)
@@ -772,10 +767,10 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 	pReqBody = (TrackerStorageSyncReqBody*)(out_buff+sizeof(TrackerHeader));
 
 	memset(out_buff, 0, sizeof(out_buff));
-	sprintf(pHeader->pkg_len, "%x", (int)sizeof(TrackerStorageSyncReqBody));
+	long2buff((int)sizeof(TrackerStorageSyncReqBody), pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY;
 	strcpy(pReqBody->src_ip_addr, g_sync_src_ip_addr);
-	sprintf(pReqBody->until_timestamp, "%x", g_sync_until_timestamp);
+	long2buff(g_sync_until_timestamp, pReqBody->until_timestamp);
 
 	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \
 			sizeof(out_buff), g_network_timeout)) != 0)
@@ -803,10 +798,10 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer)
 	pReqBody = (TrackerStorageJoinBody *)(out_buff+sizeof(TrackerHeader));
 
 	memset(out_buff, 0, sizeof(out_buff));
-	sprintf(pHeader->pkg_len, "%x", (int)sizeof(TrackerStorageJoinBody));
+	long2buff((int)sizeof(TrackerStorageJoinBody), pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_JOIN;
 	strcpy(pReqBody->group_name, g_group_name);
-	sprintf(pReqBody->storage_port, "%x", g_server_port);
+	long2buff(g_server_port, pReqBody->storage_port);
 
 	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \
 			sizeof(out_buff), g_network_timeout)) != 0)
@@ -842,7 +837,7 @@ static int tracker_report_stat(TrackerServerInfo *pTrackerServer)
 	pHeader = (TrackerHeader *)out_buff;
 	pStatBuff = (TrackerStatReportReqBody*) \
 			(out_buff + sizeof(TrackerHeader));
-	sprintf(pHeader->pkg_len, "%x", (int)sizeof(TrackerStatReportReqBody));
+	long2buff((int)sizeof(TrackerStatReportReqBody), pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_REPORT;
 	pHeader->status = 0;
 
@@ -913,7 +908,7 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 		body_len = 0;
 	}
 
-	sprintf(pHeader->pkg_len, "%x", body_len);
+	long2buff(body_len, pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_BEAT;
 	pHeader->status = 0;
 

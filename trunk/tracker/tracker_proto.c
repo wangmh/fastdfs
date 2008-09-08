@@ -23,7 +23,7 @@
 #include "tracker_types.h"
 #include "tracker_proto.h"
 
-int tracker_recv_header(TrackerServerInfo *pTrackerServer, int *in_bytes)
+int tracker_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes)
 {
 	TrackerHeader resp;
 	int result;
@@ -47,12 +47,11 @@ int tracker_recv_header(TrackerServerInfo *pTrackerServer, int *in_bytes)
 		return resp.status;
 	}
 
-	resp.pkg_len[TRACKER_PROTO_PKG_LEN_SIZE-1] = '\0';
-	*in_bytes = strtol(resp.pkg_len, NULL, 16);
+	*in_bytes = buff2long(resp.pkg_len);
 	if (*in_bytes < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"server: %s:%d, recv package size %d " \
+			"server: %s:%d, recv package size %lld " \
 			"is not correct", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, *in_bytes);
@@ -65,7 +64,7 @@ int tracker_recv_header(TrackerServerInfo *pTrackerServer, int *in_bytes)
 
 int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
 		char **buff, const int buff_size, \
-		int *in_bytes)
+		int64_t *in_bytes)
 {
 	int result;
 	bool bMalloced;
@@ -89,7 +88,7 @@ int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
 			*in_bytes = 0;
 
 			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail", \
+				"malloc %lld bytes fail", \
 				__LINE__, (*in_bytes) + 1);
 			return errno != 0 ? errno : ENOMEM;
 		}
@@ -101,7 +100,7 @@ int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
 		if (*in_bytes > buff_size)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"server: %s:%d, recv body bytes: %d" \
+				"server: %s:%d, recv body bytes: %lld" \
 				" exceed max: %d", \
 				__LINE__, pTrackerServer->ip_addr, \
 				pTrackerServer->port, *in_bytes, buff_size);
@@ -138,10 +137,8 @@ int tracker_quit(TrackerServerInfo *pTrackerServer)
 	TrackerHeader header;
 	int result;
 
-	header.pkg_len[0] = '0';
-	header.pkg_len[1] = '\0';
+	memset(&header, 0, sizeof(header));
 	header.cmd = FDFS_PROTO_CMD_QUIT;
-	header.status = 0;
 	result = tcpsenddata(pTrackerServer->sock, &header, sizeof(header), \
 				g_network_timeout);
 	if(result != 0)

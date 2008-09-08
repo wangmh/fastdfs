@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 	char buff[13];
 	int len;
         char *file_buff;
-	int file_size;
+	int64_t file_size;
 	char *operation;
 	char *meta_buff;
 
@@ -204,8 +204,8 @@ int main(int argc, char *argv[])
 						local_filename=remote_filename;
 					}
 
-					result = writeToFile(local_filename, file_buff, \
-							file_size);
+					result = writeToFile(local_filename, \
+						file_buff, file_size);
 
 					free(file_buff);
 				}
@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
 			if (result == 0)
 			{
 				printf("download file success, " \
-					"file size=%d, file save to %s\n", \
+					"file size=%lld, file save to %s\n", \
 					 file_size, local_filename);
 			}
 			else

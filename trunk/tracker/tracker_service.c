@@ -49,8 +49,6 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 	if (status != 0 || pClientInfo->pGroup == NULL ||
 		pClientInfo->pGroup->version == pClientInfo->pStorage->version)
 	{
-		resp.pkg_len[0] = '0';
-		resp.pkg_len[1] = '\0';
 		if ((result=tcpsenddata(pClientInfo->sock, \
 			&resp, sizeof(resp), g_network_timeout)) != 0)
 		{
@@ -80,7 +78,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 	}
 
 	out_len = sizeof(FDFSStorageBrief) * pClientInfo->pGroup->count;
-	sprintf(resp.pkg_len, "%x", out_len);
+	long2buff(out_len, resp.pkg_len);
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
@@ -138,7 +136,7 @@ static void tracker_check_dirty(TrackerClientInfo *pClientInfo)
 }
 
 static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	int server_count;
@@ -152,7 +150,8 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 			(nInPackLen % sizeof(FDFSStorageBrief) != 0))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip addr: %s, package size %d " \
+				"cmd=%d, client ip addr: %s, " \
+				"package size %lld " \
 				"is not correct", \
 				__LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG, \
@@ -190,8 +189,6 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 	}
 
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
-	resp.pkg_len[0] = '0';
-	resp.pkg_len[1] = '\0';
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
@@ -207,7 +204,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 }
 
 static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	TrackerStorageJoinBody body;
 	int status;
@@ -217,7 +214,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	if (nInPackLen != sizeof(body))
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"cmd: %d, client ip: %s, package size %d " \
+			"cmd: %d, client ip: %s, package size %lld " \
 			"is not correct, expect length: %d.", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_JOIN, \
 			pClientInfo->ip_addr, nInPackLen, sizeof(body));
@@ -247,8 +244,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 		break;
 	}
 
-	body.storage_port[sizeof(body.storage_port)-1] = '\0';
-	pClientInfo->storage_port = strtol(body.storage_port, NULL, 16);
+	pClientInfo->storage_port = (int)buff2long(body.storage_port);
 	if (pClientInfo->storage_port <= 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -267,7 +263,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 }
 
 static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	TrackerStorageSyncReqBody body;
 	int status;
@@ -279,7 +275,7 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 	if (nInPackLen != sizeof(body))
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"cmd: %d, client ip: %s, package size %d " \
+			"cmd: %d, client ip: %s, package size %lld " \
 			"is not correct, expect length: %d.", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY, \
 			pClientInfo->ip_addr, nInPackLen, sizeof(body));
@@ -340,9 +336,8 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		body.until_timestamp[TRACKER_PROTO_PKG_LEN_SIZE-1] = '\0';
 		pClientInfo->pStorage->sync_until_timestamp = \
-				strtol(body.until_timestamp, NULL, 16);
+				(int)buff2long(body.until_timestamp);
 		bSaveStorages = true;
 	}
 
@@ -368,7 +363,6 @@ static int tracker_check_logined(TrackerClientInfo *pClientInfo)
 	}
 
 	memset(&resp, 0, sizeof(resp));
-	resp.pkg_len[0] = '0';
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 	resp.status = EACCES;
 	if ((result=tcpsenddata(pClientInfo->sock, &resp, sizeof(resp), \
@@ -386,7 +380,7 @@ static int tracker_check_logined(TrackerClientInfo *pClientInfo)
 }
 
 static int tracker_deal_server_list_group_storages( \
-		TrackerClientInfo *pClientInfo, const int nInPackLen)
+		TrackerClientInfo *pClientInfo, const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN+1];
@@ -404,16 +398,16 @@ static int tracker_deal_server_list_group_storages( \
 	pDest = stats;
 	while (1)
 	{
-		if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN+1)
+		if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length: %d", \
 				__LINE__, \
 				TRACKER_PROTO_CMD_SERVER_LIST_STORAGE, \
 				pClientInfo->ip_addr,  \
-				nInPackLen, FDFS_GROUP_NAME_MAX_LEN+1);
+				nInPackLen, FDFS_GROUP_NAME_MAX_LEN);
 			resp.status = EINVAL;
 			break;
 		}
@@ -486,7 +480,7 @@ static int tracker_deal_server_list_group_storages( \
 	}
 
 	out_len = (pDest - stats) * sizeof(TrackerStorageStat);
-	sprintf(resp.pkg_len, "%x", out_len);
+	long2buff(out_len, resp.pkg_len);
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
@@ -525,7 +519,7 @@ FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 remain bytes: filename
 **/
 static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 32];
@@ -545,7 +539,7 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -559,13 +553,13 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is too large, " \
 				"expect length should < %d", \
 				__LINE__, \
 				TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH, \
-				pClientInfo->ip_addr, sizeof(in_buff), \
-				nInPackLen);
+				pClientInfo->ip_addr, nInPackLen, \
+				sizeof(in_buff));
 			resp.status = EINVAL;
 			break;
 		}
@@ -619,21 +613,20 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 	if (resp.status == 0)
 	{
 		out_len = TRACKER_QUERY_STORAGE_BODY_LEN;
-		sprintf(resp.pkg_len, "%x", out_len);
+		long2buff(out_len, resp.pkg_len);
 
 		memcpy(out_buff, &resp, sizeof(resp));
 		memcpy(out_buff + sizeof(resp), pGroup->group_name, \
 				FDFS_GROUP_NAME_MAX_LEN);
 		memcpy(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN, \
 				pStorageServer->ip_addr, FDFS_IPADDR_SIZE-1);
-		sprintf(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN \
-				+ FDFS_IPADDR_SIZE - 1, "%x", \
-				pGroup->storage_port);
+		long2buff(pGroup->storage_port, out_buff + sizeof(resp) + \
+			FDFS_GROUP_NAME_MAX_LEN + FDFS_IPADDR_SIZE - 1);
 	}
 	else
 	{
 		out_len = 0;
-		sprintf(resp.pkg_len, "%x", out_len);
+		long2buff(out_len, resp.pkg_len);
 		memcpy(out_buff, &resp, sizeof(resp));
 	}
 
@@ -652,7 +645,7 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 }
 
 static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	int out_len;
@@ -672,7 +665,7 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length: 0", \
 				__LINE__, \
@@ -708,7 +701,8 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 			if (pStoreGroup == NULL)
 			{
 				FDFSGroupInfo **ppGroupEnd;
-				ppGroupEnd = g_groups.sorted_groups + g_groups.count;
+				ppGroupEnd = g_groups.sorted_groups + \
+						g_groups.count;
 				for (ppGroup=ppFoundGroup+1; \
 					ppGroup<ppGroupEnd; ppGroup++)
 				{
@@ -829,21 +823,20 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 	if (resp.status == 0)
 	{
 		out_len = TRACKER_QUERY_STORAGE_BODY_LEN;
-		sprintf(resp.pkg_len, "%x", out_len);
+		long2buff(out_len, resp.pkg_len);
 
 		memcpy(out_buff, &resp, sizeof(resp));
 		memcpy(out_buff + sizeof(resp), pStoreGroup->group_name, \
 				FDFS_GROUP_NAME_MAX_LEN);
 		memcpy(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN, \
 				pStorageServer->ip_addr, FDFS_IPADDR_SIZE-1);
-		sprintf(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN \
-				+ FDFS_IPADDR_SIZE-1, "%x", \
-				pStoreGroup->storage_port);
+		long2buff(pStoreGroup->storage_port, out_buff + sizeof(resp) + \
+			FDFS_GROUP_NAME_MAX_LEN + FDFS_IPADDR_SIZE-1);
 	}
 	else
 	{
 		out_len = 0;
-		sprintf(resp.pkg_len, "%x", out_len);
+		long2buff(out_len, resp.pkg_len);
 		memcpy(out_buff, &resp, sizeof(resp));
 	}
 
@@ -862,7 +855,7 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 }
 
 static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	FDFSGroupInfo **ppGroup;
@@ -879,7 +872,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length: 0", \
 				__LINE__, \
@@ -895,14 +888,14 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 		{
 			memcpy(pDest->group_name, (*ppGroup)->group_name, \
 				FDFS_GROUP_NAME_MAX_LEN + 1);
-			sprintf(pDest->sz_free_mb, "%x", (*ppGroup)->free_mb);
-			sprintf(pDest->sz_count, "%x", (*ppGroup)->count);
-			sprintf(pDest->sz_storage_port, "%x", \
-					(*ppGroup)->storage_port);
-			sprintf(pDest->sz_active_count, "%x", \
-					(*ppGroup)->active_count);
-			sprintf(pDest->sz_current_write_server, "%x", \
-					(*ppGroup)->current_write_server);
+			long2buff((*ppGroup)->free_mb, pDest->sz_free_mb);
+			long2buff((*ppGroup)->count, pDest->sz_count);
+			long2buff((*ppGroup)->storage_port, \
+				pDest->sz_storage_port);
+			long2buff((*ppGroup)->active_count, \
+				pDest->sz_active_count);
+			long2buff((*ppGroup)->current_write_server, \
+				pDest->sz_current_write_server);
 			pDest++;
 		}
 
@@ -911,7 +904,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 	}
 
 	out_len = (pDest - groupStats) * sizeof(TrackerGroupStat);
-	sprintf(resp.pkg_len, "%x", out_len);
+	long2buff(out_len, resp.pkg_len);
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
@@ -944,7 +937,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 }
 
 static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageSyncReqBody)];
 	char dest_ip_addr[FDFS_IPADDR_SIZE];
@@ -963,7 +956,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != FDFS_IPADDR_SIZE)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length: %d", \
 				__LINE__, \
@@ -974,8 +967,8 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((pResp->status=tcprecvdata(pClientInfo->sock, dest_ip_addr, \
-			nInPackLen, g_network_timeout)) != 0)
+		if ((pResp->status=tcprecvdata(pClientInfo->sock, \
+			dest_ip_addr, nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip addr: %s, recv data fail, " \
@@ -1006,8 +999,8 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 		{
 			strcpy(pBody->src_ip_addr, \
 				pDestStorage->psync_src_server->ip_addr);
-			sprintf(pBody->until_timestamp, "%x", \
-				pDestStorage->sync_until_timestamp);
+			long2buff(pDestStorage->sync_until_timestamp, \
+				pBody->until_timestamp);
 			out_len += sizeof(TrackerStorageSyncReqBody);
 		}
 
@@ -1017,7 +1010,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 
 	//printf("deal sync request, status=%d\n", pResp->status);
 
-	sprintf(pResp->pkg_len, "%x", out_len - (int)sizeof(TrackerHeader));
+	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		out_buff, out_len, g_network_timeout)) != 0)
@@ -1034,7 +1027,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 }
 
 static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageSyncReqBody)];
 	TrackerHeader *pResp;
@@ -1055,7 +1048,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length: 0", \
 				__LINE__, \
@@ -1083,7 +1076,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 
 		sync_until_timestamp = (int)time(NULL);
 		strcpy(pBody->src_ip_addr, pSrcStorage->ip_addr);
-		sprintf(pBody->until_timestamp, "%x", sync_until_timestamp);
+		long2buff(sync_until_timestamp, pBody->until_timestamp);
 		out_len += sizeof(TrackerStorageSyncReqBody);
 		pResp->status = 0;
 		break;
@@ -1091,7 +1084,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 
 	//printf("deal sync request, status=%d\n", pResp->status);
 
-	sprintf(pResp->pkg_len, "%x", out_len - (int)sizeof(TrackerHeader));
+	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		out_buff, out_len, g_network_timeout)) != 0)
@@ -1193,7 +1186,7 @@ static void tracker_find_max_free_space_group()
 }
 
 static int tracker_deal_storage_report(TrackerClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	int status;
 	TrackerStatReportReqBody statBuff;
@@ -1203,7 +1196,7 @@ static int tracker_deal_storage_report(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != sizeof(TrackerStatReportReqBody))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length: %d", \
 				__LINE__, \
@@ -1282,7 +1275,7 @@ static int tracker_deal_storage_report(TrackerClientInfo *pClientInfo, \
 }
 
 static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
-				const int nInPackLen)
+				const int64_t nInPackLen)
 {
 	int status;
 	FDFSStorageStatBuff statBuff;
@@ -1299,7 +1292,7 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != sizeof(FDFSStorageStatBuff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %d " \
+				"cmd=%d, client ip: %s, package size %lld " \
 				"is not correct, " \
 				"expect length: 0 or %d", \
 				__LINE__, \
@@ -1387,7 +1380,7 @@ data buff (struct)
 	TrackerClientInfo client_info;	
 	TrackerHeader header;
 	int result;
-	int nInPackLen;
+	int64_t nInPackLen;
 	int count;
 	int recv_bytes;
 	int log_level;
@@ -1425,8 +1418,7 @@ data buff (struct)
 			break;
 		}
 
-		header.pkg_len[sizeof(header.pkg_len)-1] = '\0';
-		nInPackLen = strtol(header.pkg_len, NULL, 16);
+		nInPackLen = buff2long(header.pkg_len);
 
 		tracker_check_dirty(&client_info);
 
