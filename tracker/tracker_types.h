@@ -50,8 +50,8 @@ typedef struct
 typedef struct
 {
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	int free_mb;  //free disk storage in MB
-	int count;    //server count
+	int64_t free_mb;  //free disk storage in MB
+	int count;        //server count
 	int storage_port;
 	int active_count; //active server count
 	int current_write_server;
@@ -59,16 +59,16 @@ typedef struct
 
 typedef struct
 {
-	int total_upload_count;
-	int success_upload_count;
-	int total_set_meta_count;
-	int success_set_meta_count;
-	int total_delete_count;
-	int success_delete_count;
-	int total_download_count;
-	int success_download_count;
-	int total_get_meta_count;
-	int success_get_meta_count;
+	int64_t total_upload_count;
+	int64_t success_upload_count;
+	int64_t total_set_meta_count;
+	int64_t success_set_meta_count;
+	int64_t total_delete_count;
+	int64_t success_delete_count;
+	int64_t total_download_count;
+	int64_t success_download_count;
+	int64_t total_get_meta_count;
+	int64_t success_get_meta_count;
 	time_t last_source_update;
 	time_t last_sync_update;
 	/*
@@ -80,18 +80,18 @@ typedef struct
 
 typedef struct
 {
-	char sz_total_upload_count[4];
-	char sz_success_upload_count[4];
-	char sz_total_set_meta_count[4];
-	char sz_success_set_meta_count[4];
-	char sz_total_delete_count[4];
-	char sz_success_delete_count[4];
-	char sz_total_download_count[4];
-	char sz_success_download_count[4];
-	char sz_total_get_meta_count[4];
-	char sz_success_get_meta_count[4];
-	char sz_last_source_update[4];
-	char sz_last_sync_update[4];
+	char sz_total_upload_count[8];
+	char sz_success_upload_count[8];
+	char sz_total_set_meta_count[8];
+	char sz_success_set_meta_count[8];
+	char sz_total_delete_count[8];
+	char sz_success_delete_count[8];
+	char sz_total_download_count[8];
+	char sz_success_download_count[8];
+	char sz_total_get_meta_count[8];
+	char sz_success_get_meta_count[8];
+	char sz_last_source_update[8];
+	char sz_last_sync_update[8];
 } FDFSStorageStatBuff;
 
 typedef struct StructFDFSStorageDetail
@@ -101,10 +101,10 @@ typedef struct StructFDFSStorageDetail
 	char ip_addr[FDFS_IPADDR_SIZE];
 
 	struct StructFDFSStorageDetail *psync_src_server;
-	int sync_until_timestamp;
+	time_t sync_until_timestamp;
 
-	int total_mb;  //total disk storage in MB
-	int free_mb;  //free disk storage in MB
+	int64_t total_mb;  //total disk storage in MB
+	int64_t free_mb;  //free disk storage in MB
 
 	int *ref_count;   //group/storage servers referer count
 	int version;      //current server version
@@ -115,7 +115,7 @@ typedef struct
 {
 	bool dirty;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	int free_mb;  //free disk storage in MB
+	int64_t free_mb;  //free disk storage in MB
 	int alloc_size;
 	int count;    //server count
 	int storage_port;

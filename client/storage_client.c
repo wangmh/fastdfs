@@ -40,10 +40,10 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	int result;
 	TrackerServerInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+32];
-	int in_bytes;
+	int64_t in_bytes;
 	int filename_len;
 	char *file_buff;
-	int file_size;
+	int64_t file_size;
 
 	file_buff = NULL;
 	*meta_list = NULL;
@@ -81,8 +81,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 			sizeof(out_buff) - sizeof(TrackerHeader) - \
 			FDFS_GROUP_NAME_MAX_LEN,  "%s", filename);
 
-	sprintf(header.pkg_len, "%x", FDFS_GROUP_NAME_MAX_LEN + \
-			filename_len);
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, header.pkg_len);
 	header.cmd = STORAGE_PROTO_CMD_GET_METADATA;
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
@@ -141,7 +140,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+32];
 	char in_buff[1];
 	char *pBuff;
-	int in_bytes;
+	int64_t in_bytes;
 	int filename_len;
 
 	if (pStorageServer == NULL)
@@ -177,8 +176,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 			sizeof(out_buff) - sizeof(TrackerHeader) - \
 			FDFS_GROUP_NAME_MAX_LEN,  "%s", filename);
 
-	sprintf(header.pkg_len, "%x", FDFS_GROUP_NAME_MAX_LEN + \
-			filename_len);
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, header.pkg_len);
 	header.cmd = STORAGE_PROTO_CMD_DELETE_FILE;
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
@@ -217,13 +215,13 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const bool bFilename, \
 		const char *group_name, const char *remote_filename, \
-		char **file_buff, int *file_size)
+		char **file_buff, int64_t *file_size)
 {
 	TrackerHeader header;
 	int result;
 	TrackerServerInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+32];
-	int in_bytes;
+	int64_t in_bytes;
 	int filename_len;
 
 	*file_size = 0;
@@ -260,8 +258,7 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 			sizeof(out_buff) - sizeof(TrackerHeader) - \
 			FDFS_GROUP_NAME_MAX_LEN,  "%s", remote_filename);
 
-	sprintf(header.pkg_len, "%x", FDFS_GROUP_NAME_MAX_LEN + \
-			filename_len);
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, header.pkg_len);
 	header.cmd = STORAGE_PROTO_CMD_DOWNLOAD_FILE;
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
@@ -318,7 +315,7 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const char *group_name, const char *remote_filename, \
-			const char *local_filename, int *file_size)
+			const char *local_filename, int64_t *file_size)
 {
 	char *pLocalFilename;
 	pLocalFilename = (char *)local_filename;
@@ -337,7 +334,7 @@ file size bytes: file content
 int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const bool bFilename, \
-			const char *file_buff, const int file_size, \
+			const char *file_buff, const int64_t file_size, \
 			const FDFSMetaData *meta_list, \
 			const int meta_count, \
 			char *group_name, \
@@ -350,7 +347,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 			sizeof(FDFSMetaData) * MAX_STATIC_META_DATA_COUNT + 2];
 	char *pMetaData;
 	int meta_bytes;
-	int in_bytes;
+	int64_t in_bytes;
 	char in_buff[128];
 	char *pInBuff;
 	TrackerServerInfo storageServer;
@@ -408,18 +405,18 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 
 	if (meta_count > 0)
 	{
-		fdfs_pack_metadata(meta_list, meta_count, \
-                        pMetaData + 2 * TRACKER_PROTO_PKG_LEN_SIZE, &meta_bytes);
+		fdfs_pack_metadata(meta_list, meta_count, pMetaData + \
+			2 * TRACKER_PROTO_PKG_LEN_SIZE, &meta_bytes);
 	}
 	else
 	{
 		meta_bytes = 0;
 	}
-	sprintf(pMetaData, "%x", meta_bytes);
-	sprintf(pMetaData + TRACKER_PROTO_PKG_LEN_SIZE, "%x", file_size);
+	long2buff(meta_bytes, pMetaData);
+	long2buff(file_size, pMetaData + TRACKER_PROTO_PKG_LEN_SIZE);
 
-	sprintf(header.pkg_len, "%x", 2 * TRACKER_PROTO_PKG_LEN_SIZE + \
-			meta_bytes + file_size);
+	long2buff(2 * TRACKER_PROTO_PKG_LEN_SIZE + \
+			meta_bytes + file_size, header.pkg_len);
 	header.cmd = STORAGE_PROTO_CMD_UPLOAD_FILE;
 	header.status = 0;
 	if ((result=tcpsenddata(pStorageServer->sock, &header, sizeof(header), \
@@ -447,15 +444,16 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 
 	if (bFilename)
 	{
-		if ((result=tcpsendfile(pStorageServer->sock, file_buff, file_size)) != 0)
+		if ((result=tcpsendfile(pStorageServer->sock, file_buff, \
+			file_size)) != 0)
 		{
 			break;
 		}
 	}
 	else
 	{
-		if ((result=tcpsenddata(pStorageServer->sock, (char *)file_buff, \
-				file_size, g_network_timeout)) != 0)
+		if ((result=tcpsenddata(pStorageServer->sock, \
+			(char *)file_buff, file_size, g_network_timeout)) != 0)
 		{
 			logError("send data to storage server %s:%d fail, " \
 				"errno: %d, error info: %s", \
@@ -476,7 +474,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes <= FDFS_GROUP_NAME_MAX_LEN)
 	{
 		logError("storage server %s:%d response data " \
-			"length: %d is invalid, should > %d.", \
+			"length: %lld is invalid, should > %d.", \
 			pStorageServer->ip_addr, pStorageServer->port, \
 			in_bytes, FDFS_GROUP_NAME_MAX_LEN);
 		result = EINVAL;
@@ -559,7 +557,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	TrackerServerInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+2*TRACKER_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN+32];
 	char in_buff[1];
-	int in_bytes;
+	int64_t in_bytes;
 	char *pBuff;
 	int filename_len;
 	char *meta_buff;
@@ -608,10 +606,10 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	pEnd = out_buff + sizeof(out_buff);
 	p = out_buff + sizeof(TrackerHeader);
 
-	sprintf(p, "%x", filename_len);
+	long2buff(filename_len, p);
 	p += TRACKER_PROTO_PKG_LEN_SIZE;
 
-	sprintf(p, "%x", meta_bytes);
+	long2buff(meta_bytes, p);
 	p += TRACKER_PROTO_PKG_LEN_SIZE;
 
 	*p++ = op_flag;
@@ -622,8 +620,8 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	filename_len = snprintf(p, pEnd - p, "%s", filename);
 	p += filename_len;
 
-	sprintf(header.pkg_len, "%x", (int)(p - (out_buff + \
-			sizeof(TrackerHeader))) + meta_bytes);
+	long2buff((int)(p - (out_buff + sizeof(TrackerHeader))) + \
+		meta_bytes, header.pkg_len);
 	header.cmd = STORAGE_PROTO_CMD_SET_METADATA;
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));

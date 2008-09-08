@@ -486,11 +486,11 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no)
 	return sock;
 }
 
-int tcprecvfile(int sock, const char *filename, const int file_bytes)
+int tcprecvfile(int sock, const char *filename, const int64_t file_bytes)
 {
 	int fd;
 	char buff[FDFS_BUFF_SIZE];
-	int remain_bytes;
+	int64_t remain_bytes;
 	int recv_bytes;
 	int result;
 
@@ -566,7 +566,7 @@ int tcpdiscard(int sock, const int bytes)
 	return 0;
 }
 
-int tcpsendfile(int sock, const char *filename, const int file_bytes)
+int tcpsendfile(int sock, const char *filename, const int64_t file_bytes)
 {
 	int fd;
 	int send_bytes;
@@ -630,7 +630,7 @@ int tcpsendfile(int sock, const char *filename, const int file_bytes)
 
 	{
 	char buff[FDFS_BUFF_SIZE];
-	int remain_bytes;
+	int64_t remain_bytes;
 	remain_bytes = file_bytes;
 	while (remain_bytes > 0)
 	{

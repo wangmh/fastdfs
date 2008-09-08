@@ -246,26 +246,26 @@ static int tracker_load_storages(const char *data_path)
 		psync_src_ip_addr = trim(fields[3]);
 		clientInfo.pStorage->sync_until_timestamp = atoi( \
 					trim_left(fields[4]));
-		clientInfo.pStorage->stat.total_upload_count = atoi( \
-					trim_left(fields[5]));
-		clientInfo.pStorage->stat.success_upload_count = atoi( \
-					trim_left(fields[6]));
-		clientInfo.pStorage->stat.total_set_meta_count = atoi( \
-					trim_left(fields[7]));
-		clientInfo.pStorage->stat.success_set_meta_count = atoi( \
-					trim_left(fields[8]));
-		clientInfo.pStorage->stat.total_delete_count = atoi( \
-					trim_left(fields[9]));
-		clientInfo.pStorage->stat.success_delete_count = atoi( \
-					trim_left(fields[10]));
-		clientInfo.pStorage->stat.total_download_count = atoi( \
-					trim_left(fields[11]));
-		clientInfo.pStorage->stat.success_download_count = atoi( \
-					trim_left(fields[12]));
-		clientInfo.pStorage->stat.total_get_meta_count = atoi( \
-					trim_left(fields[13]));
-		clientInfo.pStorage->stat.success_get_meta_count = atoi( \
-					trim_left(fields[14]));
+		clientInfo.pStorage->stat.total_upload_count = strtoll( \
+					trim_left(fields[5]), NULL, 10);
+		clientInfo.pStorage->stat.success_upload_count = strtoll( \
+					trim_left(fields[6]), NULL, 10);
+		clientInfo.pStorage->stat.total_set_meta_count = strtoll( \
+					trim_left(fields[7]), NULL, 10);
+		clientInfo.pStorage->stat.success_set_meta_count = strtoll( \
+					trim_left(fields[8]), NULL, 10);
+		clientInfo.pStorage->stat.total_delete_count = strtoll( \
+					trim_left(fields[9]), NULL, 10);
+		clientInfo.pStorage->stat.success_delete_count = strtoll( \
+					trim_left(fields[10]), NULL, 10);
+		clientInfo.pStorage->stat.total_download_count = strtoll( \
+					trim_left(fields[11]), NULL, 10);
+		clientInfo.pStorage->stat.success_download_count = strtoll( \
+					trim_left(fields[12]), NULL, 10);
+		clientInfo.pStorage->stat.total_get_meta_count = strtoll( \
+					trim_left(fields[13]), NULL, 10);
+		clientInfo.pStorage->stat.success_get_meta_count = strtoll( \
+					trim_left(fields[14]), NULL, 10);
 		clientInfo.pStorage->stat.last_source_update = atoi( \
 					trim_left(fields[15]));
 		clientInfo.pStorage->stat.last_sync_update = atoi( \
@@ -445,16 +445,16 @@ int tracker_save_storages()
 				"%d%c" \
 				"%s%c" \
 				"%d%c" \
-				"%d%c" \
-				"%d%c" \
-				"%d%c" \
-				"%d%c" \
-				"%d%c" \
-				"%d%c" \
-				"%d%c" \
-				"%d%c" \
-				"%d%c" \
-				"%d%c" \
+				"%lld%c" \
+				"%lld%c" \
+				"%lld%c" \
+				"%lld%c" \
+				"%lld%c" \
+				"%lld%c" \
+				"%lld%c" \
+				"%lld%c" \
+				"%lld%c" \
+				"%lld%c" \
 				"%d%c" \
 				"%d\n", \
 				(*ppGroup)->group_name, \
@@ -466,7 +466,7 @@ int tracker_save_storages()
 				((*ppStorage)->psync_src_server != NULL ? \
 				(*ppStorage)->psync_src_server->ip_addr : ""), 	
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->sync_until_timestamp, \
+				(int)(*ppStorage)->sync_until_timestamp, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
 				(*ppStorage)->stat.total_upload_count, \
 				STORAGE_DATA_FIELD_SEPERATOR, \

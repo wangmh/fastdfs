@@ -165,6 +165,22 @@ char *iniGetStrValue(const char *szName, IniItemInfo *items, \
 	}
 }
 
+int64_t iniGetInt64Value(const char *szName, IniItemInfo *items, \
+			const int nItemCount, const int64_t nDefaultValue)
+{
+	char *pValue;
+	
+	pValue = iniGetStrValue(szName, items, nItemCount);
+	if (pValue == NULL)
+	{
+		return nDefaultValue;
+	}
+	else
+	{
+		return strtoll(pValue, NULL, 10);
+	}
+}
+
 int iniGetIntValue(const char *szName, IniItemInfo *items, \
 		const int nItemCount, const int nDefaultValue)
 {

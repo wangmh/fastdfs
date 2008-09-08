@@ -27,19 +27,19 @@ typedef struct
 	char ip_addr[FDFS_IPADDR_SIZE];
 	bool need_sync_old;
 	bool sync_old_done;
-	int until_timestamp;
+	time_t until_timestamp;
 	int mark_fd;
 	int binlog_index;
 	int binlog_fd;
 	off_t binlog_offset;
-	int scan_row_count;
-	int sync_row_count;
-	int last_write_row_count;
+	int64_t scan_row_count;
+	int64_t sync_row_count;
+	int64_t last_write_row_count;
 } BinLogReader;
 
 typedef struct
 {
-	int timestamp;
+	time_t timestamp;
 	char op_type;
 	char filename[32];
 	int filename_len;

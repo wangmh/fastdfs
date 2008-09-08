@@ -145,16 +145,16 @@ int storage_open_storage_stat()
 			return ENOENT;
 		}
 
-		g_storage_stat.total_upload_count = iniGetIntValue( \
+		g_storage_stat.total_upload_count = iniGetInt64Value( \
 				STAT_ITEM_TOTAL_UPLOAD, \
 				items, nItemCount, 0);
-		g_storage_stat.success_upload_count = iniGetIntValue( \
+		g_storage_stat.success_upload_count = iniGetInt64Value( \
 				STAT_ITEM_SUCCESS_UPLOAD, \
 				items, nItemCount, 0);
-		g_storage_stat.total_download_count = iniGetIntValue( \
+		g_storage_stat.total_download_count = iniGetInt64Value( \
 				STAT_ITEM_TOTAL_DOWNLOAD, \
 				items, nItemCount, 0);
-		g_storage_stat.success_download_count = iniGetIntValue( \
+		g_storage_stat.success_download_count = iniGetInt64Value( \
 				STAT_ITEM_SUCCESS_DOWNLOAD, \
 				items, nItemCount, 0);
 		g_storage_stat.last_source_update = iniGetIntValue( \
@@ -163,22 +163,22 @@ int storage_open_storage_stat()
 		g_storage_stat.last_sync_update = iniGetIntValue( \
 				STAT_ITEM_LAST_SYNC_UPD, \
 				items, nItemCount, 0);
-		g_storage_stat.total_set_meta_count = iniGetIntValue( \
+		g_storage_stat.total_set_meta_count = iniGetInt64Value( \
 				STAT_ITEM_TOTAL_SET_META, \
 				items, nItemCount, 0);
-		g_storage_stat.success_set_meta_count = iniGetIntValue( \
+		g_storage_stat.success_set_meta_count = iniGetInt64Value( \
 				STAT_ITEM_SUCCESS_SET_META, \
 				items, nItemCount, 0);
-		g_storage_stat.total_delete_count = iniGetIntValue( \
+		g_storage_stat.total_delete_count = iniGetInt64Value( \
 				STAT_ITEM_TOTAL_DELETE, \
 				items, nItemCount, 0);
-		g_storage_stat.success_delete_count = iniGetIntValue( \
+		g_storage_stat.success_delete_count = iniGetInt64Value( \
 				STAT_ITEM_SUCCESS_DELETE, \
 				items, nItemCount, 0);
-		g_storage_stat.total_get_meta_count = iniGetIntValue( \
+		g_storage_stat.total_get_meta_count = iniGetInt64Value( \
 				STAT_ITEM_TOTAL_GET_META, \
 				items, nItemCount, 0);
-		g_storage_stat.success_get_meta_count = iniGetIntValue( \
+		g_storage_stat.success_get_meta_count = iniGetInt64Value( \
 				STAT_ITEM_SUCCESS_GET_META, \
 				items, nItemCount, 0);
 
@@ -226,18 +226,18 @@ int storage_write_to_stat_file()
 	int len;
 
 	len = sprintf(buff, 
+		"%s=%lld\n"  \
+		"%s=%lld\n"  \
+		"%s=%lld\n"  \
+		"%s=%lld\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
-		"%s=%d\n"  \
-		"%s=%d\n"  \
-		"%s=%d\n"  \
-		"%s=%d\n"  \
-		"%s=%d\n"  \
-		"%s=%d\n"  \
-		"%s=%d\n"  \
-		"%s=%d\n"  \
-		"%s=%d\n"  \
-		"%s=%d\n", \
+		"%s=%lld\n"  \
+		"%s=%lld\n"  \
+		"%s=%lld\n"  \
+		"%s=%lld\n"  \
+		"%s=%lld\n"  \
+		"%s=%lld\n", \
 		STAT_ITEM_TOTAL_UPLOAD, g_storage_stat.total_upload_count, \
 		STAT_ITEM_SUCCESS_UPLOAD, g_storage_stat.success_upload_count, \
 		STAT_ITEM_TOTAL_DOWNLOAD, g_storage_stat.total_download_count, \

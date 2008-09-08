@@ -14,7 +14,7 @@
 #include "tracker_types.h"
 
 #define TRACKER_PROTO_CMD_STORAGE_JOIN          81
-#define FDFS_PROTO_CMD_QUIT          82
+#define FDFS_PROTO_CMD_QUIT			82
 #define TRACKER_PROTO_CMD_STORAGE_BEAT          83  //heart beat
 #define TRACKER_PROTO_CMD_STORAGE_REPORT        84
 #define TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG   85  //repl new storage servers
@@ -45,7 +45,7 @@
 //for replace, insert when the meta item not exist, otherwise update it
 #define STORAGE_SET_METADATA_FLAG_MERGE		'M'
 
-#define TRACKER_PROTO_PKG_LEN_SIZE	9
+#define TRACKER_PROTO_PKG_LEN_SIZE	8
 #define TRACKER_PROTO_CMD_SIZE		1
 
 #define TRACKER_QUERY_STORAGE_BODY_LEN	FDFS_GROUP_NAME_MAX_LEN \
@@ -79,8 +79,8 @@ typedef struct
 {
 	char status;
 	char ip_addr[FDFS_IPADDR_SIZE];
-	char sz_total_mb[4];
-	char sz_free_mb[4];
+	char sz_total_mb[8];
+	char sz_free_mb[8];
 	FDFSStorageStatBuff stat_buff;
 } TrackerStorageStat;
 
@@ -92,8 +92,8 @@ typedef struct
 
 typedef struct
 {
-	char sz_total_mb[4];
-	char sz_free_mb[4];
+	char sz_total_mb[8];
+	char sz_free_mb[8];
 } TrackerStatReportReqBody;
 
 #ifdef __cplusplus
@@ -105,11 +105,11 @@ int metadata_cmp_by_name(const void *p1, const void *p2);
 
 const char *get_storage_status_caption(const int status);
 
-int tracker_recv_header(TrackerServerInfo *pTrackerServer, int *in_bytes);
+int tracker_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes);
 
 int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
 		char **buff, const int buff_size, \
-		int *in_bytes);
+		int64_t *in_bytes);
 int tracker_quit(TrackerServerInfo *pTrackerServer);
 
 #define fdfs_split_metadata(meta_buff, meta_count, err_no) \
