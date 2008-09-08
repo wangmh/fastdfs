@@ -52,7 +52,7 @@ int _hash_alloc_buckets(HashArray *pHash)
 	ChainList *plist;
 	ChainList *list_end;
 
-	pHash->items = (ChainList *)malloc(sizeof(ChainList) * (*pHash->capacity));
+	pHash->items=(ChainList *)malloc(sizeof(ChainList)*(*pHash->capacity));
 	if (pHash->items == NULL)
 	{
 		return ENOMEM;
@@ -67,7 +67,8 @@ int _hash_alloc_buckets(HashArray *pHash)
 	return 0;
 }
 
-int hash_init(HashArray *pHash, HashFunc hash_func, const unsigned int capacity, const double load_factor)
+int hash_init(HashArray *pHash, HashFunc hash_func, \
+		const unsigned int capacity, const double load_factor)
 {
 	unsigned int *pprime;
 	unsigned int *prime_end;
@@ -209,10 +210,11 @@ void hash_stat_print(HashArray *pHash)
 	{
 		if (stats[i] > 0) totalLength += (i+1) * stats[i];
 	}
-	printf("capacity: %d, item_count=%d, bucket_used: %d, avg length: %.4f, max length: %d, bucket / item = %.2f%%\n", 
+	printf("capacity: %d, item_count=%d, bucket_used: %d, " \
+		"avg length: %.4f, max length: %d, bucket / item = %.2f%%\n", 
                *pHash->capacity, pHash->item_count, bucket_used,
-               bucket_used > 0 ? (double)totalLength / (double)bucket_used : 0.00,
-               max_length, (double)bucket_used * 100.00 / (double)*pHash->capacity);
+               bucket_used > 0 ? (double)totalLength / (double)bucket_used:0.00,
+               max_length, (double)bucket_used*100.00/(double)*pHash->capacity);
 }
 
 static int _rehash1(HashArray *pHash, const int old_capacity, \
@@ -242,8 +244,11 @@ static int _rehash1(HashArray *pHash, const int old_capacity, \
 		while (pnode != NULL)
 		{
 			hash_data = (HashData *) pnode->data;
-			pNewList = pHash->items + (hash_data->hash_code % (*pHash->capacity));
-			if (addNode(pNewList, hash_data) == 0) //success to add node
+			pNewList = pHash->items + (hash_data->hash_code % \
+				(*pHash->capacity));
+
+			//success to add node
+			if (addNode(pNewList, hash_data) == 0)
 			{
 			}
 
@@ -299,7 +304,9 @@ static int _rehash(HashArray *pHash)
 		}
 	}
 
-	//printf("rehash, old_capacity=%d, new_capacity=%d\n", old_capacity, *pHash->capacity);
+	/*printf("rehash, old_capacity=%d, new_capacity=%d\n", \
+		old_capacity, *pHash->capacity);
+	*/
 	return result;
 }
 
@@ -333,7 +340,8 @@ int _hash_conflict_count(HashArray *pHash)
 			pSubNode = pnode->next;
 			while (pSubNode != NULL)
 			{
-				if (((HashData *)pnode->data)->hash_code != ((HashData *)pSubNode->data)->hash_code)
+				if (((HashData *)pnode->data)->hash_code != \
+					((HashData *)pSubNode->data)->hash_code)
 				{
 					conflicted = 1;
 					break;
@@ -405,7 +413,10 @@ int hash_best_op(HashArray *pHash, const int suggest_capacity)
 		}
 
 		old_capacity = *new_capacity;
-		//printf("rehash, conflict_count=%d, old_capacity=%d, new_capacity=%d\n", conflict_count, old_capacity, *new_capacity);
+		/*printf("rehash, conflict_count=%d, old_capacity=%d, " \
+			"new_capacity=%d\n", conflict_count, \
+			old_capacity, *new_capacity);
+		*/
 	} while ((conflict_count=_hash_conflict_count(pHash)) > 0);
 
 	pHash->is_malloc_capacity = true;
@@ -424,7 +435,8 @@ HashData *_chain_find_entry(ChainList *plist, const void *key, \
 	while (pnode != NULL)
 	{
 		hash_data = (HashData *)pnode->data;
-		if (key_len == hash_data->key_len && memcmp(key, hash_data->key, key_len) == 0)
+		if (key_len == hash_data->key_len && \
+			memcmp(key, hash_data->key, key_len) == 0)
 		{
 			return hash_data;
 		}
@@ -460,7 +472,8 @@ void *hash_find(HashArray *pHash, const void *key, const int key_len)
 	}
 }
 
-int hash_insert(HashArray *pHash, const void *key, const int key_len, void *value)
+int hash_insert(HashArray *pHash, const void *key, const int key_len, \
+		void *value)
 {
 	unsigned int hash_code;
 	ChainList *plist;
@@ -504,7 +517,8 @@ int hash_insert(HashArray *pHash, const void *key, const int key_len, void *valu
 
 	pHash->item_count++;
 
-	if ((double)pHash->item_count / (double)*pHash->capacity >= pHash->load_factor)
+	if ((double)pHash->item_count / (double)*pHash->capacity >= \
+		pHash->load_factor)
 	{
 		_rehash(pHash);
 	}
@@ -533,7 +547,8 @@ int hash_delete(HashArray *pHash, const void *key, const int key_len)
 	while (pnode != NULL)
 	{
 		hash_data = (HashData *)pnode->data;
-		if (key_len == hash_data->key_len && memcmp(key, hash_data->key, key_len) == 0)
+		if (key_len == hash_data->key_len && \
+			memcmp(key, hash_data->key, key_len) == 0)
 		{
 			deleteNodeEx(plist, previous, pnode);
 			pHash->item_count--;
@@ -620,7 +635,8 @@ unsigned int PJWHash(const void *key, const int key_len)
     unsigned int ThreeQuarters    = (unsigned int)((BitsInUnignedInt * 3) / 4);
     unsigned int OneEighth        = (unsigned int)(BitsInUnignedInt / 8);
 
-    unsigned int HighBits         = (unsigned int)(0xFFFFFFFF) << (BitsInUnignedInt - OneEighth);
+    unsigned int HighBits         = (unsigned int)(0xFFFFFFFF) << \
+				(BitsInUnignedInt - OneEighth);
     unsigned int hash             = 0;
     unsigned int test             = 0;
 

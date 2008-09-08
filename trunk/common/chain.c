@@ -13,7 +13,8 @@
 #include "chain.h"
 //#include "use_mmalloc.h"
 
-void chain_init(ChainList *pList, const int type, FreeDataFunc freeDataFunc, CompareFunc compareFunc)
+void chain_init(ChainList *pList, const int type, FreeDataFunc freeDataFunc, \
+		CompareFunc compareFunc)
 {
 	if (pList == NULL)
 	{
@@ -144,7 +145,7 @@ int insertNodeAsc(ChainList *pList, void *data)
 	}
 
 	pNew->next = pNode;
-	if (pPrevious == NULL)  //增加的结点是第一个结点
+	if (pPrevious == NULL)
 	{
 		pList->head = pNew;
 	}
@@ -153,7 +154,7 @@ int insertNodeAsc(ChainList *pList, void *data)
 		pPrevious->next = pNew;
 	}
 
-	if (pNode == NULL)	//增加的结点是最后一个结点
+	if (pNode == NULL)
 	{
 		pList->tail = pNew;
 	}
@@ -177,9 +178,10 @@ int addNode(ChainList *pList, void *data)
 	}
 }
 
-void deleteNodeEx(ChainList *pList, ChainNode *pPreviousNode, ChainNode *pDeletedNode)
+void deleteNodeEx(ChainList *pList, ChainNode *pPreviousNode, \
+		ChainNode *pDeletedNode)
 {
-	if (pDeletedNode == pList->head)	//删除的的是第一个
+	if (pDeletedNode == pList->head)
 	{
 		pList->head = pDeletedNode->next;
 	}
@@ -188,7 +190,7 @@ void deleteNodeEx(ChainList *pList, ChainNode *pPreviousNode, ChainNode *pDelete
 		pPreviousNode->next = pDeletedNode->next;
 	}
 
-	if (pDeletedNode == pList->tail) //删除的是最后一个
+	if (pDeletedNode == pList->tail)
 	{
 		pList->tail = pPreviousNode;
 	}
@@ -196,12 +198,13 @@ void deleteNodeEx(ChainList *pList, ChainNode *pPreviousNode, ChainNode *pDelete
 	freeChainNode(pList, pDeletedNode);
 }
 
-void deleteToNodePrevious(ChainList *pList, ChainNode *pPreviousNode, ChainNode *pDeletedNext)
+void deleteToNodePrevious(ChainList *pList, ChainNode *pPreviousNode, \
+			ChainNode *pDeletedNext)
 {
 	ChainNode *pNode;
 	ChainNode *pDeletedNode;
 
-	if (pPreviousNode == NULL) //删除的的是第一个
+	if (pPreviousNode == NULL)
 	{
         	pNode = pList->head;
 		pList->head = pDeletedNext;
@@ -219,7 +222,7 @@ void deleteToNodePrevious(ChainList *pList, ChainNode *pPreviousNode, ChainNode 
 	        freeChainNode(pList, pDeletedNode);
 	}
 
-	if (pDeletedNext == NULL) //删除的是最后一个
+	if (pDeletedNext == NULL)
 	{
 		pList->tail = pPreviousNode;
 	}
@@ -298,7 +301,7 @@ int deleteNode(ChainList *pList, void *data, bool bDeleteAll)
 
 			continue;
 		}
-		else if(nCompareRes > 0 && pList->type == CHAIN_TYPE_SORTED) //升序排列的链表
+		else if(nCompareRes > 0 && pList->type == CHAIN_TYPE_SORTED)
 		{
 			break;
 		}
@@ -319,3 +322,4 @@ int deleteAll(ChainList *pList, void *data)
 {
 	return deleteNode(pList, data, true);
 }
+
