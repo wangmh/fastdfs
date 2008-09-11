@@ -45,15 +45,15 @@
 //for replace, insert when the meta item not exist, otherwise update it
 #define STORAGE_SET_METADATA_FLAG_MERGE		'M'
 
-#define TRACKER_PROTO_PKG_LEN_SIZE	8
-#define TRACKER_PROTO_CMD_SIZE		1
+#define FDFS_PROTO_PKG_LEN_SIZE		8
+#define FDFS_PROTO_CMD_SIZE		1
 
 #define TRACKER_QUERY_STORAGE_BODY_LEN	FDFS_GROUP_NAME_MAX_LEN \
-			+ FDFS_IPADDR_SIZE - 1 + TRACKER_PROTO_PKG_LEN_SIZE
+			+ FDFS_IPADDR_SIZE - 1 + FDFS_PROTO_PKG_LEN_SIZE
 
 typedef struct
 {
-	char pkg_len[TRACKER_PROTO_PKG_LEN_SIZE];
+	char pkg_len[FDFS_PROTO_PKG_LEN_SIZE];
 	char cmd;
 	char status;
 } TrackerHeader;
@@ -61,18 +61,18 @@ typedef struct
 typedef struct
 {
 	char group_name[FDFS_GROUP_NAME_MAX_LEN+1];
-	char storage_port[TRACKER_PROTO_PKG_LEN_SIZE];
+	char storage_port[FDFS_PROTO_PKG_LEN_SIZE];
 } TrackerStorageJoinBody;
 
 
 typedef struct
 {
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char sz_free_mb[TRACKER_PROTO_PKG_LEN_SIZE];  //free disk storage in MB
-	char sz_count[TRACKER_PROTO_PKG_LEN_SIZE];    //server count
-	char sz_storage_port[TRACKER_PROTO_PKG_LEN_SIZE];
-	char sz_active_count[TRACKER_PROTO_PKG_LEN_SIZE]; //active server count
-	char sz_current_write_server[TRACKER_PROTO_PKG_LEN_SIZE];
+	char sz_free_mb[FDFS_PROTO_PKG_LEN_SIZE];  //free disk storage in MB
+	char sz_count[FDFS_PROTO_PKG_LEN_SIZE];    //server count
+	char sz_storage_port[FDFS_PROTO_PKG_LEN_SIZE];
+	char sz_active_count[FDFS_PROTO_PKG_LEN_SIZE]; //active server count
+	char sz_current_write_server[FDFS_PROTO_PKG_LEN_SIZE];
 } TrackerGroupStat;
 
 typedef struct
@@ -87,7 +87,7 @@ typedef struct
 typedef struct
 {
 	char src_ip_addr[FDFS_IPADDR_SIZE];
-	char until_timestamp[TRACKER_PROTO_PKG_LEN_SIZE];
+	char until_timestamp[FDFS_PROTO_PKG_LEN_SIZE];
 } TrackerStorageSyncReqBody;
 
 typedef struct
@@ -100,17 +100,17 @@ typedef struct
 extern "C" {
 #endif
 
-int tracker_validate_group_name(const char *group_name);
+int fdfs_validate_group_name(const char *group_name);
 int metadata_cmp_by_name(const void *p1, const void *p2);
 
 const char *get_storage_status_caption(const int status);
 
-int tracker_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes);
+int fdfs_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes);
 
-int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
+int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
 		char **buff, const int buff_size, \
 		int64_t *in_bytes);
-int tracker_quit(TrackerServerInfo *pTrackerServer);
+int fdfs_quit(TrackerServerInfo *pTrackerServer);
 
 #define fdfs_split_metadata(meta_buff, meta_count, err_no) \
 		fdfs_split_metadata_ex(meta_buff, FDFS_RECORD_SEPERATOR, \

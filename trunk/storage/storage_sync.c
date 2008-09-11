@@ -60,8 +60,8 @@ static int storage_binlog_reader_skip(BinLogReader *pReader);
 static void storage_reader_destroy(BinLogReader *pReader);
 
 /**
-9 bytes: filename bytes
-9 bytes: file size
+8 bytes: filename bytes
+8 bytes: file size
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename bytes : filename
 file size bytes: file content
@@ -109,7 +109,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	while (1)
 	{
 		memset(&header, 0, sizeof(header));
-		long2buff(2 * TRACKER_PROTO_PKG_LEN_SIZE + \
+		long2buff(2 * FDFS_PROTO_PKG_LEN_SIZE + \
 				FDFS_GROUP_NAME_MAX_LEN + \
 				pRecord->filename_len + stat_buf.st_size,\
 				header.pkg_len);
@@ -118,9 +118,9 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 
 		p = out_buff + sizeof(TrackerHeader);
 		long2buff(pRecord->filename_len, p);
-		p += TRACKER_PROTO_PKG_LEN_SIZE;
+		p += FDFS_PROTO_PKG_LEN_SIZE;
 		long2buff(stat_buf.st_size, p);
-		p += TRACKER_PROTO_PKG_LEN_SIZE;
+		p += FDFS_PROTO_PKG_LEN_SIZE;
 		sprintf(p, "%s", pStorageServer->group_name);
 		p += FDFS_GROUP_NAME_MAX_LEN;
 		memcpy(p, pRecord->filename, pRecord->filename_len);
@@ -154,7 +154,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		}
 
 		pBuff = in_buff;
-		if ((result=tracker_recv_response(pStorageServer, \
+		if ((result=fdfs_recv_response(pStorageServer, \
 			&pBuff, 0, &in_bytes)) != 0)
 		{
 			break;
@@ -242,7 +242,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 	}
 
 	pBuff = in_buff;
-	result = tracker_recv_response(pStorageServer, &pBuff, 0, &in_bytes);
+	result = fdfs_recv_response(pStorageServer, &pBuff, 0, &in_bytes);
 	if (result == ENOENT)
 	{
 		result = 0;
@@ -752,7 +752,7 @@ static int storage_report_storage_status(const char *ip_addr, \
 		{
 		}
 
-		tracker_quit(pTServer);
+		fdfs_quit(pTServer);
 		close(pTServer->sock);
 	}
 
@@ -852,13 +852,13 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 
 		if ((result=tracker_sync_src_req(pTServer, pReader)) != 0)
 		{
-			tracker_quit(pTServer);
+			fdfs_quit(pTServer);
 			close(pTServer->sock);
 			sleep(g_heart_beat_interval);
 			continue;
 		}
 
-		tracker_quit(pTServer);
+		fdfs_quit(pTServer);
 		close(pTServer->sock);
 
 		break;
@@ -1339,7 +1339,7 @@ static void* storage_sync_thread_entrance(void* arg)
 				"ip_addr %s belong to the local host," \
 				" sync thread exit.", \
 				__LINE__, storage_server.ip_addr);
-			tracker_quit(&storage_server);
+			fdfs_quit(&storage_server);
 			break;
 		}
 

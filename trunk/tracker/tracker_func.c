@@ -75,7 +75,7 @@ static int tracker_load_store_lookup(const char *filename, \
 
 	snprintf(g_groups.store_group, sizeof(g_groups.store_group), \
 			"%s", pGroupName);
-	if (tracker_validate_group_name(g_groups.store_group) != 0) \
+	if (fdfs_validate_group_name(g_groups.store_group) != 0) \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"conf file \"%s\", " \

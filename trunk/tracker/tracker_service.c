@@ -235,7 +235,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 
 	memcpy(pClientInfo->group_name, body.group_name, FDFS_GROUP_NAME_MAX_LEN);
 	pClientInfo->group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
-	if ((status=tracker_validate_group_name(pClientInfo->group_name)) != 0)
+	if ((status=fdfs_validate_group_name(pClientInfo->group_name)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, invalid group_name: %s", \
@@ -1377,7 +1377,7 @@ void* tracker_thread_entrance(void* arg)
 {
 /*
 package format:
-9 bytes length (hex string)
+8 bytes length (hex string)
 1 bytes cmd (char)
 1 bytes status(char)
 data buff (struct)

@@ -185,7 +185,7 @@ static void* tracker_report_thread_entrance(void* arg)
 					"errno: %d, error info:%s.", \
 					__LINE__, errno, strerror(errno));
 
-				tracker_quit(pTrackerServer);
+				fdfs_quit(pTrackerServer);
 				sleep(g_heart_beat_interval);
 				continue;
 			}
@@ -214,7 +214,7 @@ static void* tracker_report_thread_entrance(void* arg)
 					pthread_mutex_unlock( \
 						&reporter_thread_lock);
 
-					tracker_quit(pTrackerServer);
+					fdfs_quit(pTrackerServer);
 					sleep(g_heart_beat_interval);
 					continue;
 				}
@@ -234,7 +234,7 @@ static void* tracker_report_thread_entrance(void* arg)
 		if (*g_sync_src_ip_addr != '\0' && \
 			tracker_sync_notify(pTrackerServer) != 0)
 		{
-			tracker_quit(pTrackerServer);
+			fdfs_quit(pTrackerServer);
 			sleep(g_heart_beat_interval);
 			continue;
 		}
@@ -270,7 +270,7 @@ static void* tracker_report_thread_entrance(void* arg)
 			sleep(1);
 		}
 
-		if ((!g_continue_flag) && tracker_quit(pTrackerServer) != 0)
+		if ((!g_continue_flag) && fdfs_quit(pTrackerServer) != 0)
 		{
 		}
 
@@ -388,7 +388,7 @@ int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 	}
 
 	if (memcmp(resp.pkg_len, "\0\0\0\0\0\0\0\0", \
-		TRACKER_PROTO_PKG_LEN_SIZE) != 0)
+		FDFS_PROTO_PKG_LEN_SIZE) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
@@ -652,7 +652,7 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 	}
 
 	pBuff = (char *)&syncReqbody;
-	if ((result=tracker_recv_response(pTrackerServer, \
+	if ((result=fdfs_recv_response(pTrackerServer, \
                 &pBuff, sizeof(syncReqbody), &in_bytes)) != 0)
 	{
 		return result;
@@ -711,7 +711,7 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 	}
 
 	pBuff = (char *)&syncReqbody;
-	if ((result=tracker_recv_response(pTrackerServer, \
+	if ((result=fdfs_recv_response(pTrackerServer, \
                 &pBuff, sizeof(syncReqbody), &in_bytes)) != 0)
 	{
 		return result;

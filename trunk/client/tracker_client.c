@@ -170,7 +170,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	}
 
 	pInBuff = (char *)stats;
-	if ((result=tracker_recv_response(pTrackerServer, \
+	if ((result=fdfs_recv_response(pTrackerServer, \
 		&pInBuff, sizeof(stats), &in_bytes)) != 0)
 	{
 		*storage_count = 0;
@@ -272,7 +272,7 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	}
 
 	pInBuff = (char *)stats;
-	if ((result=tracker_recv_response(pTrackerServer, \
+	if ((result=fdfs_recv_response(pTrackerServer, \
 		&pInBuff, sizeof(stats), &in_bytes)) != 0)
 	{
 		*group_count = 0;
@@ -358,7 +358,7 @@ int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
 	}
 
 	pInBuff = in_buff;
-	if ((result=tracker_recv_response(pTrackerServer, \
+	if ((result=fdfs_recv_response(pTrackerServer, \
 		&pInBuff, sizeof(in_buff), &in_bytes)) != 0)
 	{
 		return result;
@@ -408,7 +408,7 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 	}
 
 	pInBuff = in_buff;
-	if ((result=tracker_recv_response(pTrackerServer, \
+	if ((result=fdfs_recv_response(pTrackerServer, \
 		&pInBuff, sizeof(in_buff), &in_bytes)) != 0)
 	{
 		return result;

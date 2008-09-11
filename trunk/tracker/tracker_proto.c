@@ -23,7 +23,7 @@
 #include "tracker_types.h"
 #include "tracker_proto.h"
 
-int tracker_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes)
+int fdfs_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes)
 {
 	TrackerHeader resp;
 	int result;
@@ -62,14 +62,14 @@ int tracker_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes)
 	return resp.status;
 }
 
-int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
+int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
 		char **buff, const int buff_size, \
 		int64_t *in_bytes)
 {
 	int result;
 	bool bMalloced;
 
-	result = tracker_recv_header(pTrackerServer, in_bytes);
+	result = fdfs_recv_header(pTrackerServer, in_bytes);
 	if (result != 0)
 	{
 		return result;
@@ -132,7 +132,7 @@ int tracker_recv_response(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-int tracker_quit(TrackerServerInfo *pTrackerServer)
+int fdfs_quit(TrackerServerInfo *pTrackerServer)
 {
 	TrackerHeader header;
 	int result;
@@ -154,7 +154,7 @@ int tracker_quit(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
-int tracker_validate_group_name(const char *group_name)
+int fdfs_validate_group_name(const char *group_name)
 {
 	const char *p;
 	const char *pEnd;
