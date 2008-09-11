@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (tracker_quit(pTrackerServer) != 0)
+	if (fdfs_quit(pTrackerServer) != 0)
 	{
 	}
 

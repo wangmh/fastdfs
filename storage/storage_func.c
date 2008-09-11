@@ -714,7 +714,7 @@ int storage_load_from_conf_file(const char *filename, \
 		}
 
 		snprintf(g_group_name, sizeof(g_group_name), "%s", pGroupName);
-		if ((result=tracker_validate_group_name(g_group_name)) != 0) \
+		if ((result=fdfs_validate_group_name(g_group_name)) != 0) \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"conf file \"%s\", " \

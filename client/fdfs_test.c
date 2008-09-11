@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 			printf("storage_upload_by_filename fail, " \
 				"error no: %d, error info: %s\n", \
 				result, strerror(result));
-			tracker_quit(&storageServer);
+			fdfs_quit(&storageServer);
 			tracker_disconnect_server(&storageServer);
 			fdfs_client_destroy();
 			return result;
@@ -320,10 +320,10 @@ int main(int argc, char *argv[])
 		return EINVAL;
 	}
 
-	tracker_quit(&storageServer);
+	fdfs_quit(&storageServer);
 	tracker_disconnect_server(&storageServer);
 
-	tracker_quit(pTrackerServer);
+	fdfs_quit(pTrackerServer);
 
 	tracker_close_all_connections();
 	fdfs_client_destroy();

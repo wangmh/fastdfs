@@ -364,8 +364,8 @@ static int storage_do_set_metadata(StorageClientInfo *pClientInfo, \
 }
 
 /**
-9 bytes: filename length
-9 bytes: meta data size
+8 bytes: filename length
+8 bytes: meta data size
 1 bytes: operation flag, 
      'O' for overwrite all old metadata
      'M' for merge, insert when the meta item not exist, otherwise update it
@@ -394,7 +394,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 	in_buff = NULL;
 	while (1)
 	{
-		if (nInPackLen <= 2 * TRACKER_PROTO_PKG_LEN_SIZE + 1 + \
+		if (nInPackLen <= 2 * FDFS_PROTO_PKG_LEN_SIZE + 1 + \
 					FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -404,7 +404,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 				__LINE__, \
 				STORAGE_PROTO_CMD_SET_METADATA, \
 				pClientInfo->ip_addr,  \
-				nInPackLen, 2 * TRACKER_PROTO_PKG_LEN_SIZE + 1 \
+				nInPackLen, 2 * FDFS_PROTO_PKG_LEN_SIZE + 1 \
 				+ FDFS_GROUP_NAME_MAX_LEN);
 			resp.status = EINVAL;
 			break;
@@ -434,7 +434,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 
 		*(in_buff + nInPackLen) = '\0';
 		filename_len = buff2long(in_buff);
-		meta_bytes = buff2long(in_buff + TRACKER_PROTO_PKG_LEN_SIZE);
+		meta_bytes = buff2long(in_buff + FDFS_PROTO_PKG_LEN_SIZE);
 		if (filename_len <= 0 || filename_len >= sizeof(filename))
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -444,7 +444,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		op_flag = *(in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE);
+		op_flag = *(in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE);
 		if (op_flag != STORAGE_SET_METADATA_FLAG_OVERWRITE && \
 			op_flag != STORAGE_SET_METADATA_FLAG_MERGE)
 		{
@@ -457,7 +457,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 		}
 
 		if (meta_bytes < 0 || meta_bytes != nInPackLen - \
-				(2 * TRACKER_PROTO_PKG_LEN_SIZE + 1 + \
+				(2 * FDFS_PROTO_PKG_LEN_SIZE + 1 + \
 				FDFS_GROUP_NAME_MAX_LEN + filename_len))
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -467,7 +467,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		memcpy(group_name, in_buff + 2*TRACKER_PROTO_PKG_LEN_SIZE+1, \
+		memcpy(group_name, in_buff + 2*FDFS_PROTO_PKG_LEN_SIZE+1, \
 			FDFS_GROUP_NAME_MAX_LEN);
 		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
 		if (strcmp(group_name, g_group_name) != 0)
@@ -481,7 +481,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		memcpy(filename, in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE + 1 + \
+		memcpy(filename, in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE + 1 + \
 			FDFS_GROUP_NAME_MAX_LEN, filename_len);
 		*(filename + filename_len) = '\0';
 		if ((resp.status=fdfs_check_data_filename(filename, \
@@ -490,7 +490,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		meta_buff = in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE + 1 + \
+		meta_buff = in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE + 1 + \
 				FDFS_GROUP_NAME_MAX_LEN + filename_len;
 		*(meta_buff + meta_bytes) = '\0';
 
@@ -546,8 +546,8 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 }
 
 /**
-9 bytes: meta data bytes
-9 bytes: file size 
+8 bytes: meta data bytes
+8 bytes: file size 
 meta data bytes: each meta data seperated by \x01,
 		 name and value seperated by \x02
 file size bytes: file content
@@ -557,7 +557,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 {
 	TrackerHeader resp;
 	int out_len;
-	char in_buff[2 * TRACKER_PROTO_PKG_LEN_SIZE + 1];
+	char in_buff[2 * FDFS_PROTO_PKG_LEN_SIZE + 1];
 	char *meta_buff;
 	char out_buff[128];
 	char filename[128];
@@ -572,7 +572,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	filename_len = 0;
 	while (1)
 	{
-		if (nInPackLen < 2 * TRACKER_PROTO_PKG_LEN_SIZE)
+		if (nInPackLen < 2 * FDFS_PROTO_PKG_LEN_SIZE)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, package size %lld " \
@@ -581,13 +581,13 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 				__LINE__, \
 				STORAGE_PROTO_CMD_UPLOAD_FILE, \
 				pClientInfo->ip_addr,  \
-				nInPackLen, 2 * TRACKER_PROTO_PKG_LEN_SIZE);
+				nInPackLen, 2 * FDFS_PROTO_PKG_LEN_SIZE);
 			resp.status = EINVAL;
 			break;
 		}
 
 		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
-			2*TRACKER_PROTO_PKG_LEN_SIZE, g_network_timeout)) != 0)
+			2*FDFS_PROTO_PKG_LEN_SIZE, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -598,7 +598,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 		}
 
 		meta_bytes = buff2long(in_buff);
-		file_bytes = buff2long(in_buff + TRACKER_PROTO_PKG_LEN_SIZE);
+		file_bytes = buff2long(in_buff + FDFS_PROTO_PKG_LEN_SIZE);
 		if (meta_bytes < 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -611,7 +611,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 		}
 
 		if (file_bytes < 0 || file_bytes != nInPackLen - \
-			(2 * TRACKER_PROTO_PKG_LEN_SIZE + meta_bytes))
+			(2 * FDFS_PROTO_PKG_LEN_SIZE + meta_bytes))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, pkg length is not correct, " \
@@ -716,8 +716,8 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 }
 
 /**
-9 bytes: filename bytes
-9 bytes: file size
+8 bytes: filename bytes
+8 bytes: file size
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename bytes : filename
 file size bytes: file content
@@ -726,7 +726,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			const int64_t nInPackLen, const char proto_cmd)
 {
 	TrackerHeader resp;
-	char in_buff[2 * TRACKER_PROTO_PKG_LEN_SIZE + \
+	char in_buff[2 * FDFS_PROTO_PKG_LEN_SIZE + \
 			FDFS_GROUP_NAME_MAX_LEN + 1];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char filename[128];
@@ -738,7 +738,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 	memset(&resp, 0, sizeof(resp));
 	while (1)
 	{
-		if (nInPackLen <= 2 * TRACKER_PROTO_PKG_LEN_SIZE + \
+		if (nInPackLen <= 2 * FDFS_PROTO_PKG_LEN_SIZE + \
 					FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -748,14 +748,14 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 				__LINE__, \
 				proto_cmd, \
 				pClientInfo->ip_addr,  nInPackLen, \
-				2 * TRACKER_PROTO_PKG_LEN_SIZE + \
+				2 * FDFS_PROTO_PKG_LEN_SIZE + \
 					FDFS_GROUP_NAME_MAX_LEN);
 			resp.status = EINVAL;
 			break;
 		}
 
 		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
-			2*TRACKER_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN, \
+			2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN, \
 			g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -769,7 +769,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		}
 
 		filename_len = buff2long(in_buff);
-		file_bytes = buff2long(in_buff + TRACKER_PROTO_PKG_LEN_SIZE);
+		file_bytes = buff2long(in_buff + FDFS_PROTO_PKG_LEN_SIZE);
 
 		if (filename_len < 0 || filename_len >= sizeof(filename))
 		{
@@ -793,7 +793,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		memcpy(group_name, in_buff + 2 * TRACKER_PROTO_PKG_LEN_SIZE, \
+		memcpy(group_name, in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE, \
 				FDFS_GROUP_NAME_MAX_LEN);
 		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
 		if (strcmp(group_name, g_group_name) != 0)
@@ -807,14 +807,14 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (file_bytes != nInPackLen - (2*TRACKER_PROTO_PKG_LEN_SIZE + \
+		if (file_bytes != nInPackLen - (2*FDFS_PROTO_PKG_LEN_SIZE + \
 					FDFS_GROUP_NAME_MAX_LEN + filename_len))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, in request pkg, " \
 				"file size: %lld != remain bytes: %lld", \
 				__LINE__, pClientInfo->ip_addr, file_bytes, \
-				nInPackLen - (2*TRACKER_PROTO_PKG_LEN_SIZE + \
+				nInPackLen - (2*FDFS_PROTO_PKG_LEN_SIZE + \
 				FDFS_GROUP_NAME_MAX_LEN + filename_len));
 			resp.status = EPIPE;
 			break;
@@ -1494,7 +1494,7 @@ void* storage_thread_entrance(void* arg)
 {
 /*
 package format:
-9 bytes length (hex string)
+8 bytes length (hex string)
 1 bytes cmd (char)
 1 bytes status(char)
 data buff (struct)

@@ -99,7 +99,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	if ((result=tracker_recv_response(pStorageServer, \
+	if ((result=fdfs_recv_response(pStorageServer, \
 		&file_buff, 0, &in_bytes)) != 0)
 	{
 		break;
@@ -123,7 +123,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 
 	if (pStorageServer == &storageServer)
 	{
-		tracker_quit(pStorageServer);
+		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
 	}
 
@@ -194,7 +194,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	}
 
 	pBuff = in_buff;
-	if ((result=tracker_recv_response(pStorageServer, \
+	if ((result=fdfs_recv_response(pStorageServer, \
 		&pBuff, 0, &in_bytes)) != 0)
 	{
 		break;
@@ -205,7 +205,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 
 	if (pStorageServer == &storageServer)
 	{
-		tracker_quit(pStorageServer);
+		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
 	}
 
@@ -277,7 +277,7 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 
 	if (bFilename)
 	{
-		if ((result=tracker_recv_header(pStorageServer, \
+		if ((result=fdfs_recv_header(pStorageServer, \
 			&in_bytes)) != 0)
 		{
 			break;
@@ -292,7 +292,7 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 	else
 	{
 		*file_buff = NULL;
-		if ((result=tracker_recv_response(pStorageServer, \
+		if ((result=fdfs_recv_response(pStorageServer, \
 			file_buff, 0, &in_bytes)) != 0)
 		{
 			break;
@@ -305,7 +305,7 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 
 	if (pStorageServer == &storageServer)
 	{
-		tracker_quit(pStorageServer);
+		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
 	}
 
@@ -325,8 +325,8 @@ int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
 }
 
 /**
-9 bytes: meta data bytes
-9 bytes: file size
+8 bytes: meta data bytes
+8 bytes: file size
 meta data bytes: each meta data seperated by \x01,
                  name and value seperated by \x02
 file size bytes: file content
@@ -343,7 +343,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 #define MAX_STATIC_META_DATA_COUNT 32
 	TrackerHeader header;
 	int result;
-	char meta_buff[2 * TRACKER_PROTO_PKG_LEN_SIZE + \
+	char meta_buff[2 * FDFS_PROTO_PKG_LEN_SIZE + \
 			sizeof(FDFSMetaData) * MAX_STATIC_META_DATA_COUNT + 2];
 	char *pMetaData;
 	int meta_bytes;
@@ -378,7 +378,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	while (1)
 	{
 	/**
-	9 bytes: meta data bytes
+	8 bytes: meta data bytes
 	meta data bytes: each meta data seperated by \x01,
 			 name and value seperated by \x02
 	file size bytes: file content
@@ -389,7 +389,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	}
 	else
 	{
-		pMetaData = (char *)malloc(2 * TRACKER_PROTO_PKG_LEN_SIZE + \
+		pMetaData = (char *)malloc(2 * FDFS_PROTO_PKG_LEN_SIZE + \
                         sizeof(FDFSMetaData) * meta_count + 2);
 		if (pMetaData == NULL)
 		{
@@ -397,7 +397,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 
 			logError("file: "__FILE__", line: %d, " \
 				"malloc %d bytes fail", __LINE__, \
-				2 * TRACKER_PROTO_PKG_LEN_SIZE + \
+				2 * FDFS_PROTO_PKG_LEN_SIZE + \
 				sizeof(FDFSMetaData) * meta_count + 2);
 			break;
 		}
@@ -406,16 +406,16 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	if (meta_count > 0)
 	{
 		fdfs_pack_metadata(meta_list, meta_count, pMetaData + \
-			2 * TRACKER_PROTO_PKG_LEN_SIZE, &meta_bytes);
+			2 * FDFS_PROTO_PKG_LEN_SIZE, &meta_bytes);
 	}
 	else
 	{
 		meta_bytes = 0;
 	}
 	long2buff(meta_bytes, pMetaData);
-	long2buff(file_size, pMetaData + TRACKER_PROTO_PKG_LEN_SIZE);
+	long2buff(file_size, pMetaData + FDFS_PROTO_PKG_LEN_SIZE);
 
-	long2buff(2 * TRACKER_PROTO_PKG_LEN_SIZE + \
+	long2buff(2 * FDFS_PROTO_PKG_LEN_SIZE + \
 			meta_bytes + file_size, header.pkg_len);
 	header.cmd = STORAGE_PROTO_CMD_UPLOAD_FILE;
 	header.status = 0;
@@ -431,7 +431,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	}
 
 	if ((result=tcpsenddata(pStorageServer->sock, pMetaData, \
-			2 * TRACKER_PROTO_PKG_LEN_SIZE + meta_bytes, \
+			2 * FDFS_PROTO_PKG_LEN_SIZE + meta_bytes, \
 			g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
@@ -465,7 +465,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	}
 
 	pInBuff = in_buff;
-	if ((result=tracker_recv_response(pStorageServer, \
+	if ((result=fdfs_recv_response(pStorageServer, \
 		&pInBuff, sizeof(in_buff), &in_bytes)) != 0)
 	{
 		break;
@@ -493,7 +493,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 
 	if (pStorageServer == &storageServer)
 	{
-		tracker_quit(pStorageServer);
+		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
 	}
 	if (pMetaData != NULL && pMetaData != meta_buff)
@@ -536,8 +536,8 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 }
 
 /**
-9 bytes: filename length
-9 bytes: meta data size
+8 bytes: filename length
+8 bytes: meta data size
 1 bytes: operation flag,
      'O' for overwrite all old metadata
      'M' for merge, insert when the meta item not exist, otherwise update it
@@ -555,7 +555,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader header;
 	int result;
 	TrackerServerInfo storageServer;
-	char out_buff[sizeof(TrackerHeader)+2*TRACKER_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN+32];
+	char out_buff[sizeof(TrackerHeader)+2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN+32];
 	char in_buff[1];
 	int64_t in_bytes;
 	char *pBuff;
@@ -607,10 +607,10 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	p = out_buff + sizeof(TrackerHeader);
 
 	long2buff(filename_len, p);
-	p += TRACKER_PROTO_PKG_LEN_SIZE;
+	p += FDFS_PROTO_PKG_LEN_SIZE;
 
 	long2buff(meta_bytes, p);
-	p += TRACKER_PROTO_PKG_LEN_SIZE;
+	p += FDFS_PROTO_PKG_LEN_SIZE;
 
 	*p++ = op_flag;
 
@@ -651,7 +651,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	}
 
 	pBuff = in_buff;
-	result = tracker_recv_response(pStorageServer, \
+	result = fdfs_recv_response(pStorageServer, \
 		&pBuff, 0, &in_bytes);
 	break;
 	}
@@ -663,7 +663,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 
 	if (pStorageServer == &storageServer)
 	{
-		tracker_quit(pStorageServer);
+		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
 	}
 
