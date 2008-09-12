@@ -1,6 +1,7 @@
 
 Version 1.9  2008-09-12
   * change some macro name and function name in tracker/tracker_proto.h
+  * server can be run by the specified group and user, set by the config file
   * change make.sh and add file common/fdfs_os_bits.h, 
     remove the warning info of printf format for int64_t param in 64 bits system
 

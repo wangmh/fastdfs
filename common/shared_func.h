@@ -85,6 +85,8 @@ int init_pthread_attr(pthread_attr_t *pattr);
 int set_rlimit(int resource, const rlim_t value);
 int set_nonblock(int fd);
 
+int set_run_by(const char *group_name, const char *username);
+
 #ifdef __cplusplus
 }
 #endif

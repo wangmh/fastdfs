@@ -588,6 +588,8 @@ int storage_load_from_conf_file(const char *filename, \
 	char *pBasePath;
 	char *pBindAddr;
 	char *pGroupName;
+	char *pRunByGroup;
+	char *pRunByUser;
 	char *ppTrackerServers[FDFS_MAX_TRACKERS];
 	IniItemInfo *items;
 	int nItemCount;
@@ -777,6 +779,15 @@ int storage_load_from_conf_file(const char *filename, \
 			break;
 		}
 	
+		pRunByGroup = iniGetStrValue("run_by_group", \
+						items, nItemCount);
+		pRunByUser = iniGetStrValue("run_by_user", \
+						items, nItemCount);
+		if ((result=set_run_by(pRunByGroup, pRunByUser)) != 0)
+		{
+			return result;
+		}
+
 		logInfo("FastDFS v%d.%d, base_path=%s, " \
 			"group_name=%s, " \
 			"network_timeout=%d, "\
