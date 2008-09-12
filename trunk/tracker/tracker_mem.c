@@ -445,16 +445,16 @@ int tracker_save_storages()
 				"%d%c" \
 				"%s%c" \
 				"%d%c" \
-				""FDFS_INT64_FORMAT"%c" \
-				""FDFS_INT64_FORMAT"%c" \
-				""FDFS_INT64_FORMAT"%c" \
-				""FDFS_INT64_FORMAT"%c" \
-				""FDFS_INT64_FORMAT"%c" \
-				""FDFS_INT64_FORMAT"%c" \
-				""FDFS_INT64_FORMAT"%c" \
-				""FDFS_INT64_FORMAT"%c" \
-				""FDFS_INT64_FORMAT"%c" \
-				""FDFS_INT64_FORMAT"%c" \
+				FDFS_INT64_FORMAT"%c" \
+				FDFS_INT64_FORMAT"%c" \
+				FDFS_INT64_FORMAT"%c" \
+				FDFS_INT64_FORMAT"%c" \
+				FDFS_INT64_FORMAT"%c" \
+				FDFS_INT64_FORMAT"%c" \
+				FDFS_INT64_FORMAT"%c" \
+				FDFS_INT64_FORMAT"%c" \
+				FDFS_INT64_FORMAT"%c" \
+				FDFS_INT64_FORMAT"%c" \
 				"%d%c" \
 				"%d\n", \
 				(*ppGroup)->group_name, \
