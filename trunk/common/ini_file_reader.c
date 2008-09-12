@@ -270,3 +270,53 @@ int iniGetValues(const char *szName, IniItemInfo *items, const int nItemCount, \
 	return ppValues - szValues;
 }
 
+IniItemInfo *iniGetValuesEx(const char *szName, IniItemInfo *items, 
+		const int nItemCount, int *nTargetCount)
+{
+	IniItemInfo targetItem;
+	IniItemInfo *pFound;
+	IniItemInfo *pItem;
+	IniItemInfo *pItemEnd;
+	IniItemInfo *pItemStart;
+	
+	if (nItemCount <= 0)
+	{
+		*nTargetCount = 0;
+		return NULL;
+	}
+	
+	snprintf(targetItem.name, sizeof(targetItem.name), "%s", szName);
+	pFound = (IniItemInfo *)bsearch(&targetItem, items, nItemCount, \
+				sizeof(IniItemInfo), compareByItemName);
+	if (pFound == NULL)
+	{
+		*nTargetCount = 0;
+		return NULL;
+	}
+
+	*nTargetCount = 1;
+	for (pItem=pFound-1; pItem>=items; pItem--)
+	{
+		if (strcmp(pItem->name, szName) != 0)
+		{
+			break;
+		}
+
+		(*nTargetCount)++;
+	}
+	pItemStart = pFound - (*nTargetCount) + 1;
+
+	pItemEnd = items + nItemCount;
+	for (pItem=pFound+1; pItem<pItemEnd; pItem++)
+	{
+		if (strcmp(pItem->name, szName) != 0)
+		{
+			break;
+		}
+
+		(*nTargetCount)++;
+	}
+
+	return pItemStart;
+}
+

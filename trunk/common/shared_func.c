@@ -1224,3 +1224,48 @@ int set_run_by(const char *group_name, const char *username)
 	return 0;
 }
 
+int fdfs_load_allow_hosts(IniItemInfo *items, const int nItemCount, \
+		int *allow_ip_count, in_addr_t **allow_ip_addrs)
+{
+	int count;
+	IniItemInfo *pItem;
+	IniItemInfo *pItemStart;
+	IniItemInfo *pItemEnd;
+
+	if ((pItemStart=iniGetValuesEx("allow_hosts", \
+		items, nItemCount, &count)) == NULL)
+	{
+		*allow_ip_count = -1; /* -1 means match any ip address */
+		*allow_ip_addrs = NULL;
+		return 0;
+	}
+
+	pItemEnd = pItemStart + count;
+	for (pItem=pItemStart; pItem<pItemEnd; pItem++)
+	{
+		if (strcmp(pItem->value, "*") == 0)
+		{
+			*allow_ip_count = -1; /* -1 means match any ip address*/
+			*allow_ip_addrs = NULL;
+			return 0;
+		}
+	}
+
+	*allow_ip_addrs = (in_addr_t *)malloc(sizeof(in_addr_t) * count);
+	if (*allow_ip_addrs == NULL)
+	{
+		*allow_ip_count = 0;
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, errno: %d, error info: %s.", \
+			__LINE__, sizeof(in_addr_t) * count, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	for (pItem=pItemStart; pItem<pItemEnd; pItem++)
+	{
+	}
+
+	return 0;
+}
+

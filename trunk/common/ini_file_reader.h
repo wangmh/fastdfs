@@ -39,6 +39,9 @@ int iniGetValues(const char *szName, IniItemInfo *items, const int nItemCount, \
 
 int iniGetIntValue(const char *szName, IniItemInfo *items, \
 			const int nItemCount, const int nDefaultValue);
+IniItemInfo *iniGetValuesEx(const char *szName, IniItemInfo *items, 
+		const int nItemCount, int *nTargetCount);
+
 int64_t iniGetInt64Value(const char *szName, IniItemInfo *items, \
 			const int nItemCount, const int64_t nDefaultValue);
 bool iniGetBoolValue(const char *szName, IniItemInfo *items, \
