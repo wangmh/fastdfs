@@ -10,7 +10,7 @@ Chinese language: http://www.csource.org/
 #step 1. download FastDFS source package and unpack it
 tar xzf FastDFS_v1.x.tar.gz
 #for example:
-tar xzf FastDFS_v1.7.tar.gz
+tar xzf FastDFS_v1.9.tar.gz
 
 #step 2. enter the FastDFS dir
 cd FastDFS
@@ -82,6 +82,15 @@ reserved_storage_space = 4GB
 ### debug
 log_level=info
 
+
+#unix group name to run this program,
+#not set (empty) means run by the group of current user
+run_by_group=
+
+#unix username to run this program,
+#not set (empty) means run by current user
+run_by_user=
+
 ###end of tracker server config###
 
 
@@ -112,26 +121,39 @@ tracker_server=10.62.164.84:22122
 ### debug
 log_level=info
 
+
+#unix group name to run this program,
+#not set (empty) means run by the group of current user
+run_by_group=
+
+#unix username to run this program,
+#not set (empty) means run by current user
+run_by_user=
+
 ###end of storage server config###
 
 
 Item detail
 1. common items
--------------------------------------------
-|  item name    |  type  | default | Must |
--------------------------------------------
-|base_path      | string |         |  Y   |
--------------------------------------------
-|disabled       | boolean| false   |  N   |
--------------------------------------------
-|bind_addr      | string |         |  N   |
--------------------------------------------
-|network_timeout| int    | 30(s)   |  N   |
--------------------------------------------
-|max_connections| int    | 256     |  N   |
--------------------------------------------
-|log_level      | string | info    |  N   |
--------------------------------------------
+--------------------------------------------
+|  item name     |  type  | default | Must |
+--------------------------------------------
+| base_path      | string |         |  Y   |
+--------------------------------------------
+| disabled       | boolean| false   |  N   |
+--------------------------------------------
+| bind_addr      | string |         |  N   |
+--------------------------------------------
+| network_timeout| int    | 30(s)   |  N   |
+--------------------------------------------
+| max_connections| int    | 256     |  N   |
+--------------------------------------------
+| log_level      | string | info    |  N   |
+--------------------------------------------
+| run_by_group   | string |         |  N   |
+--------------------------------------------
+| run_by_user    | string |         |  N   |
+--------------------------------------------
 memo:
    * base_path is the base path of sub dirs: 
      data and logs. base_path must exist and it's sub dirs will 
@@ -149,17 +171,17 @@ memo:
      # debug
 
 2. tracker server items
---------------------------------------------------
-|  item name           |  type  | default | Must |
---------------------------------------------------
-|port                  | int    | 22000   |  N   |
---------------------------------------------------
-|store_lookup          | int    |  0      |  N   |
---------------------------------------------------
-|store_group           | string |         |  N   |
---------------------------------------------------
-|reserved_storage_space| string |  1GB    |  N   |
---------------------------------------------------
+---------------------------------------------------
+|  item name            |  type  | default | Must |
+---------------------------------------------------
+| port                  | int    | 22000   |  N   |
+---------------------------------------------------
+| store_lookup          | int    |  0      |  N   |
+---------------------------------------------------
+| store_group           | string |         |  N   |
+---------------------------------------------------
+| reserved_storage_space| string |  1GB    |  N   |
+---------------------------------------------------
 memo: 
   * the value of store_lookup is:
     0: round robin (default)
@@ -179,21 +201,21 @@ memo:
       # no unit for byte(B)
 
 3. storage server items
-------------------------------------------------
-|  item name         |  type  | default | Must |
-------------------------------------------------
-|group_name          | string |         |  Y   |
-------------------------------------------------
-|tracker_server      | string |         |  Y   |
-------------------------------------------------
-|port                | int    | 23000   |  N   |
-------------------------------------------------
-|heart_beat_interval | int    |  30(s)  |  N   |
-------------------------------------------------
-|stat_report_interval| int    | 300(s)  |  N   |
-------------------------------------------------
-|sync_wait_msec      | int    | 100(ms) |  N   |
-------------------------------------------------
+-------------------------------------------------
+|  item name          |  type  | default | Must |
+-------------------------------------------------
+| group_name          | string |         |  Y   |
+-------------------------------------------------
+| tracker_server      | string |         |  Y   |
+-------------------------------------------------
+| port                | int    | 23000   |  N   |
+-------------------------------------------------
+| heart_beat_interval | int    |  30(s)  |  N   |
+-------------------------------------------------
+| stat_report_interval| int    | 300(s)  |  N   |
+-------------------------------------------------
+| sync_wait_msec      | int    | 100(ms) |  N   |
+-------------------------------------------------
 memo:
   * tracker_server can ocur more than once, and tracker_server format is
     "host:port", host can be hostname or ip address.

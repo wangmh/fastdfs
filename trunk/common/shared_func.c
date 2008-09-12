@@ -18,6 +18,8 @@
 #include <errno.h>
 #include <sys/file.h>
 #include <dirent.h>
+#include <grp.h>
+#include <pwd.h>
 #include "shared_func.h"
 #include "logger.h"
 
@@ -1154,7 +1156,7 @@ int set_nonblock(int fd)
 	if (flags < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"fcntl failed, errno: %d, result info: %s.", \
+			"fcntl fail, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : EACCES;
 	}
@@ -1162,9 +1164,61 @@ int set_nonblock(int fd)
 	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"fcntl failed, errno: %d, result info: %s.", \
+			"fcntl fail, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : EACCES;
+	}
+
+	return 0;
+}
+
+int set_run_by(const char *group_name, const char *username)
+{
+	struct group *pGroup;
+	struct passwd *pUser;
+	int nErrNo;
+	if (group_name != NULL && *group_name != '\0')
+	{
+     		pGroup = getgrnam(group_name);
+		if (pGroup == NULL)
+		{
+			nErrNo = errno != 0 ? errno : ENOENT;
+			logError("file: "__FILE__", line: %d, " \
+				"getgrnam fail, errno: %d, error info: %s.", \
+				__LINE__, nErrNo, strerror(nErrNo));
+			return nErrNo;
+		}
+
+		if (setegid(pGroup->gr_gid) != 0)
+		{
+			nErrNo = errno != 0 ? errno : EPERM;
+			logError("file: "__FILE__", line: %d, " \
+				"setegid fail, errno: %d, error info: %s.", \
+				__LINE__, nErrNo, strerror(nErrNo));
+			return nErrNo;
+		}
+	}
+
+	if (username != NULL && *username != '\0')
+	{
+     		pUser = getpwnam(username);
+		if (pUser == NULL)
+		{
+			nErrNo = errno != 0 ? errno : ENOENT;
+			logError("file: "__FILE__", line: %d, " \
+				"getpwnam fail, errno: %d, error info: %s.", \
+				__LINE__, nErrNo, strerror(nErrNo));
+			return nErrNo;
+		}
+
+		if (seteuid(pUser->pw_uid) != 0)
+		{
+			nErrNo = errno != 0 ? errno : EPERM;
+			logError("file: "__FILE__", line: %d, " \
+				"seteuid fail, errno: %d, error info: %s.", \
+				__LINE__, nErrNo, strerror(nErrNo));
+			return nErrNo;
+		}
 	}
 
 	return 0;

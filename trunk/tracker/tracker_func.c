@@ -94,6 +94,8 @@ int tracker_load_from_conf_file(const char *filename, \
 	char *pBindAddr;
 	char *pStorageReserved;
 	char *pReservedEnd;
+	char *pRunByGroup;
+	char *pRunByUser;
 	IniItemInfo *items;
 	int nItemCount;
 	int result;
@@ -238,6 +240,15 @@ int tracker_load_from_conf_file(const char *filename, \
 			break;
 		}
 	
+		pRunByGroup = iniGetStrValue("run_by_group", \
+						items, nItemCount);
+		pRunByUser = iniGetStrValue("run_by_user", \
+						items, nItemCount);
+		if ((result=set_run_by(pRunByGroup, pRunByUser)) != 0)
+		{
+			return result;
+		}
+
 		logInfo("FastDFS v%d.%d, base_path=%s, " \
 			"network_timeout=%d, "    \
 			"port=%d, bind_addr=%s, " \
