@@ -398,7 +398,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 					FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -416,7 +416,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 			resp.status = ENOMEM;
 
 			logError("file: "__FILE__", line: %d, " \
-				"malloc %lld bytes fail", \
+				"malloc "FDFS_INT64_FORMAT" bytes fail", \
 				__LINE__, nInPackLen + 1);
 			break;
 		}
@@ -575,7 +575,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen < 2 * FDFS_PROTO_PKG_LEN_SIZE)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -615,7 +615,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, pkg length is not correct, " \
-				"invalid file bytes: %lld", \
+				"invalid file bytes: "FDFS_INT64_FORMAT"", \
 				__LINE__, pClientInfo->ip_addr, \
 				file_bytes);
 			resp.status = EINVAL;
@@ -742,7 +742,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 					FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -760,7 +760,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
-				"expect pkg length: %lld, " \
+				"expect pkg length: "FDFS_INT64_FORMAT", " \
 				"errno: %d, error info: %s", \
 				__LINE__, \
 				pClientInfo->ip_addr, nInPackLen, \
@@ -787,7 +787,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, in request pkg, " \
-				"file size: %lld is invalid, which < 0", \
+				"file size: "FDFS_INT64_FORMAT" is invalid, which < 0", \
 				__LINE__, pClientInfo->ip_addr, file_bytes);
 			resp.status = EPIPE;
 			break;
@@ -812,7 +812,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, in request pkg, " \
-				"file size: %lld != remain bytes: %lld", \
+				"file size: "FDFS_INT64_FORMAT" != remain bytes: "FDFS_INT64_FORMAT"", \
 				__LINE__, pClientInfo->ip_addr, file_bytes, \
 				nInPackLen - (2*FDFS_PROTO_PKG_LEN_SIZE + \
 				FDFS_GROUP_NAME_MAX_LEN + filename_len));
@@ -855,7 +855,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"client ip: %s, discard buff fail, " \
-					"buff size: %lld, " \
+					"buff size: "FDFS_INT64_FORMAT", " \
 					"errno: %d, error info: %s.", \
 					__LINE__, pClientInfo->ip_addr, \
 					file_bytes, \
@@ -872,7 +872,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv file buff fail, " \
-				"file size: %lld, errno: %d, error info: %s.", \
+				"file size: "FDFS_INT64_FORMAT", errno: %d, error info: %s.", \
 				__LINE__, pClientInfo->ip_addr, \
 				file_bytes, resp.status, strerror(resp.status));
 			break;
@@ -942,7 +942,7 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -956,7 +956,7 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is too large, " \
 				"expect length should < %d", \
 				__LINE__, \
@@ -1090,7 +1090,7 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -1104,7 +1104,7 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is too large, " \
 				"expect length should < %d", \
 				__LINE__, \
@@ -1233,7 +1233,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length <= %d", \
 				__LINE__, \
@@ -1247,7 +1247,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is too large, " \
 				"expect length should < %d", \
 				__LINE__, \
@@ -1361,7 +1361,7 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length <= %d", \
 				__LINE__, \
@@ -1375,7 +1375,7 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is too large, " \
 				"expect length should < %d", \
 				__LINE__, \

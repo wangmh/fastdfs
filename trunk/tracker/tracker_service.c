@@ -151,7 +151,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip addr: %s, " \
-				"package size %lld " \
+				"package size "FDFS_INT64_FORMAT" " \
 				"is not correct", \
 				__LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG, \
@@ -214,7 +214,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	if (nInPackLen != sizeof(body))
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"cmd: %d, client ip: %s, package size %lld " \
+			"cmd: %d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 			"is not correct, expect length: %d.", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_JOIN, \
 			pClientInfo->ip_addr, nInPackLen, sizeof(body));
@@ -275,7 +275,7 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 	if (nInPackLen != sizeof(body))
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"cmd: %d, client ip: %s, package size %lld " \
+			"cmd: %d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 			"is not correct, expect length: %d.", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY, \
 			pClientInfo->ip_addr, nInPackLen, sizeof(body));
@@ -406,7 +406,7 @@ static int tracker_deal_server_list_group_storages( \
 		if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length: %d", \
 				__LINE__, \
@@ -544,7 +544,7 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -558,7 +558,7 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is too large, " \
 				"expect length should < %d", \
 				__LINE__, \
@@ -670,7 +670,7 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length: 0", \
 				__LINE__, \
@@ -877,7 +877,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length: 0", \
 				__LINE__, \
@@ -961,7 +961,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != FDFS_IPADDR_SIZE)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length: %d", \
 				__LINE__, \
@@ -1053,7 +1053,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length: 0", \
 				__LINE__, \
@@ -1201,7 +1201,7 @@ static int tracker_deal_storage_report(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != sizeof(TrackerStatReportReqBody))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length: %d", \
 				__LINE__, \
@@ -1297,7 +1297,7 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != sizeof(FDFSStorageStatBuff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size %lld " \
+				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
 				"is not correct, " \
 				"expect length: 0 or %d", \
 				__LINE__, \

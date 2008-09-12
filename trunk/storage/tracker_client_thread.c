@@ -573,7 +573,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
-			"package size %lld is not correct", \
+			"package size "FDFS_INT64_FORMAT" is not correct", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, nInPackLen);
 		return EINVAL;
@@ -670,7 +670,7 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
-			"recv body length: %lld is invalid, " \
+			"recv body length: "FDFS_INT64_FORMAT" is invalid, " \
 			"expect body length: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
@@ -726,7 +726,7 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
-			"recv body length: %lld is invalid, " \
+			"recv body length: "FDFS_INT64_FORMAT" is invalid, " \
 			"expect body length: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \

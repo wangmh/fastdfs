@@ -51,7 +51,7 @@ int fdfs_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes)
 	if (*in_bytes < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"server: %s:%d, recv package size %lld " \
+			"server: %s:%d, recv package size "FDFS_INT64_FORMAT" " \
 			"is not correct", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, *in_bytes);
@@ -88,7 +88,7 @@ int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
 			*in_bytes = 0;
 
 			logError("file: "__FILE__", line: %d, " \
-				"malloc %lld bytes fail", \
+				"malloc "FDFS_INT64_FORMAT" bytes fail", \
 				__LINE__, (*in_bytes) + 1);
 			return errno != 0 ? errno : ENOMEM;
 		}
@@ -100,7 +100,7 @@ int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
 		if (*in_bytes > buff_size)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"server: %s:%d, recv body bytes: %lld" \
+				"server: %s:%d, recv body bytes: "FDFS_INT64_FORMAT"" \
 				" exceed max: %d", \
 				__LINE__, pTrackerServer->ip_addr, \
 				pTrackerServer->port, *in_bytes, buff_size);

@@ -1,6 +1,8 @@
 
-Version 1.9  2008-09-11
+Version 1.9  2008-09-12
   * change some macro name and function name in tracker/tracker_proto.h
+  * change make.sh and add file common/fdfs_os_bits.h, 
+    remove the warning info of printf format for int64_t param in 64 bits system
 
 Version 1.8  2008-09-07
   * communication protocol changed to support large file exceed 2GB:
