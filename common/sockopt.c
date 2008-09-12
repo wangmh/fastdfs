@@ -683,7 +683,7 @@ int tcpsetnonblockopt(int fd, const int timeout)
 	if (result < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"setsockopt failed, errno: %d, result info: %s.", \
+			"setsockopt failed, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -696,7 +696,7 @@ int tcpsetnonblockopt(int fd, const int timeout)
 	if (result < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"setsockopt failed, errno: %d, result info: %s.", \
+			"setsockopt failed, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -706,7 +706,7 @@ int tcpsetnonblockopt(int fd, const int timeout)
 	if (result < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"setsockopt failed, errno: %d, result info: %s.", \
+			"setsockopt failed, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -723,7 +723,7 @@ int tcpsetnonblockopt(int fd, const int timeout)
 	if (result < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"getsockopt failed, errno: %d, result info: %s.", \
+			"getsockopt failed, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -734,7 +734,7 @@ int tcpsetnonblockopt(int fd, const int timeout)
 	if (result < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"getsockopt failed, errno: %d, result info: %s.", \
+			"getsockopt failed, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -746,7 +746,7 @@ int tcpsetnonblockopt(int fd, const int timeout)
 	if (flags < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"fcntl failed, errno: %d, result info: %s.", \
+			"fcntl failed, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : EACCES;
 	}
@@ -754,7 +754,7 @@ int tcpsetnonblockopt(int fd, const int timeout)
 	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"fcntl failed, errno: %d, result info: %s.", \
+			"fcntl failed, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : EACCES;
 	}
