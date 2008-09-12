@@ -226,18 +226,18 @@ int storage_write_to_stat_file()
 	int len;
 
 	len = sprintf(buff, 
-		"%s=%lld\n"  \
-		"%s=%lld\n"  \
-		"%s=%lld\n"  \
-		"%s=%lld\n"  \
+		"%s="FDFS_INT64_FORMAT"\n"  \
+		"%s="FDFS_INT64_FORMAT"\n"  \
+		"%s="FDFS_INT64_FORMAT"\n"  \
+		"%s="FDFS_INT64_FORMAT"\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
-		"%s=%lld\n"  \
-		"%s=%lld\n"  \
-		"%s=%lld\n"  \
-		"%s=%lld\n"  \
-		"%s=%lld\n"  \
-		"%s=%lld\n", \
+		"%s="FDFS_INT64_FORMAT"\n"  \
+		"%s="FDFS_INT64_FORMAT"\n"  \
+		"%s="FDFS_INT64_FORMAT"\n"  \
+		"%s="FDFS_INT64_FORMAT"\n"  \
+		"%s="FDFS_INT64_FORMAT"\n"  \
+		"%s="FDFS_INT64_FORMAT"\n", \
 		STAT_ITEM_TOTAL_UPLOAD, g_storage_stat.total_upload_count, \
 		STAT_ITEM_SUCCESS_UPLOAD, g_storage_stat.success_upload_count, \
 		STAT_ITEM_TOTAL_DOWNLOAD, g_storage_stat.total_download_count, \

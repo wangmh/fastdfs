@@ -180,7 +180,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes % sizeof(TrackerStorageStat) != 0)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: %lld is invalid.", \
+			"length: "FDFS_INT64_FORMAT" is invalid.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes);
 		*storage_count = 0;
@@ -282,7 +282,7 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes % sizeof(TrackerGroupStat) != 0)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: %lld is invalid.", \
+			"length: "FDFS_INT64_FORMAT" is invalid.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes);
 		*group_count = 0;
@@ -367,7 +367,7 @@ int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes != TRACKER_QUERY_STORAGE_BODY_LEN)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: %lld is invalid, expect length: %d.", \
+			"length: "FDFS_INT64_FORMAT" is invalid, expect length: %d.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
 			TRACKER_QUERY_STORAGE_BODY_LEN);
@@ -417,7 +417,7 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes != TRACKER_QUERY_STORAGE_BODY_LEN)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: %lld is invalid, expect length: %d.", \
+			"length: "FDFS_INT64_FORMAT" is invalid, expect length: %d.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
 			TRACKER_QUERY_STORAGE_BODY_LEN);
