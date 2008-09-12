@@ -14,3 +14,6 @@ FDFSGroups g_groups;
 int g_storage_stat_chg_count = 0;
 int g_storage_reserved_mb = 0;
 
+int g_allow_ip_count = 0;
+in_addr_t *g_allow_ip_addrs = NULL;
+

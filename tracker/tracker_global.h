@@ -11,6 +11,10 @@
 #ifndef _TRACKER_GLOBAL_H
 #define _TRACKER_GLOBAL_H
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #include "tracker_types.h"
 
 #define TRACKER_SYNC_TO_FILE_FREQ 1000
@@ -24,6 +28,9 @@ extern FDFSGroups g_groups;
 extern int g_storage_stat_chg_count;
 extern int g_max_connections;
 extern int g_storage_reserved_mb;
+
+extern int g_allow_ip_count;  /* -1 means match any ip address */
+extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
 
 #ifdef __cplusplus
 }
