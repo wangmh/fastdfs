@@ -333,6 +333,8 @@ int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
 	int filename_len;
 
 	memset(pStorageServer, 0, sizeof(TrackerServerInfo));
+	pStorageServer->sock = -1;
+
 	memset(out_buff, 0, sizeof(out_buff));
 	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
 			sizeof(TrackerHeader),  "%s", group_name);
@@ -393,8 +395,10 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 	int64_t in_bytes;
 	int result;
 
-	memset(&header, 0, sizeof(header));
 	memset(pStorageServer, 0, sizeof(TrackerServerInfo));
+	pStorageServer->sock = -1;
+
+	memset(&header, 0, sizeof(header));
 	header.cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_STORE;
 	if ((result=tcpsenddata(pTrackerServer->sock, &header, \
 			sizeof(header), g_network_timeout)) != 0)
