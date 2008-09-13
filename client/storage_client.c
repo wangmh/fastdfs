@@ -30,6 +30,89 @@
 #include "client_global.h"
 #include "fdfs_base64.h"
 
+static int storage_get_read_connection(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo **ppStorageServer, \
+		const char *group_name, const char *filename, \
+		TrackerServerInfo *pNewStorage, bool *new_connection)
+{
+	int result;
+	if (*ppStorageServer == NULL)
+	{
+		if ((result=tracker_query_storage_fetch(pTrackerServer, \
+		                pNewStorage, group_name, filename)) != 0)
+		{
+			return result;
+		}
+
+		if ((result=tracker_connect_server(pNewStorage)) != 0)
+		{
+			return result;
+		}
+
+		*ppStorageServer = pNewStorage;
+		*new_connection = true;
+	}
+	else
+	{
+		if ((*ppStorageServer)->sock >= 0)
+		{
+			*new_connection = false;
+		}
+		else
+		{
+			if ((result=tracker_connect_server(*ppStorageServer)) != 0)
+			{
+				return result;
+			}
+
+			*new_connection = true;
+		}
+	}
+
+	return 0;
+}
+
+static int storage_get_write_connection(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo **ppStorageServer, \
+		TrackerServerInfo *pNewStorage, bool *new_connection)
+{
+	int result;
+	if (*ppStorageServer == NULL)
+	{
+		if ((result=tracker_query_storage_store(pTrackerServer, \
+		                pNewStorage)) != 0)
+		{
+			return result;
+		}
+
+		if ((result=tracker_connect_server(pNewStorage)) != 0)
+		{
+			return result;
+		}
+
+		*ppStorageServer = pNewStorage;
+		*new_connection = true;
+	}
+	else
+	{
+		if ((*ppStorageServer)->sock >= 0)
+		{
+			*new_connection = false;
+		}
+		else
+		{
+			if ((result=tracker_connect_server(*ppStorageServer)) != 0)
+			{
+				return result;
+			}
+
+			*new_connection = true;
+		}
+	}
+
+	return 0;
+}
+
 int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer,  \
 			const char *group_name, const char *filename, \
@@ -44,25 +127,17 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	int filename_len;
 	char *file_buff;
 	int64_t file_size;
+	bool new_connection;
 
 	file_buff = NULL;
 	*meta_list = NULL;
 	*meta_count = 0;
-	if (pStorageServer == NULL)
+
+	if ((result=storage_get_read_connection(pTrackerServer, \
+		&pStorageServer, group_name, filename, \
+		&storageServer, &new_connection)) != 0)
 	{
-		if ((result=tracker_query_storage_fetch(pTrackerServer, \
-		                &storageServer, group_name, filename)) != 0)
-			
-		{
-			return result;
-		}
-
-		if ((result=tracker_connect_server(&storageServer)) != 0)
-		{
-			return result;
-		}
-
-		pStorageServer = &storageServer;
+		return result;
 	}
 
 	while (1)
@@ -121,7 +196,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 		free(file_buff);
 	}
 
-	if (pStorageServer == &storageServer)
+	if (new_connection)
 	{
 		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
@@ -142,22 +217,13 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	char *pBuff;
 	int64_t in_bytes;
 	int filename_len;
+	bool new_connection;
 
-	if (pStorageServer == NULL)
+	if ((result=storage_get_read_connection(pTrackerServer, \
+		&pStorageServer, group_name, filename, \
+		&storageServer, &new_connection)) != 0)
 	{
-		if ((result=tracker_query_storage_fetch(pTrackerServer, \
-		                &storageServer, group_name, filename)) != 0)
-			
-		{
-			return result;
-		}
-
-		if ((result=tracker_connect_server(&storageServer)) != 0)
-		{
-			return result;
-		}
-
-		pStorageServer = &storageServer;
+		return result;
 	}
 
 	while (1)
@@ -203,7 +269,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	break;
 	}
 
-	if (pStorageServer == &storageServer)
+	if (new_connection)
 	{
 		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
@@ -223,23 +289,14 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+32];
 	int64_t in_bytes;
 	int filename_len;
+	bool new_connection;
 
 	*file_size = 0;
-	if (pStorageServer == NULL)
+	if ((result=storage_get_read_connection(pTrackerServer, \
+		&pStorageServer, group_name, remote_filename, \
+		&storageServer, &new_connection)) != 0)
 	{
-		if ((result=tracker_query_storage_fetch(pTrackerServer, \
-		                &storageServer, group_name, remote_filename)) != 0)
-			
-		{
-			return result;
-		}
-
-		if ((result=tracker_connect_server(&storageServer)) != 0)
-		{
-			return result;
-		}
-
-		pStorageServer = &storageServer;
+		return result;
 	}
 
 	while (1)
@@ -303,7 +360,7 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 	break;
 	}
 
-	if (pStorageServer == &storageServer)
+	if (new_connection)
 	{
 		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
@@ -351,23 +408,15 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	char in_buff[128];
 	char *pInBuff;
 	TrackerServerInfo storageServer;
+	bool new_connection;
 
 	group_name[0] = '\0';
 	remote_filename[0] = '\0';
-	if (pStorageServer == NULL)
+
+	if ((result=storage_get_write_connection(pTrackerServer, \
+		&pStorageServer, &storageServer, &new_connection)) != 0)
 	{
-		if ((result=tracker_query_storage_store(pTrackerServer, \
-		                &storageServer)) != 0)
-		{
-			return result;
-		}
-
-		if ((result=tracker_connect_server(&storageServer)) != 0)
-		{
-			return result;
-		}
-
-		pStorageServer = &storageServer;
+		return result;
 	}
 
 	/*
@@ -491,7 +540,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	break;
 	}
 
-	if (pStorageServer == &storageServer)
+	if (new_connection)
 	{
 		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
@@ -564,22 +613,13 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	int meta_bytes;
 	char *p;
 	char *pEnd;
+	bool new_connection;
 
-	if (pStorageServer == NULL)
+	if ((result=storage_get_read_connection(pTrackerServer, \
+		&pStorageServer, group_name, filename, \
+		&storageServer, &new_connection)) != 0)
 	{
-		if ((result=tracker_query_storage_fetch(pTrackerServer, \
-		                &storageServer, group_name, filename)) != 0)
-			
-		{
-			return result;
-		}
-
-		if ((result=tracker_connect_server(&storageServer)) != 0)
-		{
-			return result;
-		}
-
-		pStorageServer = &storageServer;
+		return result;
 	}
 
 	meta_buff = NULL;
@@ -661,7 +701,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 		free(meta_buff);
 	}
 
-	if (pStorageServer == &storageServer)
+	if (new_connection)
 	{
 		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
