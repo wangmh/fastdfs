@@ -1,5 +1,5 @@
 
-Version 1.9  2008-09-13
+Version 1.9  2008-09-14
   * security enhancement: support allow hosts which can connect to the server
   * server can be run by the specified group and user, set by the config file
   * change make.sh and add file common/fdfs_os_bits.h, 
