@@ -1262,7 +1262,6 @@ int fdfs_load_allow_hosts(IniItemInfo *items, const int nItemCount, \
 		}
 	}
 
-	printf("count=%d\n", count);
 	alloc_count = count;
 	*allow_ip_count = 0;
 	*allow_ip_addrs = (in_addr_t *)malloc(sizeof(in_addr_t) * alloc_count);
@@ -1476,19 +1475,27 @@ int fdfs_load_allow_hosts(IniItemInfo *items, const int nItemCount, \
 		free(pItemValue);
 	}
 
-	printf("*allow_ip_count=%d\n", *allow_ip_count);
+	if (*allow_ip_count == 0)
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"allow ip count: 0", __LINE__);
+	}
+
 	if (*allow_ip_count > 0)
 	{
 		qsort(*allow_ip_addrs,  *allow_ip_count, sizeof(in_addr_t), \
 			cmp_by_ip_addr_t);
 	}
 
+	/*
+	printf("*allow_ip_count=%d\n", *allow_ip_count);
 	for (i=0; i<*allow_ip_count; i++)
 	{
 		struct in_addr address;
 		address.s_addr = (*allow_ip_addrs)[i];
 		printf("%s\n", inet_ntoa(address));
 	}
+	*/
 
 	return 0;
 }

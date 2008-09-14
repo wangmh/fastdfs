@@ -1506,12 +1506,26 @@ data buff (struct)
 	int count;
 	int recv_bytes;
 	int log_level;
-	
+	in_addr_t client_ip;
+
 	memset(&client_info, 0, sizeof(client_info));
 	client_info.sock = (int)arg;
 	
-	getPeerIpaddr(client_info.sock, \
+	client_ip = getPeerIpaddr(client_info.sock, \
 				client_info.ip_addr, FDFS_IPADDR_SIZE);
+	if (g_allow_ip_count >= 0)
+	{
+		if (bsearch(&client_ip, g_allow_ip_addrs, g_allow_ip_count, \
+			sizeof(in_addr_t), cmp_by_ip_addr_t) == NULL)
+		{
+			struct in_addr address;
+			address.s_addr = client_ip;
+			logError("file: "__FILE__", line: %d, " \
+				"ip addr %s is not allowed to access", \
+				__LINE__, inet_ntoa(address));
+			goto THREAD_DONE;
+		}
+	}
 
 	count = 0;
 	while (g_continue_flag)
@@ -1658,6 +1672,7 @@ data buff (struct)
 		count++;
 	}
 
+THREAD_DONE:
 	if (pthread_mutex_lock(&g_storage_thread_lock) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
