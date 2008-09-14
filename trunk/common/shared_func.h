@@ -74,7 +74,7 @@ bool is_filename_secure(const char *filename, const int len);
 int fdfs_check_data_filename(const char *filename, const int len);
 void fdfs_load_log_level(IniItemInfo *items, const int nItemCount);
 int fdfs_load_allow_hosts(IniItemInfo *items, const int nItemCount, \
-		int *allow_ip_count, in_addr_t **allow_ip_addrs);
+		in_addr_t **allow_ip_addrs, int *allow_ip_count);
 
 void chopPath(char *filePath);
 int getFileContent(const char *filename, char **buff, off_t *file_size);
@@ -88,6 +88,7 @@ int set_rlimit(int resource, const rlim_t value);
 int set_nonblock(int fd);
 
 int set_run_by(const char *group_name, const char *username);
+int cmp_by_ip_addr_t(const void *p1, const void *p2);
 
 #ifdef __cplusplus
 }

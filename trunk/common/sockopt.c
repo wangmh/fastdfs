@@ -340,7 +340,10 @@ in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize)
 
 	if (inet_pton(AF_INET, name, &ip_addr) == 1)
 	{
-		snprintf(buff, bufferSize, "%s", name);
+		if (buff != NULL)
+		{
+			snprintf(buff, bufferSize, "%s", name);
+		}
 		return ip_addr.s_addr;
 	}
 
@@ -357,7 +360,10 @@ in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize)
 
 	memset(&ip_addr, 0, sizeof(ip_addr));
 	ip_addr.s_addr = *(addr_list[0]);
-	snprintf(buff, bufferSize, "%s", inet_ntoa(ip_addr));
+	if (buff != NULL)
+	{
+		snprintf(buff, bufferSize, "%s", inet_ntoa(ip_addr));
+	}
 	return ip_addr.s_addr;
 }
 

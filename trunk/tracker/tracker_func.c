@@ -249,18 +249,25 @@ int tracker_load_from_conf_file(const char *filename, \
 			return result;
 		}
 
+		if ((result=fdfs_load_allow_hosts(items, nItemCount, \
+                	 &g_allow_ip_addrs, &g_allow_ip_count)) != 0)
+		{
+			return result;
+		}
+
 		logInfo("FastDFS v%d.%d, base_path=%s, " \
 			"network_timeout=%d, "    \
 			"port=%d, bind_addr=%s, " \
 			"max_connections=%d, "    \
 			"store_lookup=%d, store_group=%s, " \
-			"reserved_storage_space=%dMB", \
+			"reserved_storage_space=%dMB, " \
+			"allow_ip_count=%d", \
 			g_version.major, g_version.minor,  \
 			g_base_path, \
 			g_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_groups.store_lookup, g_groups.store_group, \
-			g_storage_reserved_mb);
+			g_storage_reserved_mb, g_allow_ip_count);
 		break;
 	}
 
