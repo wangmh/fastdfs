@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <time.h>
 #ifdef OS_LINUX
+#include <sys/vfs.h>
 #include <sys/statfs.h>
 #endif
 #include <sys/param.h>
