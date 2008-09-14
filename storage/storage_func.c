@@ -788,6 +788,12 @@ int storage_load_from_conf_file(const char *filename, \
 			return result;
 		}
 
+		if ((result=fdfs_load_allow_hosts(items, nItemCount, \
+                	 &g_allow_ip_addrs, &g_allow_ip_count)) != 0)
+		{
+			return result;
+		}
+
 		logInfo("FastDFS v%d.%d, base_path=%s, " \
 			"group_name=%s, " \
 			"network_timeout=%d, "\
@@ -795,13 +801,14 @@ int storage_load_from_conf_file(const char *filename, \
 			"max_connections=%d, "    \
 			"heart_beat_interval=%ds, " \
 			"stat_report_interval=%ds, tracker_server_count=%d, " \
-			"sync_wait_usec=%dms", \
+			"sync_wait_usec=%dms, allow_ip_count=%d", \
 			g_version.major, g_version.minor, \
 			g_base_path, g_group_name, \
 			g_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_heart_beat_interval, g_stat_report_interval, \
-			g_tracker_server_count, g_sync_wait_usec / 1000);
+			g_tracker_server_count, g_sync_wait_usec / 1000, \
+			g_allow_ip_count);
 
 		break;
 	}

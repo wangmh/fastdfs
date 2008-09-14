@@ -1,10 +1,11 @@
 
 Version 1.9  2008-09-13
-  * change some macro name and function name in tracker/tracker_proto.h
+  * security enhancement: support allow hosts which can connect to the server
   * server can be run by the specified group and user, set by the config file
   * change make.sh and add file common/fdfs_os_bits.h, 
     remove the warning info of printf format for int64_t param in 64 bits system
   * storage_client.c changed: auto connect to storage server when not connected
+  * change some macro name and function name in tracker/tracker_proto.h
 
 Version 1.8  2008-09-07
   * communication protocol changed to support large file exceed 2GB:

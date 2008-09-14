@@ -39,6 +39,9 @@ int g_local_host_ip_count = 0;
 char g_local_host_ip_addrs[STORAGE_MAX_LOCAL_IP_ADDRS * \
 				FDFS_IPADDR_SIZE];
 
+int g_allow_ip_count = 0;
+in_addr_t *g_allow_ip_addrs = NULL;
+
 bool is_local_host_ip(const char *client_ip)
 {
 	char *p;

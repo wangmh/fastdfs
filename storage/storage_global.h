@@ -55,6 +55,9 @@ extern int g_local_host_ip_count;
 extern char g_local_host_ip_addrs[STORAGE_MAX_LOCAL_IP_ADDRS * \
 				FDFS_IPADDR_SIZE];
 
+extern int g_allow_ip_count;  /* -1 means match any ip address */
+extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
+
 void load_local_host_ip_addrs();
 bool is_local_host_ip(const char *client_ip);
 int insert_into_local_host_ip(const char *client_ip);
