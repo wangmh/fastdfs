@@ -1,4 +1,4 @@
-Copy right 2008 Happy Fish / YuQing
+Copy right 2009 Happy Fish / YuQing
 
 FastDFS may be copied only under the terms of the GNU General
 Public License V3, which may be found in the FastDFS source kit.
@@ -154,6 +154,8 @@ Item detail
 --------------------------------------------
 | run_by_user    | string |         |  N   |
 --------------------------------------------
+| allow_hosts    | string |   *     |  N   |
+--------------------------------------------
 memo:
    * base_path is the base path of sub dirs: 
      data and logs. base_path must exist and it's sub dirs will 
@@ -169,6 +171,11 @@ memo:
      # notice
      # info
      # debug
+   * allow_hosts can ocur more than once, host can be hostname or ip address,
+     "*" means match all ip addresses, can use range like this: 10.0.1.[1-15,20]
+      or host[01-08,20-25].domain.com, for example:
+        allow_hosts=10.0.1.[1-15,20]
+        allow_hosts=host[01-08,20-25].domain.com
 
 2. tracker server items
 ---------------------------------------------------

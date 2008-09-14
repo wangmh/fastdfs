@@ -11,10 +11,10 @@
 #ifndef _TRACKER_GLOBAL_H
 #define _TRACKER_GLOBAL_H
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "fdfs_define.h"
 #include "tracker_types.h"
 
 #define TRACKER_SYNC_TO_FILE_FREQ 1000
