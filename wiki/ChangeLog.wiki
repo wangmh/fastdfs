@@ -1,4 +1,26 @@
 #labels Featured
+* Version 1.9 === 2008-09-14
+{{{
+  * security enhancement: support allow hosts which can connect to the server
+  * server can be run by the specified group and user, set by the config file
+  * change make.sh and add file common/fdfs_os_bits.h, 
+    remove the warning info of printf format for int64_t param in 64 bits system
+  * storage_client.c changed: auto connect to storage server when not connected
+  * change some macro name and function name in tracker/tracker_proto.h
+}}}
+
+* Version 1.8 === 2008-09-07
+{{{
+  * communication protocol changed to support large file exceed 2GB:
+     # all integer field is 8 bytes big-endian
+     # group name fixed length: FDFS_GROUP_NAME_MAX_LEN bytes
+  * storage stat numbers (such as total_upload_count, success_upload_count) 
+    use int64_t (8 bytes integer)
+  * ini_file_reader.c add function iniGetInt64Value
+  * sockopt.c add function tcpsetnonblockopt
+  * shared_func.c add function set_nonblock
+}}}
+
 * Version 1.7  === 2008-08-31
 {{{
   * performance optimizing:
