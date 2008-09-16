@@ -139,11 +139,15 @@ allow_hosts=*
 === 1. common items ===
 
 ||item name      ||  type  || default || Must ||
+||base_path      || string ||         ||  Y   ||
 ||disabled       || boolean|| false   ||  N   ||
 ||bind_addr      || string ||         ||  N   ||
-||network_timeout|| int    ||30(s)    ||  N   ||
-||base_path      || string ||         ||  Y   ||
-||max_connections|| int    ||256      ||  N   ||
+||network_timeout|| int    || 30(s)   ||  N   ||
+||max_connections|| int    || 256     ||  N   ||
+||log_level      || string || info    ||  N   ||
+||run_by_group   || string ||         ||  N   ||
+||run_by_user    || string ||         ||  N   ||
+||allow_hosts    || string ||   *     ||  N   ||
 
 ==== memo ===
    * base_path is the base path of sub dirs: data and logs. 
@@ -175,12 +179,12 @@ allow_hosts=*
 === 3. storage server items ===
 
 ||item name           ||  type  || default || Must ||
-||port                || int    || 23000   ||  N   ||
 ||group_name          || string ||         ||  Y   ||
+||tracker_server      || string ||         ||  Y   ||
+||port                || int    || 23000   ||  N   ||
 ||heart_beat_interval || int    ||  30(s)  ||  N   ||
 ||stat_report_interval|| int    || 300(s)  ||  N   ||
 ||sync_wait_msec      || int    || 100(ms) ||  N   ||
-||tracker_server      || string ||         ||  Y   ||
 
 ==== memo ====
   * tracker_server can ocur more than once, and tracker_server format is "host:port", host can be hostname or ip address.
