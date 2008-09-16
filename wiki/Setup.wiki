@@ -147,7 +147,7 @@ allow_hosts=*
 ||log_level      || string || info    ||  N   ||
 ||run_by_group   || string ||         ||  N   ||
 ||run_by_user    || string ||         ||  N   ||
-||allow_hosts    || string || &nbsp;* ||  N   ||
+||allow_hosts    || string || <tt>*_^</tt> ||  N   ||
 
 ==== memo ===
    * base_path is the base path of sub dirs: data and logs. 
