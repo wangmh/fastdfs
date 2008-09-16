@@ -4,7 +4,7 @@
 #step 1. download FastDFS source package and unpack it
 tar xzf FastDFS_v1.x.tar.gz
 #for example:
-tar xzf FastDFS_v1.1.tar.gz
+tar xzf FastDFS_v1.9.tar.gz
 
 #step 2. enter the FastDFS dir
 cd FastDFS
@@ -64,6 +64,32 @@ store_group=group2
 ### K or k for kilobyte(KB)
 ### no unit for byte(B)
 reserved_storage_space = 4GB
+
+#standard log level as syslog, case insensitive, value list:
+### emerg for emergency
+### alert
+### crit for critical
+### error
+### warn for warning
+### notice
+### info
+### debug
+log_level=info
+
+#unix group name to run this program,
+#not set (empty) means run by the group of current user
+run_by_group=
+
+#unix username to run this program,
+#not set (empty) means run by current user
+run_by_user=
+
+# allow_hosts can ocur more than once, host can be hostname or ip address,
+# "*" means match all ip addresses, can use range like this: 10.0.1.[1-15,20] or
+# host[01-08,20-25].domain.com, for example:
+# allow_hosts=10.0.1.[1-15,20]
+# allow_hosts=host[01-08,20-25].domain.com
+allow_hosts=*
 }}}
 
 * storage server config file sample:
@@ -81,6 +107,32 @@ max_connections=1024
 
 tracker_server=10.62.164.83:22122
 tracker_server=10.62.164.84:22122
+
+#standard log level as syslog, case insensitive, value list:
+### emerg for emergency
+### alert
+### crit for critical
+### error
+### warn for warning
+### notice
+### info
+### debug
+log_level=info
+
+#unix group name to run this program,
+#not set (empty) means run by the group of current user
+run_by_group=
+
+#unix username to run this program,
+#not set (empty) means run by current user
+run_by_user=
+
+# allow_hosts can ocur more than once, host can be hostname or ip address,
+# "*" means match all ip addresses, can use range like this: 10.0.1.[1-15,20] or
+# host[01-08,20-25].domain.com, for example:
+# allow_hosts=10.0.1.[1-15,20]
+# allow_hosts=host[01-08,20-25].domain.com
+allow_hosts=*
 }}}
 
 == Item detail ==
