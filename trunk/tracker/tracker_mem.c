@@ -561,6 +561,7 @@ int tracker_mem_init()
 			malloc(sizeof(FDFSGroupInfo *) * g_groups.alloc_size);
 	if (g_groups.sorted_groups == NULL)
 	{
+		free(ref_count);
 		free(g_groups.groups);
 		g_groups.groups = NULL;
 
