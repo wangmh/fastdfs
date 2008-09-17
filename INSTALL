@@ -91,6 +91,12 @@ run_by_group=
 #not set (empty) means run by current user
 run_by_user=
 
+# allow_hosts can ocur more than once, host can be hostname or ip address,
+# "*" means match all ip addresses, can use range like this: 10.0.1.[1-15,20] or
+# host[01-08,20-25].domain.com, for example:
+# allow_hosts=10.0.1.[1-15,20]
+# allow_hosts=host[01-08,20-25].domain.com
+allow_hosts=*
 ###end of tracker server config###
 
 
@@ -130,6 +136,12 @@ run_by_group=
 #not set (empty) means run by current user
 run_by_user=
 
+# allow_hosts can ocur more than once, host can be hostname or ip address,
+# "*" means match all ip addresses, can use range like this: 10.0.1.[1-15,20] or
+# host[01-08,20-25].domain.com, for example:
+# allow_hosts=10.0.1.[1-15,20]
+# allow_hosts=host[01-08,20-25].domain.com
+allow_hosts=*
 ###end of storage server config###
 
 
