@@ -1,4 +1,7 @@
 
+Version 1.10  2008-09-18
+  * trim function op in shared_func.c
+
 Version 1.9  2008-09-14
   * security enhancement: support allow hosts which can connect to the server
   * server can be run by the specified group and user, set by the config file
