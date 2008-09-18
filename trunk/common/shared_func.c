@@ -386,39 +386,36 @@ void printBuffHex(const char *s, const int len)
 
 char *trim_left(char *pStr)
 {
-	int ilength;
-	int i;
 	char *pTemp;
-	char ch;
+	char *p;
+	char *pEnd;
 	int nDestLen;
-	
-	ilength = strlen(pStr);
-	
-	for (i=0; i<ilength; i++ )
+
+	pEnd = pStr + strlen(pStr);
+	for (p=pStr; p<pEnd; p++)
 	{
-		ch = pStr[i];
-		if (!(' ' == ch || '\n' == ch || '\r' == ch || '\t' == ch))
+		if (!(' ' == *p|| '\n' == *p || '\r' == *p || '\t' == *p))
 		{
 			break;
 		}
 	}
 	
-	if ( 0 == i)
+	if ( p == pStr)
 	{
 		return pStr;
 	}
 	
-	nDestLen = ilength - i;
-	pTemp = (char *)malloc(nDestLen + 1);
+	nDestLen = (pEnd - p) + 1; //including \0
+	pTemp = (char *)malloc(nDestLen);
 	if (pTemp == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail", __LINE__, nDestLen + 1);
-		return pStr + i;
+			"malloc %d bytes fail", __LINE__, nDestLen);
+		return p;
 	}
 
-	strcpy(pTemp, pStr + i);
-	strcpy(pStr, pTemp);
+	memcpy(pTemp, p, nDestLen);
+	memcpy(pStr, pTemp, nDestLen);
 	free(pTemp);
 	return pStr;
 }
@@ -428,7 +425,6 @@ char *trim_right(char *pStr)
 	int len;
 	char *p;
 	char *pEnd;
-	char ch;
 
 	len = strlen(pStr);
 	if (len == 0)
@@ -439,8 +435,7 @@ char *trim_right(char *pStr)
 	pEnd = pStr + len - 1;
 	for (p = pEnd;  p>=pStr; p--)
 	{
-		ch = *p;
-		if (!(' ' == ch || '\n' == ch || '\r' == ch || '\t' == ch))
+		if (!(' ' == *p || '\n' == *p || '\r' == *p || '\t' == *p))
 		{
 			break;
 		}
@@ -1503,5 +1498,43 @@ int fdfs_load_allow_hosts(IniItemInfo *items, const int nItemCount, \
 int cmp_by_ip_addr_t(const void *p1, const void *p2)
 {
         return memcmp((in_addr_t *)p1, (in_addr_t *)p2, sizeof(in_addr_t));
+}
+
+int create_work_threads(int *count, void *(*start_func)(void *), \
+		void *arg, pthread_t *tids)
+{
+	int result;
+	pthread_t *ptid;
+	pthread_t *ptid_end;
+
+	result = 0;
+	ptid_end = tids + (*count);
+	for (ptid=tids; ptid<ptid_end; ptid++)
+	{
+		printf("1111111111111111111\n");
+		if ((result=pthread_create(ptid, NULL, \
+			start_func, arg)) != 0)
+		{
+			*count = ptid - tids;
+			logError("file: "__FILE__", line: %d, " \
+				"create thread failed, startup threads: %d, " \
+				"errno: %d, error info: %s", \
+				__LINE__, *count, \
+				result, strerror(result));
+			break;
+		}
+		/*
+		if ((result=pthread_join(*ptid, NULL)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"pthread_join fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, strerror(result));
+		}
+		*/
+		printf("aaaaaaaaaaaaaaaaaaaaaaa\n");
+	}
+
+	return result;
 }
 

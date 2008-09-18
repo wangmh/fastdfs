@@ -90,6 +90,9 @@ int set_nonblock(int fd);
 int set_run_by(const char *group_name, const char *username);
 int cmp_by_ip_addr_t(const void *p1, const void *p2);
 
+int create_work_threads(int *count, void *(*start_func)(void *), \
+		void *arg, pthread_t *tids);
+
 #ifdef __cplusplus
 }
 #endif
