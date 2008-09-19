@@ -1,9 +1,9 @@
 .SUFFIXES: .c .o .lo
 
-COMPILE = $(CC) -O3 -Wall -D_FILE_OFFSET_BITS=64 -DOS_LINUX
+COMPILE = $(CC) $(CFLAGS)
 INC_PATH = -I../common -I../tracker -I/usr/local/include
-LIB_PATH = -L/usr/local/lib  -lpthread
-TARGET_PATH = /usr/local/bin
+LIB_PATH = -L/usr/local/lib $(LIBS)
+TARGET_PATH = $(TARGET_PATH)
 
 STATIC_OBJS = ../common/hash.o ../common/fdfs_define.o ../common/chain.o \
               ../common/shared_func.o ../common/ini_file_reader.o \
