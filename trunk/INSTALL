@@ -16,10 +16,7 @@ tar xzf FastDFS_v1.9.tar.gz
 cd FastDFS
 
 #step 3. make all
-#for Linux execute:
 ./make.sh
-#for FreeBSD execute:
-./make.sh -f Makefile.freebsd
 
 #step 4. make install
 ./make.sh install
