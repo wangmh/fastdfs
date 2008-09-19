@@ -1507,9 +1507,57 @@ data buff (struct)
 	int recv_bytes;
 	int log_level;
 	in_addr_t client_ip;
+	int server_sock;
+	
+	server_sock = (int)arg;
+
+	while (g_continue_flag)
+	{
+	if (pthread_mutex_lock(&g_storage_thread_lock) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info:%s.", \
+			__LINE__, errno, strerror(errno));
+	}
+
+	if (!g_continue_flag)
+	{
+		pthread_mutex_unlock(&g_storage_thread_lock);
+		break;
+	}
 
 	memset(&client_info, 0, sizeof(client_info));
-	client_info.sock = (int)arg;
+	client_info.sock = nbaccept(server_sock, 1 * 60, &result);
+	if (pthread_mutex_unlock(&g_storage_thread_lock) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info:%s.", \
+			__LINE__, errno, strerror(errno));
+	}
+	if(client_info.sock < 0) //error
+	{
+		if (result == ETIMEDOUT || result == EINTR || \
+			result == EAGAIN)
+		{
+			continue;
+		}
+			
+		if(result == EBADF)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"accept failed, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, strerror(result));
+			break;
+		}
+			
+		logError("file: "__FILE__", line: %d, " \
+			"accept failed, errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		continue;
+	}
 	
 	client_ip = getPeerIpaddr(client_info.sock, \
 				client_info.ip_addr, FDFS_IPADDR_SIZE);
@@ -1523,7 +1571,9 @@ data buff (struct)
 			logError("file: "__FILE__", line: %d, " \
 				"ip addr %s is not allowed to access", \
 				__LINE__, inet_ntoa(address));
-			goto THREAD_DONE;
+
+			close(client_info.sock);
+			continue;
 		}
 	}
 
@@ -1671,8 +1721,9 @@ data buff (struct)
 
 		count++;
 	}
+	close(client_info.sock);
+	}
 
-THREAD_DONE:
 	if (pthread_mutex_lock(&g_storage_thread_lock) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1689,7 +1740,6 @@ THREAD_DONE:
 			__LINE__, errno, strerror(errno));
 	}
 
-	close(client_info.sock);
 	return NULL;
 }
 

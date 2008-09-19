@@ -92,6 +92,7 @@ int cmp_by_ip_addr_t(const void *p1, const void *p2);
 
 int create_work_threads(int *count, void *(*start_func)(void *), \
 		void *arg, pthread_t *tids);
+int kill_work_threads(pthread_t *tids, const int count);
 
 #ifdef __cplusplus
 }

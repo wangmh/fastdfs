@@ -1,5 +1,6 @@
 
 Version 1.10  2008-09-18
+  * use thread pool, create all worker threads at startup
   * trim function op in shared_func.c
   * add Makefile template Makefile.in, delete Makefile and Makefile.freebsd
     change make.sh to support all unix systems (passed in Linux and FreeBSD)
