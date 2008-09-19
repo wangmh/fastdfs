@@ -45,12 +45,10 @@ int main(int argc, char *argv[])
 {
 	char *conf_filename;
 	char bind_addr[FDFS_IPADDR_SIZE];
-	pthread_attr_t thread_attr;
-	int incomesock;
 	
 	int result;
 	int sock;
-	pthread_t tid;
+	pthread_t *tids;
 	struct sigaction act;
 
 	if (argc < 2)
@@ -169,7 +167,6 @@ int main(int argc, char *argv[])
 		return errno;
 	}
 
-	g_storage_thread_count = 0;
 	if ((result=tracker_report_thread_start()) != 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
@@ -180,96 +177,29 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	if ((result=init_pthread_attr(&thread_attr)) != 0)
+	tids = (pthread_t *)malloc(sizeof(pthread_t) * g_max_connections);
+	if (tids == NULL)
 	{
-		logCrit("file: "__FILE__", line: %d, " \
-			"init_pthread_attr fail, program exit!", __LINE__);
-		g_continue_flag = false;
-		storage_close_storage_stat();
+		logError("file: "__FILE__", line: %d, " \
+			"malloc fail, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno;
+	}
+
+	g_storage_thread_count = g_max_connections;
+	if ((result=create_work_threads(&g_storage_thread_count, \
+		storage_thread_entrance, (void *)sock, tids)) != 0)
+	{
+		free(tids);
 		return result;
 	}
 
 	while (g_continue_flag)
 	{
-		/*
-		if (bReloadFlag)
-		{			
-			if (!storage_load_from_conf_file())
-			{
-				break;
-			}
-			
-			bReloadFlag = false;
-		}
-		*/
-	
-		incomesock = nbaccept(sock, 1 * 60, &result);
-		if(incomesock < 0) //error
-		{
-			if (result == ETIMEDOUT || result == EINTR || \
-				result == EAGAIN)
-			{
-				continue;
-			}
-			
-			if(result == EBADF)
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"accept failed, " \
-					"errno: %d, error info: %s", \
-					__LINE__, result, strerror(result));
-				break;
-			}
-			
-			logError("file: "__FILE__", line: %d, " \
-				"accept failed, " \
-				"errno: %d, error info: %s", \
-				__LINE__, result, strerror(result));
-			continue;
-		}
-		
-		if (pthread_mutex_lock(&g_storage_thread_lock) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"call pthread_mutex_lock fail, " \
-				"errno: %d, error info:%s.", \
-				__LINE__, errno, strerror(errno));
-		}
-		if (g_storage_thread_count >= g_max_connections)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"create thread failed, " \
-				"current thread count %d exceed the limit %d", \
-				__LINE__, \
-				g_storage_thread_count + 1, g_max_connections);
-			close(incomesock);
-		}
-		else
-		{
-			result = pthread_create(&tid, &thread_attr, \
-				storage_thread_entrance, (void*)incomesock);
-			if(result != 0)
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"create thread failed, " \
-					"errno: %d, error info: %s", \
-					__LINE__, errno, strerror(errno));
-				close(incomesock);
-			}
-			else
-			{
-				g_storage_thread_count++;
-			}
-		}
-		if (pthread_mutex_unlock(&g_storage_thread_lock) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"call pthread_mutex_unlock fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, errno, strerror(errno));
-		}
+		sleep(1);
 	}
 
+	kill_work_threads(tids, g_max_connections);
 	while (g_storage_thread_count != 0 || \
 		g_tracker_reporter_count > 0 || \
 		g_storage_sync_thread_count > 0)
@@ -287,11 +217,12 @@ int main(int argc, char *argv[])
 		g_tracker_servers = NULL;
 	}
 
-	pthread_attr_destroy(&thread_attr);
 	pthread_mutex_destroy(&g_storage_thread_lock);
 	
 	storage_sync_destroy();
 	storage_close_storage_stat();
+
+	free(tids);
 
 	logInfo("exit nomally.\n");
 	

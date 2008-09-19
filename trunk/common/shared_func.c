@@ -1504,15 +1504,20 @@ int create_work_threads(int *count, void *(*start_func)(void *), \
 		void *arg, pthread_t *tids)
 {
 	int result;
+	pthread_attr_t thread_attr;
 	pthread_t *ptid;
 	pthread_t *ptid_end;
+
+	if ((result=init_pthread_attr(&thread_attr)) != 0)
+	{
+		return result;
+	}
 
 	result = 0;
 	ptid_end = tids + (*count);
 	for (ptid=tids; ptid<ptid_end; ptid++)
 	{
-		printf("1111111111111111111\n");
-		if ((result=pthread_create(ptid, NULL, \
+		if ((result=pthread_create(ptid, &thread_attr, \
 			start_func, arg)) != 0)
 		{
 			*count = ptid - tids;
@@ -1523,18 +1528,30 @@ int create_work_threads(int *count, void *(*start_func)(void *), \
 				result, strerror(result));
 			break;
 		}
-		/*
-		if ((result=pthread_join(*ptid, NULL)) != 0)
+	}
+
+	pthread_attr_destroy(&thread_attr);
+	return result;
+}
+
+int kill_work_threads(pthread_t *tids, const int count)
+{
+	int result;
+	pthread_t *ptid;
+	pthread_t *ptid_end;
+
+	ptid_end = tids + count;
+	for (ptid=tids; ptid<ptid_end; ptid++)
+	{
+		if ((result=pthread_kill(*ptid, SIGINT)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"pthread_join fail, " \
+				"kill thread failed, " \
 				"errno: %d, error info: %s", \
 				__LINE__, result, strerror(result));
 		}
-		*/
-		printf("aaaaaaaaaaaaaaaaaaaaaaa\n");
 	}
 
-	return result;
+	return 0;
 }
 
