@@ -42,13 +42,11 @@ LIBS=''
 if [ -f /usr/lib/libpthread.so ] || [ -f /usr/local/lib/libpthread.so ]; then
   LIBS="$LIBS -lpthread"
 else
-  line =`nm -D /usr/lib/libc_r.so | grep pthread_create | grep -w T`
-  if ![ -z "$line" ]; then
+  line=`nm -D /usr/lib/libc_r.so | grep pthread_create | grep -w T`
+  if [ -n "$line" ]; then
     LIBS="$LIBS -lc_r"
   fi
 fi
-
-echo $CFLAGS
 
 cd tracker
 cp Makefile.in Makefile
