@@ -1,9 +1,8 @@
 .SUFFIXES: .c .o
 
-COMPILE = $(CC) -Wall -O2 -D_FILE_OFFSET_BITS=64 -DOS_LINUX
-#COMPILE = $(CC) -Wall -g -D_FILE_OFFSET_BITS=64 -DOS_LINUX -D__DEBUG__
+COMPILE = $(CC) -O3 -Wall -D_FILE_OFFSET_BITS=64 -DOS_LINUX
 INC_PATH = -I../common -I../tracker -I/usr/local/include
-LIB_PATH = -L/usr/local/lib -lpthread
+LIB_PATH = -L/usr/local/lib  -lpthread
 TARGET_PATH = /usr/local/bin
 
 COMMON_LIB =
@@ -27,6 +26,6 @@ all: $(ALL_OBJS) $(ALL_PRGS)
 .c.o:
 	$(COMPILE) -c -o $@ $<  $(INC_PATH)
 install:
-	cp -f $(ALL_PRGS) $(TARGET_PATH)
+	cp -f $(ALL_PRGS) /usr/local/bin
 clean:
 	rm -f $(ALL_OBJS) $(ALL_PRGS)

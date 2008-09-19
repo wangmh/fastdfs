@@ -1,9 +1,9 @@
 .SUFFIXES: .c .o
 
-COMPILE = $(CC) -O3 -Wall -D_FILE_OFFSET_BITS=64 -DOS_LINUX
+COMPILE = $(CC) $(CFLAGS)
 INC_PATH = -I../common -I/usr/local/include
-LIB_PATH = -L/usr/local/lib  -lpthread
-TARGET_PATH = /usr/local/bin
+LIB_PATH = -L/usr/local/lib $(LIBS)
+TARGET_PATH = $(TARGET_PATH)
 
 COMMON_LIB =
 SHARED_OBJS = ../common/hash.o ../common/fdfs_define.o ../common/chain.o \
@@ -24,6 +24,6 @@ all: $(ALL_OBJS) $(ALL_PRGS)
 .c.o:
 	$(COMPILE) -c -o $@ $<  $(INC_PATH)
 install:
-	cp -f $(ALL_PRGS) /usr/local/bin
+	cp -f $(ALL_PRGS) $(TARGET_PATH)
 clean:
 	rm -f $(ALL_OBJS) $(ALL_PRGS)

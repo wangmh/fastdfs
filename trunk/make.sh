@@ -27,13 +27,48 @@ cat <<EOF > common/fdfs_os_bits.h
 #endif
 EOF
 
+TARGET_PATH=/usr/local/bin
+CFLAGS='-O3 -Wall -D_FILE_OFFSET_BITS=64'
+#CFLAGS='-g -Wall -D_FILE_OFFSET_BITS=64 -D__DEBUG__'
+
+uname=`uname`
+if [ "$uname" = "Linux" ]; then
+  CFLAGS="$CFLAGS -DOS_LINUX"
+elif [ "$uname" = "FreeBSD" ]; then
+  CFLAGS="$CFLAGS -DOS_FREEBSD"
+fi
+
+LIBS=''
+if [ -f /usr/lib/libpthread.so ] || [ -f /usr/local/lib/libpthread.so ]; then
+  LIBS="$LIBS -lpthread"
+else
+  line =`nm -D /usr/lib/libc_r.so | grep pthread_create | grep -w T`
+  if ![ -z "$line" ]; then
+    LIBS="$LIBS -lc_r"
+  fi
+fi
+
+echo $CFLAGS
+
 cd tracker
+cp Makefile.in Makefile
+perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
+perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
+perl -pi -e "s#\\\$\(TARGET_PATH\)#$TARGET_PATH#g" Makefile
 make $1 $2
 
 cd ../storage
+cp Makefile.in Makefile
+perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
+perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
+perl -pi -e "s#\\\$\(TARGET_PATH\)#$TARGET_PATH#g" Makefile
 make $1 $2
 
 cd ../client
+cp Makefile.in Makefile
+perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
+perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
+perl -pi -e "s#\\\$\(TARGET_PATH\)#$TARGET_PATH#g" Makefile
 make $1 $2
 
 if [ "$1" = "install" ]; then
