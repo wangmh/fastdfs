@@ -5,7 +5,6 @@ INC_PATH = -I../common -I../tracker -I/usr/local/include
 LIB_PATH = -L/usr/local/lib  -lpthread
 TARGET_PATH = /usr/local/bin
 
-COMMON_LIB =
 SHARED_OBJS = ../common/hash.o ../common/fdfs_define.o ../common/chain.o \
               ../common/shared_func.o ../common/ini_file_reader.o \
               ../common/logger.o ../common/sockopt.o ../common/fdfs_global.o \
@@ -20,9 +19,9 @@ ALL_PRGS = fdfs_storaged
 
 all: $(ALL_OBJS) $(ALL_PRGS)
 .o:
-	$(COMPILE) -o $@ $<  $(SHARED_OBJS) $(COMMON_LIB) $(LIB_PATH) $(INC_PATH)
+	$(COMPILE) -o $@ $<  $(SHARED_OBJS) $(LIB_PATH) $(INC_PATH)
 .c:
-	$(COMPILE) -o $@ $<  $(ALL_OBJS) $(COMMON_LIB) $(LIB_PATH) $(INC_PATH)
+	$(COMPILE) -o $@ $<  $(ALL_OBJS) $(LIB_PATH) $(INC_PATH)
 .c.o:
 	$(COMPILE) -c -o $@ $<  $(INC_PATH)
 install:
