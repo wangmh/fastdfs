@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 
 	while (g_continue_flag)
 	{
-		sleep(1);
+		sleep(60);
 	}
 
 	kill_work_threads(tids, g_max_connections);
