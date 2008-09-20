@@ -48,7 +48,7 @@ bind_addr=
 port=22122
 network_timeout=20
 base_path=/home/yuqing/FastDFS
-max_connections=1024
+max_connections=256
 
 #0: round robin
 #1: specify group
@@ -108,7 +108,7 @@ heart_beat_interval=30
 stat_report_interval=600
 base_path=/home/yuqing/FastDFS
 sync_wait_msec=200
-max_connections=1024
+max_connections=256
 
 tracker_server=10.62.164.83:22122
 tracker_server=10.62.164.84:22122
