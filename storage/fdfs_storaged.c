@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 
 	while (g_continue_flag)
 	{
-		sleep(60);
+		sleep(1);
 	}
 
 	kill_work_threads(tids, g_max_connections);
