@@ -55,6 +55,9 @@ static off_t binlog_file_size = 0;
 int g_storage_sync_thread_count = 0;
 static pthread_mutex_t sync_thread_lock;
 
+/* save sync thread ids */
+static pthread_t *sync_tids = NULL;
+
 static int storage_write_to_mark_file(BinLogReader *pReader);
 static int storage_binlog_reader_skip(BinLogReader *pReader);
 static void storage_reader_destroy(BinLogReader *pReader);
@@ -511,19 +514,35 @@ int storage_sync_init()
 
 int storage_sync_destroy()
 {
+	int result;
 	if (g_binlog_fd >= 0)
 	{
 		close(g_binlog_fd);
 		g_binlog_fd = -1;
 	}
 
-	if (pthread_mutex_destroy(&sync_thread_lock) != 0)
+	if ((result=pthread_mutex_destroy(&sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_destroy fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	if (sync_tids != NULL)
+	{
+		pthread_t *ptid;
+		pthread_t *ptid_end;
+
+		ptid_end = sync_tids + g_storage_sync_thread_count;
+		for (ptid=sync_tids; ptid<ptid_end; ptid++)
+		{
+			pthread_kill(*ptid, SIGINT);
+		}
+
+		free(sync_tids);
+		sync_tids = NULL;
 	}
 
 	return 0;
@@ -1218,6 +1237,7 @@ static void* storage_sync_thread_entrance(void* arg)
 	int read_result;
 	int sync_result;
 	int conn_result;
+	int result;
 	int record_len;
 	int previousCode;
 	int nContinuousFail;
@@ -1467,20 +1487,20 @@ static void* storage_sync_thread_entrance(void* arg)
 	}
 	storage_reader_destroy(&reader);
 
-	if (pthread_mutex_lock(&sync_thread_lock) != 0)
+	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, result, strerror(result));
 	}
 	g_storage_sync_thread_count--;
-	if (pthread_mutex_unlock(&sync_thread_lock) != 0)
+	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, result, strerror(result));
 	}
 
 	return NULL;
@@ -1488,6 +1508,7 @@ static void* storage_sync_thread_entrance(void* arg)
 
 int storage_sync_thread_start(const FDFSStorageBrief *pStorage)
 {
+	int result;
 	pthread_attr_t pattr;
 	pthread_t tid;
 
@@ -1496,38 +1517,59 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage)
 		return 0;
 	}
 
-	pthread_attr_init(&pattr);
-	pthread_attr_setdetachstate(&pattr, PTHREAD_CREATE_DETACHED);
+	if ((result=init_pthread_attr(&pattr)) != 0)
+	{
+		return result;
+	}
 
 	/*
-	//printf("start storage ip_addr: %s, g_storage_sync_thread_count=%d\n", \
+	//printf("start storage ip_addr: %s, g_storage_sync_thread_count=%d\n", 
 			pStorage->ip_addr, g_storage_sync_thread_count);
 	*/
 
-	if (pthread_create(&tid, &pattr, storage_sync_thread_entrance, \
-		(void *)pStorage) != 0)
+	if ((result=pthread_create(&tid, &pattr, storage_sync_thread_entrance, \
+		(void *)pStorage)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"create thread failed, errno: %d, " \
 			"error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+
+		pthread_attr_destroy(&pattr);
+		return result;
 	}
 
-	if (pthread_mutex_lock(&sync_thread_lock) != 0)
+	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, result, strerror(result));
 	}
+
 	g_storage_sync_thread_count++;
-	if (pthread_mutex_unlock(&sync_thread_lock) != 0)
+	sync_tids = (pthread_t *)realloc(sync_tids, sizeof(pthread_t) * \
+					g_storage_sync_thread_count);
+	if (sync_tids == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, sizeof(pthread_t) * \
+			g_storage_sync_thread_count, \
+			errno, strerror(errno));
+	}
+	else
+	{
+		sync_tids[g_storage_sync_thread_count - 1] = tid;
+	}
+
+	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, result, strerror(result));
 	}
 
 	pthread_attr_destroy(&pattr);

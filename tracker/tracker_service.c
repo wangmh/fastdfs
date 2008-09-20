@@ -1194,6 +1194,7 @@ static int tracker_deal_storage_report(TrackerClientInfo *pClientInfo, \
 				const int64_t nInPackLen)
 {
 	int status;
+	int result;
 	TrackerStatReportReqBody statBuff;
  
 	while (1)
@@ -1237,20 +1238,22 @@ static int tracker_deal_storage_report(TrackerClientInfo *pClientInfo, \
 		if (g_groups.store_lookup == \
 			FDFS_STORE_LOOKUP_LOAD_BALANCE)
 		{
-			if (pthread_mutex_lock(&g_tracker_thread_lock) != 0)
+			if ((result=pthread_mutex_lock( \
+				&g_tracker_thread_lock)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 				"call pthread_mutex_lock fail, " \
-				"errno: %d, error info:%s.", \
-				__LINE__, errno, strerror(errno));
+				"errno: %d, error info: %s", \
+				__LINE__, result, strerror(result));
 			}
 			tracker_find_max_free_space_group();
-			if (pthread_mutex_unlock(&g_tracker_thread_lock) != 0)
+			if ((result=pthread_mutex_unlock( \
+				&g_tracker_thread_lock)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_unlock fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, errno, strerror(errno));
+					__LINE__, result, strerror(result));
 			}
 		}
 		}
@@ -1396,12 +1399,12 @@ data buff (struct)
 
 	while (g_continue_flag)
 	{
-	if (pthread_mutex_lock(&g_tracker_thread_lock) != 0)
+	if ((result=pthread_mutex_lock(&g_tracker_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
-			"errno: %d, error info:%s.", \
-			__LINE__, errno, strerror(errno));
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
 	}
 
 	if (!g_continue_flag)
@@ -1414,10 +1417,9 @@ data buff (struct)
 	client_info.sock = nbaccept(server_sock, 1 * 60, &result);
 	if (pthread_mutex_unlock(&g_tracker_thread_lock) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_unlock fail, " \
-			"errno: %d, error info:%s.", \
-			__LINE__, errno, strerror(errno));
+		logError("file: "__FILE__", line: %d, "   \
+			"call pthread_mutex_unlock fail", \
+			__LINE__);
 	}
 	if(client_info.sock < 0) //error
 	{
@@ -1630,20 +1632,20 @@ data buff (struct)
 	close(client_info.sock);
 	}
 
-	if (pthread_mutex_lock(&g_tracker_thread_lock) != 0)
+	if ((result=pthread_mutex_lock(&g_tracker_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
-			"errno: %d, error info:%s.", \
-			__LINE__, errno, strerror(errno));
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
 	}
 	g_tracker_thread_count--;
-	if (pthread_mutex_unlock(&g_tracker_thread_lock) != 0)
+	if ((result=pthread_mutex_unlock(&g_tracker_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, result, strerror(result));
 	}
 
 	return NULL;

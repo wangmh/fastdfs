@@ -1513,12 +1513,12 @@ data buff (struct)
 
 	while (g_continue_flag)
 	{
-	if (pthread_mutex_lock(&g_storage_thread_lock) != 0)
+	if ((result=pthread_mutex_lock(&g_storage_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
-			"errno: %d, error info:%s.", \
-			__LINE__, errno, strerror(errno));
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
 	}
 
 	if (!g_continue_flag)
@@ -1532,9 +1532,8 @@ data buff (struct)
 	if (pthread_mutex_unlock(&g_storage_thread_lock) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_unlock fail, " \
-			"errno: %d, error info:%s.", \
-			__LINE__, errno, strerror(errno));
+			"call pthread_mutex_unlock fail", \
+			__LINE__);
 	}
 	if(client_info.sock < 0) //error
 	{
@@ -1724,20 +1723,20 @@ data buff (struct)
 	close(client_info.sock);
 	}
 
-	if (pthread_mutex_lock(&g_storage_thread_lock) != 0)
+	if ((result=pthread_mutex_lock(&g_storage_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
-			"errno: %d, error info:%s.", \
-			__LINE__, errno, strerror(errno));
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
 	}
 	g_storage_thread_count--;
-	if (pthread_mutex_unlock(&g_storage_thread_lock) != 0)
+	if ((result=pthread_mutex_unlock(&g_storage_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, result, strerror(result));
 	}
 
 	return NULL;
