@@ -56,13 +56,14 @@ int tracker_report_init()
  
 int tracker_report_destroy()
 {
-	if (pthread_mutex_destroy(&reporter_thread_lock) != 0)
+	int result;
+	if ((result=pthread_mutex_destroy(&reporter_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_destroy fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
 	}
 
 	return 0;
@@ -179,12 +180,13 @@ static void* tracker_report_thread_entrance(void* arg)
 
 		if (!sync_old_done)
 		{
-			if (pthread_mutex_lock(&reporter_thread_lock) != 0)
+			if ((result=pthread_mutex_lock(&reporter_thread_lock)) \
+					 != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_lock fail, " \
-					"errno: %d, error info:%s.", \
-					__LINE__, errno, strerror(errno));
+					"errno: %d, error info: %s", \
+					__LINE__, result, strerror(result));
 
 				fdfs_quit(pTrackerServer);
 				sleep(g_heart_beat_interval);
@@ -221,12 +223,13 @@ static void* tracker_report_thread_entrance(void* arg)
 				}
 			}
 
-			if (pthread_mutex_unlock(&reporter_thread_lock) != 0)
+			if ((result=pthread_mutex_unlock(&reporter_thread_lock))
+				 != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_unlock fail, " \
-					"errno: %d, error info:%s.", \
-					__LINE__, errno, strerror(errno));
+					"errno: %d, error info: %s", \
+					__LINE__, result, strerror(result));
 			}
 
 			sync_old_done = true;
@@ -293,20 +296,20 @@ static void* tracker_report_thread_entrance(void* arg)
 			result, strerror(result));
 	}
 
-	if (pthread_mutex_lock(&reporter_thread_lock) != 0)
+	if ((result=pthread_mutex_lock(&reporter_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
-			"errno: %d, error info:%s.", \
-			__LINE__, errno, strerror(errno));
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
 	}
 	g_tracker_reporter_count--;
-	if (pthread_mutex_unlock(&reporter_thread_lock) != 0)
+	if ((result=pthread_mutex_unlock(&reporter_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
-			"errno: %d, error info:%s.", \
-			__LINE__, errno, strerror(errno));
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
 	}
 
 	return NULL;
@@ -446,13 +449,14 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		{
 			if (g_storage_count < FDFS_MAX_SERVERS_EACH_GROUP)
 			{
-				if (pthread_mutex_lock(&reporter_thread_lock) \
-					 != 0)
+				if ((result=pthread_mutex_lock( \
+					&reporter_thread_lock)) != 0)
 				{
 					logError("file: "__FILE__", line: %d, "\
 						"call pthread_mutex_lock fail,"\
-						" errno: %d, error info:%s.", \
-						__LINE__, errno, strerror(errno));
+						" errno: %d, error info: %s", \
+						__LINE__, \
+						result, strerror(result));
 				}
 				pInsertedServer = g_storage_servers + \
 						g_storage_count;
@@ -461,13 +465,13 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 				tracker_insert_into_sorted_servers( \
 						pInsertedServer);
 				g_storage_count++;
-				if (pthread_mutex_unlock(&reporter_thread_lock)\
-						 != 0)
+				if ((result=pthread_mutex_unlock( \
+					&reporter_thread_lock)) != 0)
 				{
 					logError("file: "__FILE__", line: %d, "\
 					"call pthread_mutex_unlock fail, " \
-					"errno: %d, error info:%s.", \
-					__LINE__, errno, strerror(errno));
+					"errno: %d, error info: %s", \
+					__LINE__, result, strerror(result));
 				}
 
 				if ((result=storage_sync_thread_start( \
@@ -934,38 +938,41 @@ int tracker_report_thread_start()
 	TrackerServerInfo *pServerEnd;
 	pthread_attr_t pattr;
 	pthread_t tid;
+	int result;
 
-	pthread_attr_init(&pattr);
-	pthread_attr_setdetachstate(&pattr, PTHREAD_CREATE_DETACHED);
+	if ((result=init_pthread_attr(&pattr)) != 0)
+	{
+		return result;
+	}
 
 	pServerEnd = g_tracker_servers + g_tracker_server_count;
 	for (pTrackerServer=g_tracker_servers; pTrackerServer<pServerEnd; \
 		pTrackerServer++)
 	{
-		if(pthread_create(&tid, &pattr, tracker_report_thread_entrance, 
-			pTrackerServer) != 0)
+		if((result=pthread_create(&tid, &pattr, \
+			tracker_report_thread_entrance, pTrackerServer)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"create thread failed, errno: %d, " \
 				"error info: %s.", \
-				__LINE__, errno, strerror(errno));
-			return errno != 0 ? errno : EAGAIN;
+				__LINE__, result, strerror(result));
+			return result;
 		}
 
-		if (pthread_mutex_lock(&reporter_thread_lock) != 0)
+		if ((result=pthread_mutex_lock(&reporter_thread_lock)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"call pthread_mutex_lock fail, " \
-				"errno: %d, error info:%s.", \
-				__LINE__, errno, strerror(errno));
+				"errno: %d, error info: %s", \
+				__LINE__, result, strerror(result));
 		}
 		g_tracker_reporter_count++;
-		if (pthread_mutex_unlock(&reporter_thread_lock) != 0)
+		if ((result=pthread_mutex_unlock(&reporter_thread_lock)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"call pthread_mutex_unlock fail, " \
-				"errno: %d, error info:%s.", \
-				__LINE__, errno, strerror(errno));
+				"errno: %d, error info: %s", \
+				__LINE__, result, strerror(result));
 		}
 	}
 

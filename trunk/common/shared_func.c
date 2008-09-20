@@ -92,7 +92,8 @@ char *replaceCRLF2Space(char *s)
 	return s;
 }
 
-char *getAppAbsolutePath(const char *exeName, char *szAbsPath, const int pathSize)
+char *getAppAbsolutePath(const char *exeName, char *szAbsPath, \
+		const int pathSize)
 {
 	char *p;
 	char *szPath;
@@ -133,7 +134,7 @@ char *getAppAbsolutePath(const char *exeName, char *szAbsPath, const int pathSiz
 		}
 		
 		nPathLen = strlen(cwd);
-		if (cwd[nPathLen - 1] == '/')	//去除路径最后的/
+		if (cwd[nPathLen - 1] == '/')
 		{
 			cwd[nPathLen - 1] = '\0';
 		}
@@ -159,7 +160,8 @@ int getProccessCount(const char *progName, const bool bAllOwners)
 	return getUserProcIds(progName, bAllOwners, pids, 0);
 }
 
-int getUserProcIds(const char *progName, const bool bAllOwners, int pids[], const int arrSize)
+int getUserProcIds(const char *progName, const bool bAllOwners, \
+		int pids[], const int arrSize)
 {
 	char path[80]="/proc";
 	char fullpath[80];
@@ -272,7 +274,10 @@ char *toLowercase(char *src)
 	p = src;
 	while (*p != '\0')
 	{
-		*p = tolower(*p);
+		if (*p >= 'A' && *p <= 'Z')
+		{
+			*p += 32;
+		}
 		p++;
 	}
 	
@@ -286,7 +291,10 @@ char *toUppercase(char *src)
 	p = src;
 	while (*p != '\0')
 	{
-		*p = toupper(*p);
+		if (*p >= 'a' && *p <= 'z')
+		{
+			*p -= 32;
+		}
 		p++;
 	}
 	
@@ -326,15 +334,14 @@ void daemon_init(bool bCloseFiles)
 char *bin2hex(const char *s, const int len, char *szHexBuff)
 {
 	unsigned char *p;
+	unsigned char *pEnd;
 	int nLen;
-	int i;
 	
 	nLen = 0;
-	p = (unsigned char *)s;
-	for (i=0; i<len; i++)
+	pEnd = (unsigned char *)s + len;
+	for (p=(unsigned char *)s; p<pEnd; p++)
 	{
 		nLen += sprintf(szHexBuff + nLen, "%02X", *p);
-		p++;
 	}
 	
 	szHexBuff[nLen] = '\0';
@@ -344,9 +351,10 @@ char *bin2hex(const char *s, const int len, char *szHexBuff)
 char *hex2bin(const char *s, char *szBinBuff, int *nDestLen)
 {
         char buff[3];
-	char *p;
+	char *pSrc;
 	int nSrcLen;
-	int i;
+	char *pDest;
+	char *pDestEnd;
 	
 	nSrcLen = strlen(s);
         if (nSrcLen == 0)
@@ -357,16 +365,18 @@ char *hex2bin(const char *s, char *szBinBuff, int *nDestLen)
         }
 
 	*nDestLen = nSrcLen / 2;
-	p = (char *)s;
+	pSrc = (char *)s;
         buff[2] = '\0';
-	for (i=0; i<*nDestLen; i++)
+
+	pDestEnd = szBinBuff + (*nDestLen);
+	for (pDest=szBinBuff; pDest<pDestEnd; pDest++)
 	{
-		memcpy(buff, p, 2);
-		szBinBuff[i] = strtol(buff, NULL, 16);
-		p += 2;
+		buff[0] = *pSrc++;
+		buff[1] = *pSrc++;
+		*pDest = (char)strtol(buff, NULL, 16);
 	}
 	
-	szBinBuff[*nDestLen] = '\0';
+	*pDest = '\0';
 	return szBinBuff;
 }
 
@@ -1458,7 +1468,7 @@ int fdfs_load_allow_hosts(IniItemInfo *items, const int nItemCount, \
 				}
 				else
 				{
-					(*allow_ip_addrs)[*allow_ip_count] = addr;
+					(*allow_ip_addrs)[*allow_ip_count]=addr;
 					(*allow_ip_count)++;
 				}
 

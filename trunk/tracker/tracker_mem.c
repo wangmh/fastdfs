@@ -710,10 +710,8 @@ int tracker_mem_destroy()
 	if (pthread_mutex_destroy(&mem_thread_lock) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_destroy fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			"call pthread_mutex_destroy fail", \
+			__LINE__);
 	}
 
 	return result;
@@ -1142,13 +1140,13 @@ int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 	}
 	else
 	{
-		if (pthread_mutex_lock(&mem_thread_lock) != 0)
+		if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"call pthread_mutex_lock fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, errno, strerror(errno));
-			return errno != 0 ? errno : EAGAIN;
+				__LINE__, result, strerror(result));
+			return result;
 		}
 
 		result = 0;
@@ -1189,10 +1187,9 @@ int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 		if (pthread_mutex_unlock(&mem_thread_lock) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"call pthread_mutex_unlock fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, errno, strerror(errno));
-			return errno != 0 ? errno : EAGAIN;
+				"call pthread_mutex_unlock fail", \
+				__LINE__);
+			return result;
 		}
 
 		if (result != 0)
@@ -1254,13 +1251,13 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 	else
 	{
 		//printf("pGroup->count=%d, not found %s\n", pClientInfo->pGroup->count, pClientInfo->ip_addr);
-		if (pthread_mutex_lock(&mem_thread_lock) != 0)
+		if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"call pthread_mutex_lock fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, errno, strerror(errno));
-			return errno != 0 ? errno : EAGAIN;
+				__LINE__, result, strerror(result));
+			return result;
 		}
 
 		result = 0;
@@ -1293,11 +1290,9 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 
 		if (pthread_mutex_unlock(&mem_thread_lock) != 0)
 		{
-			logError("file: "__FILE__", line: %d, " \
-				"call pthread_mutex_unlock fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, errno, strerror(errno));
-			return errno != 0 ? errno : EAGAIN;
+			logError("file: "__FILE__", line: %d, "   \
+				"call pthread_mutex_unlock fail", \
+				__LINE__);
 		}
 
 		if (result != 0)
@@ -1395,13 +1390,13 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 	FDFSStorageDetail *pStorageServer;
 	FDFSStorageDetail **ppFound;
 
-	if (pthread_mutex_lock(&mem_thread_lock) != 0)
+	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
 	}
 
 	result = 0;
@@ -1466,11 +1461,9 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 
 	if (pthread_mutex_unlock(&mem_thread_lock) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_unlock fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+		logError("file: "__FILE__", line: %d, "   \
+			"call pthread_mutex_unlock fail", \
+			__LINE__);
 	}
 
 	return result;
@@ -1479,17 +1472,18 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
 			FDFSStorageDetail *pTargetServer) 
 {
+	int result;
 	FDFSStorageDetail **ppStorageServer;
 	FDFSStorageDetail **ppEnd;
 	FDFSStorageDetail **ppServer;
 
-	if (pthread_mutex_lock(&mem_thread_lock) != 0)
+	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
 	}
 
 	ppStorageServer = (FDFSStorageDetail **)bsearch( \
@@ -1518,13 +1512,13 @@ int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
 		}
 	}
 
-	if (pthread_mutex_unlock(&mem_thread_lock) != 0)
+	if ((result=pthread_mutex_unlock(&mem_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
 	}
 
 	return 0;
@@ -1533,6 +1527,7 @@ int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
 int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 			FDFSStorageDetail *pTargetServer) 
 {
+	int result;
 	FDFSStorageDetail **ppStorageServer;
 
 	if ((pTargetServer->status == FDFS_STORAGE_STATUS_WAIT_SYNC) || \
@@ -1554,13 +1549,13 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 		return 0;
 	}
 
-	if (pthread_mutex_lock(&mem_thread_lock) != 0)
+	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
 	}
 
 	ppStorageServer = (FDFSStorageDetail **)bsearch(&pTargetServer, \
@@ -1577,13 +1572,13 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 		pGroup->version++;
 	}
 
-	if (pthread_mutex_unlock(&mem_thread_lock) != 0)
+	if ((result=pthread_mutex_unlock(&mem_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
 	}
 
 	return 0;
@@ -1613,13 +1608,14 @@ int tracker_mem_offline_store_server(TrackerClientInfo *pClientInfo)
 
 int tracker_mem_pthread_lock()
 {
-	if (pthread_mutex_lock(&mem_thread_lock) != 0)
+	int result;
+	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
 	}
 
 	return 0;
@@ -1627,13 +1623,14 @@ int tracker_mem_pthread_lock()
 
 int tracker_mem_pthread_unlock()
 {
-	if (pthread_mutex_unlock(&mem_thread_lock) != 0)
+	int result;
+	if ((result=pthread_mutex_unlock(&mem_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EAGAIN;
+			__LINE__, result, strerror(result));
+		return result;
 	}
 
 	return 0;

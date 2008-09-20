@@ -69,7 +69,15 @@ perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_PATH\)#$TARGET_PATH#g" Makefile
 make $1 $2
 
+cd test
+cp Makefile.in Makefile
+perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
+perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
+perl -pi -e "s#\\\$\(TARGET_PATH\)#$TARGET_PATH#g" Makefile
+cd ..
+
 if [ "$1" = "install" ]; then
   cd ..
   cp restart.sh  /usr/local/bin/
 fi
+
