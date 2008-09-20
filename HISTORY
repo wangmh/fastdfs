@@ -1,5 +1,5 @@
 
-Version 1.10  2008-09-18
+Version 1.10  2008-09-20
   * performance optimizing: use thread pool, create all work threads at startup
   * trim function op in shared_func.c
   * add Makefile template Makefile.in, delete Makefile and Makefile.freebsd
