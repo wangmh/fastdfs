@@ -21,6 +21,7 @@ extern "C" {
 int tracker_report_init();
 int tracker_report_destroy();
 int tracker_report_thread_start();
+int kill_tracker_report_threads();
 
 int tracker_report_join(TrackerServerInfo *pTrackerServer);
 int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \

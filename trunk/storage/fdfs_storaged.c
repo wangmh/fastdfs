@@ -199,7 +199,10 @@ int main(int argc, char *argv[])
 		sleep(1);
 	}
 
+	kill_tracker_report_threads();
+	kill_storage_sync_threads();
 	kill_work_threads(tids, g_max_connections);
+
 	while (g_storage_thread_count != 0 || \
 		g_tracker_reporter_count > 0 || \
 		g_storage_sync_thread_count > 0)
