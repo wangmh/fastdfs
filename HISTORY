@@ -1,4 +1,7 @@
 
+Version 1.11  2008-09-21
+  * kill report and sync threads when recv terminate signal
+
 Version 1.10  2008-09-20
   * performance optimizing: use thread pool, create all work threads at startup
   * trim function op in shared_func.c

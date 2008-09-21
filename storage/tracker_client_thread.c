@@ -36,6 +36,9 @@
 
 static pthread_mutex_t reporter_thread_lock;
 
+/* save report thread ids */
+static pthread_t *report_tids = NULL;
+
 static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 			int *pstat_chg_sync_count);
 static int tracker_report_stat(TrackerServerInfo *pTrackerServer);
@@ -57,6 +60,7 @@ int tracker_report_init()
 int tracker_report_destroy()
 {
 	int result;
+
 	if ((result=pthread_mutex_destroy(&reporter_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -67,6 +71,26 @@ int tracker_report_destroy()
 	}
 
 	return 0;
+}
+
+int kill_tracker_report_threads()
+{
+	int result;
+
+	if (report_tids != NULL)
+	{
+		result = kill_work_threads(report_tids, \
+				g_tracker_server_count);
+
+		free(report_tids);
+		report_tids = NULL;
+	}
+	else
+	{
+		result = 0;
+	}
+
+	return result;
 }
 
 static void* tracker_report_thread_entrance(void* arg)
@@ -140,8 +164,15 @@ static void* tracker_report_thread_entrance(void* arg)
 			}
 
 			nContinuousFail++;
-			sleep(g_heart_beat_interval);
-			continue;
+			if (g_continue_flag)
+			{
+				sleep(g_heart_beat_interval);
+				continue;
+			}
+			else
+			{
+				break;
+			}
 		}
 
 		if (nContinuousFail == 0)
@@ -945,6 +976,20 @@ int tracker_report_thread_start()
 		return result;
 	}
 
+	report_tids = (pthread_t *)malloc(sizeof(pthread_t) * \
+					g_tracker_server_count);
+	if (report_tids == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, sizeof(pthread_t) * \
+			g_tracker_server_count, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	g_tracker_reporter_count = 0;
 	pServerEnd = g_tracker_servers + g_tracker_server_count;
 	for (pTrackerServer=g_tracker_servers; pTrackerServer<pServerEnd; \
 		pTrackerServer++)
@@ -966,6 +1011,8 @@ int tracker_report_thread_start()
 				"errno: %d, error info: %s", \
 				__LINE__, result, strerror(result));
 		}
+
+		report_tids[g_tracker_reporter_count] = tid;
 		g_tracker_reporter_count++;
 		if ((result=pthread_mutex_unlock(&reporter_thread_lock)) != 0)
 		{

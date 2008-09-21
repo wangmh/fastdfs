@@ -530,22 +530,28 @@ int storage_sync_destroy()
 		return result;
 	}
 
+
+	return 0;
+}
+
+int kill_storage_sync_threads()
+{
+	int result;
+
 	if (sync_tids != NULL)
 	{
-		pthread_t *ptid;
-		pthread_t *ptid_end;
-
-		ptid_end = sync_tids + g_storage_sync_thread_count;
-		for (ptid=sync_tids; ptid<ptid_end; ptid++)
-		{
-			pthread_kill(*ptid, SIGINT);
-		}
+		result = kill_work_threads(sync_tids, \
+				g_storage_sync_thread_count);
 
 		free(sync_tids);
 		sync_tids = NULL;
 	}
+	else
+	{
+		result = 0;
+	}
 
-	return 0;
+	return result;
 }
 
 int storage_binlog_write(const char op_type, const char *filename)

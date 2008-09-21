@@ -55,6 +55,7 @@ int storage_sync_destroy();
 int storage_binlog_write(const char op_type, const char *filename);
 
 int storage_sync_thread_start(const FDFSStorageBrief *pStorage);
+int kill_storage_sync_threads();
 
 #ifdef __cplusplus
 }
