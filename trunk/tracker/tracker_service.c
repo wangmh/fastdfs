@@ -73,7 +73,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 	{
 		pDestServer->status = (*ppServer)->status;
 		memcpy(pDestServer->ip_addr, (*ppServer)->ip_addr, \
-			FDFS_IPADDR_SIZE);
+			IP_ADDRESS_SIZE);
 		pDestServer++;
 	}
 
@@ -151,7 +151,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip addr: %s, " \
-				"package size "FDFS_INT64_FORMAT" " \
+				"package size "INT64_PRINTF_FORMAT" " \
 				"is not correct", \
 				__LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG, \
@@ -214,7 +214,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	if (nInPackLen != sizeof(body))
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"cmd: %d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
+			"cmd: %d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
 			"is not correct, expect length: %d.", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_JOIN, \
 			pClientInfo->ip_addr, nInPackLen, sizeof(body));
@@ -267,7 +267,7 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 {
 	TrackerStorageSyncReqBody body;
 	int status;
-	char sync_src_ip_addr[FDFS_IPADDR_SIZE];
+	char sync_src_ip_addr[IP_ADDRESS_SIZE];
 	bool bSaveStorages;
 
 	while (1)
@@ -275,7 +275,7 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 	if (nInPackLen != sizeof(body))
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"cmd: %d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
+			"cmd: %d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
 			"is not correct, expect length: %d.", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY, \
 			pClientInfo->ip_addr, nInPackLen, sizeof(body));
@@ -319,8 +319,8 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 
 	if (pClientInfo->pStorage->psync_src_server == NULL)
 	{
-		memcpy(sync_src_ip_addr, body.src_ip_addr, FDFS_IPADDR_SIZE);
-		sync_src_ip_addr[FDFS_IPADDR_SIZE-1] = '\0';
+		memcpy(sync_src_ip_addr, body.src_ip_addr, IP_ADDRESS_SIZE);
+		sync_src_ip_addr[IP_ADDRESS_SIZE-1] = '\0';
 
 		pClientInfo->pStorage->psync_src_server = \
 			tracker_mem_get_storage(pClientInfo->pGroup, \
@@ -406,7 +406,7 @@ static int tracker_deal_server_list_group_storages( \
 		if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
+				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
 				"is not correct, " \
 				"expect length: %d", \
 				__LINE__, \
@@ -449,7 +449,7 @@ static int tracker_deal_server_list_group_storages( \
 			pStorageStat = &((*ppServer)->stat);
 			pDest->status = (*ppServer)->status;
 			memcpy(pDest->ip_addr, (*ppServer)->ip_addr, \
-				FDFS_IPADDR_SIZE);
+				IP_ADDRESS_SIZE);
 			long2buff((*ppServer)->total_mb, pDest->sz_total_mb);
 			long2buff((*ppServer)->free_mb, pDest->sz_free_mb);
 
@@ -544,7 +544,7 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
+				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
 				"is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
@@ -558,7 +558,7 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
+				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
 				"is too large, " \
 				"expect length should < %d", \
 				__LINE__, \
@@ -624,9 +624,9 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 		memcpy(out_buff + sizeof(resp), pGroup->group_name, \
 				FDFS_GROUP_NAME_MAX_LEN);
 		memcpy(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN, \
-				pStorageServer->ip_addr, FDFS_IPADDR_SIZE-1);
+				pStorageServer->ip_addr, IP_ADDRESS_SIZE-1);
 		long2buff(pGroup->storage_port, out_buff + sizeof(resp) + \
-			FDFS_GROUP_NAME_MAX_LEN + FDFS_IPADDR_SIZE - 1);
+			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1);
 	}
 	else
 	{
@@ -670,7 +670,7 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
+				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
 				"is not correct, " \
 				"expect length: 0", \
 				__LINE__, \
@@ -834,9 +834,9 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 		memcpy(out_buff + sizeof(resp), pStoreGroup->group_name, \
 				FDFS_GROUP_NAME_MAX_LEN);
 		memcpy(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN, \
-				pStorageServer->ip_addr, FDFS_IPADDR_SIZE-1);
+				pStorageServer->ip_addr, IP_ADDRESS_SIZE-1);
 		long2buff(pStoreGroup->storage_port, out_buff + sizeof(resp) + \
-			FDFS_GROUP_NAME_MAX_LEN + FDFS_IPADDR_SIZE-1);
+			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE-1);
 	}
 	else
 	{
@@ -877,7 +877,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
+				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
 				"is not correct, " \
 				"expect length: 0", \
 				__LINE__, \
@@ -945,7 +945,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 				const int64_t nInPackLen)
 {
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageSyncReqBody)];
-	char dest_ip_addr[FDFS_IPADDR_SIZE];
+	char dest_ip_addr[IP_ADDRESS_SIZE];
 	TrackerHeader *pResp;
 	TrackerStorageSyncReqBody *pBody;
 	FDFSStorageDetail *pDestStorage;
@@ -958,16 +958,16 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 	out_len = sizeof(TrackerHeader);
 	while (1)
 	{
-		if (nInPackLen != FDFS_IPADDR_SIZE)
+		if (nInPackLen != IP_ADDRESS_SIZE)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
+				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
 				"is not correct, " \
 				"expect length: %d", \
 				__LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ, \
 				pClientInfo->ip_addr, nInPackLen, \
-				FDFS_IPADDR_SIZE);
+				IP_ADDRESS_SIZE);
 			pResp->status = EINVAL;
 			break;
 		}
@@ -985,7 +985,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		dest_ip_addr[FDFS_IPADDR_SIZE-1] = '\0';
+		dest_ip_addr[IP_ADDRESS_SIZE-1] = '\0';
 		pDestStorage = tracker_mem_get_storage(pClientInfo->pGroup, \
 				dest_ip_addr);
 		if (pDestStorage == NULL)
@@ -1053,7 +1053,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
+				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
 				"is not correct, " \
 				"expect length: 0", \
 				__LINE__, \
@@ -1202,7 +1202,7 @@ static int tracker_deal_storage_report(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != sizeof(TrackerStatReportReqBody))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
+				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
 				"is not correct, " \
 				"expect length: %d", \
 				__LINE__, \
@@ -1300,7 +1300,7 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != sizeof(FDFSStorageStatBuff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "FDFS_INT64_FORMAT" " \
+				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
 				"is not correct, " \
 				"expect length: 0 or %d", \
 				__LINE__, \
@@ -1445,7 +1445,7 @@ data buff (struct)
 	}
 	
 	client_ip = getPeerIpaddr(client_info.sock, \
-				client_info.ip_addr, FDFS_IPADDR_SIZE);
+				client_info.ip_addr, IP_ADDRESS_SIZE);
 	if (g_allow_ip_count >= 0)
 	{
 		if (bsearch(&client_ip, g_allow_ip_addrs, g_allow_ip_count, \

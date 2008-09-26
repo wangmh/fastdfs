@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 	{
 		printf( "\nGroup %d:\n" \
 			"group name = %s\n" \
-			"free space = "FDFS_INT64_FORMAT" GB\n" \
+			"free space = "INT64_PRINTF_FORMAT" GB\n" \
 			"storage server count = %d\n" \
 			"active server count = %d\n" \
 			"storage_port = %d\n" \
@@ -105,16 +105,16 @@ int main(int argc, char *argv[])
 				"\t\tip_addr = %s  %s\n" \
 				"\t\ttotal storage = %dGB\n" \
 				"\t\tfree storage = %dGB\n" \
-				"\t\ttotal_upload_count = "FDFS_INT64_FORMAT"\n"   \
-				"\t\tsuccess_upload_count = "FDFS_INT64_FORMAT"\n" \
-				"\t\ttotal_set_meta_count = "FDFS_INT64_FORMAT"\n" \
-				"\t\tsuccess_set_meta_count = "FDFS_INT64_FORMAT"\n" \
-				"\t\ttotal_delete_count = "FDFS_INT64_FORMAT"\n" \
-				"\t\tsuccess_delete_count = "FDFS_INT64_FORMAT"\n" \
-				"\t\ttotal_download_count = "FDFS_INT64_FORMAT"\n" \
-				"\t\tsuccess_download_count = "FDFS_INT64_FORMAT"\n" \
-				"\t\ttotal_get_meta_count = "FDFS_INT64_FORMAT"\n" \
-				"\t\tsuccess_get_meta_count = "FDFS_INT64_FORMAT"\n" \
+				"\t\ttotal_upload_count = "INT64_PRINTF_FORMAT"\n"   \
+				"\t\tsuccess_upload_count = "INT64_PRINTF_FORMAT"\n" \
+				"\t\ttotal_set_meta_count = "INT64_PRINTF_FORMAT"\n" \
+				"\t\tsuccess_set_meta_count = "INT64_PRINTF_FORMAT"\n" \
+				"\t\ttotal_delete_count = "INT64_PRINTF_FORMAT"\n" \
+				"\t\tsuccess_delete_count = "INT64_PRINTF_FORMAT"\n" \
+				"\t\ttotal_download_count = "INT64_PRINTF_FORMAT"\n" \
+				"\t\tsuccess_download_count = "INT64_PRINTF_FORMAT"\n" \
+				"\t\ttotal_get_meta_count = "INT64_PRINTF_FORMAT"\n" \
+				"\t\tsuccess_get_meta_count = "INT64_PRINTF_FORMAT"\n" \
 				"\t\tlast_source_update = %s\n" \
 				"\t\tlast_sync_update = %s\n",  \
 				++k, pStorage->ip_addr, \

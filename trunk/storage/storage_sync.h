@@ -24,7 +24,7 @@ extern "C" {
 
 typedef struct
 {
-	char ip_addr[FDFS_IPADDR_SIZE];
+	char ip_addr[IP_ADDRESS_SIZE];
 	bool need_sync_old;
 	bool sync_old_done;
 	time_t until_timestamp;

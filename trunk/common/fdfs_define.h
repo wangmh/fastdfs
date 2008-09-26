@@ -45,12 +45,12 @@ typedef void * (*ThreadEntranceFunc)(LPVOID lpThreadParameter);
 
 #ifdef OS_BITS
   #if OS_BITS == 64
-    #define FDFS_INT64_FORMAT   "%ld"
+    #define INT64_PRINTF_FORMAT   "%ld"
   #else
-    #define FDFS_INT64_FORMAT   "%lld"
+    #define INT64_PRINTF_FORMAT   "%lld"
   #endif
 #else
-  #define FDFS_INT64_FORMAT   "%lld"
+  #define INT64_PRINTF_FORMAT   "%lld"
 #endif
 
 extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
@@ -73,7 +73,7 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 #define TRACKER_ERROR_LOG_FILENAME      "trackerd"
 #define STORAGE_ERROR_LOG_FILENAME      "storaged"
 
-#define FDFS_IPADDR_SIZE	16
+#define IP_ADDRESS_SIZE	16
 
 #define FDFS_RECORD_SEPERATOR	'\x01'
 #define FDFS_FIELD_SEPERATOR	'\x02'

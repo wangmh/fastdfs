@@ -180,7 +180,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes % sizeof(TrackerStorageStat) != 0)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: "FDFS_INT64_FORMAT" is invalid.", \
+			"length: "INT64_PRINTF_FORMAT" is invalid.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes);
 		*storage_count = 0;
@@ -208,7 +208,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 
 		pDest->status = pSrc->status;
 		memcpy(pDest->ip_addr, pSrc->ip_addr, \
-				FDFS_IPADDR_SIZE - 1);
+				IP_ADDRESS_SIZE - 1);
 		pDest->total_mb = buff2long(pSrc->sz_total_mb);
 		pDest->free_mb = buff2long(pSrc->sz_free_mb);
 
@@ -282,7 +282,7 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes % sizeof(TrackerGroupStat) != 0)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: "FDFS_INT64_FORMAT" is invalid.", \
+			"length: "INT64_PRINTF_FORMAT" is invalid.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes);
 		*group_count = 0;
@@ -369,7 +369,7 @@ int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes != TRACKER_QUERY_STORAGE_BODY_LEN)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: "FDFS_INT64_FORMAT" is invalid, expect length: %d.", \
+			"length: "INT64_PRINTF_FORMAT" is invalid, expect length: %d.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
 			TRACKER_QUERY_STORAGE_BODY_LEN);
@@ -379,9 +379,9 @@ int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
 	memcpy(pStorageServer->group_name, in_buff, \
 			FDFS_GROUP_NAME_MAX_LEN);
 	memcpy(pStorageServer->ip_addr, in_buff + \
-			FDFS_GROUP_NAME_MAX_LEN, FDFS_IPADDR_SIZE-1);
+			FDFS_GROUP_NAME_MAX_LEN, IP_ADDRESS_SIZE-1);
 	pStorageServer->port = (int)buff2long(in_buff + \
-			FDFS_GROUP_NAME_MAX_LEN + FDFS_IPADDR_SIZE - 1);
+			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1);
 	return 0;
 }
 
@@ -421,7 +421,7 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes != TRACKER_QUERY_STORAGE_BODY_LEN)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: "FDFS_INT64_FORMAT" is invalid, expect length: %d.", \
+			"length: "INT64_PRINTF_FORMAT" is invalid, expect length: %d.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
 			TRACKER_QUERY_STORAGE_BODY_LEN);
@@ -431,8 +431,8 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 	memcpy(pStorageServer->group_name, in_buff, \
 			FDFS_GROUP_NAME_MAX_LEN);
 	memcpy(pStorageServer->ip_addr, in_buff + \
-			FDFS_GROUP_NAME_MAX_LEN, FDFS_IPADDR_SIZE-1);
+			FDFS_GROUP_NAME_MAX_LEN, IP_ADDRESS_SIZE-1);
 	pStorageServer->port = (int)buff2long(in_buff + \
-				FDFS_GROUP_NAME_MAX_LEN + FDFS_IPADDR_SIZE - 1);
+				FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1);
 	return 0;
 } 

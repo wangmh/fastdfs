@@ -295,7 +295,7 @@ static int tracker_load_storages(const char *data_path)
 		pStorageSyncs[nStorageSyncCount].pGroup = clientInfo.pGroup;
 		pStorageSyncs[nStorageSyncCount].pStorage = clientInfo.pStorage;
 		snprintf(pStorageSyncs[nStorageSyncCount].sync_src_ip_addr, \
-			FDFS_IPADDR_SIZE, "%s", psync_src_ip_addr);
+			IP_ADDRESS_SIZE, "%s", psync_src_ip_addr);
 		nStorageSyncCount++;
 
 	}
@@ -445,16 +445,16 @@ int tracker_save_storages()
 				"%d%c" \
 				"%s%c" \
 				"%d%c" \
-				FDFS_INT64_FORMAT"%c" \
-				FDFS_INT64_FORMAT"%c" \
-				FDFS_INT64_FORMAT"%c" \
-				FDFS_INT64_FORMAT"%c" \
-				FDFS_INT64_FORMAT"%c" \
-				FDFS_INT64_FORMAT"%c" \
-				FDFS_INT64_FORMAT"%c" \
-				FDFS_INT64_FORMAT"%c" \
-				FDFS_INT64_FORMAT"%c" \
-				FDFS_INT64_FORMAT"%c" \
+				INT64_PRINTF_FORMAT"%c" \
+				INT64_PRINTF_FORMAT"%c" \
+				INT64_PRINTF_FORMAT"%c" \
+				INT64_PRINTF_FORMAT"%c" \
+				INT64_PRINTF_FORMAT"%c" \
+				INT64_PRINTF_FORMAT"%c" \
+				INT64_PRINTF_FORMAT"%c" \
+				INT64_PRINTF_FORMAT"%c" \
+				INT64_PRINTF_FORMAT"%c" \
+				INT64_PRINTF_FORMAT"%c" \
 				"%d%c" \
 				"%d\n", \
 				(*ppGroup)->group_name, \
@@ -1277,7 +1277,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 			pStorageServer = pClientInfo->pGroup->all_servers \
 					 + pClientInfo->pGroup->count;
 			memcpy(pStorageServer->ip_addr, pClientInfo->ip_addr,
-				FDFS_IPADDR_SIZE);
+				IP_ADDRESS_SIZE);
 
 			tracker_mem_insert_into_sorted_servers( \
 				pStorageServer, \
@@ -1419,9 +1419,9 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 		pEnd = briefServers + server_count;
 		for (pServer=briefServers; pServer<pEnd; pServer++)
 		{
-			pServer->ip_addr[FDFS_IPADDR_SIZE-1] = '\0';
+			pServer->ip_addr[IP_ADDRESS_SIZE-1] = '\0';
 			memcpy(target_storage.ip_addr, pServer->ip_addr, \
-				FDFS_IPADDR_SIZE);
+				IP_ADDRESS_SIZE);
 			pTargetStorage = &target_storage;
 			if ((ppFound=(FDFSStorageDetail **)bsearch( \
 				&pTargetStorage, \
@@ -1445,7 +1445,7 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 
 			pStorageServer->status = pServer->status;
 			memcpy(pStorageServer->ip_addr, pServer->ip_addr, \
-				FDFS_IPADDR_SIZE);
+				IP_ADDRESS_SIZE);
 
 			tracker_mem_insert_into_sorted_servers( \
 				pStorageServer, \

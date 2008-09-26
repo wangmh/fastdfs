@@ -29,7 +29,7 @@ int g_stat_change_count = 1;
 
 int g_storage_join_time = 0;
 bool g_sync_old_done = false;
-char g_sync_src_ip_addr[FDFS_IPADDR_SIZE] = {0};
+char g_sync_src_ip_addr[IP_ADDRESS_SIZE] = {0};
 int g_sync_until_timestamp = 0;
 
 int g_tracker_server_count = 0;
@@ -37,7 +37,7 @@ TrackerServerInfo *g_tracker_servers = NULL;
 
 int g_local_host_ip_count = 0;
 char g_local_host_ip_addrs[STORAGE_MAX_LOCAL_IP_ADDRS * \
-				FDFS_IPADDR_SIZE];
+				IP_ADDRESS_SIZE];
 
 int g_allow_ip_count = 0;
 in_addr_t *g_allow_ip_addrs = NULL;
@@ -48,8 +48,8 @@ bool is_local_host_ip(const char *client_ip)
 	char *pEnd;
 
 	pEnd = g_local_host_ip_addrs + \
-		FDFS_IPADDR_SIZE * g_local_host_ip_count;
-	for (p=g_local_host_ip_addrs; p<pEnd; p+=FDFS_IPADDR_SIZE)
+		IP_ADDRESS_SIZE * g_local_host_ip_count;
+	for (p=g_local_host_ip_addrs; p<pEnd; p+=IP_ADDRESS_SIZE)
 	{
 		if (strcmp(client_ip, p) == 0)
 		{
@@ -73,7 +73,7 @@ int insert_into_local_host_ip(const char *client_ip)
 	}
 
 	strcpy(g_local_host_ip_addrs + \
-		FDFS_IPADDR_SIZE * g_local_host_ip_count, \
+		IP_ADDRESS_SIZE * g_local_host_ip_count, \
 		client_ip);
 	g_local_host_ip_count++;
 	return 1;
@@ -83,7 +83,7 @@ void load_local_host_ip_addrs()
 {
 	struct hostent *ent;
 	char hostname[128];
-	char ip_addr[FDFS_IPADDR_SIZE];
+	char ip_addr[IP_ADDRESS_SIZE];
 	int k;
 
 	insert_into_local_host_ip("127.0.0.1");
@@ -122,11 +122,11 @@ void print_local_host_ip_addrs()
 
 	printf("local_host_ip_count=%d\n", g_local_host_ip_count);
 	pEnd = g_local_host_ip_addrs + \
-		FDFS_IPADDR_SIZE * g_local_host_ip_count;
-	for (p=g_local_host_ip_addrs; p<pEnd; p+=FDFS_IPADDR_SIZE)
+		IP_ADDRESS_SIZE * g_local_host_ip_count;
+	for (p=g_local_host_ip_addrs; p<pEnd; p+=IP_ADDRESS_SIZE)
 	{
 		printf("%d. %s\n", (int)((p-g_local_host_ip_addrs)/ \
-				FDFS_IPADDR_SIZE)+1, p);
+				IP_ADDRESS_SIZE)+1, p);
 	}
 
 	printf("\n");
