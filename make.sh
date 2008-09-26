@@ -18,9 +18,9 @@ else
  OS_BITS=32
 fi
 
-cat <<EOF > common/fdfs_os_bits.h
-#ifndef _FDFS_OS_BITS
-#define _FDFS_OS_BITS
+cat <<EOF > common/_os_bits.h
+#ifndef _OS_BITS_H
+#define _OS_BITS_H
 
 #define OS_BITS  $OS_BITS
 
