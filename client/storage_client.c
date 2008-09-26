@@ -523,7 +523,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes <= FDFS_GROUP_NAME_MAX_LEN)
 	{
 		logError("storage server %s:%d response data " \
-			"length: "FDFS_INT64_FORMAT" is invalid, should > %d.", \
+			"length: "INT64_PRINTF_FORMAT" is invalid, should > %d.", \
 			pStorageServer->ip_addr, pStorageServer->port, \
 			in_bytes, FDFS_GROUP_NAME_MAX_LEN);
 		result = EINVAL;

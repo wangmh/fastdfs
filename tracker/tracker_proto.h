@@ -49,7 +49,7 @@
 #define FDFS_PROTO_CMD_SIZE		1
 
 #define TRACKER_QUERY_STORAGE_BODY_LEN	FDFS_GROUP_NAME_MAX_LEN \
-			+ FDFS_IPADDR_SIZE - 1 + FDFS_PROTO_PKG_LEN_SIZE
+			+ IP_ADDRESS_SIZE - 1 + FDFS_PROTO_PKG_LEN_SIZE
 
 typedef struct
 {
@@ -78,7 +78,7 @@ typedef struct
 typedef struct
 {
 	char status;
-	char ip_addr[FDFS_IPADDR_SIZE];
+	char ip_addr[IP_ADDRESS_SIZE];
 	char sz_total_mb[8];
 	char sz_free_mb[8];
 	FDFSStorageStatBuff stat_buff;
@@ -86,7 +86,7 @@ typedef struct
 
 typedef struct
 {
-	char src_ip_addr[FDFS_IPADDR_SIZE];
+	char src_ip_addr[IP_ADDRESS_SIZE];
 	char until_timestamp[FDFS_PROTO_PKG_LEN_SIZE];
 } TrackerStorageSyncReqBody;
 

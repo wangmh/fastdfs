@@ -18,7 +18,7 @@ extern "C" {
 typedef struct
 {
         char status;
-        char ip_addr[FDFS_IPADDR_SIZE];
+        char ip_addr[IP_ADDRESS_SIZE];
 	int total_mb;  //total disk storage in MB
 	int free_mb;  //free disk storage in MB
         FDFSStorageStat stat;

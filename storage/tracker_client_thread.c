@@ -96,7 +96,7 @@ int kill_tracker_report_threads()
 static void* tracker_report_thread_entrance(void* arg)
 {
 	TrackerServerInfo *pTrackerServer;
-	char tracker_client_ip[FDFS_IPADDR_SIZE];
+	char tracker_client_ip[IP_ADDRESS_SIZE];
 	char szFailPrompt[36];
 	bool sync_old_done;
 	int stat_chg_sync_count;
@@ -193,7 +193,7 @@ static void* tracker_report_thread_entrance(void* arg)
 		nContinuousFail = 0;
 
 		getSockIpaddr(pTrackerServer->sock, \
-				tracker_client_ip, FDFS_IPADDR_SIZE);
+				tracker_client_ip, IP_ADDRESS_SIZE);
 		insert_into_local_host_ip(tracker_client_ip);
 
 		/*
@@ -609,7 +609,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
-			"package size "FDFS_INT64_FORMAT" is not correct", \
+			"package size "INT64_PRINTF_FORMAT" is not correct", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, nInPackLen);
 		return EINVAL;
@@ -662,8 +662,8 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer)
 int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 			BinLogReader *pReader)
 {
-	char out_buff[sizeof(TrackerHeader) + FDFS_IPADDR_SIZE];
-	char sync_src_ip_addr[FDFS_IPADDR_SIZE];
+	char out_buff[sizeof(TrackerHeader) + IP_ADDRESS_SIZE];
+	char sync_src_ip_addr[IP_ADDRESS_SIZE];
 	TrackerHeader *pHeader;
 	TrackerStorageSyncReqBody syncReqbody;
 	char *pBuff;
@@ -672,7 +672,7 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 
 	memset(out_buff, 0, sizeof(out_buff));
 	pHeader = (TrackerHeader *)out_buff;
-	long2buff(FDFS_IPADDR_SIZE, pHeader->pkg_len);
+	long2buff(IP_ADDRESS_SIZE, pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ;
 	strcpy(out_buff + sizeof(TrackerHeader), pReader->ip_addr);
 	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \
@@ -706,7 +706,7 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
-			"recv body length: "FDFS_INT64_FORMAT" is invalid, " \
+			"recv body length: "INT64_PRINTF_FORMAT" is invalid, " \
 			"expect body length: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
@@ -714,8 +714,8 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 		return EINVAL;
 	}
 
-	memcpy(sync_src_ip_addr, syncReqbody.src_ip_addr, FDFS_IPADDR_SIZE);
-	sync_src_ip_addr[FDFS_IPADDR_SIZE-1] = '\0';
+	memcpy(sync_src_ip_addr, syncReqbody.src_ip_addr, IP_ADDRESS_SIZE);
+	sync_src_ip_addr[IP_ADDRESS_SIZE-1] = '\0';
 
 	pReader->need_sync_old = is_local_host_ip(sync_src_ip_addr);
        	pReader->until_timestamp = (time_t)buff2long( \
@@ -762,7 +762,7 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
-			"recv body length: "FDFS_INT64_FORMAT" is invalid, " \
+			"recv body length: "INT64_PRINTF_FORMAT" is invalid, " \
 			"expect body length: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
@@ -770,8 +770,8 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 		return EINVAL;
 	}
 
-	memcpy(g_sync_src_ip_addr, syncReqbody.src_ip_addr, FDFS_IPADDR_SIZE);
-	g_sync_src_ip_addr[FDFS_IPADDR_SIZE-1] = '\0';
+	memcpy(g_sync_src_ip_addr, syncReqbody.src_ip_addr, IP_ADDRESS_SIZE);
+	g_sync_src_ip_addr[IP_ADDRESS_SIZE-1] = '\0';
 
 	g_sync_until_timestamp = (time_t)buff2long(syncReqbody.until_timestamp);
 

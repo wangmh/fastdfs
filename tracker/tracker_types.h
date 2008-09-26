@@ -44,7 +44,7 @@
 typedef struct
 {
 	char status;
-	char ip_addr[FDFS_IPADDR_SIZE];
+	char ip_addr[IP_ADDRESS_SIZE];
 } FDFSStorageBrief;
 
 typedef struct
@@ -98,7 +98,7 @@ typedef struct StructFDFSStorageDetail
 {
 	char status;
 	bool dirty;
-	char ip_addr[FDFS_IPADDR_SIZE];
+	char ip_addr[IP_ADDRESS_SIZE];
 
 	struct StructFDFSStorageDetail *psync_src_server;
 	time_t sync_until_timestamp;
@@ -147,7 +147,7 @@ typedef struct
 {
 	int sock;
 	int port;
-	char ip_addr[FDFS_IPADDR_SIZE];
+	char ip_addr[IP_ADDRESS_SIZE];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 } TrackerServerInfo;
 
@@ -155,7 +155,7 @@ typedef struct
 {
 	int sock;
 	int storage_port;
-	char ip_addr[FDFS_IPADDR_SIZE];
+	char ip_addr[IP_ADDRESS_SIZE];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	FDFSGroupInfo *pGroup;
 	FDFSStorageDetail *pStorage;
@@ -166,7 +166,7 @@ typedef struct
 typedef struct
 {
 	int sock;
-	char ip_addr[FDFS_IPADDR_SIZE];
+	char ip_addr[IP_ADDRESS_SIZE];
 } StorageClientInfo;
 
 typedef struct
@@ -179,7 +179,7 @@ typedef struct
 {
 	FDFSGroupInfo *pGroup;
 	FDFSStorageDetail *pStorage;
-	char sync_src_ip_addr[FDFS_IPADDR_SIZE];
+	char sync_src_ip_addr[IP_ADDRESS_SIZE];
 } FDFSStorageSync;
 
 #endif

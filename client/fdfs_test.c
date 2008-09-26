@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
 			if (result == 0)
 			{
 				printf("download file success, " \
-					"file size="FDFS_INT64_FORMAT", file save to %s\n", \
+					"file size="INT64_PRINTF_FORMAT", file save to %s\n", \
 					 file_size, local_filename);
 			}
 			else

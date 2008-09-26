@@ -39,7 +39,7 @@ void sigUsrHandler(int sig);
 int main(int argc, char *argv[])
 {
 	char *conf_filename;
-	char bind_addr[FDFS_IPADDR_SIZE];
+	char bind_addr[IP_ADDRESS_SIZE];
 	int result;
 	int sock;
 	pthread_t *tids;
