@@ -6,10 +6,10 @@
 * Please visit the FastDFS Home Page http://www.csource.org/ for more detail.
 **/
 
-//global.h
+//fdfs_global.h
 
-#ifndef _GLOBAL_H
-#define _GLOBAL_H
+#ifndef _FDFS_GLOBAL_H
+#define _FDFS_GLOBAL_H
 
 #include "fdfs_define.h"
 
