@@ -11,7 +11,7 @@
 #ifndef _FDFS_BASE64_H
 #define _FDFS_BASE64_H
 
-#include "fdfs_define.h"
+#include "common_define.h"
 
 #ifdef __cplusplus
 extern "C" {
