@@ -651,7 +651,7 @@ int storage_load_from_conf_file(const char *filename, \
 			break;
 		}
 
-		fdfs_load_log_level(items, nItemCount);
+		load_log_level(items, nItemCount);
 		if ((result=log_init(STORAGE_ERROR_LOG_FILENAME)) != 0)
 		{
 			break;
@@ -788,7 +788,7 @@ int storage_load_from_conf_file(const char *filename, \
 			return result;
 		}
 
-		if ((result=fdfs_load_allow_hosts(items, nItemCount, \
+		if ((result=load_allow_hosts(items, nItemCount, \
                 	 &g_allow_ip_addrs, &g_allow_ip_count)) != 0)
 		{
 			return result;
