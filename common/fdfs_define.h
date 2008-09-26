@@ -8,8 +8,8 @@
 
 //fdfs_define.h
 
-#ifndef _DEFINE_H_
-#define _DEFINE_H_
+#ifndef _FDFS_DEFINE_H_
+#define _FDFS_DEFINE_H_
 
 #include <pthread.h>
 

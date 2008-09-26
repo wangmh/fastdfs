@@ -8,8 +8,8 @@
 
 //fdfs_base64.h
 
-#ifndef BASE64_H
-#define BASE64_H
+#ifndef _FDFS_BASE64_H
+#define _FDFS_BASE64_H
 
 #include "fdfs_define.h"
 
