@@ -13,7 +13,7 @@
 #include "storage_global.h"
 
 int g_server_port = FDFS_STORAGE_SERVER_DEF_PORT;
-int g_max_connections = FDFS_DEF_MAX_CONNECTONS;
+int g_max_connections = DEFAULT_MAX_CONNECTONS;
 
 int g_storage_count = 0;
 FDFSStorageBrief g_storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];

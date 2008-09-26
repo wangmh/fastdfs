@@ -68,7 +68,7 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 #define DEFAULT_NETWORK_TIMEOUT			30
 #define FDFS_TRACKER_SERVER_DEF_PORT		22000
 #define FDFS_STORAGE_SERVER_DEF_PORT		23000
-#define FDFS_DEF_MAX_CONNECTONS			256
+#define DEFAULT_MAX_CONNECTONS			256
 #define FDFS_DEF_STORAGE_RESERVED_MB		1024
 #define TRACKER_ERROR_LOG_FILENAME      "trackerd"
 #define STORAGE_ERROR_LOG_FILENAME      "storaged"

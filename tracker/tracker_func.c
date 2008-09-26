@@ -229,10 +229,10 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 
 		g_max_connections = iniGetIntValue("max_connections", \
-				items, nItemCount, FDFS_DEF_MAX_CONNECTONS);
+				items, nItemCount, DEFAULT_MAX_CONNECTONS);
 		if (g_max_connections <= 0)
 		{
-			g_max_connections = FDFS_DEF_MAX_CONNECTONS;
+			g_max_connections = DEFAULT_MAX_CONNECTONS;
 		}
 	
 		if ((result=set_rlimit(RLIMIT_NOFILE, g_max_connections)) != 0)
