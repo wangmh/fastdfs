@@ -1554,3 +1554,37 @@ int kill_work_threads(pthread_t *tids, const int count)
 	return 0;
 }
 
+int parse_bytes(char *pStr, int64_t *bytes)
+{
+	char *pReservedEnd;
+
+	pReservedEnd = NULL;
+	*bytes = strtol(pStr, &pReservedEnd, 10);
+	if (*bytes < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"bytes: "INT64_PRINTF_FORMAT" < 0", \
+			__LINE__, *bytes);
+		return EINVAL;
+	}
+
+	if (pReservedEnd == NULL || *pReservedEnd == '\0')
+	{
+		*bytes *= 1024 * 1024;
+	}
+	else if (*pReservedEnd == 'G' || *pReservedEnd == 'g')
+	{
+		*bytes *= 1024 * 1024 * 1024;
+	}
+	else if (*pReservedEnd == 'M' || *pReservedEnd == 'm')
+	{
+		*bytes *= 1024 * 1024;
+	}
+	else if (*pReservedEnd == 'K' || *pReservedEnd == 'k')
+	{
+		*bytes *= 1024;
+	}
+
+	return 0;
+}
+

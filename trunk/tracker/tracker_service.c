@@ -1451,11 +1451,9 @@ data buff (struct)
 		if (bsearch(&client_ip, g_allow_ip_addrs, g_allow_ip_count, \
 			sizeof(in_addr_t), cmp_by_ip_addr_t) == NULL)
 		{
-			struct in_addr address;
-			address.s_addr = client_ip;
 			logError("file: "__FILE__", line: %d, " \
 				"ip addr %s is not allowed to access", \
-				__LINE__, inet_ntoa(address));
+				__LINE__, client_info.ip_addr);
 
 			close(client_info.sock);
 			continue;
