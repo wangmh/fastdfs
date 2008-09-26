@@ -7,7 +7,7 @@
 **/
 
 //socketopt.c
-#include "fdfs_define.h"
+#include "common_define.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

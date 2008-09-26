@@ -18,7 +18,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/file.h>
-#include "fdfs_define.h"
+#include "common_define.h"
 #include "fdfs_global.h"
 #include "shared_func.h"
 #include "logger.h"

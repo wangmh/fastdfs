@@ -9,7 +9,7 @@
 #ifndef CHAIN_H
 #define CHAIN_H
 
-#include "fdfs_define.h"
+#include "common_define.h"
 
 #define CHAIN_TYPE_INSERT	0
 #define CHAIN_TYPE_APPEND	1

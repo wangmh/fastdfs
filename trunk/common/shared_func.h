@@ -16,7 +16,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include "fdfs_define.h"
+#include "common_define.h"
 #include "ini_file_reader.h"
 
 #ifdef __cplusplus
@@ -64,8 +64,6 @@ void freeSplit(char **p);
 
 int splitEx(char *src, const char seperator, char **pCols, const int nMaxCols);
 int my_strtok(char *src, const char *delim, char **pCols, const int nMaxCols);
-
-FILE *openConfFile(const char *szFilename);
 
 bool fileExists(const char *filename);
 bool isDir(const char *filename);

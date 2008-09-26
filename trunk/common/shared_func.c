@@ -685,17 +685,6 @@ char int2base62(const int i)
   return base62[i];
 }
 
-FILE *openConfFile(const char *szFilename)
-{
-	FILE *fp;
-	char szFullFilename[256];
-	
-	sprintf(szFullFilename, FDFS_BASE_FILE_PATH"%s", szFilename);
-	fp = fopen(szFullFilename, "r");
-	
-	return fp;
-}
-
 bool fileExists(const char *filename)
 {
 	return access(filename, 0) == 0;
