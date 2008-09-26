@@ -7,7 +7,7 @@ LIB_PATH = -L/usr/local/lib
 TARGET_PATH = /usr/local/bin
 
 COMMON_LIB =
-SHARED_OBJS = hash.o fdfs_define.o chain.o shared_func.o ini_file_reader.o \
+SHARED_OBJS = hash.o chain.o shared_func.o ini_file_reader.o \
               logger.o sockopt.o fdfs_global.o fdfs_base64.o
 ALL_OBJS = $(SHARED_OBJS)
 
