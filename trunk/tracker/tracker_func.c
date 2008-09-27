@@ -184,6 +184,19 @@ int tracker_load_from_conf_file(const char *filename, \
 			break;
 		}
 
+		g_groups.store_server = iniGetIntValue("store_server", \
+			items, nItemCount, FDFS_STORE_SERVER_FIRST);
+		if (!(g_groups.store_server == FDFS_STORE_SERVER_FIRST || \
+			g_groups.store_server == FDFS_STORE_SERVER_ROUND_ROBIN))
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"store_server 's value %d is invalid, " \
+				"set to %d (use the first server)!", \
+				__LINE__, g_groups.store_server, \
+				FDFS_STORE_SERVER_FIRST);
+			g_groups.store_server = FDFS_STORE_SERVER_FIRST;
+		}
+
 		pStorageReserved = iniGetStrValue("reserved_storage_space", \
 						items, nItemCount);
 		if (pStorageReserved == NULL)
@@ -260,6 +273,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			"port=%d, bind_addr=%s, " \
 			"max_connections=%d, "    \
 			"store_lookup=%d, store_group=%s, " \
+			"store_server=%d, " \
 			"reserved_storage_space=%dMB, " \
 			"allow_ip_count=%d", \
 			g_version.major, g_version.minor,  \
@@ -267,6 +281,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_groups.store_lookup, g_groups.store_group, \
+			g_groups.store_server, \
 			g_storage_reserved_mb, g_allow_ip_count);
 		break;
 	}
