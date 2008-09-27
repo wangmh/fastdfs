@@ -37,9 +37,14 @@
 #define FDFS_STORAGE_STATUS_ONLINE	  5
 #define FDFS_STORAGE_STATUS_ACTIVE	  6
 
+//which group to upload file
 #define FDFS_STORE_LOOKUP_ROUND_ROBIN	0  //round robin
 #define FDFS_STORE_LOOKUP_SPEC_GROUP	1  //specify group
 #define FDFS_STORE_LOOKUP_LOAD_BALANCE	2  //load balance
+
+//which server to upload file
+#define FDFS_STORE_SERVER_ROUND_ROBIN	0  //round robin
+#define FDFS_STORE_SERVER_FIRST		1  //the first server
 
 typedef struct
 {
@@ -139,7 +144,8 @@ typedef struct
 	FDFSGroupInfo **sorted_groups; //order by group_name
 	FDFSGroupInfo *pStoreGroup;
 	int current_write_group;
-	byte store_lookup;
+	byte store_lookup;  //store to which group
+	byte store_server;  //store to which server
 	char store_group[FDFS_GROUP_NAME_MAX_LEN + 1];
 } FDFSGroups;
 

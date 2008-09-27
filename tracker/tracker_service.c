@@ -804,10 +804,22 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (pStoreGroup->current_write_server >= \
-				pStoreGroup->active_count)
+		if (g_groups.store_server == FDFS_STORE_SERVER_ROUND_ROBIN)
 		{
-			pStoreGroup->current_write_server = 0;
+			if (pStoreGroup->current_write_server >= \
+					pStoreGroup->active_count)
+			{
+				pStoreGroup->current_write_server = 0;
+			}
+
+
+			pStorageServer = *(pStoreGroup->active_servers + \
+					   pStoreGroup->current_write_server);
+			pStoreGroup->current_write_server++;
+		}
+		else //use the first server
+		{
+			pStorageServer = *(pStoreGroup->active_servers);
 		}
 
 		/*
@@ -817,9 +829,6 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 			pStoreGroup->active_count);
 		*/
 
-		pStorageServer = *(pStoreGroup->active_servers + \
-				   pStoreGroup->current_write_server);
-		pStoreGroup->current_write_server++;
 		resp.status = 0;
 		break;
 	}
