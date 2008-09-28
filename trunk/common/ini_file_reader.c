@@ -18,7 +18,10 @@
 #include "ini_file_reader.h"
 
 #define _LINE_BUFFER_SIZE	512
-#define _ALLOC_ITEMS_ONCE	  8
+#define _ALLOC_ITEMS_ONCE	8
+
+static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
+		int *nItemCount, int *nAllocItems);
 
 int compareByItemName(const void *p1, const void *p2)
 {
@@ -27,46 +30,136 @@ int compareByItemName(const void *p1, const void *p2)
 
 int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 {
-	FILE *fp;
-	IniItemInfo *items;
-	IniItemInfo *pItem;
 	int alloc_items;
-	char szLineBuff[_LINE_BUFFER_SIZE + 1];
-	char *pEqualChar;
-	int nNameLen;
-	int nValueLen;
+	int result;
+	char *pLast;
 
-	alloc_items = _ALLOC_ITEMS_ONCE; 
-	items = (IniItemInfo *)malloc(sizeof(IniItemInfo) * alloc_items);
-	if (items == NULL)
+	pLast = strrchr(szFilename, '/');
+	if (pLast != NULL)
 	{
-		*nItemCount = -1;
-		*ppItems = NULL;
+		char path[256];
+		int len;
 
+		len = pLast - szFilename;
+		if (len >= sizeof(path))
+		{
+			len = sizeof(path) - 1;
+		}
+
+		memcpy(path, szFilename, len);
+		*(path + len) = '\0';
+		if (chdir(path) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"chdir to the path of conf file: %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, szFilename, errno, strerror(errno));
+			return errno != 0 ? errno : ENOENT;
+		}
+	}
+
+	*nItemCount = 0;
+	alloc_items = _ALLOC_ITEMS_ONCE;
+	*ppItems = (IniItemInfo *)malloc(sizeof(IniItemInfo) * alloc_items);
+	if (*ppItems == NULL)
+	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
 			sizeof(IniItemInfo) * alloc_items);
 		return errno != 0 ? errno : ENOMEM;
 	}
-	
+
+	memset(*ppItems, 0, sizeof(IniItemInfo) * alloc_items);
+	result = iniDoLoadItems(szFilename, ppItems, nItemCount, &alloc_items);
+	if (result != 0)
+	{
+		if (*ppItems != NULL)
+		{
+			free(*ppItems);
+			*ppItems = NULL;
+		}
+		*nItemCount = 0;
+	}
+	else
+	{
+		qsort(*ppItems, *nItemCount, sizeof(IniItemInfo), \
+			compareByItemName);
+	}
+
+	return result;
+}
+
+static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
+		int *nItemCount, int *nAllocItems)
+{
+	FILE *fp;
+	IniItemInfo *pItem;
+	char szLineBuff[_LINE_BUFFER_SIZE + 1];
+	char *pEqualChar;
+	char *pIncludeFilename;
+	int nNameLen;
+	int nValueLen;
+	int result;
+
 	if ((fp = fopen(szFilename, "r")) == NULL)
 	{
-		free(items);
-		*nItemCount = -1;
-		*ppItems = NULL;
+		logError("file: "__FILE__", line: %d, " \
+			"open conf file \"%s\" fail, " \
+			"errno: %d, error info: %s",  \
+			__LINE__, szFilename, errno, strerror(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 	
-	memset(items, 0, sizeof(IniItemInfo) * alloc_items);
 	memset(szLineBuff, 0, sizeof(szLineBuff));
 
-	pItem = items;
-	*nItemCount = 0;
+	result = 0;
+	pItem = *ppItems + (*nItemCount);
 	while (1)
 	{
 		if (fgets(szLineBuff, _LINE_BUFFER_SIZE, fp) == NULL)
 		{
 			break;
+		}
+
+		if (*szLineBuff == '#' && \
+			strncasecmp(szLineBuff+1, "include", 7) == 0 && \
+			(*(szLineBuff+8) == ' ' || *(szLineBuff+8) == '\t'))
+		{
+			pIncludeFilename = strdup(szLineBuff + 9);
+			if (pIncludeFilename == NULL)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"strdup %d bytes fail", __LINE__, \
+					strlen(szLineBuff + 9) + 1);
+				result = errno != 0 ? errno : ENOMEM;
+				break;
+			}
+
+			trim(pIncludeFilename);
+			if (fileExists(pIncludeFilename))
+			{
+				result = iniDoLoadItems(pIncludeFilename, \
+					ppItems, nItemCount, nAllocItems);
+				if (result != 0)
+				{
+					free(pIncludeFilename);
+					break;
+				}
+			}
+			else
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"include file \"%s\" not exists, " \
+					"line: \"%s\"", __LINE__, \
+					pIncludeFilename, szLineBuff);
+				free(pIncludeFilename);
+				result = ENOENT;
+				break;
+			}
+
+			pItem = (*ppItems) + (*nItemCount);  //must re-asign
+			free(pIncludeFilename);
+			continue;
 		}
 
 		trim(szLineBuff);
@@ -93,26 +186,23 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 			nValueLen = INI_ITEM_VALUE_LEN;
 		}
 	
-		if (*nItemCount >= alloc_items)
+		if (*nItemCount >= *nAllocItems)
 		{
-			alloc_items += _ALLOC_ITEMS_ONCE;
-			items = (IniItemInfo *)realloc(items, 
-				sizeof(IniItemInfo) * alloc_items);
-			if (items == NULL)
+			(*nAllocItems) += _ALLOC_ITEMS_ONCE;
+			*ppItems = (IniItemInfo *)realloc(*ppItems, 
+				sizeof(IniItemInfo) * (*nAllocItems));
+			if (*ppItems == NULL)
 			{
-				fclose(fp);
-				*nItemCount = -1;
-				*ppItems = NULL;
-
 				logError("file: "__FILE__", line: %d, " \
 					"realloc %d bytes fail", __LINE__, \
-					sizeof(IniItemInfo) * alloc_items);
-				return errno != 0 ? errno : ENOMEM;
+					sizeof(IniItemInfo) * (*nAllocItems));
+				result = errno != 0 ? errno : ENOMEM;
+				break;
 			}
 
-			pItem = items + (*nItemCount);
+			pItem = (*ppItems) + (*nItemCount);
 			memset(pItem, 0, sizeof(IniItemInfo) * \
-				(alloc_items - (*nItemCount)));
+				((*nAllocItems) - (*nItemCount)));
 		}
 
 		memcpy(pItem->name, szLineBuff, nNameLen);
@@ -127,10 +217,7 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 	
 	fclose(fp);
 	
-	qsort(items, *nItemCount, sizeof(IniItemInfo), compareByItemName);
-
-	*ppItems = items;
-	return 0;
+	return result;
 }
 
 void iniFreeItems(IniItemInfo *items)
@@ -318,5 +405,19 @@ IniItemInfo *iniGetValuesEx(const char *szName, IniItemInfo *items,
 	}
 
 	return pItemStart;
+}
+
+void iniPrintItems(IniItemInfo *items, const int nItemCount)
+{
+	IniItemInfo *pItem;
+	IniItemInfo *pItemEnd;
+	int i;
+
+	i = 0;
+	pItemEnd = items + nItemCount;
+	for (pItem=items; pItem<pItemEnd; pItem++)
+	{
+		printf("%d. %s=%s\n", ++i, pItem->name, pItem->value);	
+	}
 }
 
