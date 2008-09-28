@@ -801,7 +801,7 @@ int storage_load_from_conf_file(const char *filename, \
 			"max_connections=%d, "    \
 			"heart_beat_interval=%ds, " \
 			"stat_report_interval=%ds, tracker_server_count=%d, " \
-			"sync_wait_usec=%dms, allow_ip_count=%d", \
+			"sync_wait_msec=%dms, allow_ip_count=%d", \
 			g_version.major, g_version.minor, \
 			g_base_path, g_group_name, \
 			g_network_timeout, \

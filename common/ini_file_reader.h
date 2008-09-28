@@ -47,6 +47,8 @@ int64_t iniGetInt64Value(const char *szName, IniItemInfo *items, \
 bool iniGetBoolValue(const char *szName, IniItemInfo *items, \
 		const int nItemCount);
 
+void iniPrintItems(IniItemInfo *items, const int nItemCount);
+
 #ifdef __cplusplus
 }
 #endif

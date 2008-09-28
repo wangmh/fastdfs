@@ -11,5 +11,5 @@
 bool g_continue_flag = true;
 int g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 char g_base_path[MAX_PATH_SIZE];
-FDFSVersion g_version = {1, 10};
+FDFSVersion g_version = {1, 11};
 
