@@ -1,4 +1,18 @@
 #labels Featured
+
+* Version 1.11 === 2008-10-04
+{{{
+  * kill report and sync threads when recv terminate signal
+  * add item "store_server" in tracker.conf, by default use the first
+    storage server to store uploaded files
+  * ini_file_reader.c changed: a conf file can include other conf files
+  * some adjustment:
+    some macro name changed
+    add common_define.h
+    remove fdfs_define.c
+    fdfs_os_bits.h change to _os_bits.h
+}}}
+
 * Version 1.10 === 2008-09-20
 {{{
   * performance optimizing: use thread pool, create all work threads at startup
