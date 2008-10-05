@@ -4,7 +4,7 @@
 #step 1. download FastDFS source package and unpack it
 tar xzf FastDFS_v1.x.tar.gz
 #for example:
-tar xzf FastDFS_v1.10.tar.gz
+tar xzf FastDFS_v1.11.tar.gz
 
 #step 2. enter the FastDFS dir
 cd FastDFS
@@ -51,6 +51,11 @@ store_lookup=0
 
 #when store_lookup set to 1(specify group), must set store_group to the group name
 store_group=group2
+
+#0: round robin
+#1: the first server order by ip address
+#recommand use the first server to upload file
+store_server=1
 
 #reserved storage space for system or other applications.
 #if the free(available) space of any stoarge server in a group <= reserved_storage_space,
@@ -158,6 +163,7 @@ allow_hosts=*
 ||port           || int    || 22000   ||  N   ||
 ||store_lookup   || int    ||  0      ||  N   ||
 ||store_group    || string ||         ||  N   ||
+||store_server   || int    ||  1      ||  N   ||
 ||reserved_storage_space|| string ||   1GB      ||  N   ||
 
 ==== memo ====
