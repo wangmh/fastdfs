@@ -11,6 +11,10 @@
 
 #include "tracker_types.h"
 
+#define FDFS_DOWNLOAD_TO_BUFF   	1
+#define FDFS_DOWNLOAD_TO_FILE   	2
+#define FDFS_DOWNLOAD_TO_CALLBACK   	3
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -50,9 +54,9 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 **/
 #define storage_upload_by_filebuff(pTrackerServer, pStorageServer, file_buff, \
 		file_size, meta_list, meta_count, group_name, remote_filename) \
-	storage_upload_by_filebuff(pTrackerServer, pStorageServer, false, \
-		file_buff, file_size, meta_list, meta_count, group_name, \
-		remote_filename)
+	storage_do_upload_file(pTrackerServer, pStorageServer, \
+		false, file_buff, file_size, meta_list, \
+		meta_count, group_name, remote_filename)
 
 int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
@@ -111,19 +115,21 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 **/
 #define storage_download_file(pTrackerServer, pStorageServer, group_name, \
 			remote_filename, file_buff, file_size)  \
-	storage_do_download_file(pTrackerServer, pStorageServer, false, \
-			group_name, remote_filename, file_buff, file_size)
+	storage_do_download_file(pTrackerServer, pStorageServer, \
+			FDFS_DOWNLOAD_TO_BUFF, group_name, remote_filename, \
+			file_buff, NULL, file_size)
 
 #define storage_download_file_to_buff(pTrackerServer, pStorageServer, \
 			group_name, remote_filename, file_buff, file_size)  \
-	storage_do_download_file(pTrackerServer, pStorageServer, false, \
-			group_name, remote_filename, file_buff, file_size)
+	storage_do_download_file(pTrackerServer, pStorageServer, \
+			FDFS_DOWNLOAD_TO_BUFF, group_name, remote_filename, \
+			file_buff, NULL, file_size)
 
 int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
-			const bool bFilename, \
-			const char *group_name, const char *remote_filename, \
-			char **file_buff, int64_t *file_size);
+		TrackerServerInfo *pStorageServer, \
+		const int download_type, \
+		const char *group_name, const char *remote_filename, \
+		char **file_buff, void *arg, int64_t *file_size);
 
 /**
 * download file from storage server
@@ -157,6 +163,36 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 			const char *group_name, const char *filename, \
 			FDFSMetaData **meta_list, \
 			int *meta_count);
+
+
+/**
+* Download file callback function prototype
+* params:
+*	arg: callback extra arguement
+*       file_size: file size
+*       data: temp buff, should not keep persistently
+*	current_size: current data size
+* return: 0 success, !=0 fail, should return the error code
+**/
+typedef int (*DownloadCallback) (void *arg, const int64_t file_size, \
+		const char *data, const int current_size);
+
+/**
+* download file from storage server
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*	group_name: the group name of storage server
+*	remote_filename: filename on storage server
+*	callback: callback function
+*	arg: callback extra arguement
+*       file_size: return file size (bytes)
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const char *group_name, const char *remote_filename, \
+		DownloadCallback callback, void *arg, int64_t *file_size);
 
 #ifdef __cplusplus
 }

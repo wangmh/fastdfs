@@ -279,9 +279,9 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 }
 
 int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const bool bFilename, \
+		TrackerServerInfo *pStorageServer, const int download_type, \
 		const char *group_name, const char *remote_filename, \
-		char **file_buff, int64_t *file_size)
+		char **file_buff, void *arg, int64_t *file_size)
 {
 	TrackerHeader header;
 	int result;
@@ -332,7 +332,7 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	if (bFilename)
+	if (download_type == FDFS_DOWNLOAD_TO_FILE)
 	{
 		if ((result=fdfs_recv_header(pStorageServer, \
 			&in_bytes)) != 0)
@@ -346,13 +346,61 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 			break;
 		}
 	}
-	else
+	else if (download_type == FDFS_DOWNLOAD_TO_BUFF)
 	{
 		*file_buff = NULL;
 		if ((result=fdfs_recv_response(pStorageServer, \
 			file_buff, 0, &in_bytes)) != 0)
 		{
 			break;
+		}
+	}
+	else
+	{
+		DownloadCallback callback;
+		char buff[2048];
+		int recv_bytes;
+		int64_t remain_bytes;
+
+		if ((result=fdfs_recv_header(pStorageServer, \
+			&in_bytes)) != 0)
+		{
+			break;
+		}
+
+		callback = (DownloadCallback)*file_buff;
+		remain_bytes = in_bytes;
+		while (remain_bytes > 0)
+		{
+			if (remain_bytes > sizeof(buff))
+			{
+				recv_bytes = sizeof(buff);
+			}
+			else
+			{
+				recv_bytes = remain_bytes;
+			}
+
+			if ((result=tcprecvdata(pStorageServer->sock, buff, \
+				recv_bytes, g_network_timeout)) != 0)
+			{
+				logError("recv data from storage server " \
+					"%s:%d fail, " \
+					"errno: %d, error info: %s", \
+					pStorageServer->ip_addr, \
+					pStorageServer->port, \
+					result, strerror(result));
+				break;
+			}
+
+			result = callback(arg, in_bytes, buff, recv_bytes);
+			if (result != 0)
+			{
+				logError("call callback function fail, " \
+					"error code: %d", result);
+			}
+
+			remain_bytes -= recv_bytes;
 		}
 	}
 
@@ -377,8 +425,8 @@ int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
 	char *pLocalFilename;
 	pLocalFilename = (char *)local_filename;
 	return storage_do_download_file(pTrackerServer, pStorageServer, \
-			true, group_name, remote_filename, \
-			&pLocalFilename, file_size);
+			FDFS_DOWNLOAD_TO_FILE, group_name, remote_filename, \
+			&pLocalFilename, NULL, file_size);
 }
 
 /**
@@ -708,5 +756,17 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	}
 
 	return result;
+}
+
+int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const char *group_name, const char *remote_filename, \
+		DownloadCallback callback, void *arg, int64_t *file_size)
+{
+	char *pCallback;
+	pCallback = (char *)callback;
+	return storage_do_download_file(pTrackerServer, pStorageServer, \
+			FDFS_DOWNLOAD_TO_CALLBACK, group_name, remote_filename, \
+			&pCallback, arg, file_size);
 }
 
