@@ -17,6 +17,22 @@
 #include "fdfs_global.h"
 #include "fdfs_base64.h"
 
+int writeToFileCallback(void *arg, const int64_t file_size, const char *data, \
+                const int current_size)
+{
+	if (arg == NULL)
+	{
+		return EINVAL;
+	}
+
+	if (fwrite(data, current_size, 1, (FILE *)arg) != 1)
+	{
+		return errno != 0 ? errno : EIO;
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	char *conf_filename;
@@ -180,10 +196,34 @@ int main(int argc, char *argv[])
 			if (argc >= 6)
 			{
 				local_filename = argv[5];
+				if (strcmp(local_filename, "CALLBACK") == 0)
+				{
+				FILE *fp;
+				fp = fopen(local_filename, "wb");
+				if (fp == NULL)
+				{
+					result = errno != 0 ? errno : EPERM;
+					printf("open file \"%s\" fail, " \
+						"errno: %d, error info: %s", \
+						local_filename, result, \
+						strerror(result));
+				}
+				else
+				{
+				result = storage_download_file_ex( \
+					pTrackerServer, &storageServer, \
+					group_name, remote_filename, \
+					writeToFileCallback, fp, &file_size);
+				fclose(fp);
+				}
+				}
+				else
+				{
 				result = storage_download_file_to_file( \
 					pTrackerServer, &storageServer, \
 					group_name, remote_filename, \
 					local_filename, &file_size);
+				}
 			}
 			else
 			{
