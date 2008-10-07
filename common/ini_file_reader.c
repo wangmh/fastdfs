@@ -33,12 +33,22 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 	int alloc_items;
 	int result;
 	char *pLast;
+	char old_cwd[MAX_PATH_SIZE];
 
+	memset(old_cwd, 0, sizeof(old_cwd));
 	pLast = strrchr(szFilename, '/');
 	if (pLast != NULL)
 	{
 		char path[256];
 		int len;
+
+		if (getcwd(old_cwd, sizeof(old_cwd)) == NULL)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"getcwd fail, errno: %d, error info: %s", \
+				__LINE__, errno, strerror(errno));
+			*old_cwd = '\0';
+		}
 
 		len = pLast - szFilename;
 		if (len >= sizeof(path))
@@ -84,6 +94,15 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 	{
 		qsort(*ppItems, *nItemCount, sizeof(IniItemInfo), \
 			compareByItemName);
+	}
+
+	if (*old_cwd != '\0' && chdir(old_cwd) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"chdir to old path: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, old_cwd, errno, strerror(errno));
+		return errno != 0 ? errno : ENOENT;
 	}
 
 	return result;
