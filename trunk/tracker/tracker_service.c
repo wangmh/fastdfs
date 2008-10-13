@@ -262,6 +262,93 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	return tracker_check_and_sync(pClientInfo, status);
 }
 
+static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
+				const int64_t nInPackLen)
+{
+	TrackerHeader resp;
+	char in_buff[FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char *pIpAddr;
+	FDFSGroupInfo *pGroup;
+	int result;
+
+	memset(&resp, 0, sizeof(resp));
+	while (1)
+	{
+		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
+				"is not correct, " \
+				"expect length > %d", \
+				__LINE__, \
+				TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE, \
+				pClientInfo->ip_addr,  \
+				nInPackLen, FDFS_GROUP_NAME_MAX_LEN);
+			resp.status = EINVAL;
+			break;
+		}
+
+		if (nInPackLen >= sizeof(in_buff))
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
+				"is too large, " \
+				"expect length should < %d", \
+				__LINE__, \
+				TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE, \
+				pClientInfo->ip_addr, nInPackLen, \
+				sizeof(in_buff));
+			resp.status = EINVAL;
+			break;
+		}
+
+		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+			nInPackLen, g_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, recv data fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pClientInfo->ip_addr, \
+				resp.status, strerror(resp.status));
+			break;
+		}
+		in_buff[nInPackLen] = '\0';
+
+		memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
+		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
+		pIpAddr = in_buff + FDFS_GROUP_NAME_MAX_LEN;
+		pGroup = tracker_mem_get_group(group_name);
+		if (pGroup == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, invalid group_name: %s", \
+				__LINE__, pClientInfo->ip_addr, \
+				pClientInfo->group_name);
+			resp.status = ENOENT;
+			break;
+		}
+
+		resp.status = tracker_mem_delete_storage(pGroup, pIpAddr);
+		break;
+	}
+
+	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+
+	if ((result=tcpsenddata(pClientInfo->sock, \
+		&resp, sizeof(resp), g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			result, strerror(result));
+		return result;
+	}
+
+	return resp.status;
+}
+
 static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 				const int64_t nInPackLen)
 {
@@ -388,7 +475,7 @@ static int tracker_deal_server_list_group_storages( \
 		TrackerClientInfo *pClientInfo, const int64_t nInPackLen)
 {
 	TrackerHeader resp;
-	char group_name[FDFS_GROUP_NAME_MAX_LEN+1];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	FDFSGroupInfo *pGroup;
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppEnd;
@@ -528,7 +615,7 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 {
 	TrackerHeader resp;
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 32];
-	char group_name[FDFS_GROUP_NAME_MAX_LEN];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char *filename;
 	int out_len;
 	FDFSGroupInfo *pGroup;
@@ -1599,6 +1686,14 @@ data buff (struct)
 		else if (header.cmd == TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY)
 		{
 			if (tracker_deal_storage_sync_notify( \
+				&client_info, nInPackLen) != 0)
+			{
+				break;
+			}
+		}
+		else if (header.cmd == TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE)
+		{
+			if (tracker_deal_server_delete_storage( \
 				&client_info, nInPackLen) != 0)
 			{
 				break;

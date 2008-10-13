@@ -439,6 +439,11 @@ int tracker_save_storages()
 		for (ppStorage=(*ppGroup)->sorted_servers; \
 			ppStorage<ppStorageEnd; ppStorage++)
 		{
+			if ((*ppStorage)->status == FDFS_STORAGE_STATUS_DELETED)
+			{
+				continue;
+			}
+
 			len = sprintf(buff, \
 				"%s%c" \
 				"%s%c" \
@@ -1235,6 +1240,31 @@ FDFSStorageDetail *tracker_mem_get_storage(FDFSGroupInfo *pGroup, \
 	}
 }
 
+int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
+{
+	FDFSStorageDetail *pStorageServer;
+	pStorageServer = tracker_mem_get_storage(pGroup, ip_addr);
+	if (pStorageServer == NULL)
+	{
+		return ENOENT;
+	}
+
+	if (pStorageServer->status == FDFS_STORAGE_STATUS_ONLINE || \
+	    pStorageServer->status == FDFS_STORAGE_STATUS_ACTIVE)
+	{
+		return EBUSY;
+	}
+
+	if (pStorageServer->status == FDFS_STORAGE_STATUS_DELETED)
+	{
+		return EALREADY;
+	}
+
+	pStorageServer->status = FDFS_STORAGE_STATUS_DELETED;
+	pGroup->version++;
+	return 0;
+}
+
 int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 			const bool bIncRef, bool *bInserted)
 {
@@ -1246,6 +1276,14 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 				pClientInfo->ip_addr);
 	if (pStorageServer != NULL)
 	{
+		if (pStorageServer->status == FDFS_STORAGE_STATUS_DELETED)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"storage ip: %s already deleted, you can " \
+				"restart the tracker servers to reset.", \
+				__LINE__, pClientInfo->ip_addr);
+			return EAGAIN;
+		}
 		//printf("pGroup->count=%d, found %s\n", pClientInfo->pGroup->count, pClientInfo->ip_addr);
 	}
 	else
@@ -1537,6 +1575,15 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 		return 0;
 	}
 
+	if (pTargetServer->status == FDFS_STORAGE_STATUS_DELETED)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"storage ip: %s already deleted, you can " \
+			"restart the tracker servers to reset.", \
+			__LINE__, pTargetServer->ip_addr);
+		return EAGAIN;
+	}
+
 	pTargetServer->status = FDFS_STORAGE_STATUS_ACTIVE;
 
 	ppStorageServer = (FDFSStorageDetail **)bsearch(&pTargetServer, \
@@ -1596,7 +1643,9 @@ int tracker_mem_offline_store_server(TrackerClientInfo *pClientInfo)
 		(pClientInfo->pStorage->status == \
 			FDFS_STORAGE_STATUS_SYNCING) || \
 		(pClientInfo->pStorage->status == \
-			FDFS_STORAGE_STATUS_INIT))
+			FDFS_STORAGE_STATUS_INIT) || \
+		(pClientInfo->pStorage->status == \
+			FDFS_STORAGE_STATUS_DELETED))
 	{
 		return 0;
 	}
