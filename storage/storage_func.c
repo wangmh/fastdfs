@@ -407,6 +407,8 @@ int storage_check_and_make_data_dirs()
 	for (i=0; i<DATA_DIR_COUNT_PER_PATH; i++)
 	{
 		sprintf(dir_name, STORAGE_DATA_DIR_FORMAT, i);
+
+		fprintf(stderr, "mkdir data path: %s ...\n", dir_name);
 		if (mkdir(dir_name, 0755) != 0)
 		{
 			if (!(errno == EEXIST && isDir(dir_name)))
@@ -458,6 +460,8 @@ int storage_check_and_make_data_dirs()
 			return errno != 0 ? errno : ENOENT;
 		}
 	}
+
+	fprintf(stderr, "mkdir data path done.\n");
 
 	result = storage_write_to_sync_ini_file();
 
