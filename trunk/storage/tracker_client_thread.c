@@ -449,7 +449,9 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 	FDFSStorageBrief *pDiffServer;
 	int res;
 	int result;
+	int nDeletedCount;
 
+	nDeletedCount = 0;
 	pDiffServer = diffServers;
 	pEnd = briefServers + server_count;
 	for (pServer=briefServers; pServer<pEnd; pServer++)
@@ -461,20 +463,32 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		{
 			if ((*ppFound)->status != pServer->status)
 			{
-				if (((pServer->status == \
+				if ((((pServer->status == \
 					FDFS_STORAGE_STATUS_WAIT_SYNC) || \
 					(pServer->status == \
 					FDFS_STORAGE_STATUS_SYNCING)) && \
-					((*ppFound)->status > pServer->status))
+					((*ppFound)->status > pServer->status))\
+					 || ((*ppFound)->status == \
+						FDFS_STORAGE_STATUS_DELETED))
 				{
 					memcpy(pDiffServer++, *ppFound, \
 						sizeof(FDFSStorageBrief));
+				}
+				else if ((*ppFound)->status == \
+					FDFS_STORAGE_STATUS_NONE && \
+					pServer->status == \
+					FDFS_STORAGE_STATUS_DELETED) //ignore
+				{
 				}
 				else
 				{
 					(*ppFound)->status = pServer->status;
 				}
 			}
+		}
+		else if (pServer->status == FDFS_STORAGE_STATUS_DELETED)//ignore
+		{
+			nDeletedCount++;
 		}
 		else
 		{
@@ -525,7 +539,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		}
 	}
 
-	if (g_storage_count == server_count)
+	if (g_storage_count + nDeletedCount == server_count)
 	{
 		if (pDiffServer - diffServers > 0)
 		{
@@ -541,6 +555,12 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 	pServer = briefServers;
 	while (pServer < pEnd && pGlobalServer < pGlobalEnd)
 	{
+		if (pGlobalServer->status == FDFS_STORAGE_STATUS_NONE)
+		{
+			pGlobalServer++;
+			continue;
+		}
+
 		res = strcmp(pServer->ip_addr, pGlobalServer->ip_addr);
 		if (res < 0)
 		{
@@ -569,6 +589,12 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 
 	while (pGlobalServer < pGlobalEnd)
 	{
+		if (pGlobalServer->status == FDFS_STORAGE_STATUS_NONE)
+		{
+			pGlobalServer++;
+			continue;
+		}
+
 		memcpy(pDiffServer++, pGlobalServer, \
 			sizeof(FDFSStorageBrief));
 		pGlobalServer++;

@@ -1233,6 +1233,34 @@ static int storage_binlog_reader_skip(BinLogReader *pReader)
 	return result;
 }
 
+static int storage_unlink_mark_file(BinLogReader *pReader)
+{
+	char old_filename[MAX_PATH_SIZE];
+	char new_filename[MAX_PATH_SIZE];
+	time_t t;
+	struct tm tm;
+
+	t = time(NULL);
+	localtime_r(&t, &tm);
+
+	get_mark_filename(pReader, old_filename);
+	snprintf(new_filename, sizeof(new_filename), \
+		"%s.%04d%02d%02d%02d%02d%02d", old_filename, \
+		tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
+		tm.tm_hour, tm.tm_min, tm.tm_sec);
+	if (rename(old_filename, new_filename) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"rename file %s to %s fail" \
+			", errno: %d, error info: %s", \
+			__LINE__, old_filename, new_filename, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : EACCES;
+	}
+
+	return 0;
+}
+
 static void* storage_sync_thread_entrance(void* arg)
 {
 	FDFSStorageBrief *pStorage;
@@ -1257,7 +1285,8 @@ static void* storage_sync_thread_entrance(void* arg)
 	strcpy(storage_server.group_name, g_group_name);
 	storage_server.port = g_server_port;
 	storage_server.sock = -1;
-	while (g_continue_flag)
+	while (g_continue_flag && \
+		pStorage->status != FDFS_STORAGE_STATUS_DELETED)
 	{
 		if (storage_reader_init(pStorage, &reader) != 0)
 		{
@@ -1279,7 +1308,8 @@ static void* storage_sync_thread_entrance(void* arg)
 		previousCode = 0;
 		nContinuousFail = 0;
 		conn_result = 0;
-		while (g_continue_flag)
+		while (g_continue_flag && \
+			pStorage->status != FDFS_STORAGE_STATUS_DELETED)
 		{
 			storage_server.sock = \
 				socket(AF_INET, SOCK_STREAM, 0);
@@ -1387,7 +1417,8 @@ static void* storage_sync_thread_entrance(void* arg)
 		}
 
 		sync_result = 0;
-		while (g_continue_flag)
+		while (g_continue_flag && \
+			pStorage->status != FDFS_STORAGE_STATUS_DELETED)
 		{
 			read_result = storage_binlog_read(&reader, \
 					&record, &record_len);
@@ -1493,6 +1524,13 @@ static void* storage_sync_thread_entrance(void* arg)
 	}
 	storage_reader_destroy(&reader);
 
+	if (pStorage->status == FDFS_STORAGE_STATUS_DELETED)
+	{
+		storage_unlink_mark_file(&reader);
+		sleep(2 * g_heart_beat_interval + 1);
+		pStorage->status = FDFS_STORAGE_STATUS_NONE;
+	}
+
 	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1509,6 +1547,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			__LINE__, result, strerror(result));
 	}
 
+	printf("sync thread done, ip_addr: %s, status: %d\n", pStorage->ip_addr, pStorage->status);
 	return NULL;
 }
 
@@ -1517,6 +1556,11 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage)
 	int result;
 	pthread_attr_t pattr;
 	pthread_t tid;
+
+	if (pStorage->status == FDFS_STORAGE_STATUS_DELETED)
+	{
+		return 0;
+	}
 
 	if (is_local_host_ip(pStorage->ip_addr)) //can't self sync to self
 	{
