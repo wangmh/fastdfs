@@ -383,6 +383,11 @@ int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 	int out_len;
 	int result;
 
+	if (server_count == 0)
+	{
+		return 0;
+	}
+
 	memset(&resp, 0, sizeof(resp));
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG;
 
