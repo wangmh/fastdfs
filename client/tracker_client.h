@@ -47,6 +47,14 @@ int tracker_connect_server(TrackerServerInfo *pTrackerServer);
 **/
 void tracker_disconnect_server(TrackerServerInfo *pTrackerServer);
 
+
+/**
+* connect to all tracker servers
+* params:
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_get_all_connections();
+
 /**
 * close all connections to tracker servers
 * params:
@@ -104,6 +112,17 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const char *group_name, const char *filename);
+
+/**
+* delete a storage server from cluster
+* params:
+*	pTrackerServer: tracker server
+*	group_name: the group name which the storage server belongs to
+*	ip_addr: the ip address of the storage server
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_delete_storage(TrackerServerInfo *pTrackerServer, \
+		const char *group_name, const char *ip_addr);
 
 #ifdef __cplusplus
 }

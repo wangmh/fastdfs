@@ -1527,6 +1527,13 @@ static void* storage_sync_thread_entrance(void* arg)
 	if (pStorage->status == FDFS_STORAGE_STATUS_DELETED)
 	{
 		storage_unlink_mark_file(&reader);
+		if (strcmp(g_sync_src_ip_addr, pStorage->ip_addr) == 0)
+		{
+			g_sync_src_ip_addr[0] = '\0';
+			storage_write_to_sync_ini_file();
+		}
+
+		printf("heihei...................., pStorage->ip_addr=%s\n", pStorage->ip_addr);
 		sleep(2 * g_heart_beat_interval + 1);
 		pStorage->status = FDFS_STORAGE_STATUS_NONE;
 	}

@@ -66,6 +66,25 @@ int tracker_connect_server(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
+int tracker_get_all_connections()
+{
+	TrackerServerInfo *pServer;
+	TrackerServerInfo *pEnd;
+	int success_count;
+
+	success_count = 0;
+	pEnd = g_tracker_servers + g_tracker_server_count;
+	for (pServer=g_tracker_servers; pServer<pEnd; pServer++)
+	{
+		if (pServer->sock > 0 || tracker_connect_server(pServer) == 0)
+		{
+			success_count++;
+		}
+	}
+
+	return success_count > 0 ? 0 : ENOTCONN;
+}
+
 void tracker_close_all_connections()
 {
 	TrackerServerInfo *pServer;
@@ -435,4 +454,48 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 	pStorageServer->port = (int)buff2long(in_buff + \
 				FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1);
 	return 0;
-} 
+}
+
+int tracker_delete_storage(TrackerServerInfo *pTrackerServer, \
+		const char *group_name, const char *ip_addr)
+{
+	TrackerHeader header;
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
+			IP_ADDRESS_SIZE];
+	char in_buff[1];
+	char *pInBuff;
+	int64_t in_bytes;
+	int result;
+	int ipaddr_len;
+
+	memset(out_buff, 0, sizeof(out_buff));
+	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
+			sizeof(TrackerHeader),  "%s", group_name);
+	ipaddr_len = snprintf(out_buff + sizeof(TrackerHeader) + \
+			FDFS_GROUP_NAME_MAX_LEN, \
+			sizeof(out_buff) - sizeof(TrackerHeader) - \
+			FDFS_GROUP_NAME_MAX_LEN,  "%s", ip_addr);
+	
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + ipaddr_len, header.pkg_len);
+	header.cmd = TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE;
+	header.status = 0;
+	memcpy(out_buff, &header, sizeof(TrackerHeader));
+	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \
+		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
+		ipaddr_len, g_network_timeout)) != 0)
+	{
+		logError("send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, strerror(result));
+		return result;
+	}
+
+	pInBuff = in_buff;
+	result = fdfs_recv_response(pTrackerServer, \
+		&pInBuff, 0, &in_bytes);
+
+	return result;
+}
+
