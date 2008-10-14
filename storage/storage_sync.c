@@ -1300,7 +1300,8 @@ static void* storage_sync_thread_entrance(void* arg)
 		while (g_continue_flag && \
 			(pStorage->status != FDFS_STORAGE_STATUS_ACTIVE && \
 			pStorage->status != FDFS_STORAGE_STATUS_WAIT_SYNC && \
-			pStorage->status != FDFS_STORAGE_STATUS_SYNCING))
+			pStorage->status != FDFS_STORAGE_STATUS_SYNCING && \
+			pStorage->status != FDFS_STORAGE_STATUS_DELETED))
 		{
 			sleep(1);
 		}
@@ -1533,7 +1534,6 @@ static void* storage_sync_thread_entrance(void* arg)
 			storage_write_to_sync_ini_file();
 		}
 
-		printf("heihei...................., pStorage->ip_addr=%s\n", pStorage->ip_addr);
 		sleep(2 * g_heart_beat_interval + 1);
 		pStorage->status = FDFS_STORAGE_STATUS_NONE;
 	}
@@ -1554,7 +1554,6 @@ static void* storage_sync_thread_entrance(void* arg)
 			__LINE__, result, strerror(result));
 	}
 
-	printf("sync thread done, ip_addr: %s, status: %d\n", pStorage->ip_addr, pStorage->status);
 	return NULL;
 }
 
