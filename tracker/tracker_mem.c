@@ -1468,11 +1468,14 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 				sizeof(FDFSStorageDetail *), \
 				tracker_mem_cmp_by_ip_addr)) != NULL)
 			{
-				if ((pServer->status > (*ppFound)->status) && \
+				if (((pServer->status > (*ppFound)->status) && \
 					(((*ppFound)->status == \
 					FDFS_STORAGE_STATUS_WAIT_SYNC) || \
 					((*ppFound)->status == \
-					FDFS_STORAGE_STATUS_SYNCING)))
+					FDFS_STORAGE_STATUS_SYNCING))) || \
+					(pServer->status != (*ppFound)->status \
+					 && pServer->status == \
+						FDFS_STORAGE_STATUS_DELETED))
 				{
 					(*ppFound)->status = pServer->status;
 					pClientInfo->pGroup->version++;
