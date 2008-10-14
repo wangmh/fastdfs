@@ -1243,6 +1243,9 @@ FDFSStorageDetail *tracker_mem_get_storage(FDFSGroupInfo *pGroup, \
 int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
 {
 	FDFSStorageDetail *pStorageServer;
+	FDFSStorageDetail *pServer;
+	FDFSStorageDetail *pEnd;
+
 	pStorageServer = tracker_mem_get_storage(pGroup, ip_addr);
 	if (pStorageServer == NULL)
 	{
@@ -1258,6 +1261,16 @@ int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
 	if (pStorageServer->status == FDFS_STORAGE_STATUS_DELETED)
 	{
 		return EALREADY;
+	}
+
+	pEnd = pGroup->all_servers + pGroup->count;
+	for (pServer=pGroup->all_servers; pServer<pEnd; pServer++)
+	{
+		if (pServer->psync_src_server != NULL && \
+		strcmp(pServer->psync_src_server->ip_addr, ip_addr) == 0)
+		{
+			pServer->psync_src_server->ip_addr[0] = '\0';
+		}
 	}
 
 	pStorageServer->status = FDFS_STORAGE_STATUS_DELETED;

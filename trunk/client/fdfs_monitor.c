@@ -16,28 +16,30 @@
 #include <sys/types.h>
 #include "fdfs_client.h"
 
+static TrackerServerInfo *pTrackerServer;
+
+static int list_all_groups(const char *group_name);
+
 int main(int argc, char *argv[])
 {
 	char *conf_filename;
-	TrackerServerInfo *pTrackerServer;
 	int result;
-	int group_count;
-	int storage_count;
-	FDFSGroupStat group_stats[FDFS_MAX_GROUPS];
-	FDFSGroupStat *pGroupStat;
-	FDFSGroupStat *pGroupEnd;
-	FDFSStorageInfo storage_infos[FDFS_MAX_SERVERS_EACH_GROUP];
-	FDFSStorageInfo *pStorage;
-	FDFSStorageInfo *pStorageEnd;
-	FDFSStorageStat *pStorageStat;
-	char szSrcUpdTime[32];
-	char szSyncUpdTime[32];
-	int i, k;
-
+	char *op_type;
+	
 	if (argc < 2)
 	{
-		printf("Usage: %s <config_file>\n", argv[0]);
+		printf("Usage: %s <config_file> [list|delete <group_name> " \
+			"[storage_ip]]\n", argv[0]);
 		return 1;
+	}
+
+	if (argc == 2)
+	{
+		op_type = "list";
+	}
+	else
+	{
+		op_type = argv[2];
 	}
 
 	conf_filename = argv[1];
@@ -53,6 +55,165 @@ int main(int argc, char *argv[])
 		return errno != 0 ? errno : ECONNREFUSED;
 	}
 
+	if (strcmp(op_type, "list") == 0)
+	{
+		if (argc <= 3)
+		{
+			result = list_all_groups(NULL);
+		}
+		else
+		{
+			result = list_all_groups(argv[3]);
+		}
+
+		if (fdfs_quit(pTrackerServer) != 0)
+		{
+		}
+	}
+	else if (strcmp(op_type, "delete") == 0)
+	{
+		TrackerServerInfo *pServer;
+		TrackerServerInfo *pEnd;
+
+		if (argc < 5)
+		{
+			printf("Usage: %s <config_file> delete <group_name> " \
+				"<storage_ip>\n", argv[0]);
+			return 1;
+		}
+
+		if ((result=tracker_get_all_connections()) != 0)
+		{
+			printf("connect to tracker server fail!\n");
+			return result;
+		}
+
+		pEnd = g_tracker_servers + g_tracker_server_count;
+		for (pServer=g_tracker_servers; pServer<pEnd; pServer++)
+		{
+			if (pServer->sock <= 0)
+			{
+				continue;
+			}
+
+			if ((result=tracker_delete_storage(pServer, \
+				argv[3], argv[4])) == 0)
+			{
+				printf("delete storage server %s::%s from " \
+					"tracker server %s success.\n", \
+					argv[3], argv[4], pServer->ip_addr);
+			}
+			else
+			{
+				printf("delete storage server %s::%s from " \
+					"tracker server %s fail, " \
+					"error no: %d, error info: %s\n", \
+					argv[3], argv[4], pServer->ip_addr, \
+					result, strerror(result));
+			}
+
+			fdfs_quit(pServer);
+		}
+	}
+
+	tracker_close_all_connections();
+	fdfs_client_destroy();
+	return 0;
+}
+
+static int list_storages(FDFSGroupStat *pGroupStat)
+{
+	int result;
+	int storage_count;
+	FDFSStorageInfo storage_infos[FDFS_MAX_SERVERS_EACH_GROUP];
+	FDFSStorageInfo *pStorage;
+	FDFSStorageInfo *pStorageEnd;
+	FDFSStorageStat *pStorageStat;
+	char szSrcUpdTime[32];
+	char szSyncUpdTime[32];
+	int k;
+
+	printf( "group name = %s\n" \
+		"free space = "INT64_PRINTF_FORMAT" GB\n" \
+		"storage server count = %d\n" \
+		"active server count = %d\n" \
+		"storage_port = %d\n" \
+		"current write server index = %d\n\n", \
+		pGroupStat->group_name, \
+		pGroupStat->free_mb / 1024, \
+		pGroupStat->count, \
+		pGroupStat->active_count, \
+		pGroupStat->storage_port, \
+		pGroupStat->current_write_server
+	);
+
+	result = tracker_list_servers(pTrackerServer, \
+		pGroupStat->group_name, \
+		storage_infos, FDFS_MAX_SERVERS_EACH_GROUP, \
+		&storage_count);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	k = 0;
+	pStorageEnd = storage_infos + storage_count;
+	for (pStorage=storage_infos; pStorage<pStorageEnd; \
+		pStorage++)
+	{
+		pStorageStat = &(pStorage->stat);
+
+		printf( "\tHost %d:\n" \
+			"\t\tip_addr = %s  %s\n" \
+			"\t\ttotal storage = %dGB\n" \
+			"\t\tfree storage = %dGB\n" \
+			"\t\ttotal_upload_count = "INT64_PRINTF_FORMAT"\n"   \
+			"\t\tsuccess_upload_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_set_meta_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tsuccess_set_meta_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_delete_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tsuccess_delete_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_download_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tsuccess_download_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_get_meta_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tsuccess_get_meta_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tlast_source_update = %s\n" \
+			"\t\tlast_sync_update = %s\n",  \
+			++k, pStorage->ip_addr, \
+			get_storage_status_caption(pStorage->status), \
+			pStorage->total_mb / 1024, \
+			pStorage->free_mb / 1024,  \
+			pStorageStat->total_upload_count, \
+			pStorageStat->success_upload_count, \
+			pStorageStat->total_set_meta_count, \
+			pStorageStat->success_set_meta_count, \
+			pStorageStat->total_delete_count, \
+			pStorageStat->success_delete_count, \
+			pStorageStat->total_download_count, \
+			pStorageStat->success_download_count, \
+			pStorageStat->total_get_meta_count, \
+			pStorageStat->success_get_meta_count, \
+			formatDatetime(pStorageStat->last_source_update, \
+				"%Y-%m-%d %H:%M:%S", \
+				szSrcUpdTime, sizeof(szSrcUpdTime)), \
+			formatDatetime(pStorageStat->last_sync_update, \
+				"%Y-%m-%d %H:%M:%S", \
+				szSyncUpdTime, sizeof(szSyncUpdTime))
+		);
+	}
+
+	return 0;
+}
+
+static int list_all_groups(const char *group_name)
+{
+	int result;
+	int group_count;
+	FDFSGroupStat group_stats[FDFS_MAX_GROUPS];
+	FDFSGroupStat *pGroupStat;
+	FDFSGroupStat *pGroupEnd;
+	int i;
+
 	result = tracker_list_groups(pTrackerServer, \
 		group_stats, FDFS_MAX_GROUPS, \
 		&group_count);
@@ -63,90 +224,31 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	printf("group count: %d\n", group_count);
-	i = 0;
 	pGroupEnd = group_stats + group_count;
-	for (pGroupStat=group_stats; pGroupStat<pGroupEnd; \
-		pGroupStat++)
+	if (group_name == NULL)
 	{
-		printf( "\nGroup %d:\n" \
-			"group name = %s\n" \
-			"free space = "INT64_PRINTF_FORMAT" GB\n" \
-			"storage server count = %d\n" \
-			"active server count = %d\n" \
-			"storage_port = %d\n" \
-			"current write server index = %d\n\n", \
-			++i, \
-			pGroupStat->group_name, \
-			pGroupStat->free_mb / 1024, \
-			pGroupStat->count, \
-			pGroupStat->active_count, \
-			pGroupStat->storage_port, \
-			pGroupStat->current_write_server
-		);
-
-		result = tracker_list_servers(pTrackerServer, \
-			pGroupStat->group_name, \
-			storage_infos, FDFS_MAX_SERVERS_EACH_GROUP, \
-			&storage_count);
-		if (result != 0)
+		printf("group count: %d\n", group_count);
+		i = 0;
+		for (pGroupStat=group_stats; pGroupStat<pGroupEnd; \
+			pGroupStat++)
 		{
-			continue;
+			printf( "\nGroup %d:\n", ++i);
+			list_storages(pGroupStat);
 		}
-
-		k = 0;
-		pStorageEnd = storage_infos + storage_count;
-		for (pStorage=storage_infos; pStorage<pStorageEnd; \
-			pStorage++)
+	}
+	else
+	{
+		for (pGroupStat=group_stats; pGroupStat<pGroupEnd; \
+			pGroupStat++)
 		{
-			pStorageStat = &(pStorage->stat);
-
-			printf( "\tHost %d:\n" \
-				"\t\tip_addr = %s  %s\n" \
-				"\t\ttotal storage = %dGB\n" \
-				"\t\tfree storage = %dGB\n" \
-				"\t\ttotal_upload_count = "INT64_PRINTF_FORMAT"\n"   \
-				"\t\tsuccess_upload_count = "INT64_PRINTF_FORMAT"\n" \
-				"\t\ttotal_set_meta_count = "INT64_PRINTF_FORMAT"\n" \
-				"\t\tsuccess_set_meta_count = "INT64_PRINTF_FORMAT"\n" \
-				"\t\ttotal_delete_count = "INT64_PRINTF_FORMAT"\n" \
-				"\t\tsuccess_delete_count = "INT64_PRINTF_FORMAT"\n" \
-				"\t\ttotal_download_count = "INT64_PRINTF_FORMAT"\n" \
-				"\t\tsuccess_download_count = "INT64_PRINTF_FORMAT"\n" \
-				"\t\ttotal_get_meta_count = "INT64_PRINTF_FORMAT"\n" \
-				"\t\tsuccess_get_meta_count = "INT64_PRINTF_FORMAT"\n" \
-				"\t\tlast_source_update = %s\n" \
-				"\t\tlast_sync_update = %s\n",  \
-				++k, pStorage->ip_addr, \
-				get_storage_status_caption(pStorage->status), \
-				pStorage->total_mb / 1024, \
-				pStorage->free_mb / 1024,  \
-				pStorageStat->total_upload_count, \
-				pStorageStat->success_upload_count, \
-				pStorageStat->total_set_meta_count, \
-				pStorageStat->success_set_meta_count, \
-				pStorageStat->total_delete_count, \
-				pStorageStat->success_delete_count, \
-				pStorageStat->total_download_count, \
-				pStorageStat->success_download_count, \
-				pStorageStat->total_get_meta_count, \
-				pStorageStat->success_get_meta_count, \
-				formatDatetime(pStorageStat->last_source_update, \
-					"%Y-%m-%d %H:%M:%S", \
-					szSrcUpdTime, sizeof(szSrcUpdTime)), \
-				formatDatetime(pStorageStat->last_sync_update, \
-					"%Y-%m-%d %H:%M:%S", \
-					szSyncUpdTime, sizeof(szSyncUpdTime))
-			);
+			if (strcmp(pGroupStat->group_name, group_name) == 0)
+			{
+				list_storages(pGroupStat);
+				break;
+			}
 		}
 	}
 
-	if (fdfs_quit(pTrackerServer) != 0)
-	{
-	}
-
-	tracker_close_all_connections();
-	fdfs_client_destroy();
 	return 0;
 }
 
