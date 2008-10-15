@@ -6,16 +6,11 @@
 * Please visit the FastDFS Home Page http://www.csource.org/ for more detail.
 **/
 
-#ifndef STORAGE_CLIENT_H
-#define STORAGE_CLIENT_H
+#ifndef STORAGE_CLIENT1_H
+#define STORAGE_CLIENT1_H
 
 #include "tracker_types.h"
-
-#define FDFS_DOWNLOAD_TO_BUFF   	1
-#define FDFS_DOWNLOAD_TO_FILE   	2
-#define FDFS_DOWNLOAD_TO_CALLBACK   	3
-
-#define FDFS_FILE_ID_SEPERATOR		'/'
+#include "storage_client.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,17 +24,15 @@ extern "C" {
 *       local_filename: local filename to upload
 *	meta_list: meta info array
 *       meta_count: meta item count
-*	group_name: return the group name to store the file
-*	remote_filename: return the new created filename
+*	file_id: return the new created file id (including group name and filename)
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
+int storage_upload_by_filename1(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const char *local_filename, \
 			const FDFSMetaData *meta_list, \
 			const int meta_count, \
-			char *group_name, \
-			char *remote_filename);
+			char *file_id);
 
 /**
 * upload file to storage server (by file buff)
@@ -50,45 +43,40 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 *       file_size: file size (bytes)
 *	meta_list: meta info array
 *       meta_count: meta item count
-*	group_name: return the group name to store the file
-*	remote_filename: return the new created filename
+*	file_id: return the new created file id (including group name and filename)
 * return: 0 success, !=0 fail, return the error code
 **/
-#define storage_upload_by_filebuff(pTrackerServer, pStorageServer, file_buff, \
-		file_size, meta_list, meta_count, group_name, remote_filename) \
-	storage_do_upload_file(pTrackerServer, pStorageServer, \
+#define storage_upload_by_filebuff1(pTrackerServer, pStorageServer, file_buff, \
+		file_size, meta_list, meta_count, file_id) \
+	storage_do_upload_file1(pTrackerServer, pStorageServer, \
 		false, file_buff, file_size, meta_list, \
-		meta_count, group_name, remote_filename)
-
-int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
+		meta_count, file_id)
+int storage_do_upload_file1(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const bool bFilename, \
 			const char *file_buff, const int64_t file_size, \
 			const FDFSMetaData *meta_list, \
 			const int meta_count, \
-			char *group_name, \
-			char *remote_filename);
+			char *file_id);
 
 /**
 * delete file from storage server
 * params:
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
-*	group_name: the group name of storage server
-*	filename: filename on storage server
+*	file_id: the file id to deleted (including group name and filename)
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_delete_file(TrackerServerInfo *pTrackerServer, \
+int storage_delete_file1(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
-			const char *group_name, const char *filename);
+			const char *file_id);
 
 /**
 * set metadata items to storage server
 * params:
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
-*	group_name: the group name of storage server
-*	filename: filename on storage server
+*	file_id: the file id (including group name and filename)
 *	meta_list: meta item array
 *       meta_count: meta item count
 *       op_flag:
@@ -98,9 +86,9 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 *				the metadata item not exist, otherwise update it
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
+int storage_set_metadata1(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
-			const char *group_name, const char *filename, \
+			const char *file_id, \
 			FDFSMetaData *meta_list, const int meta_count, \
 			const char op_flag);
 
@@ -109,28 +97,26 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 * params:
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
-*	group_name: the group name of storage server
-*	remote_filename: filename on storage server
+*	file_id: the file id (including group name and filename)
 *       file_buff: return file content/buff, must be freed
 *       file_size: return file size (bytes)
 * return: 0 success, !=0 fail, return the error code
 **/
-#define storage_download_file(pTrackerServer, pStorageServer, group_name, \
-			remote_filename, file_buff, file_size)  \
-	storage_do_download_file(pTrackerServer, pStorageServer, \
-			FDFS_DOWNLOAD_TO_BUFF, group_name, remote_filename, \
+#define storage_download_file1(pTrackerServer, pStorageServer, file_id, \
+			file_buff, file_size)  \
+	storage_do_download_file1(pTrackerServer, pStorageServer, \
+			FDFS_DOWNLOAD_TO_BUFF, file_id, \
 			file_buff, NULL, file_size)
 
-#define storage_download_file_to_buff(pTrackerServer, pStorageServer, \
-			group_name, remote_filename, file_buff, file_size)  \
-	storage_do_download_file(pTrackerServer, pStorageServer, \
-			FDFS_DOWNLOAD_TO_BUFF, group_name, remote_filename, \
+#define storage_download_file_to_buff1(pTrackerServer, pStorageServer, \
+			file_id, file_buff, file_size)  \
+	storage_do_download_file1(pTrackerServer, pStorageServer, \
+			FDFS_DOWNLOAD_TO_BUFF, file_id, \
 			file_buff, NULL, file_size)
 
-int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
+int storage_do_download_file1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
-		const int download_type, \
-		const char *group_name, const char *remote_filename, \
+		const int download_type, const char *file_id, \
 		char **file_buff, void *arg, int64_t *file_size);
 
 /**
@@ -138,64 +124,60 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 * params:
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
-*	group_name: the group name of storage server
-*	remote_filename: filename on storage server
+*	file_id: the file id (including group name and filename)
 *	local_filename: local filename to write
 *       file_size: return file size (bytes)
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
-			const char *group_name, const char *remote_filename, \
-			const char *local_filename, int64_t *file_size);
+int storage_download_file_to_file1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const char *file_id, \
+		const char *local_filename, int64_t *file_size);
 
 /**
 * get all metadata items from storage server
 * params:
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
-*	group_name: the group name of storage server
-*	filename: filename on storage server
+*	file_id: the file id (including group name and filename)
 *	meta_list: return meta info array, must be freed
 *       meta_count: return meta item count
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer,  \
-			const char *group_name, const char *filename, \
-			FDFSMetaData **meta_list, \
-			int *meta_count);
+int storage_get_metadata1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer,  \
+		const char *file_id, \
+		FDFSMetaData **meta_list, int *meta_count);
 
-
-/**
-* Download file callback function prototype
-* params:
-*	arg: callback extra arguement
-*       file_size: file size
-*       data: temp buff, should not keep persistently
-*	current_size: current data size
-* return: 0 success, !=0 fail, should return the error code
-**/
-typedef int (*DownloadCallback) (void *arg, const int64_t file_size, \
-		const char *data, const int current_size);
 
 /**
 * download file from storage server
 * params:
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
-*	group_name: the group name of storage server
-*	remote_filename: filename on storage server
+*	file_id: the file id (including group name and filename)
 *	callback: callback function
 *	arg: callback extra arguement
 *       file_size: return file size (bytes)
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
+int storage_download_file_ex1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
-		const char *group_name, const char *remote_filename, \
+		const char *file_id, \
 		DownloadCallback callback, void *arg, int64_t *file_size);
 
+/**
+* query storage server to download file
+* params:
+*	pTrackerServer: tracker server
+*	pStorageServer: return storage server
+*	file_id: the file id (including group name and filename)
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_query_storage_fetch1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const char *file_id);
+		
 #ifdef __cplusplus
 }
 #endif

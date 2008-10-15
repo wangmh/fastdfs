@@ -569,7 +569,8 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		res = strcmp(pServer->ip_addr, pGlobalServer->ip_addr);
 		if (res < 0)
 		{
-			pServer++;
+			if (pServer->status != FDFS_STORAGE_STATUS_DELETED)
+			{
 			logError("file: "__FILE__", line: %d, " \
 				"tracker server %s:%d, " \
 				"group \"%s\", " \
@@ -578,6 +579,9 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 				pTrackerServer->port, \
 				pTrackerServer->group_name
 			);
+			}
+
+			pServer++;
 		}
 		else if (res == 0)
 		{
