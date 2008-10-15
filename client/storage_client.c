@@ -30,6 +30,23 @@
 #include "client_global.h"
 #include "fdfs_base64.h"
 
+#define FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id) \
+	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 64]; \
+	char *group_name; \
+	char *filename; \
+	char *pSeperator; \
+	\
+	snprintf(new_file_id, sizeof(new_file_id), "%s", file_id); \
+	pSeperator = strchr(new_file_id, FDFS_FILE_ID_SEPERATOR); \
+	if (pSeperator == NULL) \
+	{ \
+		return EINVAL; \
+	} \
+	\
+	*pSeperator = '\0'; \
+	group_name = new_file_id; \
+	filename =  pSeperator + 1; \
+
 static int storage_get_read_connection(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo **ppStorageServer, \
 		const char *group_name, const char *filename, \
@@ -111,6 +128,17 @@ static int storage_get_write_connection(TrackerServerInfo *pTrackerServer, \
 	}
 
 	return 0;
+}
+
+int storage_get_metadata1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer,  \
+		const char *file_id, \
+		FDFSMetaData **meta_list, int *meta_count)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
+
+	return storage_get_metadata(pTrackerServer, pStorageServer, \
+			group_name, filename, meta_list, meta_count);
 }
 
 int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
@@ -205,6 +233,16 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
+int storage_delete_file1(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer, \
+			const char *file_id)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
+
+	return storage_delete_file(pTrackerServer, \
+			pStorageServer, group_name, filename);
+}
+
 int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const char *group_name, const char *filename)
@@ -276,6 +314,18 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	}
 
 	return result;
+}
+
+int storage_do_download_file1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const int download_type, const char *file_id, \
+		char **file_buff, void *arg, int64_t *file_size)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
+
+	return storage_do_download_file(pTrackerServer, pStorageServer, \
+		download_type, group_name, filename, \
+		file_buff, arg, file_size);
 }
 
 int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
@@ -417,6 +467,18 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
+int storage_download_file_to_file1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const char *file_id, \
+		const char *local_filename, int64_t *file_size)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
+
+	return storage_download_file_to_file(pTrackerServer, \
+			pStorageServer, group_name, filename, \
+			local_filename, file_size);
+}
+
 int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const char *group_name, const char *remote_filename, \
@@ -427,6 +489,64 @@ int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
 	return storage_do_download_file(pTrackerServer, pStorageServer, \
 			FDFS_DOWNLOAD_TO_FILE, group_name, remote_filename, \
 			&pLocalFilename, NULL, file_size);
+}
+
+int storage_upload_by_filename1(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer, \
+			const char *local_filename, \
+			const FDFSMetaData *meta_list, \
+			const int meta_count, \
+			char *file_id)
+{
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char remote_filename[64];
+	int result;
+
+	result = storage_upload_by_filename(pTrackerServer, \
+			pStorageServer, local_filename, \
+			meta_list, meta_count, \
+			group_name, remote_filename);
+	if (result == 0)
+	{
+		sprintf(file_id, "%s%c%s", group_name, \
+			FDFS_FILE_ID_SEPERATOR, remote_filename);
+	}
+	else
+	{
+		file_id[0] = '\0';
+	}
+
+	return result;
+}
+
+int storage_do_upload_file1(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer, \
+			const bool bFilename, \
+			const char *file_buff, const int64_t file_size, \
+			const FDFSMetaData *meta_list, \
+			const int meta_count, \
+			char *file_id)
+{
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char remote_filename[64];
+	int result;
+
+	result = storage_do_upload_file(pTrackerServer, \
+			pStorageServer, bFilename, \
+			file_buff, file_size, \
+			meta_list, meta_count, \
+			group_name, remote_filename);
+	if (result == 0)
+	{
+		sprintf(file_id, "%s%c%s", group_name, \
+			FDFS_FILE_ID_SEPERATOR, remote_filename);
+	}
+	else
+	{
+		file_id[0] = '\0';
+	}
+
+	return result;
 }
 
 /**
@@ -632,6 +752,19 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 			group_name, remote_filename);
 }
 
+int storage_set_metadata1(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer, \
+			const char *file_id, \
+			FDFSMetaData *meta_list, const int meta_count, \
+			const char op_flag)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
+
+	return storage_set_metadata(pTrackerServer, pStorageServer, \
+			group_name, filename, \
+			meta_list, meta_count, op_flag);
+}
+
 /**
 8 bytes: filename length
 8 bytes: meta data size
@@ -758,6 +891,17 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
+int storage_download_file_ex1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const char *file_id, \
+		DownloadCallback callback, void *arg, int64_t *file_size)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
+
+	return storage_download_file_ex(pTrackerServer, pStorageServer, \
+		group_name, filename, callback, arg, file_size);
+}
+
 int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const char *group_name, const char *remote_filename, \
@@ -768,5 +912,15 @@ int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
 	return storage_do_download_file(pTrackerServer, pStorageServer, \
 			FDFS_DOWNLOAD_TO_CALLBACK, group_name, remote_filename, \
 			&pCallback, arg, file_size);
+}
+
+int tracker_query_storage_fetch1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const char *file_id)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
+
+	return tracker_query_storage_fetch(pTrackerServer, \
+		pStorageServer, group_name, filename);
 }
 

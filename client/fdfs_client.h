@@ -14,6 +14,7 @@
 #include "tracker_proto.h"
 #include "tracker_client.h"
 #include "storage_client.h"
+#include "storage_client1.h"
 #include "client_func.h"
 #include "client_global.h"
 

@@ -24,12 +24,12 @@ HEADER_FILES = ../common/common_define.h ../common/fdfs_define.h \
                ../common/fdfs_base64.h ../common/shared_func.h \
                ../common/ini_file_reader.h ../common/_os_bits.h \
                ../tracker/tracker_types.h ../tracker/tracker_proto.h \
-               tracker_client.h storage_client.h client_func.h \
-               client_global.h fdfs_client.h
+               tracker_client.h storage_client.h storage_client1.h \
+               client_func.h client_global.h fdfs_client.h
 
 ALL_OBJS = $(STATIC_OBJS) $(SHARED_OBJS)
 
-ALL_PRGS = fdfs_monitor fdfs_test
+ALL_PRGS = fdfs_monitor fdfs_test fdfs_test1
 ALL_LIBS = libfdfsclient.so.1
 
 all: $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS)
