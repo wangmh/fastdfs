@@ -7,7 +7,7 @@ TARGET_PATH = $(TARGET_PATH)
 
 ALL_OBJS = 
 
-ALL_PRGS = fdfs_monitor fdfs_test
+ALL_PRGS = fdfs_monitor fdfs_test fdfs_test1
 
 all: $(ALL_OBJS) $(ALL_PRGS)
 .o:
