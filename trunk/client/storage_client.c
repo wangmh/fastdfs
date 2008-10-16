@@ -448,9 +448,15 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 			{
 				logError("call callback function fail, " \
 					"error code: %d", result);
+				break;
 			}
 
 			remain_bytes -= recv_bytes;
+		}
+
+		if (remain_bytes != 0)
+		{
+			break;
 		}
 	}
 
