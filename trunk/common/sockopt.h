@@ -44,6 +44,9 @@ int tcpsendfile(int sock, const char *filename, const int64_t file_bytes);
 int tcprecvfile(int sock, const char *filename, const int64_t file_bytes);
 int tcpdiscard(int sock, const int bytes);
 
+int gethostaddrs(char *ip_addrs[IP_ADDRESS_SIZE], \
+	const int max_count, int *count);
+
 #ifdef __cplusplus
 }
 #endif
