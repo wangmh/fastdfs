@@ -11,6 +11,8 @@
 #ifndef _SOCKETOPT_H_
 #define _SOCKETOPT_H_
 
+#include "common_define.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -44,7 +46,7 @@ int tcpsendfile(int sock, const char *filename, const int64_t file_bytes);
 int tcprecvfile(int sock, const char *filename, const int64_t file_bytes);
 int tcpdiscard(int sock, const int bytes);
 
-int gethostaddrs(char *ip_addrs[IP_ADDRESS_SIZE], \
+int gethostaddrs(char ip_addrs[][IP_ADDRESS_SIZE], \
 	const int max_count, int *count);
 
 #ifdef __cplusplus

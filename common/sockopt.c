@@ -768,7 +768,7 @@ int tcpsetnonblockopt(int fd, const int timeout)
 	return 0;
 }
 
-int gethostaddrs(char *ip_addrs[IP_ADDRESS_SIZE], \
+int gethostaddrs(char ip_addrs[][IP_ADDRESS_SIZE], \
 	const int max_count, int *count)
 {
 	struct hostent *ent;
