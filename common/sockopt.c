@@ -768,3 +768,49 @@ int tcpsetnonblockopt(int fd, const int timeout)
 	return 0;
 }
 
+int gethostaddrs(char *ip_addrs[IP_ADDRESS_SIZE], \
+	const int max_count, int *count)
+{
+	struct hostent *ent;
+	char hostname[128];
+	char ip_addr[IP_ADDRESS_SIZE];
+	int k;
+
+	*count = 0;
+	if (gethostname(hostname, sizeof(hostname)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call gethostname fail, " \
+			"error no: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EFAULT;
+	}
+
+	memset(ip_addr, 0, sizeof(ip_addr));
+        ent = gethostbyname(hostname);
+	if (ent == NULL)
+	{
+		*count = 0;
+		return h_errno != 0 ? h_errno : EFAULT;
+	}
+
+	k = 0;
+	while (ent->h_addr_list[k] != NULL)
+	{
+		if (*count >= max_count)
+		{
+			break;
+		}
+
+		if (inet_ntop(ent->h_addrtype, ent->h_addr_list[k], \
+			ip_addrs[*count], IP_ADDRESS_SIZE) != NULL)
+		{
+			(*count)++;
+		}
+
+		k++;
+	}
+
+	return 0;
+}
+
