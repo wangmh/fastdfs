@@ -39,7 +39,7 @@ elif [ "$uname" = "FreeBSD" ]; then
 fi
 
 LIBS=''
-if [ -f /usr/lib/libpthread.so ] || [ -f /usr/local/lib/libpthread.so ]; then
+if [ -f /usr/lib/libpthread.so ] || [ -f /usr/local/lib/libpthread.so ] || [ -f /usr/lib64/libpthread.so ]; then
   LIBS="$LIBS -lpthread"
 else
   line=`nm -D /usr/lib/libc_r.so | grep pthread_create | grep -w T`
