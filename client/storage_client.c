@@ -930,3 +930,13 @@ int tracker_query_storage_fetch1(TrackerServerInfo *pTrackerServer, \
 		pStorageServer, group_name, filename);
 }
 
+int tracker_query_storage_update1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const char *file_id)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
+
+	return tracker_query_storage_update(pTrackerServer, \
+		pStorageServer, group_name, filename);
+}
+

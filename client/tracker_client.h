@@ -101,6 +101,21 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer);
 
 /**
+* query storage server to update (delete file or set meta data)
+* params:
+*	pTrackerServer: tracker server
+*	pStorageServer: return storage server
+*       group_name: the group name of storage server
+*       filename: filename on storage server
+* return: 0 success, !=0 fail, return the error code
+**/
+#define tracker_query_storage_update(pTrackerServer, \
+		pStorageServer, group_name, filename) \
+	tracker_do_query_storage(pTrackerServer, \
+		pStorageServer, TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE,\
+		group_name, filename)
+
+/**
 * query storage server to download file
 * params:
 *	pTrackerServer: tracker server
@@ -109,8 +124,25 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 *       filename: filename on storage server
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+#define tracker_query_storage_fetch(pTrackerServer, \
+		pStorageServer, group_name, filename) \
+	tracker_do_query_storage(pTrackerServer, \
+		pStorageServer, TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH,\
+		group_name, filename)
+
+/**
+* query storage server to fetch or update
+* params:
+*	pTrackerServer: tracker server
+*	pStorageServer: return storage server
+*       cmd : command, TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH or 
+*             TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE
+*       group_name: the group name of storage server
+*       filename: filename on storage server
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const byte cmd, \
 		const char *group_name, const char *filename);
 
 /**

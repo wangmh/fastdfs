@@ -178,6 +178,18 @@ int tracker_query_storage_fetch1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const char *file_id);
 		
+/**
+* query storage server to update (delete file and set metadata)
+* params:
+*	pTrackerServer: tracker server
+*	pStorageServer: return storage server
+*	file_id: the file id (including group name and filename)
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_query_storage_update1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const char *file_id);
+
 #ifdef __cplusplus
 }
 #endif

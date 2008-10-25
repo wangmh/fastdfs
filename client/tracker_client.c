@@ -339,8 +339,8 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const byte cmd, \
 		const char *group_name, const char *filename)
 {
 	TrackerHeader header;
@@ -363,7 +363,7 @@ int tracker_query_storage_fetch(TrackerServerInfo *pTrackerServer, \
 			FDFS_GROUP_NAME_MAX_LEN,  "%s", filename);
 	
 	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, header.pkg_len);
-	header.cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH;
+	header.cmd = cmd;
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
 	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \

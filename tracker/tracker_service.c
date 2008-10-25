@@ -31,6 +31,9 @@
 pthread_mutex_t g_tracker_thread_lock;
 int g_tracker_thread_count = 0;
 
+static FDFSStorageDetail *tracker_get_writable_storage( \
+		FDFSGroupInfo *pStoreGroup);
+
 static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 			const int status)
 {
@@ -610,8 +613,8 @@ Header
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 remain bytes: filename
 **/
-static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
-				const int64_t nInPackLen)
+static int tracker_deal_service_query_fetch_update(TrackerClientInfo *pClientInfo, \
+			const byte cmd, const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 32];
@@ -688,13 +691,20 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		pStorageServer = *(pGroup->active_servers + \
-				   pGroup->current_read_server);
-		pGroup->current_read_server++;
-		if (pGroup->current_read_server >= \
-				pGroup->active_count)
+		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH)
 		{
-			pGroup->current_read_server = 0;
+			pStorageServer = *(pGroup->active_servers + \
+					   pGroup->current_read_server);
+			pGroup->current_read_server++;
+			if (pGroup->current_read_server >= \
+				pGroup->active_count)
+			{
+				pGroup->current_read_server = 0;
+			}
+		}
+		else //TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE
+		{
+			pStorageServer = tracker_get_writable_storage(pGroup);
 		}
 
 		resp.status = 0;
@@ -734,6 +744,27 @@ static int tracker_deal_service_query_fetch(TrackerClientInfo *pClientInfo, \
 	}
 
 	return resp.status;
+}
+
+static FDFSStorageDetail *tracker_get_writable_storage( \
+		FDFSGroupInfo *pStoreGroup)
+{
+	if (g_groups.store_server == FDFS_STORE_SERVER_ROUND_ROBIN)
+	{
+		if (pStoreGroup->current_write_server >= \
+				pStoreGroup->active_count)
+		{
+			pStoreGroup->current_write_server = 0;
+		}
+
+
+		return  *(pStoreGroup->active_servers + \
+				   pStoreGroup->current_write_server++);
+	}
+	else //use the first server
+	{
+		return *(pStoreGroup->active_servers);
+	}
 }
 
 static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
@@ -891,23 +922,7 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (g_groups.store_server == FDFS_STORE_SERVER_ROUND_ROBIN)
-		{
-			if (pStoreGroup->current_write_server >= \
-					pStoreGroup->active_count)
-			{
-				pStoreGroup->current_write_server = 0;
-			}
-
-
-			pStorageServer = *(pStoreGroup->active_servers + \
-					   pStoreGroup->current_write_server);
-			pStoreGroup->current_write_server++;
-		}
-		else //use the first server
-		{
-			pStorageServer = *(pStoreGroup->active_servers);
-		}
+		pStorageServer = tracker_get_writable_storage(pStoreGroup);
 
 		/*
 		//printf("pStoreGroup->current_write_server: %d, " \
@@ -1637,8 +1652,16 @@ data buff (struct)
 		}
 		else if (header.cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH)
 		{
-			if (tracker_deal_service_query_fetch(&client_info, \
-				nInPackLen) != 0)
+			if (tracker_deal_service_query_fetch_update(&client_info, \
+				header.cmd, nInPackLen) != 0)
+			{
+				break;
+			}
+		}
+		else if (header.cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE)
+		{
+			if (tracker_deal_service_query_fetch_update(&client_info, \
+				header.cmd, nInPackLen) != 0)
 			{
 				break;
 			}
