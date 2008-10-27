@@ -47,16 +47,40 @@
 	group_name = new_file_id; \
 	filename =  pSeperator + 1; \
 
-static int storage_get_read_connection(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo **ppStorageServer, \
+#define storage_get_read_connection(pTrackerServer, \
+		ppStorageServer, group_name, filename, \
+		pNewStorage, new_connection) \
+	storage_get_connection(pTrackerServer, \
+		ppStorageServer, TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH, \
+		group_name, filename, pNewStorage, new_connection)
+
+#define storage_get_update_connection(pTrackerServer, \
+		ppStorageServer, group_name, filename, \
+		pNewStorage, new_connection) \
+	storage_get_connection(pTrackerServer, \
+		ppStorageServer, TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE, \
+		group_name, filename, pNewStorage, new_connection)
+
+static int storage_get_connection(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo **ppStorageServer, const byte cmd, \
 		const char *group_name, const char *filename, \
 		TrackerServerInfo *pNewStorage, bool *new_connection)
 {
 	int result;
 	if (*ppStorageServer == NULL)
 	{
-		if ((result=tracker_query_storage_fetch(pTrackerServer, \
-		                pNewStorage, group_name, filename)) != 0)
+		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH)
+		{
+			result = tracker_query_storage_fetch(pTrackerServer, \
+		                pNewStorage, group_name, filename);
+		}
+		else
+		{
+			result = tracker_query_storage_update(pTrackerServer, \
+		                pNewStorage, group_name, filename);
+		}
+
+		if (result != 0)
 		{
 			return result;
 		}
@@ -257,7 +281,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	int filename_len;
 	bool new_connection;
 
-	if ((result=storage_get_read_connection(pTrackerServer, \
+	if ((result=storage_get_update_connection(pTrackerServer, \
 		&pStorageServer, group_name, filename, \
 		&storageServer, &new_connection)) != 0)
 	{
@@ -802,7 +826,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	char *pEnd;
 	bool new_connection;
 
-	if ((result=storage_get_read_connection(pTrackerServer, \
+	if ((result=storage_get_update_connection(pTrackerServer, \
 		&pStorageServer, group_name, filename, \
 		&storageServer, &new_connection)) != 0)
 	{
