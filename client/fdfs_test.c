@@ -170,8 +170,19 @@ int main(int argc, char *argv[])
 		snprintf(group_name, sizeof(group_name), "%s", argv[3]);
 		snprintf(remote_filename, sizeof(remote_filename), \
 				"%s", argv[4]);
-		if ((result=tracker_query_storage_fetch(pTrackerServer, \
-       	       		&storageServer, group_name, remote_filename)) != 0)
+		if (strcmp(operation, "setmeta") == 0 ||
+	 	    strcmp(operation, "delete") == 0)
+		{
+			result = tracker_query_storage_update(pTrackerServer, \
+       	       			&storageServer, group_name, remote_filename);
+		}
+		else
+		{
+			result = tracker_query_storage_fetch(pTrackerServer, \
+       	       			&storageServer, group_name, remote_filename);
+		}
+
+		if (result != 0)
 		{
 			fdfs_client_destroy();
 			printf("tracker_query_storage_fetch fail, " \
