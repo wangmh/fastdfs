@@ -800,7 +800,7 @@ int storage_load_from_conf_file(const char *filename, \
 
 		logInfo("FastDFS v%d.%d, base_path=%s, " \
 			"group_name=%s, " \
-			"network_timeout=%d, "\
+			"network_timeout=%ds, "\
 			"port=%d, bind_addr=%s, " \
 			"max_connections=%d, "    \
 			"heart_beat_interval=%ds, " \
