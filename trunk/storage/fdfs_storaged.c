@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	base64_init_ex(0, '.', '_', '-');
+	base64_init_ex(0, '-', '_', '.');
 	if ((result=setRandSeed()) != 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \

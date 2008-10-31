@@ -38,8 +38,8 @@ pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
 
 static int storage_gen_filename(StorageClientInfo *pClientInfo, \
-			const int file_size, \
-			char *filename, int *filename_len)
+		const int file_size, const char *szFormattedExt, \
+		const int ext_name_len, char *filename, int *filename_len)
 {
 	//struct timeval tv;
 	int current_time;
@@ -75,8 +75,10 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 	len += sprintf(buff + len, STORAGE_DATA_DIR_FORMAT"/", n & 0xFF);
 
 	memcpy(filename, buff, len);
-	memcpy(filename+len, encoded, *filename_len+1);
-	*filename_len += len;
+	memcpy(filename+len, encoded, *filename_len);
+	memcpy(filename+len+(*filename_len), szFormattedExt, ext_name_len);
+	*filename_len += len + ext_name_len;
+	*(filename + (*filename_len)) = '\0';
 
 	return 0;
 }
@@ -115,17 +117,31 @@ static int storage_sort_metadata_buff(char *meta_buff, const int meta_size)
 }
 
 static int storage_save_file(StorageClientInfo *pClientInfo, \
-			const int file_size, \
+			const int file_size, const char *file_ext_name, \
 			char *meta_buff, const int meta_size, \
 			char *filename, int *filename_len)
 {
 	int result;
 	int i;
 	char full_filename[MAX_PATH_SIZE+32];
+	char szFormattedExt[FDFS_FILE_EXT_NAME_MAX_LEN + 2];
+	char *p;
+	int ext_name_len;
+
+	ext_name_len = strlen(file_ext_name);
+	memset(szFormattedExt, '-', FDFS_FILE_EXT_NAME_MAX_LEN + 1);
+	if (ext_name_len > 0)
+	{
+		p = szFormattedExt + (FDFS_FILE_EXT_NAME_MAX_LEN-ext_name_len);
+		*p = '.';
+		memcpy(p+1, file_ext_name, ext_name_len);
+	}
+	szFormattedExt[FDFS_FILE_EXT_NAME_MAX_LEN + 1] = '\0';
 
 	for (i=0; i<1024; i++)
 	{
 		if ((result=storage_gen_filename(pClientInfo, file_size, \
+				szFormattedExt, FDFS_FILE_EXT_NAME_MAX_LEN+1, \
 				filename, filename_len)) != 0)
 		{
 			return result;
@@ -548,6 +564,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 /**
 8 bytes: meta data bytes
 8 bytes: file size 
+FDFS_FILE_EXT_NAME_MAX_LEN bytes: file ext name, do not include dot (.)
 meta data bytes: each meta data seperated by \x01,
 		 name and value seperated by \x02
 file size bytes: file content
@@ -557,8 +574,9 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 {
 	TrackerHeader resp;
 	int out_len;
-	char in_buff[2 * FDFS_PROTO_PKG_LEN_SIZE + 1];
+	char in_buff[2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_FILE_EXT_NAME_MAX_LEN+1];
 	char *meta_buff;
+	char *file_ext_name;
 	char out_buff[128];
 	char filename[128];
 	int meta_bytes;
@@ -572,22 +590,25 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	filename_len = 0;
 	while (1)
 	{
-		if (nInPackLen < 2 * FDFS_PROTO_PKG_LEN_SIZE)
+		if (nInPackLen < 2 * FDFS_PROTO_PKG_LEN_SIZE + 
+				FDFS_FILE_EXT_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-				"is not correct, " \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
 				STORAGE_PROTO_CMD_UPLOAD_FILE, \
 				pClientInfo->ip_addr,  \
-				nInPackLen, 2 * FDFS_PROTO_PKG_LEN_SIZE);
+				nInPackLen, 2 * FDFS_PROTO_PKG_LEN_SIZE + \
+				FDFS_FILE_EXT_NAME_MAX_LEN);
 			resp.status = EINVAL;
 			break;
 		}
 
 		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
-			2*FDFS_PROTO_PKG_LEN_SIZE, g_network_timeout)) != 0)
+			2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_FILE_EXT_NAME_MAX_LEN, \
+			g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -611,7 +632,8 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 		}
 
 		if (file_bytes < 0 || file_bytes != nInPackLen - \
-			(2 * FDFS_PROTO_PKG_LEN_SIZE + meta_bytes))
+			(2 * FDFS_PROTO_PKG_LEN_SIZE + \
+			FDFS_FILE_EXT_NAME_MAX_LEN + meta_bytes))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, pkg length is not correct, " \
@@ -621,6 +643,9 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			resp.status = EINVAL;
 			break;
 		}
+
+		file_ext_name = in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE;
+		file_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN] = '\0';
 
 		if (meta_bytes > 0)
 		{
@@ -649,8 +674,8 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			*(meta_buff + meta_bytes) = '\0';
 		}
 
-		resp.status = storage_save_file(pClientInfo,  \
-			file_bytes, meta_buff, meta_bytes, \
+		resp.status = storage_save_file(pClientInfo, file_bytes, \
+			file_ext_name, meta_buff, meta_bytes, \
 			filename, &filename_len);
 
 		if (resp.status != 0)

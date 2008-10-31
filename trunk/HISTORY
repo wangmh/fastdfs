@@ -1,6 +1,7 @@
 
-Version 1.12  2008-10-25
+Version 1.12  2008-10-31
   * client download file support callback function
+  * upload file support file ext name
   * add delete command to delete the invalid storage server
   * add client functions which combine group name and filename to file id,
     add anothor client test program: fdfs_test1.c to use file id

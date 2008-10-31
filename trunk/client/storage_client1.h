@@ -22,17 +22,18 @@ extern "C" {
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
 *       local_filename: local filename to upload
+*       file_ext_name: file ext name, not include dot(.), 
+*                      if be NULL will abstract ext name from the local filename
 *	meta_list: meta info array
 *       meta_count: meta item count
 *	file_id: return the new created file id (including group name and filename)
 * return: 0 success, !=0 fail, return the error code
 **/
 int storage_upload_by_filename1(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
-			const char *local_filename, \
-			const FDFSMetaData *meta_list, \
-			const int meta_count, \
-			char *file_id);
+		TrackerServerInfo *pStorageServer, \
+		const char *local_filename, const char *file_ext_name, \
+		const FDFSMetaData *meta_list, \
+		const int meta_count, char *file_id);
 
 /**
 * upload file to storage server (by file buff)
@@ -41,23 +42,22 @@ int storage_upload_by_filename1(TrackerServerInfo *pTrackerServer, \
 *       pStorageServer: storage server
 *       file_buff: file content/buff
 *       file_size: file size (bytes)
+*       file_ext_name: file ext name, not include dot(.), can be NULL
 *	meta_list: meta info array
 *       meta_count: meta item count
 *	file_id: return the new created file id (including group name and filename)
 * return: 0 success, !=0 fail, return the error code
 **/
 #define storage_upload_by_filebuff1(pTrackerServer, pStorageServer, file_buff, \
-		file_size, meta_list, meta_count, file_id) \
+		file_size, file_ext_name, meta_list, meta_count, file_id) \
 	storage_do_upload_file1(pTrackerServer, pStorageServer, \
-		false, file_buff, file_size, meta_list, \
-		meta_count, file_id)
+		false, file_buff, file_size, file_ext_name, \
+		meta_list, meta_count, file_id)
 int storage_do_upload_file1(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
-			const bool bFilename, \
-			const char *file_buff, const int64_t file_size, \
-			const FDFSMetaData *meta_list, \
-			const int meta_count, \
-			char *file_id);
+		TrackerServerInfo *pStorageServer, const bool bFilename, \
+		const char *file_buff, const int64_t file_size, \
+		const char *file_ext_name, const FDFSMetaData *meta_list, \
+		const int meta_count, char *file_id);
 
 /**
 * delete file from storage server
