@@ -127,16 +127,31 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 	char szFormattedExt[FDFS_FILE_EXT_NAME_MAX_LEN + 2];
 	char *p;
 	int ext_name_len;
+	int pad_len;
 
 	ext_name_len = strlen(file_ext_name);
-	memset(szFormattedExt, '-', FDFS_FILE_EXT_NAME_MAX_LEN + 1);
+	if (ext_name_len == 0)
+	{
+		pad_len = FDFS_FILE_EXT_NAME_MAX_LEN + 1;
+	}
+	else
+	{
+		pad_len = FDFS_FILE_EXT_NAME_MAX_LEN - ext_name_len;
+	}
+
+	p = szFormattedExt;
+	for (i=0; i<pad_len; i++)
+	{
+		*p++ = '0' + (int)(10.0 * (double)rand() / RAND_MAX);
+	}
+
 	if (ext_name_len > 0)
 	{
-		p = szFormattedExt + (FDFS_FILE_EXT_NAME_MAX_LEN-ext_name_len);
-		*p = '.';
-		memcpy(p+1, file_ext_name, ext_name_len);
+		*p++ = '.';
+		memcpy(p, file_ext_name, ext_name_len);
+		p += ext_name_len;
 	}
-	szFormattedExt[FDFS_FILE_EXT_NAME_MAX_LEN + 1] = '\0';
+	*p = '\0';
 
 	for (i=0; i<1024; i++)
 	{
