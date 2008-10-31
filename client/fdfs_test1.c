@@ -150,8 +150,9 @@ int main(int argc, char *argv[])
 		if (remote_filename != NULL)
 		{
 			remote_filename++;
-			base64_decode(remote_filename + 6, \
-				strlen(remote_filename) - 6, buff, &len);
+			base64_decode(remote_filename+6, strlen(remote_filename)
+				 - 6 - (FDFS_FILE_EXT_NAME_MAX_LEN + 1), 
+				buff, &len);
 			printf("file_id=%s\n", file_id);
 			printf("file timestamp=%d\n", buff2int(buff));
 			printf("file size=%d\n", buff2int(buff+4));
