@@ -1159,8 +1159,6 @@ static int storage_binlog_read(BinLogReader *pReader, \
 		return ENOENT;
 	}
 
-	printf("*record_length=%d\n", *record_length);
-
 	if ((result=splitEx(line, ' ', cols, 3)) < 3)
 	{
 		logError("file: "__FILE__", line: %d, " \
