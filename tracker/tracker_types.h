@@ -28,6 +28,8 @@
 #define FDFS_MAX_META_NAME_LEN		64
 #define FDFS_MAX_META_VALUE_LEN		256
 
+#define FDFS_FILE_EXT_NAME_MAX_LEN	5
+
 //status order is important!
 #define FDFS_STORAGE_STATUS_INIT	  0
 #define FDFS_STORAGE_STATUS_WAIT_SYNC	  1

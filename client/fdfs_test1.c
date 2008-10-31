@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 	char *operation;
 	char *meta_buff;
 
-	base64_init_ex(0, '.', '_', '-');
+	base64_init_ex(0, '-', '_', '.');
 	printf("This is FastDFS client test program v%d.%d\n" \
 "\nCopyright (C) 2008, Happy Fish / YuQing\n" \
 "\nFastDFS may be copied only under the terms of the GNU General\n" \
@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 		meta_count++;
 		result = storage_upload_by_filename1(pTrackerServer, \
 				&storageServer, local_filename, \
-				meta_list, meta_count, \
+				NULL, meta_list, meta_count, \
 				file_id);
 		if (result != 0)
 		{

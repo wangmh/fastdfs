@@ -46,14 +46,14 @@ int main(int argc, char *argv[])
 	int meta_count;
 	int i;
 	FDFSMetaData *pMetaList;
-	char buff[13];
+	char buff[32];
 	int len;
         char *file_buff;
 	int64_t file_size;
 	char *operation;
 	char *meta_buff;
 
-	base64_init_ex(0, '.', '_', '-');
+	base64_init_ex(0, '-', '_', '.');
 	printf("This is FastDFS client test program v%d.%d\n" \
 "\nCopyright (C) 2008, Happy Fish / YuQing\n" \
 "\nFastDFS may be copied only under the terms of the GNU General\n" \
@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 		meta_count++;
 		result = storage_upload_by_filename(pTrackerServer, \
 				&storageServer, local_filename, \
-				meta_list, meta_count, \
+				NULL, meta_list, meta_count, \
 				group_name, remote_filename);
 		if (result != 0)
 		{
@@ -146,7 +146,8 @@ int main(int argc, char *argv[])
 		}
 
 		memset(buff, 0, sizeof(buff));
-		base64_decode(remote_filename + 6, strlen(remote_filename) - 6, buff, &len);
+		base64_decode(remote_filename + 6, strlen(remote_filename) - 6 \
+			 - (FDFS_FILE_EXT_NAME_MAX_LEN + 1), buff, &len);
 		printf("group_name=%s, remote_filename=%s\n", \
 			group_name, remote_filename);
 		printf("file timestamp=%d\n", buff2int(buff));
