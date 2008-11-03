@@ -1524,11 +1524,14 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 static FDFSStorageServer *get_storage_server(const char *ip_addr)
 {
 	FDFSStorageServer targetServer;
+	FDFSStorageServer *pTargetServer;
 	FDFSStorageServer **ppFound;
 
 	memset(&targetServer, 0, sizeof(targetServer));
 	strcpy(targetServer.server.ip_addr, ip_addr);
-	ppFound = (FDFSStorageServer **)bsearch(&targetServer, \
+
+	pTargetServer = &targetServer;
+	ppFound = (FDFSStorageServer **)bsearch(&pTargetServer, \
 		g_sorted_storages, g_storage_count, \
 		sizeof(FDFSStorageServer *), storage_cmp_by_ip_addr);
 	if (ppFound == NULL)
