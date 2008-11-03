@@ -23,7 +23,7 @@
 #include "shared_func.h"
 #include "logger.h"
 #include "fdfs_global.h"
-//#include "fdfs_base64.h"
+#include "fdfs_base64.h"
 #include "sockopt.h"
 #include "tracker_types.h"
 #include "tracker_mem.h"
@@ -60,7 +60,6 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	/*
 	base64_init_ex(0, '-', '_', '.');
 	if ((result=set_rand_seed()) != 0)
 	{
@@ -68,7 +67,6 @@ int main(int argc, char *argv[])
 			"set_rand_seed fail, program exit!", __LINE__);
 		return result;
 	}
-	*/
 
 	if ((result=tracker_mem_init()) != 0)
 	{

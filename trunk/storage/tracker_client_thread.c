@@ -369,28 +369,39 @@ static void* tracker_report_thread_entrance(void* arg)
 	return NULL;
 }
 
-static void tracker_insert_into_sorted_servers( \
+static bool tracker_insert_into_sorted_servers( \
 		FDFSStorageServer *pInsertedServer)
 {
 	FDFSStorageServer **ppServer;
 	FDFSStorageServer **ppEnd;
+	int nCompare;
 
 	ppEnd = g_sorted_storages + g_storage_count;
 	for (ppServer=ppEnd; ppServer > g_sorted_storages; ppServer--)
 	{
-		if (strcmp(pInsertedServer->server.ip_addr, \
-			   (*(ppServer-1))->server.ip_addr) > 0)
+		nCompare = strcmp(pInsertedServer->server.ip_addr, \
+			   	(*(ppServer-1))->server.ip_addr);
+		if (nCompare > 0)
 		{
 			*ppServer = pInsertedServer;
-			return;
+			return true;
 		}
-		else
+		else if (nCompare < 0)
 		{
 			*ppServer = *(ppServer-1);
+		}
+		else  //nCompare == 0
+		{
+			for (; ppServer < ppEnd; ppServer++) //restore
+			{
+				*ppServer = *(ppServer+1);
+			}
+			return false;
 		}
 	}
 
 	*ppServer = pInsertedServer;
+	return true;
 }
 
 int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
@@ -468,6 +479,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 	FDFSStorageServer *pGlobalServer;
 	FDFSStorageServer *pGlobalEnd;
 	FDFSStorageServer targetServer;
+	FDFSStorageServer *pTargetServer;
 	FDFSStorageBrief diffServers[FDFS_MAX_SERVERS_EACH_GROUP];
 	FDFSStorageBrief *pDiffServer;
 	int res;
@@ -475,13 +487,16 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 	int nDeletedCount;
 
 	memset(&targetServer, 0, sizeof(targetServer));
+	pTargetServer = &targetServer;
+
 	nDeletedCount = 0;
 	pDiffServer = diffServers;
 	pEnd = briefServers + server_count;
 	for (pServer=briefServers; pServer<pEnd; pServer++)
 	{
 		memcpy(&(targetServer.server),pServer,sizeof(FDFSStorageBrief));
-		ppFound = (FDFSStorageServer **)bsearch(&targetServer, \
+
+		ppFound = (FDFSStorageServer **)bsearch(&pTargetServer, \
 			g_sorted_storages, g_storage_count, \
 			sizeof(FDFSStorageServer *), storage_cmp_by_ip_addr);
 		if (ppFound != NULL)
@@ -535,9 +550,11 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 						g_storage_count;
 				memcpy(&(pInsertedServer->server), \
 					pServer, sizeof(FDFSStorageBrief));
-				tracker_insert_into_sorted_servers( \
-						pInsertedServer);
-				g_storage_count++;
+				if (tracker_insert_into_sorted_servers( \
+						pInsertedServer))
+				{
+					g_storage_count++;
+				}
 				if ((result=pthread_mutex_unlock( \
 					&reporter_thread_lock)) != 0)
 				{
