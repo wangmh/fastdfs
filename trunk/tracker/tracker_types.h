@@ -110,6 +110,7 @@ typedef struct StructFDFSStorageDetail
 
 	struct StructFDFSStorageDetail *psync_src_server;
 	time_t sync_until_timestamp;
+	time_t last_synced_timestamp; //the min sync timestamp as dest storage
 
 	int64_t total_mb;  //total disk storage in MB
 	int64_t free_mb;  //free disk storage in MB
@@ -133,6 +134,7 @@ typedef struct
 	FDFSStorageDetail **active_servers;  //order by addr
 	int current_read_server;
 	int current_write_server;
+	int **last_sync_timestamps;//row for src storage, col for dest storage
 	int *ref_count;  //groups referer count
 	int version;     //current group version
 	time_t last_source_update;

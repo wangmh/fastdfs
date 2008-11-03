@@ -16,8 +16,8 @@ int g_server_port = FDFS_STORAGE_SERVER_DEF_PORT;
 int g_max_connections = DEFAULT_MAX_CONNECTONS;
 
 int g_storage_count = 0;
-FDFSStorageBrief g_storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
-FDFSStorageBrief *g_sorted_storages[FDFS_MAX_SERVERS_EACH_GROUP];
+FDFSStorageServer g_storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
+FDFSStorageServer *g_sorted_storages[FDFS_MAX_SERVERS_EACH_GROUP];
 
 char g_group_name[FDFS_GROUP_NAME_MAX_LEN + 1] = {0};
 int g_tracker_reporter_count = 0;
@@ -26,6 +26,7 @@ int g_stat_report_interval = STORAGE_REPORT_DEF_INTERVAL;
 int g_sync_wait_usec = STORAGE_DEF_SYNC_WAIT_MSEC;
 FDFSStorageStat g_storage_stat;
 int g_stat_change_count = 1;
+int g_sync_change_count = 0;
 
 int g_storage_join_time = 0;
 bool g_sync_old_done = false;
@@ -41,6 +42,12 @@ char g_local_host_ip_addrs[STORAGE_MAX_LOCAL_IP_ADDRS * \
 
 int g_allow_ip_count = 0;
 in_addr_t *g_allow_ip_addrs = NULL;
+
+int storage_cmp_by_ip_addr(const void *p1, const void *p2)
+{
+	return strcmp((*((FDFSStorageServer **)p1))->server.ip_addr,
+		(*((FDFSStorageServer **)p2))->server.ip_addr);
+}
 
 bool is_local_host_ip(const char *client_ip)
 {

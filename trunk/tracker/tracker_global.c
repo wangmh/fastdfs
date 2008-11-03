@@ -12,6 +12,7 @@ int g_server_port = FDFS_TRACKER_SERVER_DEF_PORT;
 int g_max_connections = DEFAULT_MAX_CONNECTONS;
 FDFSGroups g_groups;
 int g_storage_stat_chg_count = 0;
+int g_storage_sync_time_chg_count = 0; //sync timestamp
 int g_storage_reserved_mb = 0;
 
 int g_allow_ip_count = 0;

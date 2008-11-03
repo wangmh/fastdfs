@@ -28,6 +28,8 @@ int tracker_mem_pthread_unlock();
 FDFSGroupInfo *tracker_mem_get_group(const char *group_name);
 FDFSStorageDetail *tracker_mem_get_storage(FDFSGroupInfo *pGroup, \
 				const char *ip_addr);
+FDFSStorageDetail *tracker_mem_get_active_storage(FDFSGroupInfo *pGroup, \
+				const char *ip_addr);
 
 int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 			const bool bIncRef, bool *bInserted);
@@ -43,6 +45,8 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
                 FDFSStorageBrief *briefServers, const int server_count);
 int tracker_save_storages();
+int tracker_save_sync_timestamps();
+
 int tracker_get_group_file_count(FDFSGroupInfo *pGroup);
 int tracker_get_group_success_upload_count(FDFSGroupInfo *pGroup);
 FDFSStorageDetail *tracker_get_group_sync_src_server(FDFSGroupInfo *pGroup, \

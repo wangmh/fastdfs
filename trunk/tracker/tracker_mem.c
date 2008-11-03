@@ -29,6 +29,7 @@ static pthread_mutex_t mem_thread_lock;
 
 #define STORAGE_GROUPS_LIST_FILENAME	"storage_groups.dat"
 #define STORAGE_SERVERS_LIST_FILENAME	"storage_servers.dat"
+#define STORAGE_SYNC_TIMESTAMP_FILENAME	"storage_sync_timestamp.dat"
 #define STORAGE_DATA_FIELD_SEPERATOR	','
 
 #define TRACKER_MEM_ALLOC_ONCE	5
@@ -116,7 +117,7 @@ static int tracker_locate_storage_sync_server(FDFSStorageSync *pStorageSyncs, \
 			pSyncServer->sync_src_ip_addr);
 		if (pSyncServer->pStorage->psync_src_server == NULL)
 		{
-			char buff[MAX_PATH_SIZE+32];
+			char buff[MAX_PATH_SIZE+64];
 			if (bLoadFromFile)
 			{
 				snprintf(buff, sizeof(buff), \
@@ -319,6 +320,180 @@ static int tracker_load_storages(const char *data_path)
 	return result;
 }
 
+static int tracker_load_sync_timestamps(const char *data_path)
+{
+#define STORAGE_SYNC_TIME_MAX_FIELDS	2 + FDFS_MAX_SERVERS_EACH_GROUP
+
+	FILE *fp;
+	char szLine[512];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char previous_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char src_ip_addr[IP_ADDRESS_SIZE];
+	char *fields[STORAGE_SYNC_TIME_MAX_FIELDS];
+	FDFSGroupInfo *pGroup;
+	FDFSGroupInfo *pEnd;
+	int cols;
+	int src_index;
+	int dest_index;
+	int min_synced_timestamp;
+	int curr_synced_timestamp;
+	int result;
+
+	if (!fileExists(STORAGE_SYNC_TIMESTAMP_FILENAME))
+	{
+		return 0;
+	}
+
+	if ((fp=fopen(STORAGE_SYNC_TIMESTAMP_FILENAME, "r")) == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"open file \"%s/%s\" fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, data_path, STORAGE_SYNC_TIMESTAMP_FILENAME, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : ENOENT;
+	}
+
+	src_index = 0;
+	pGroup = NULL;
+	*previous_group_name = '\0';
+	result = 0;
+	while (fgets(szLine, sizeof(szLine), fp) != NULL)
+	{
+		if (*szLine == '\0' || *szLine == '\n')
+		{
+			continue;
+		}
+
+		if ((cols=splitEx(szLine, STORAGE_DATA_FIELD_SEPERATOR, \
+			fields, STORAGE_SYNC_TIME_MAX_FIELDS)) <= 2)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"the format of the file \"%s/%s\" is invalid" \
+				", colums: %d <= 2", \
+				__LINE__, data_path, \
+				STORAGE_SYNC_TIMESTAMP_FILENAME, cols);
+			result = errno != 0 ? errno : EINVAL;
+			break;
+		}
+	
+		snprintf(group_name, sizeof(group_name), \
+				"%s", trim(fields[0]));
+		snprintf(src_ip_addr, sizeof(src_ip_addr), \
+				"%s", trim(fields[1]));
+		if (strcmp(group_name, previous_group_name) != 0 || \
+			pGroup == NULL)
+		{
+			if ((pGroup=tracker_mem_get_group(group_name)) == NULL)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"in the file \"%s/%s\", " \
+					"group \"%s\" is not found", \
+					__LINE__, data_path, \
+					STORAGE_SYNC_TIMESTAMP_FILENAME, \
+					group_name);
+				result = errno != 0 ? errno : ENOENT;
+				break;
+			}
+
+			strcpy(previous_group_name, group_name);
+			src_index = 0;
+		}
+		
+		if (src_index >= pGroup->count)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"the format of the file \"%s/%s\" is invalid" \
+				", group: %s, row count:%d > server count:%d",\
+				__LINE__, data_path, \
+				STORAGE_SYNC_TIMESTAMP_FILENAME, \
+				group_name, src_index+1, pGroup->count);
+			result = errno != 0 ? errno : EINVAL;
+			break;
+		}
+
+		if (strcmp(pGroup->all_servers[src_index].ip_addr, \
+			src_ip_addr) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"in data file: \"%s/%s\", " \
+				"group: %s, src server ip: %s != %s",\
+				__LINE__, data_path, \
+				STORAGE_SYNC_TIMESTAMP_FILENAME, \
+				group_name, src_ip_addr, \
+				pGroup->all_servers[src_index].ip_addr);
+			result = errno != 0 ? errno : EINVAL;
+			break;
+		}
+
+		if (cols > pGroup->count + 2)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"the format of the file \"%s/%s\" is invalid" \
+				", group_name: %s, colums: %d > %d", \
+				__LINE__, data_path, \
+				STORAGE_SYNC_TIMESTAMP_FILENAME, \
+				group_name, cols, pGroup->count + 2);
+			result = errno != 0 ? errno : EINVAL;
+			break;
+		}
+
+		for (dest_index=0; dest_index<cols-2; dest_index++)
+		{
+			pGroup->last_sync_timestamps[src_index][dest_index] = \
+				atoi(trim_left(fields[2 + dest_index]));
+		}
+
+		src_index++;
+	}
+
+	fclose(fp);
+
+	if (result != 0)
+	{
+		return result;
+	}
+
+	pEnd = g_groups.groups + g_groups.count;
+	for (pGroup=g_groups.groups; pGroup<pEnd; pGroup++)
+	{
+		if (pGroup->count <= 1)
+		{
+			continue;
+		}
+
+		for (dest_index=0; dest_index<pGroup->count; dest_index++)
+		{
+			min_synced_timestamp = 0;
+			for (src_index=0; src_index<pGroup->count; src_index++)
+			{
+				if (src_index == dest_index)
+				{
+					continue;
+				}
+
+				curr_synced_timestamp = \
+					pGroup->last_sync_timestamps \
+							[src_index][dest_index];
+				if (min_synced_timestamp == 0)
+				{
+				min_synced_timestamp = curr_synced_timestamp;
+				}
+				else if (curr_synced_timestamp < \
+					min_synced_timestamp)
+				{
+				min_synced_timestamp = curr_synced_timestamp;
+				}
+			}
+
+			pGroup->all_servers[dest_index].last_synced_timestamp =\
+					min_synced_timestamp;
+		}
+	}
+
+	return result;
+}
+
 static int tracker_load_data()
 {
 	char data_path[MAX_PATH_SIZE];
@@ -357,6 +532,11 @@ static int tracker_load_data()
 	}
 
 	if ((result=tracker_load_storages(data_path)) != 0)
+	{
+		return result;
+	}
+
+	if ((result=tracker_load_sync_timestamps(data_path)) != 0)
 	{
 		return result;
 	}
@@ -415,8 +595,8 @@ int tracker_save_storages()
 	int len;
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppGroupEnd;
-	FDFSStorageDetail **ppStorage;
-	FDFSStorageDetail **ppStorageEnd;
+	FDFSStorageDetail *pStorage;
+	FDFSStorageDetail *pStorageEnd;
 	int result;
 
 	snprintf(filname, sizeof(filname), "%s/data/%s", \
@@ -435,11 +615,11 @@ int tracker_save_storages()
 	for (ppGroup=g_groups.sorted_groups; \
 		(ppGroup < ppGroupEnd) && (result == 0); ppGroup++)
 	{
-		ppStorageEnd = (*ppGroup)->sorted_servers + (*ppGroup)->count;
-		for (ppStorage=(*ppGroup)->sorted_servers; \
-			ppStorage<ppStorageEnd; ppStorage++)
+		pStorageEnd = (*ppGroup)->all_servers + (*ppGroup)->count;
+		for (pStorage=(*ppGroup)->all_servers; \
+			pStorage<pStorageEnd; pStorage++)
 		{
-			if ((*ppStorage)->status == FDFS_STORAGE_STATUS_DELETED)
+			if (pStorage->status == FDFS_STORAGE_STATUS_DELETED)
 			{
 				continue;
 			}
@@ -464,39 +644,112 @@ int tracker_save_storages()
 				"%d\n", \
 				(*ppGroup)->group_name, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->ip_addr, \
+				pStorage->ip_addr, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->status, \
+				pStorage->status, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				((*ppStorage)->psync_src_server != NULL ? \
-				(*ppStorage)->psync_src_server->ip_addr : ""), 	
+				(pStorage->psync_src_server != NULL ? \
+				pStorage->psync_src_server->ip_addr : ""), 	
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(int)(*ppStorage)->sync_until_timestamp, \
+				(int)pStorage->sync_until_timestamp, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->stat.total_upload_count, \
+				pStorage->stat.total_upload_count, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->stat.success_upload_count, \
+				pStorage->stat.success_upload_count, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->stat.total_set_meta_count, \
+				pStorage->stat.total_set_meta_count, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->stat.success_set_meta_count, \
+				pStorage->stat.success_set_meta_count, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->stat.total_delete_count, \
+				pStorage->stat.total_delete_count, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->stat.success_delete_count, \
+				pStorage->stat.success_delete_count, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->stat.total_download_count, \
+				pStorage->stat.total_download_count, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->stat.success_download_count, \
+				pStorage->stat.success_download_count, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->stat.total_get_meta_count, \
+				pStorage->stat.total_get_meta_count, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppStorage)->stat.success_get_meta_count, \
+				pStorage->stat.success_get_meta_count, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(int)((*ppStorage)->stat.last_source_update), \
+				(int)(pStorage->stat.last_source_update), \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(int)((*ppStorage)->stat.last_sync_update) \
+				(int)(pStorage->stat.last_sync_update) \
 	 		    );
+
+			if (write(fd, buff, len) != len)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"write to file \"%s\" fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, filname, \
+					errno, strerror(errno));
+				result = errno != 0 ? errno : EIO;
+				break;
+			}
+		}
+	}
+
+	close(fd);
+	return result;
+}
+
+int tracker_save_sync_timestamps()
+{
+	char filname[MAX_PATH_SIZE];
+	char buff[512];
+	int fd;
+	int len;
+	FDFSGroupInfo **ppGroup;
+	FDFSGroupInfo **ppGroupEnd;
+	int **last_sync_timestamps;
+	int i;
+	int k;
+	int result;
+
+	snprintf(filname, sizeof(filname), "%s/data/%s", \
+		g_base_path, STORAGE_SYNC_TIMESTAMP_FILENAME);
+	if ((fd=open(filname, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"open \"%s\" fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, filname, errno, strerror(errno));
+		return errno != 0 ? errno : ENOENT;
+	}
+
+	result = 0;
+	ppGroupEnd = g_groups.sorted_groups + g_groups.count;
+	for (ppGroup=g_groups.sorted_groups; \
+		(ppGroup < ppGroupEnd) && (result == 0); ppGroup++)
+	{
+		last_sync_timestamps = (*ppGroup)->last_sync_timestamps;
+		for (i=0; i<(*ppGroup)->count; i++)
+		{
+			if ((*ppGroup)->all_servers[i].status == \
+				FDFS_STORAGE_STATUS_DELETED)
+			{
+				continue;
+			}
+
+			len = sprintf(buff, "%s%c%s", (*ppGroup)->group_name, \
+				STORAGE_DATA_FIELD_SEPERATOR, \
+				(*ppGroup)->all_servers[i].ip_addr);
+			for (k=0; k<(*ppGroup)->count; k++)
+			{
+				if ((*ppGroup)->all_servers[k].status == \
+					FDFS_STORAGE_STATUS_DELETED)
+				{
+					continue;
+				}
+
+				len += sprintf(buff + len, "%c%d", \
+					STORAGE_DATA_FIELD_SEPERATOR, \
+					last_sync_timestamps[i][k]);
+			}
+			*(buff + len) = '\n';
+			len++;
 
 			if (write(fd, buff, len) != len)
 			{
@@ -595,11 +848,70 @@ int tracker_mem_init()
 	return 0;
 }
 
+static void tracker_free_last_sync_timestamps(int **last_sync_timestamps, \
+		const int alloc_size)
+{
+	int i;
+
+	if (last_sync_timestamps != NULL)
+	{
+		for (i=0; i<alloc_size; i++)
+		{
+			if (last_sync_timestamps[i] != NULL)
+			{
+				free(last_sync_timestamps[i]);
+				last_sync_timestamps[i] = NULL;
+			}
+		}
+
+		free(last_sync_timestamps);
+	}
+}
+
+static int **tracker_malloc_last_sync_timestamps(const int alloc_size, \
+		int *err_no)
+{
+	int **results;
+	int i;
+
+	results = (int **)malloc(sizeof(int *) * alloc_size);
+	if (results == NULL)
+	{
+		*err_no = errno != 0 ? errno : ENOMEM;
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, \
+			sizeof(int *) * alloc_size);
+		return NULL;
+	}
+
+	memset(results, 0, sizeof(int *) * alloc_size);
+	for (i=0; i<alloc_size; i++)
+	{
+		results[i] = (int *)malloc(sizeof(int) * alloc_size);
+		if (results[i] == NULL)
+		{
+			*err_no = errno != 0 ? errno : ENOMEM;
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", __LINE__, \
+				sizeof(int) * alloc_size);
+
+			tracker_free_last_sync_timestamps(results, alloc_size);
+			return NULL;
+		}
+
+		memset(results[i], 0, sizeof(int) * alloc_size);
+	}
+
+	*err_no = 0;
+	return results;
+}
+
 static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 {
 	int *ref_count;
 	FDFSStorageDetail *pServer;
 	FDFSStorageDetail *pEnd;
+	int err_no;
 
 	pGroup->alloc_size = TRACKER_MEM_ALLOC_ONCE;
 	pGroup->count = 0;
@@ -656,7 +968,9 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 		pServer->ref_count = ref_count;
 	}
 
-	return 0;
+	pGroup->last_sync_timestamps = tracker_malloc_last_sync_timestamps( \
+			pGroup->alloc_size, &err_no);
+	return err_no;
 }
 
 static void tracker_mem_free_group(FDFSGroupInfo *pGroup)
@@ -664,18 +978,26 @@ static void tracker_mem_free_group(FDFSGroupInfo *pGroup)
 	if (pGroup->sorted_servers != NULL)
 	{
 		free(pGroup->sorted_servers);
+		pGroup->sorted_servers = NULL;
 	}
 
 	if (pGroup->active_servers != NULL)
 	{
 		free(pGroup->active_servers);
+		pGroup->active_servers = NULL;
 	}
 
 	if (pGroup->all_servers != NULL)
 	{
 		free(pGroup->all_servers[0].ref_count);
 		free(pGroup->all_servers);
+		pGroup->all_servers = NULL;
 	}
+
+	tracker_free_last_sync_timestamps(pGroup->last_sync_timestamps, \
+				pGroup->alloc_size);
+	pGroup->last_sync_timestamps = NULL;
+
 }
 
 int tracker_mem_destroy()
@@ -691,6 +1013,7 @@ int tracker_mem_destroy()
 	else
 	{
 		result = tracker_save_storages();
+		result += tracker_save_sync_timestamps();
 
 		pEnd = g_groups.groups + g_groups.count;
 		for (pGroup=g_groups.groups; pGroup<pEnd; pGroup++)
@@ -746,7 +1069,8 @@ int tracker_mem_realloc_groups()
 		return errno != 0 ? errno : ENOMEM;
 	}
 
-	new_sorted_groups = (FDFSGroupInfo **)malloc(sizeof(FDFSGroupInfo *) * new_size);
+	new_sorted_groups = (FDFSGroupInfo **)malloc( \
+			sizeof(FDFSGroupInfo *) * new_size);
 	if (new_sorted_groups == NULL)
 	{
 		free(new_groups);
@@ -878,10 +1202,13 @@ int tracker_mem_realloc_store_server(FDFSGroupInfo *pGroup, const int inc_count)
 	FDFSStorageDetail *old_servers;
 	FDFSStorageDetail **old_sorted_servers;
 	FDFSStorageDetail **old_active_servers;
+	int **old_last_sync_timestamps;
 	FDFSStorageDetail *new_servers;
 	FDFSStorageDetail **new_sorted_servers;
 	FDFSStorageDetail **new_active_servers;
+	int **new_last_sync_timestamps;
 	int *new_ref_count;
+	int old_size;
 	int new_size;
 	FDFSStorageDetail *pServer;
 	FDFSStorageDetail *pServerEnd;
@@ -891,6 +1218,8 @@ int tracker_mem_realloc_store_server(FDFSGroupInfo *pGroup, const int inc_count)
 	FDFSStorageSync *pStorageSyncs;
 	int nStorageSyncSize;
 	int nStorageSyncCount;
+	int err_no;
+	int i;
 	
 	new_size = pGroup->alloc_size + inc_count + TRACKER_MEM_ALLOC_ONCE;
 	new_servers = (FDFSStorageDetail *) \
@@ -970,14 +1299,35 @@ int tracker_mem_realloc_store_server(FDFSGroupInfo *pGroup, const int inc_count)
 		pServer->ref_count = new_ref_count;
 	}
 
+	new_last_sync_timestamps = tracker_malloc_last_sync_timestamps( \
+		new_size, &err_no);
+	if (new_last_sync_timestamps == NULL)
+	{
+		free(new_servers);
+		free(new_sorted_servers);
+		free(new_active_servers);
+		free(new_ref_count);
+
+		return err_no;
+	}
+	for (i=0; i<pGroup->alloc_size; i++)
+	{
+		memcpy(new_last_sync_timestamps[i],  \
+			pGroup->last_sync_timestamps[i], \
+			sizeof(int) *  pGroup->alloc_size);
+	}
+
+	old_size = pGroup->alloc_size;
 	old_servers = pGroup->all_servers;
 	old_sorted_servers = pGroup->sorted_servers;
 	old_active_servers = pGroup->active_servers;
+	old_last_sync_timestamps = pGroup->last_sync_timestamps;
 
 	pGroup->alloc_size = new_size;
 	pGroup->all_servers = new_servers;
 	pGroup->sorted_servers = new_sorted_servers;
 	pGroup->active_servers = new_active_servers;
+	pGroup->last_sync_timestamps = new_last_sync_timestamps;
 
 	nStorageSyncSize = 0;
 	nStorageSyncCount = 0;
@@ -1042,6 +1392,8 @@ int tracker_mem_realloc_store_server(FDFSGroupInfo *pGroup, const int inc_count)
 	
 	free(old_sorted_servers);
 	free(old_active_servers);
+	tracker_free_last_sync_timestamps(old_last_sync_timestamps, \
+				old_size);
 
 	return result;
 }
@@ -1213,6 +1565,31 @@ int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 	pClientInfo->pGroup = pGroup;
 	pClientInfo->pAllocedGroups = g_groups.groups;
 	return 0;
+}
+
+FDFSStorageDetail *tracker_mem_get_active_storage(FDFSGroupInfo *pGroup, \
+				const char *ip_addr)
+{
+	FDFSStorageDetail target_storage;
+	FDFSStorageDetail *pTargetStorage;
+	FDFSStorageDetail **ppStorageServer;
+
+	memset(&target_storage, 0, sizeof(target_storage));
+	strcpy(target_storage.ip_addr, ip_addr);
+	pTargetStorage = &target_storage;
+	ppStorageServer = (FDFSStorageDetail **)bsearch(&pTargetStorage, \
+			pGroup->active_servers, \
+			pGroup->active_count, \
+			sizeof(FDFSStorageDetail *), \
+			tracker_mem_cmp_by_ip_addr);
+	if (ppStorageServer != NULL)
+	{
+		return *ppStorageServer;
+	}
+	else
+	{
+		return NULL;
+	}
 }
 
 FDFSStorageDetail *tracker_mem_get_storage(FDFSGroupInfo *pGroup, \

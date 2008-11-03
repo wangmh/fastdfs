@@ -41,13 +41,17 @@ static pthread_t *report_tids = NULL;
 
 static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 			int *pstat_chg_sync_count);
-static int tracker_report_stat(TrackerServerInfo *pTrackerServer);
+static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer);
 static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer);
 static int tracker_sync_notify(TrackerServerInfo *pTrackerServer);
+static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer);
 
 int tracker_report_init()
 {
 	int result;
+
+	memset(g_storage_servers, 0, sizeof(g_storage_servers));
+	memset(g_sorted_storages, 0, sizeof(g_sorted_storages));
 
 	if ((result=init_pthread_lock(&reporter_thread_lock)) != 0)
 	{
@@ -100,9 +104,11 @@ static void* tracker_report_thread_entrance(void* arg)
 	char szFailPrompt[36];
 	bool sync_old_done;
 	int stat_chg_sync_count;
+	int sync_time_chg_count;
 	int sleep_secs;
 	time_t current_time;
-	time_t last_report_time;
+	time_t last_df_report_time;
+	time_t last_sync_report_time;
 	time_t last_beat_time;
 	int result;
 	int previousCode;
@@ -274,8 +280,11 @@ static void* tracker_report_thread_entrance(void* arg)
 			continue;
 		}
 
-		last_report_time = 0;
+		sync_time_chg_count = 0;
+		last_df_report_time = 0;
 		last_beat_time = 0;
+		last_sync_report_time = 0;
+
 		while (g_continue_flag)
 		{
 			current_time = time(NULL);
@@ -291,15 +300,29 @@ static void* tracker_report_thread_entrance(void* arg)
 				last_beat_time = current_time;
 			}
 
-			if (current_time - last_report_time >= \
-					g_stat_report_interval)
+			if (sync_time_chg_count != g_sync_change_count && \
+				current_time - last_sync_report_time >= \
+					g_heart_beat_interval)
 			{
-				if (tracker_report_stat(pTrackerServer) != 0)
+				if (tracker_report_sync_timestamp( \
+						pTrackerServer) != 0)
 				{
 					break;
 				}
 
-				last_report_time = current_time;
+				sync_time_chg_count = g_sync_change_count;
+				last_sync_report_time = current_time;
+			}
+
+			if (current_time - last_df_report_time >= \
+					g_stat_report_interval)
+			{
+				if (tracker_report_df_stat(pTrackerServer) != 0)
+				{
+					break;
+				}
+
+				last_df_report_time = current_time;
 			}
 
 			sleep(1);
@@ -346,23 +369,17 @@ static void* tracker_report_thread_entrance(void* arg)
 	return NULL;
 }
 
-static int tracker_cmp_by_ip_addr(const void *p1, const void *p2)
-{
-	return strcmp((*((FDFSStorageBrief**)p1))->ip_addr,
-		(*((FDFSStorageBrief**)p2))->ip_addr);
-}
-
 static void tracker_insert_into_sorted_servers( \
-		FDFSStorageBrief *pInsertedServer)
+		FDFSStorageServer *pInsertedServer)
 {
-	FDFSStorageBrief **ppServer;
-	FDFSStorageBrief **ppEnd;
+	FDFSStorageServer **ppServer;
+	FDFSStorageServer **ppEnd;
 
 	ppEnd = g_sorted_storages + g_storage_count;
 	for (ppServer=ppEnd; ppServer > g_sorted_storages; ppServer--)
 	{
-		if (strcmp(pInsertedServer->ip_addr, \
-			   (*(ppServer-1))->ip_addr) > 0)
+		if (strcmp(pInsertedServer->server.ip_addr, \
+			   (*(ppServer-1))->server.ip_addr) > 0)
 		{
 			*ppServer = pInsertedServer;
 			return;
@@ -445,41 +462,46 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		FDFSStorageBrief *briefServers, const int server_count)
 {
 	FDFSStorageBrief *pServer;
-	FDFSStorageBrief *pInsertedServer;
 	FDFSStorageBrief *pEnd;
-	FDFSStorageBrief **ppFound;
-	FDFSStorageBrief *pGlobalServer;
-	FDFSStorageBrief *pGlobalEnd;
+	FDFSStorageServer *pInsertedServer;
+	FDFSStorageServer **ppFound;
+	FDFSStorageServer *pGlobalServer;
+	FDFSStorageServer *pGlobalEnd;
+	FDFSStorageServer targetServer;
 	FDFSStorageBrief diffServers[FDFS_MAX_SERVERS_EACH_GROUP];
 	FDFSStorageBrief *pDiffServer;
 	int res;
 	int result;
 	int nDeletedCount;
 
+	memset(&targetServer, 0, sizeof(targetServer));
 	nDeletedCount = 0;
 	pDiffServer = diffServers;
 	pEnd = briefServers + server_count;
 	for (pServer=briefServers; pServer<pEnd; pServer++)
 	{
-		ppFound = (FDFSStorageBrief **)bsearch(&pServer, \
+		memcpy(&(targetServer.server),pServer,sizeof(FDFSStorageBrief));
+		ppFound = (FDFSStorageServer **)bsearch(&targetServer, \
 			g_sorted_storages, g_storage_count, \
-			sizeof(FDFSStorageBrief *), tracker_cmp_by_ip_addr);
+			sizeof(FDFSStorageServer *), storage_cmp_by_ip_addr);
 		if (ppFound != NULL)
 		{
-			if ((*ppFound)->status != pServer->status)
+			if ((*ppFound)->server.status != pServer->status)
 			{
 				if ((((pServer->status == \
 					FDFS_STORAGE_STATUS_WAIT_SYNC) || \
 					(pServer->status == \
 					FDFS_STORAGE_STATUS_SYNCING)) && \
-					((*ppFound)->status > pServer->status))\
-					 || ((*ppFound)->status == \
+					((*ppFound)->server.status > \
+						pServer->status)) \
+					 || ((*ppFound)->server.status == \
 						FDFS_STORAGE_STATUS_DELETED))
 				{
-					memcpy(pDiffServer++, *ppFound, \
+					memcpy(pDiffServer++, \
+						&((*ppFound)->server), \
 						sizeof(FDFSStorageBrief));
 				}
-				else if ((*ppFound)->status == \
+				else if ((*ppFound)->server.status == \
 					FDFS_STORAGE_STATUS_NONE && \
 					pServer->status == \
 					FDFS_STORAGE_STATUS_DELETED) //ignore
@@ -487,7 +509,8 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 				}
 				else
 				{
-					(*ppFound)->status = pServer->status;
+					(*ppFound)->server.status = \
+						pServer->status;
 				}
 			}
 		}
@@ -510,8 +533,8 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 				}
 				pInsertedServer = g_storage_servers + \
 						g_storage_count;
-				memcpy(pInsertedServer, pServer, \
-					sizeof(FDFSStorageBrief));
+				memcpy(&(pInsertedServer->server), \
+					pServer, sizeof(FDFSStorageBrief));
 				tracker_insert_into_sorted_servers( \
 						pInsertedServer);
 				g_storage_count++;
@@ -525,7 +548,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 				}
 
 				if ((result=storage_sync_thread_start( \
-					pInsertedServer)) != 0)
+					&(pInsertedServer->server))) != 0)
 				{
 					return result;
 				}
@@ -560,13 +583,13 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 	pServer = briefServers;
 	while (pServer < pEnd && pGlobalServer < pGlobalEnd)
 	{
-		if (pGlobalServer->status == FDFS_STORAGE_STATUS_NONE)
+		if (pGlobalServer->server.status == FDFS_STORAGE_STATUS_NONE)
 		{
 			pGlobalServer++;
 			continue;
 		}
 
-		res = strcmp(pServer->ip_addr, pGlobalServer->ip_addr);
+		res = strcmp(pServer->ip_addr, pGlobalServer->server.ip_addr);
 		if (res < 0)
 		{
 			if (pServer->status != FDFS_STORAGE_STATUS_DELETED)
@@ -590,7 +613,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		}
 		else
 		{
-			memcpy(pDiffServer++, pGlobalServer, \
+			memcpy(pDiffServer++, &(pGlobalServer->server), \
 				sizeof(FDFSStorageBrief));
 			pGlobalServer++;
 		}
@@ -598,13 +621,13 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 
 	while (pGlobalServer < pGlobalEnd)
 	{
-		if (pGlobalServer->status == FDFS_STORAGE_STATUS_NONE)
+		if (pGlobalServer->server.status == FDFS_STORAGE_STATUS_NONE)
 		{
 			pGlobalServer++;
 			continue;
 		}
 
-		memcpy(pDiffServer++, pGlobalServer, \
+		memcpy(pDiffServer++, &(pGlobalServer->server), \
 			sizeof(FDFSStorageBrief));
 		pGlobalServer++;
 	}
@@ -889,7 +912,55 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer)
 	return tracker_check_response(pTrackerServer);
 }
 
-static int tracker_report_stat(TrackerServerInfo *pTrackerServer)
+static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer)
+{
+	char out_buff[sizeof(TrackerHeader) + (IP_ADDRESS_SIZE + 4) * \
+			FDFS_MAX_SERVERS_EACH_GROUP];
+	char *p;
+	TrackerHeader *pHeader;
+	FDFSStorageServer *pServer;
+	FDFSStorageServer *pEnd;
+	int result;
+	int body_len;
+
+	if (g_storage_count == 0)
+	{
+		return 0;
+	}
+
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
+	p = out_buff + sizeof(TrackerHeader);
+
+	body_len = (IP_ADDRESS_SIZE + 4) * g_storage_count;
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_REPORT;
+	long2buff(body_len, pHeader->pkg_len);
+
+	pEnd = g_storage_servers + g_storage_count;
+	for (pServer=g_storage_servers; pServer<pEnd; pServer++)
+	{
+		memcpy(p, pServer->server.ip_addr, IP_ADDRESS_SIZE);
+		p += IP_ADDRESS_SIZE;
+		int2buff(pServer->last_sync_src_timestamp, p);
+		p += 4;
+	}
+
+	if((result=tcpsenddata(pTrackerServer->sock, out_buff, \
+		body_len, g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, send data fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, strerror(result));
+		return result;
+	}
+
+	return tracker_check_response(pTrackerServer);
+}
+
+static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer)
 {
 	char out_buff[sizeof(TrackerHeader) + sizeof(TrackerStatReportReqBody)];
 	TrackerHeader *pHeader;

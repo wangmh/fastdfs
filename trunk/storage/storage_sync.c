@@ -65,6 +65,7 @@ static void storage_reader_destroy(BinLogReader *pReader);
 /**
 8 bytes: filename bytes
 8 bytes: file size
+4 bytes: source op timestamp
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename bytes : filename
 file size bytes: file content
@@ -113,17 +114,23 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	{
 		memset(&header, 0, sizeof(header));
 		long2buff(2 * FDFS_PROTO_PKG_LEN_SIZE + \
-				FDFS_GROUP_NAME_MAX_LEN + \
+				4 + FDFS_GROUP_NAME_MAX_LEN + \
 				pRecord->filename_len + stat_buf.st_size,\
 				header.pkg_len);
 		header.cmd = proto_cmd;
 		memcpy(out_buff, &header, sizeof(TrackerHeader));
 
 		p = out_buff + sizeof(TrackerHeader);
+
 		long2buff(pRecord->filename_len, p);
 		p += FDFS_PROTO_PKG_LEN_SIZE;
+
 		long2buff(stat_buf.st_size, p);
 		p += FDFS_PROTO_PKG_LEN_SIZE;
+
+		int2buff(pRecord->timestamp, p);
+		p += 4;
+
 		sprintf(p, "%s", pStorageServer->group_name);
 		p += FDFS_GROUP_NAME_MAX_LEN;
 		memcpy(p, pRecord->filename, pRecord->filename_len);
@@ -188,6 +195,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 
 /**
 send pkg format:
+4 bytes: source delete timestamp
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 remain bytes: filename
 **/
@@ -197,7 +205,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 	TrackerHeader header;
 	int result;
 	char full_filename[MAX_PATH_SIZE];
-	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+32];
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+64];
 	char in_buff[1];
 	char *pBuff;
 	int64_t in_bytes;
@@ -220,19 +228,20 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 	while (1)
 	{
 	memset(out_buff, 0, sizeof(out_buff));
-	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
+	int2buff(pRecord->timestamp, out_buff + sizeof(TrackerHeader));
+	snprintf(out_buff + sizeof(TrackerHeader) + 4, sizeof(out_buff) - \
 		sizeof(TrackerHeader),  "%s", g_group_name);
-	memcpy(out_buff + sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
+	memcpy(out_buff + sizeof(TrackerHeader) + 4 + FDFS_GROUP_NAME_MAX_LEN, \
 		pRecord->filename, pRecord->filename_len);
 
 	memset(&header, 0, sizeof(header));
-	long2buff(FDFS_GROUP_NAME_MAX_LEN + pRecord->filename_len, \
+	long2buff(4 + FDFS_GROUP_NAME_MAX_LEN + pRecord->filename_len, \
 			header.pkg_len);
 	header.cmd = STORAGE_PROTO_CMD_SYNC_DELETE_FILE;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
 
 	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
-		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
+		sizeof(TrackerHeader) + 4 + FDFS_GROUP_NAME_MAX_LEN + \
 		pRecord->filename_len, g_network_timeout)) != 0)
 	{
 		logError("FILE: "__FILE__", line: %d, " \
@@ -1102,7 +1111,7 @@ static int storage_binlog_read(BinLogReader *pReader, \
 	while (1)
 	{
 		if ((*record_length=fd_gets(pReader->binlog_fd, line, \
-			sizeof(line), 39 + FDFS_FILE_EXT_NAME_MAX_LEN)) < 0)
+			sizeof(line), 45 + FDFS_FILE_EXT_NAME_MAX_LEN)) < 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"read a line from binlog file \"%s\" fail, " \

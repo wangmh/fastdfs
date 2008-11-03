@@ -154,8 +154,9 @@ int main(int argc, char *argv[])
 				 - 6 - (FDFS_FILE_EXT_NAME_MAX_LEN + 1), 
 				buff, &len);
 			printf("file_id=%s\n", file_id);
-			printf("file timestamp=%d\n", buff2int(buff));
-			printf("file size=%d\n", buff2int(buff+4));
+			printf("file timestamp=%d\n", \
+				buff2int(buff + sizeof(int)));
+			printf("file size=%d\n", buff2int(buff+sizeof(int)*2));
 		}
 	}
 	else if (strcmp(operation, "download") == 0 || 

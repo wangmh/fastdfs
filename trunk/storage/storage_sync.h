@@ -41,7 +41,7 @@ typedef struct
 {
 	time_t timestamp;
 	char op_type;
-	char filename[32];
+	char filename[64];
 	int filename_len;
 } BinLogRecord;
 

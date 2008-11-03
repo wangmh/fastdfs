@@ -1588,3 +1588,20 @@ int parse_bytes(char *pStr, int64_t *bytes)
 	return 0;
 }
 
+int set_rand_seed()
+{
+	struct timeval tv;
+
+	if (gettimeofday(&tv, NULL) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			 "call gettimeofday fail, " \
+			 "errno=%d, error info: %s", \
+			 __LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EPERM;
+	}
+
+	srand(tv.tv_sec ^ tv.tv_usec);
+	return 0;
+}
+
