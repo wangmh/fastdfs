@@ -336,7 +336,7 @@ static void* tracker_report_thread_entrance(void* arg)
 		pTrackerServer->sock = -1;
 		if (g_continue_flag)
 		{
-			sleep(sleep_secs);
+			sleep(1);
 		}
 	}
 
@@ -963,7 +963,7 @@ static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer)
 	}
 
 	if((result=tcpsenddata(pTrackerServer->sock, out_buff, \
-		body_len, g_network_timeout)) != 0)
+		sizeof(TrackerHeader) + body_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
