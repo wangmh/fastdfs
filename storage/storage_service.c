@@ -115,10 +115,12 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 	int result;
 	int i;
 	char full_filename[MAX_PATH_SIZE+64];
+	char meta_filename[MAX_PATH_SIZE+64];
 	char szFormattedExt[FDFS_FILE_EXT_NAME_MAX_LEN + 2];
 	char *p;
 	int ext_name_len;
 	int pad_len;
+	time_t start_time;
 
 	ext_name_len = strlen(file_ext_name);
 	if (ext_name_len == 0)
@@ -144,7 +146,7 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 	}
 	*p = '\0';
 
-	for (i=0; i<1024; i++)
+	for (i=0; i<10; i++)
 	{
 		if ((result=storage_gen_filename(pClientInfo, file_size, \
 				szFormattedExt, FDFS_FILE_EXT_NAME_MAX_LEN+1, \
@@ -171,6 +173,7 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 		return ENOENT;
 	}
 
+	start_time = time(NULL);
 	if ((result=tcprecvfile(pClientInfo->sock, full_filename, file_size)) != 0)
 	{
 		*filename = '\0';
@@ -180,8 +183,6 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 
 	if (meta_size > 0)
 	{
-		char meta_filename[MAX_PATH_SIZE+64];
-
 		if ((result=storage_sort_metadata_buff(meta_buff, \
 				meta_size)) != 0)
 		{
@@ -201,6 +202,76 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 			unlink(full_filename);
 			return result;
 		}
+	}
+	else
+	{
+		*meta_filename = '\0';
+	}
+
+	if (time(NULL) - start_time > 0)  //need to rename
+	{
+		char new_full_filename[MAX_PATH_SIZE+64];
+		char new_meta_filename[MAX_PATH_SIZE+64];
+		char new_filename[64];
+		int new_filename_len;
+
+		for (i=0; i<10; i++)
+		{
+			if ((result=storage_gen_filename(pClientInfo,file_size,\
+				szFormattedExt, FDFS_FILE_EXT_NAME_MAX_LEN+1, \
+				new_filename, &new_filename_len)) != 0)
+			{
+				return 0;
+			}
+
+			sprintf(new_full_filename, "%s/data/%s", \
+				g_base_path, new_filename);
+			if (!fileExists(new_full_filename))
+			{
+				break;
+			}
+
+			*new_full_filename = '\0';
+		}
+
+		if (*full_filename == '\0')
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"Can't generate uniq filename", __LINE__);
+			return 0;
+		}
+
+		if (rename(full_filename, new_full_filename) != 0)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"rename %s to %s fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				full_filename, new_full_filename, \
+				errno, strerror(errno));
+			return 0;
+		}
+
+		if (*meta_filename != '\0')
+		{
+			sprintf(new_meta_filename, "%s"STORAGE_META_FILE_EXT, \
+					new_full_filename);
+			if (rename(meta_filename, new_meta_filename) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"rename %s to %s fail, " \
+					"errno: %d, error info: %s", __LINE__,\
+					meta_filename, new_meta_filename, \
+					errno, strerror(errno));
+
+				unlink(new_full_filename);
+				*filename = '\0';
+				*filename_len = 0;
+				return errno != 0 ? errno : EPERM;
+			}
+		}
+
+		*filename_len = new_filename_len;
+		memcpy(filename, new_filename, new_filename_len+1);
 	}
 
 	return 0;
