@@ -1747,6 +1747,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	int result;
 	bool bGroupInserted;
 	bool bStorageInserted;
+	FDFSStorageDetail *pStorageServer;
 
 	if ((result=tracker_mem_add_group(pClientInfo, bIncRef, \
 			&bGroupInserted)) != 0)
@@ -1791,17 +1792,22 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	{
 		return result;
 	}
+
+	pStorageServer = pClientInfo->pStorage;
 	if (bStorageInserted)
 	{
-		pClientInfo->pStorage->status = FDFS_STORAGE_STATUS_INIT;
+		pStorageServer->status = FDFS_STORAGE_STATUS_INIT;
 		if ((result=tracker_save_storages()) != 0)
 		{
 			return result;
 		}
 	}
-	else
+	else if (!((pStorageServer->status == FDFS_STORAGE_STATUS_WAIT_SYNC)||\
+		(pStorageServer->status == FDFS_STORAGE_STATUS_SYNCING) || \
+		(pStorageServer->status == FDFS_STORAGE_STATUS_INIT) || \
+		(pStorageServer->status == FDFS_STORAGE_STATUS_DELETED)))
 	{
-		pClientInfo->pStorage->status = FDFS_STORAGE_STATUS_ONLINE;
+		pStorageServer->status = FDFS_STORAGE_STATUS_ONLINE;
 	}
 
 	return 0;
@@ -1860,6 +1866,8 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 			{
 				if (((pServer->status > (*ppFound)->status) && \
 					(((*ppFound)->status == \
+					FDFS_STORAGE_STATUS_INIT) || \
+					((*ppFound)->status == \
 					FDFS_STORAGE_STATUS_WAIT_SYNC) || \
 					((*ppFound)->status == \
 					FDFS_STORAGE_STATUS_SYNCING))) || \
