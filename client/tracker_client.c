@@ -344,7 +344,7 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 		const char *group_name, const char *filename)
 {
 	TrackerHeader header;
-	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 32];
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 64];
 	char in_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_BODY_LEN];
 	char *pInBuff;
 	int64_t in_bytes;

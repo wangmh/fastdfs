@@ -94,6 +94,8 @@ int kill_work_threads(pthread_t *tids, const int count);
 
 int parse_bytes(char *pStr, int64_t *bytes);
 
+int set_rand_seed();
+
 #ifdef __cplusplus
 }
 #endif

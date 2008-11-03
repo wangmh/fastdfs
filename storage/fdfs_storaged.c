@@ -39,7 +39,6 @@ bool bReloadFlag = false;
 static void sigQuitHandler(int sig);
 static void sigHupHandler(int sig);
 static void sigUsrHandler(int sig);
-static int setRandSeed();
 
 int main(int argc, char *argv[])
 {
@@ -105,10 +104,10 @@ int main(int argc, char *argv[])
 	}
 
 	base64_init_ex(0, '-', '_', '.');
-	if ((result=setRandSeed()) != 0)
+	if ((result=set_rand_seed()) != 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
-			"setRandSeed fail, program exit!", __LINE__);
+			"set_rand_seed fail, program exit!", __LINE__);
 		g_continue_flag = false;
 		return result;
 	}
@@ -255,22 +254,5 @@ static void sigUsrHandler(int sig)
 		"mo count=%d, success count=%d", g_storage_thread_count, \
 		nMoCount, nSuccMoCount);
 	*/
-}
-
-static int setRandSeed()
-{
-	struct timeval tv;
-
-	if (gettimeofday(&tv, NULL) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			 "call gettimeofday fail, " \
-			 "errno=%d, error info: %s", \
-			 __LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EPERM;
-	}
-
-	srand(tv.tv_sec ^ tv.tv_usec);
-	return 0;
 }
 

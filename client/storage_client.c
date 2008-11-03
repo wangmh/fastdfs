@@ -174,7 +174,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader header;
 	int result;
 	TrackerServerInfo storageServer;
-	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+32];
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+64];
 	int64_t in_bytes;
 	int filename_len;
 	char *file_buff;
@@ -274,7 +274,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader header;
 	int result;
 	TrackerServerInfo storageServer;
-	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+32];
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+64];
 	char in_buff[1];
 	char *pBuff;
 	int64_t in_bytes;
@@ -360,7 +360,7 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader header;
 	int result;
 	TrackerServerInfo storageServer;
-	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+32];
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+64];
 	int64_t in_bytes;
 	int filename_len;
 	bool new_connection;
@@ -845,7 +845,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader header;
 	int result;
 	TrackerServerInfo storageServer;
-	char out_buff[sizeof(TrackerHeader)+2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN+32];
+	char out_buff[sizeof(TrackerHeader)+2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN+64];
 	char in_buff[1];
 	int64_t in_bytes;
 	char *pBuff;

@@ -28,20 +28,28 @@
 extern "C" {
 #endif
 
+typedef struct
+{
+	FDFSStorageBrief server;
+	int last_sync_src_timestamp;
+} FDFSStorageServer;
+
 extern int g_server_port;
 extern int g_max_connections;
 
-extern int g_storage_count;
-extern FDFSStorageBrief g_storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
-extern FDFSStorageBrief *g_sorted_storages[FDFS_MAX_SERVERS_EACH_GROUP];
+extern int g_storage_count;  //stoage server count in my group
+extern FDFSStorageServer g_storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
+extern FDFSStorageServer *g_sorted_storages[FDFS_MAX_SERVERS_EACH_GROUP];
 
 extern char g_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 extern int g_tracker_reporter_count;
 extern int g_heart_beat_interval;
 extern int g_stat_report_interval;
 extern int g_sync_wait_usec;
+
 extern FDFSStorageStat g_storage_stat;
 extern int g_stat_change_count;
+extern int g_sync_change_count; //sync src timestamp change counter
 
 extern int g_storage_join_time;
 extern bool g_sync_old_done;
@@ -57,6 +65,8 @@ extern char g_local_host_ip_addrs[STORAGE_MAX_LOCAL_IP_ADDRS * \
 
 extern int g_allow_ip_count;  /* -1 means match any ip address */
 extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
+
+int storage_cmp_by_ip_addr(const void *p1, const void *p2);
 
 void load_local_host_ip_addrs();
 bool is_local_host_ip(const char *client_ip);

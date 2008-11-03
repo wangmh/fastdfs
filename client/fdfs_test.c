@@ -150,9 +150,8 @@ int main(int argc, char *argv[])
 			 - (FDFS_FILE_EXT_NAME_MAX_LEN + 1), buff, &len);
 		printf("group_name=%s, remote_filename=%s\n", \
 			group_name, remote_filename);
-		printf("file timestamp=%d\n", buff2int(buff));
-		printf("file size=%d\n", buff2int(buff+4));
-
+		printf("file timestamp=%d\n", buff2int(buff+sizeof(int)));
+		printf("file size=%d\n", buff2int(buff+sizeof(int)*2));
 	}
 	else if (strcmp(operation, "download") == 0 || 
 		strcmp(operation, "getmeta") == 0 ||
