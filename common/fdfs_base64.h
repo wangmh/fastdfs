@@ -30,6 +30,8 @@ int base64_get_encode_length(const int nSrcLen);
 char *base64_encode_ex(char *src, const int nSrcLen, char *dest, \
                        int *dest_len, const bool bPad);
 char *base64_decode(char *src, const int nSrcLen, char *dest, int *dest_len);
+char *base64_decode_auto(char *src, const int nSrcLen, \
+		char *dest, int *dest_len);
 
 void base64_set_line_separator(const char *pLineSeparator);
 void base64_set_line_length(const int length);
