@@ -708,7 +708,7 @@ static int tracker_deal_service_query_fetch_update( \
 		if (filename_len < 28 + (FDFS_FILE_EXT_NAME_MAX_LEN + 1))
 		{
 			base64_len = filename_len - 6;
-			base64_decode(filename + 6, base64_len, \
+			base64_decode_auto(filename + 6, base64_len, \
 				name_buff, &decoded_len);
 			storage_ip = INADDR_NONE;
 			file_timestamp = buff2int(name_buff);
@@ -717,7 +717,7 @@ static int tracker_deal_service_query_fetch_update( \
 		{
 			base64_len = filename_len - 6 - \
 				(FDFS_FILE_EXT_NAME_MAX_LEN + 1);
-			base64_decode(filename + 6, base64_len, \
+			base64_decode_auto(filename + 6, base64_len, \
 				name_buff, &decoded_len);
 			storage_ip = buff2int(name_buff);
 			file_timestamp = buff2int(name_buff+sizeof(int));

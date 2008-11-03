@@ -146,7 +146,8 @@ int main(int argc, char *argv[])
 		}
 
 		memset(buff, 0, sizeof(buff));
-		base64_decode(remote_filename + 6, strlen(remote_filename) - 6 \
+		base64_decode_auto(remote_filename + 6, \
+			strlen(remote_filename) - 6 \
 			 - (FDFS_FILE_EXT_NAME_MAX_LEN + 1), buff, &len);
 		printf("group_name=%s, remote_filename=%s\n", \
 			group_name, remote_filename);

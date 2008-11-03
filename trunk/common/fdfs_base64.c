@@ -54,7 +54,7 @@ static int pad_ch;
 */
 void base64_set_line_length(const int length)
 {
-    line_length = (length/4) * 4;
+    line_length = (length / 4) * 4;
 }
 
 /**
@@ -271,6 +271,53 @@ char *base64_encode_ex(char *src, const int nSrcLen, char *dest, \
   } // end switch;
 
   return dest;
+}
+
+char *base64_decode_auto(char *src, const int nSrcLen, \
+		char *dest, int *dest_len)
+{
+	int nRemain;
+	int nPadLen;
+	int nNewLen;
+	char tmpBuff[256];
+	char *pBuff;
+
+	nRemain = nSrcLen % 4;
+	if (nRemain == 0)
+	{
+		return base64_decode(src, nSrcLen, dest, dest_len);
+	}
+
+	nPadLen = 4 - nRemain;
+	nNewLen = nSrcLen + nPadLen;
+	if (nNewLen <= sizeof(tmpBuff))
+	{
+		pBuff = tmpBuff;
+	}
+	else
+	{
+		pBuff = (char *)malloc(nNewLen);
+		if (pBuff == NULL)
+		{
+			fprintf(stderr, "Can't malloc %d bytes\n", \
+				nSrcLen + nPadLen + 1);
+			*dest_len = 0;
+			*dest = '\0';
+			return dest;
+		}
+	}
+
+	memcpy(pBuff, src, nSrcLen);
+	memset(pBuff + nSrcLen, pad_ch, nPadLen);
+
+	base64_decode(pBuff, nNewLen, dest, dest_len);
+
+	if (pBuff != tmpBuff)
+	{
+		free(pBuff);
+	}
+
+	return dest;
 }
 
 /**
