@@ -563,7 +563,8 @@ int kill_storage_sync_threads()
 	return result;
 }
 
-int storage_binlog_write(const char op_type, const char *filename)
+int storage_binlog_write(const int timestamp, const char op_type, \
+		const char *filename)
 {
 	struct flock lock;
 	char buff[128];
@@ -585,7 +586,7 @@ int storage_binlog_write(const char op_type, const char *filename)
 	}
 	
 	write_bytes = snprintf(buff, sizeof(buff), "%d %c %s\n", \
-			(int)time(NULL), op_type, filename);
+			timestamp, op_type, filename);
 	if (write(g_binlog_fd, buff, write_bytes) != write_bytes)
 	{
 		logError("file: "__FILE__", line: %d, " \
