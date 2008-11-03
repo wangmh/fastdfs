@@ -540,7 +540,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 		if (sync_flag != '\0')
 		{
 			resp.status = storage_binlog_write( \
-					sync_flag, meta_filename);
+					time(NULL), sync_flag, meta_filename);
 		}
 
 		break;
@@ -689,9 +689,8 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		resp.status = storage_binlog_write( \
-					STORAGE_OP_TYPE_SOURCE_CREATE_FILE, \
-					filename);
+		resp.status = storage_binlog_write(time(NULL), \
+				STORAGE_OP_TYPE_SOURCE_CREATE_FILE, filename);
 		if (resp.status != 0)
 		{
 			break;
@@ -702,7 +701,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			char meta_filename[64];
 			sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, \
 				filename);
-			resp.status = storage_binlog_write( \
+			resp.status = storage_binlog_write(time(NULL), \
 					STORAGE_OP_TYPE_SOURCE_CREATE_FILE, \
 					meta_filename);
 		}
@@ -917,13 +916,13 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 
 		if (proto_cmd == STORAGE_PROTO_CMD_SYNC_CREATE_FILE)
 		{
-			resp.status = storage_binlog_write( \
+			resp.status = storage_binlog_write(*timestamp, \
 				STORAGE_OP_TYPE_REPLICA_CREATE_FILE, \
 				filename);
 		}
 		else
 		{
-			resp.status = storage_binlog_write( \
+			resp.status = storage_binlog_write(*timestamp, \
 				STORAGE_OP_TYPE_REPLICA_UPDATE_FILE, \
 				filename);
 		}
@@ -1355,9 +1354,8 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 			}
 		}
 
-		resp.status = storage_binlog_write( \
-					STORAGE_OP_TYPE_REPLICA_DELETE_FILE, \
-					filename);
+		resp.status = storage_binlog_write(*timestamp, \
+				STORAGE_OP_TYPE_REPLICA_DELETE_FILE, filename);
 		break;
 	}
 
@@ -1471,9 +1469,8 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		resp.status = storage_binlog_write( \
-					STORAGE_OP_TYPE_SOURCE_DELETE_FILE, \
-					filename);
+		resp.status = storage_binlog_write(time(NULL), \
+				STORAGE_OP_TYPE_SOURCE_DELETE_FILE, filename);
 		if (resp.status != 0)
 		{
 			break;
@@ -1498,9 +1495,8 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 
 		sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, \
 				filename);
-		resp.status = storage_binlog_write( \
-					STORAGE_OP_TYPE_SOURCE_DELETE_FILE, \
-					meta_filename);
+		resp.status = storage_binlog_write(time(NULL), \
+			STORAGE_OP_TYPE_SOURCE_DELETE_FILE, meta_filename);
 		break;
 	}
 
