@@ -723,26 +723,33 @@ static int tracker_deal_service_query_fetch_update( \
 			file_timestamp = buff2int(name_buff+sizeof(int));
 		}
 
+		/*
+		//printf("storage_ip=%d, file_timestamp=%d\n", \
+			storage_ip, file_timestamp);
+		*/
+
 		resp.status = 0;
 		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH)
 		{
 			pStorageServer = *(pGroup->active_servers + \
 					   pGroup->current_read_server);
+
+			/*
+			//printf("pStorageServer ip=%s, file_timestamp=%d\n", \
+				pStorageServer->ip_addr, \
+				(int)pStorageServer->last_synced_timestamp);
+			*/
+
+			while (1)
+			{
 			if ((pStorageServer->last_synced_timestamp > \
 				file_timestamp) || (storage_ip == INADDR_NONE \
 				&& g_groups.store_server != \
 				 FDFS_STORE_SERVER_FIRST))
 			{
-				pGroup->current_read_server++;
-				if (pGroup->current_read_server >= \
-					pGroup->active_count)
-				{
-					pGroup->current_read_server = 0;
-				}
-
 				break;
 			}
-				
+			
 			if (storage_ip == INADDR_NONE && g_groups.store_server\
 				== FDFS_STORE_SERVER_FIRST)
 			{
@@ -764,6 +771,8 @@ static int tracker_deal_service_query_fetch_update( \
 			{
 				pStorageServer = *(pGroup->active_servers);
 				break;
+			}
+			break;
 			}
 
 			pGroup->current_read_server++;
