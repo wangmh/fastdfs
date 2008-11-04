@@ -1296,7 +1296,8 @@ static void* storage_sync_thread_entrance(void* arg)
 	storage_server.port = g_server_port;
 	storage_server.sock = -1;
 	while (g_continue_flag && \
-		pStorage->status != FDFS_STORAGE_STATUS_DELETED)
+		pStorage->status != FDFS_STORAGE_STATUS_DELETED &&
+		pStorage->status != FDFS_STORAGE_STATUS_NONE)
 	{
 		if (storage_reader_init(pStorage, &reader) != 0)
 		{
@@ -1311,7 +1312,8 @@ static void* storage_sync_thread_entrance(void* arg)
 			(pStorage->status != FDFS_STORAGE_STATUS_ACTIVE && \
 			pStorage->status != FDFS_STORAGE_STATUS_WAIT_SYNC && \
 			pStorage->status != FDFS_STORAGE_STATUS_SYNCING && \
-			pStorage->status != FDFS_STORAGE_STATUS_DELETED))
+			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
+			pStorage->status != FDFS_STORAGE_STATUS_NONE))
 		{
 			sleep(1);
 		}
@@ -1320,7 +1322,8 @@ static void* storage_sync_thread_entrance(void* arg)
 		nContinuousFail = 0;
 		conn_result = 0;
 		while (g_continue_flag && \
-			pStorage->status != FDFS_STORAGE_STATUS_DELETED)
+			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
+			pStorage->status != FDFS_STORAGE_STATUS_NONE)
 		{
 			storage_server.sock = \
 				socket(AF_INET, SOCK_STREAM, 0);
@@ -1429,7 +1432,8 @@ static void* storage_sync_thread_entrance(void* arg)
 
 		sync_result = 0;
 		while (g_continue_flag && \
-			pStorage->status != FDFS_STORAGE_STATUS_DELETED)
+			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
+			pStorage->status != FDFS_STORAGE_STATUS_NONE)
 		{
 			read_result = storage_binlog_read(&reader, \
 					&record, &record_len);
@@ -1573,7 +1577,8 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage)
 	pthread_attr_t pattr;
 	pthread_t tid;
 
-	if (pStorage->status == FDFS_STORAGE_STATUS_DELETED)
+	if (pStorage->status == FDFS_STORAGE_STATUS_DELETED || \
+		pStorage->status == FDFS_STORAGE_STATUS_NONE)
 	{
 		return 0;
 	}
