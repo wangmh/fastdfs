@@ -335,7 +335,6 @@ static int tracker_load_sync_timestamps(const char *data_path)
 	int cols;
 	int src_index;
 	int dest_index;
-	int min_synced_timestamp;
 	int curr_synced_timestamp;
 	int result;
 
@@ -464,30 +463,70 @@ static int tracker_load_sync_timestamps(const char *data_path)
 
 		for (dest_index=0; dest_index<pGroup->count; dest_index++)
 		{
-			min_synced_timestamp = 0;
-			for (src_index=0; src_index<pGroup->count; src_index++)
+			if (g_groups.store_server == FDFS_STORE_SERVER_FIRST)
 			{
-				if (src_index == dest_index)
-				{
-					continue;
-				}
+				int max_synced_timestamp;
 
-				curr_synced_timestamp = \
-					pGroup->last_sync_timestamps \
+				max_synced_timestamp = 0;
+				for (src_index=0; src_index<pGroup->count; \
+					src_index++)
+				{
+					if (src_index == dest_index)
+					{
+						continue;
+					}
+
+					curr_synced_timestamp = \
+						pGroup->last_sync_timestamps \
 							[src_index][dest_index];
-				if (min_synced_timestamp == 0)
-				{
-				min_synced_timestamp = curr_synced_timestamp;
+					if (curr_synced_timestamp > \
+						max_synced_timestamp)
+					{
+						max_synced_timestamp = \
+							curr_synced_timestamp;
+					}
 				}
-				else if (curr_synced_timestamp < \
-					min_synced_timestamp)
-				{
-				min_synced_timestamp = curr_synced_timestamp;
-				}
-			}
 
-			pGroup->all_servers[dest_index].last_synced_timestamp =\
-					min_synced_timestamp;
+				pGroup->all_servers[dest_index].stat. \
+					last_synced_timestamp = max_synced_timestamp;
+			}
+			else //round robin
+			{
+				int min_synced_timestamp;
+
+				min_synced_timestamp = 0;
+				for (src_index=0; src_index<pGroup->count; \
+					src_index++)
+				{
+					if (src_index == dest_index)
+					{
+						continue;
+					}
+
+					curr_synced_timestamp = \
+						pGroup->last_sync_timestamps \
+							[src_index][dest_index];
+					if (curr_synced_timestamp == 0)
+					{
+						continue;
+					}
+
+					if (min_synced_timestamp == 0)
+					{
+						min_synced_timestamp = \
+							curr_synced_timestamp;
+					}
+					else if (curr_synced_timestamp < \
+						min_synced_timestamp)
+					{
+						min_synced_timestamp = \
+							curr_synced_timestamp;
+					}
+				}
+
+				pGroup->all_servers[dest_index].stat. \
+					last_synced_timestamp = min_synced_timestamp;
+			}
 		}
 	}
 

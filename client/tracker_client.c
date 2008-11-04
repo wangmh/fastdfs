@@ -255,6 +255,8 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_last_source_update);
 		pStorageStat->last_sync_update = buff2long( \
 			pStatBuff->sz_last_sync_update);
+		pStorageStat->last_synced_timestamp = buff2long( \
+			pStatBuff->sz_last_synced_timestamp);
 
 		pDest++;
 	}

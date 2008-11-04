@@ -60,13 +60,16 @@ typedef struct
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	int64_t free_mb;  //free disk storage in MB
 	int count;        //server count
-	int storage_port;
+	int storage_port; //storage server port
 	int active_count; //active server count
-	int current_write_server;
+	int current_write_server; //current server index to upload file
 } FDFSGroupStat;
 
 typedef struct
 {
+	/* following count stat by source server,
+           not including synced count
+	*/
 	int64_t total_upload_count;
 	int64_t success_upload_count;
 	int64_t total_set_meta_count;
@@ -77,13 +80,22 @@ typedef struct
 	int64_t success_download_count;
 	int64_t total_get_meta_count;
 	int64_t success_get_meta_count;
-	time_t last_source_update;
-	time_t last_sync_update;
-	/*
-	int total_check_count;
-	int success_check_count;
-	time_t last_check_time;
+
+	/* last update timestamp as source server, 
+           current server' timestamp
 	*/
+	time_t last_source_update;
+
+	/* last update timestamp as dest server, 
+           current server' timestamp
+	*/
+	time_t last_sync_update;
+
+	/* last syned timestamp, 
+	   source server's timestamp
+	*/
+	time_t last_synced_timestamp;
+
 } FDFSStorageStat;
 
 typedef struct
@@ -100,6 +112,7 @@ typedef struct
 	char sz_success_get_meta_count[8];
 	char sz_last_source_update[8];
 	char sz_last_sync_update[8];
+	char sz_last_synced_timestamp[8];
 } FDFSStorageStatBuff;
 
 typedef struct StructFDFSStorageDetail
@@ -110,7 +123,6 @@ typedef struct StructFDFSStorageDetail
 
 	struct StructFDFSStorageDetail *psync_src_server;
 	time_t sync_until_timestamp;
-	time_t last_synced_timestamp; //the min sync timestamp as dest storage
 
 	int64_t total_mb;  //total disk storage in MB
 	int64_t free_mb;  //free disk storage in MB
@@ -144,11 +156,11 @@ typedef struct
 typedef struct
 {
 	int alloc_size;
-	int count;
+	int count;  //group count
 	FDFSGroupInfo *groups;
 	FDFSGroupInfo **sorted_groups; //order by group_name
-	FDFSGroupInfo *pStoreGroup;
-	int current_write_group;
+	FDFSGroupInfo *pStoreGroup;  //the group to store uploaded files
+	int current_write_group;  //current group index to upload file
 	byte store_lookup;  //store to which group
 	byte store_server;  //store to which server
 	char store_group[FDFS_GROUP_NAME_MAX_LEN + 1];
@@ -182,8 +194,8 @@ typedef struct
 
 typedef struct
 {
-	char name[FDFS_MAX_META_NAME_LEN + 1];
-	char value[FDFS_MAX_META_VALUE_LEN + 1];
+	char name[FDFS_MAX_META_NAME_LEN + 1];  //key
+	char value[FDFS_MAX_META_VALUE_LEN + 1]; //value
 } FDFSMetaData;
 
 typedef struct
