@@ -568,6 +568,8 @@ static int tracker_deal_server_list_group_storages( \
 				 pStatBuff->sz_last_source_update);
 			long2buff(pStorageStat->last_sync_update, \
 				 pStatBuff->sz_last_sync_update);
+			long2buff(pStorageStat->last_synced_timestamp, \
+				 pStatBuff->sz_last_synced_timestamp);
 			pDest++;
 		}
 
@@ -607,7 +609,6 @@ static int tracker_deal_server_list_group_storages( \
 
 	return resp.status;
 }
-
 
 /**
 pkg format:
@@ -739,14 +740,14 @@ static int tracker_deal_service_query_fetch_update( \
 				"file_timestamp=%d, " \
 				"last_synced_timestamp=%d\n", filename, \
 				pStorageServer->ip_addr, file_timestamp, \
-				(int)pStorageServer->last_synced_timestamp);
+				(int)pStorageServer->stat.last_synced_timestamp);
 			*/
 
 			while (1)
 			{
-			if ((pStorageServer->last_synced_timestamp > \
+			if ((pStorageServer->stat.last_synced_timestamp > \
 				file_timestamp) || \
-				(pStorageServer->last_synced_timestamp + 1 >= \
+				(pStorageServer->stat.last_synced_timestamp + 1 >= \
 				  file_timestamp&&time(NULL)-file_timestamp>60)\
 				|| (storage_ip == INADDR_NONE \
 				    && g_groups.store_server != \
@@ -1407,7 +1408,6 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 	char *pEnd;
 	char *src_ip_addr;
 	int sync_timestamp;
-	int min_synced_timestamp;
 	int src_index;
 	int dest_index;
 	FDFSStorageDetail *pSrcStorage;
@@ -1445,50 +1445,106 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 		dest_index = pClientInfo->pStorage - \
 				pClientInfo->pGroup->all_servers;
 
-		min_synced_timestamp = 0;
-		pEnd = in_buff + nInPackLen;
-		for (p=in_buff; p<pEnd; p += (IP_ADDRESS_SIZE + 4))
+		if (g_groups.store_server == FDFS_STORE_SERVER_FIRST)
 		{
-			sync_timestamp = buff2int(p + IP_ADDRESS_SIZE);
-			if (sync_timestamp <= 0)
-			{
-				continue;
-			}
+			int max_synced_timestamp;
 
-			src_ip_addr = p;
-			*(src_ip_addr + (IP_ADDRESS_SIZE - 1)) = '\0';
- 			pSrcStorage = tracker_mem_get_storage( \
+			max_synced_timestamp = pClientInfo->pStorage->stat.\
+						last_synced_timestamp;
+			pEnd = in_buff + nInPackLen;
+			for (p=in_buff; p<pEnd; p += (IP_ADDRESS_SIZE + 4))
+			{
+				sync_timestamp = buff2int(p + IP_ADDRESS_SIZE);
+				if (sync_timestamp <= 0)
+				{
+					continue;
+				}
+
+				src_ip_addr = p;
+				*(src_ip_addr + (IP_ADDRESS_SIZE - 1)) = '\0';
+ 				pSrcStorage = tracker_mem_get_storage( \
 					pClientInfo->pGroup, src_ip_addr);
-			if (pSrcStorage == NULL)
-			{
-				continue;
-			}
-			if (pSrcStorage->status != FDFS_STORAGE_STATUS_ACTIVE)
-			{
-				continue;
+				if (pSrcStorage == NULL)
+				{
+					continue;
+				}
+				if (pSrcStorage->status != FDFS_STORAGE_STATUS_ACTIVE)
+				{
+					continue;
+				}
+
+				src_index = pSrcStorage - 
+						pClientInfo->pGroup->all_servers;
+				if (src_index == dest_index)
+				{
+					continue;
+				}
+
+				pClientInfo->pGroup->last_sync_timestamps \
+					[src_index][dest_index] = sync_timestamp;
+
+				if (sync_timestamp > max_synced_timestamp)
+				{
+					max_synced_timestamp = sync_timestamp;
+				}
 			}
 
-			src_index = pSrcStorage - 
-					pClientInfo->pGroup->all_servers;
-			if (src_index == dest_index)
+			pClientInfo->pStorage->stat.last_synced_timestamp = \
+					max_synced_timestamp;
+		}
+		else  //round robin
+		{
+			int min_synced_timestamp;
+
+			min_synced_timestamp = 0;
+			pEnd = in_buff + nInPackLen;
+			for (p=in_buff; p<pEnd; p += (IP_ADDRESS_SIZE + 4))
 			{
-				continue;
+				sync_timestamp = buff2int(p + IP_ADDRESS_SIZE);
+				if (sync_timestamp <= 0)
+				{
+					continue;
+				}
+
+				src_ip_addr = p;
+				*(src_ip_addr + (IP_ADDRESS_SIZE - 1)) = '\0';
+ 				pSrcStorage = tracker_mem_get_storage( \
+					pClientInfo->pGroup, src_ip_addr);
+				if (pSrcStorage == NULL)
+				{
+					continue;
+				}
+				if (pSrcStorage->status != FDFS_STORAGE_STATUS_ACTIVE)
+				{
+					continue;
+				}
+
+				src_index = pSrcStorage - 
+						pClientInfo->pGroup->all_servers;
+				if (src_index == dest_index)
+				{
+					continue;
+				}
+
+				pClientInfo->pGroup->last_sync_timestamps \
+					[src_index][dest_index] = sync_timestamp;
+
+				if (min_synced_timestamp == 0)
+				{
+					min_synced_timestamp = sync_timestamp;
+				}
+				else if (sync_timestamp < min_synced_timestamp)
+				{
+					min_synced_timestamp = sync_timestamp;
+				}
 			}
 
-			pClientInfo->pGroup->last_sync_timestamps[src_index] \
-						[dest_index] = sync_timestamp;
-
-			if (min_synced_timestamp == 0)
+			if (min_synced_timestamp > 0)
 			{
-				min_synced_timestamp = sync_timestamp;
-			}
-			else if (sync_timestamp < min_synced_timestamp)
-			{
-				min_synced_timestamp = sync_timestamp;
+				pClientInfo->pStorage->stat.last_synced_timestamp = \
+					min_synced_timestamp;
 			}
 		}
-		pClientInfo->pStorage->last_synced_timestamp = \
-				min_synced_timestamp;
 
 		if (++g_storage_sync_time_chg_count % \
 			TRACKER_SYNC_TO_FILE_FREQ == 0)

@@ -131,6 +131,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 	FDFSStorageStat *pStorageStat;
 	char szSrcUpdTime[32];
 	char szSyncUpdTime[32];
+	char szSyncedTimestamp[32];
 	int k;
 
 	printf( "group name = %s\n" \
@@ -178,7 +179,8 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\ttotal_get_meta_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tsuccess_get_meta_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tlast_source_update = %s\n" \
-			"\t\tlast_sync_update = %s\n",  \
+			"\t\tlast_sync_update = %s\n"   \
+			"\t\tlast_synced_timestamp= %s\n",  \
 			++k, pStorage->ip_addr, \
 			get_storage_status_caption(pStorage->status), \
 			pStorage->total_mb / 1024, \
@@ -198,7 +200,10 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 				szSrcUpdTime, sizeof(szSrcUpdTime)), \
 			formatDatetime(pStorageStat->last_sync_update, \
 				"%Y-%m-%d %H:%M:%S", \
-				szSyncUpdTime, sizeof(szSyncUpdTime))
+				szSyncUpdTime, sizeof(szSyncUpdTime)), \
+			formatDatetime(pStorageStat->last_synced_timestamp, \
+				"%Y-%m-%d %H:%M:%S", \
+				szSyncedTimestamp, sizeof(szSyncedTimestamp))
 		);
 	}
 
