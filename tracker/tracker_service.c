@@ -735,17 +735,22 @@ static int tracker_deal_service_query_fetch_update( \
 					   pGroup->current_read_server);
 
 			/*
-			//printf("pStorageServer ip=%s, file_timestamp=%d\n", \
-				pStorageServer->ip_addr, \
+			//printf("filename=%s, pStorageServer ip=%s, " \
+				"file_timestamp=%d, " \
+				"last_synced_timestamp=%d\n", filename, \
+				pStorageServer->ip_addr, file_timestamp, \
 				(int)pStorageServer->last_synced_timestamp);
 			*/
 
 			while (1)
 			{
 			if ((pStorageServer->last_synced_timestamp > \
-				file_timestamp) || (storage_ip == INADDR_NONE \
-				&& g_groups.store_server != \
-				 FDFS_STORE_SERVER_FIRST))
+				file_timestamp) || \
+				(pStorageServer->last_synced_timestamp + 1 >= \
+				  file_timestamp&&time(NULL)-file_timestamp>60)\
+				|| (storage_ip == INADDR_NONE \
+				    && g_groups.store_server != \
+				       FDFS_STORE_SERVER_FIRST))
 			{
 				break;
 			}
