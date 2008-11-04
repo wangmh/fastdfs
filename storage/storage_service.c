@@ -38,10 +38,10 @@ pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
 
 static int storage_gen_filename(StorageClientInfo *pClientInfo, \
-		const int file_size, const char *szFormattedExt, \
-		const int ext_name_len, char *filename, int *filename_len)
+		const int file_size, const char *szFormattedExt, 
+		const int ext_name_len, const time_t timestamp, \
+		char *filename, int *filename_len)
 {
-	int current_time;
 	int r;
 	char buff[sizeof(int) * 4];
 	char encoded[sizeof(int) * 6 + 1];
@@ -53,10 +53,9 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 	server_ip = getSockIpaddr(pClientInfo->sock, \
 			szStorageIp, IP_ADDRESS_SIZE);
 	r = rand();
-	current_time = time(NULL);
 
 	int2buff(server_ip, buff);
-	int2buff(current_time, buff+sizeof(int));
+	int2buff(timestamp, buff+sizeof(int));
 	int2buff(file_size, buff+sizeof(int)*2);
 	int2buff(r, buff+sizeof(int)*3);
 
@@ -121,6 +120,7 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 	int ext_name_len;
 	int pad_len;
 	time_t start_time;
+	time_t end_time;
 
 	ext_name_len = strlen(file_ext_name);
 	if (ext_name_len == 0)
@@ -146,11 +146,12 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 	}
 	*p = '\0';
 
+	start_time = time(NULL);
 	for (i=0; i<10; i++)
 	{
 		if ((result=storage_gen_filename(pClientInfo, file_size, \
 				szFormattedExt, FDFS_FILE_EXT_NAME_MAX_LEN+1, \
-				filename, filename_len)) != 0)
+				start_time + 1, filename, filename_len)) != 0)
 		{
 			return result;
 		}
@@ -173,7 +174,6 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 		return ENOENT;
 	}
 
-	start_time = time(NULL);
 	if ((result=tcprecvfile(pClientInfo->sock, full_filename, file_size)) != 0)
 	{
 		*filename = '\0';
@@ -208,7 +208,8 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 		*meta_filename = '\0';
 	}
 
-	if (time(NULL) - start_time > 0)  //need to rename
+	end_time = time(NULL);
+	if (end_time - start_time > 1)  //need to rename filename
 	{
 		char new_full_filename[MAX_PATH_SIZE+64];
 		char new_meta_filename[MAX_PATH_SIZE+64];
@@ -219,7 +220,7 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 		{
 			if ((result=storage_gen_filename(pClientInfo,file_size,\
 				szFormattedExt, FDFS_FILE_EXT_NAME_MAX_LEN+1, \
-				new_filename, &new_filename_len)) != 0)
+				end_time, new_filename, &new_filename_len)) != 0)
 			{
 				return 0;
 			}
