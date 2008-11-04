@@ -969,12 +969,8 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 					resp.status, strerror(resp.status));
 				break;
 			}
-
-			resp.status = EEXIST;
-			break;
 		}
-
-		if ((resp.status=tcprecvfile(pClientInfo->sock, \
+		else if ((resp.status=tcprecvfile(pClientInfo->sock, \
 				full_filename, file_bytes)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -1014,14 +1010,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		return result;
 	}
 
-	if (resp.status == EEXIST)
-	{
-		return 0;
-	}
-	else
-	{
-		return resp.status;
-	}
+	return resp.status;
 }
 
 /**
