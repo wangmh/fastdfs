@@ -89,10 +89,10 @@ static int storage_sort_metadata_buff(char *meta_buff, const int meta_size)
 	/*
 	{
 	int i;
-	printf("meta_count=%d\n", meta_count);
+	//printf("meta_count=%d\n", meta_count);
 	for (i=0; i<meta_count; i++)
 	{
-		printf("%d. %s=%s\n", i+1, meta_list[i].name, meta_list[i].value);
+		//printf("%d. %s=%s\n", i+1, meta_list[i].name, meta_list[i].value);
 	}
 	}
 	*/
