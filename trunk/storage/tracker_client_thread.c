@@ -524,8 +524,24 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 				}
 				else
 				{
-					(*ppFound)->server.status = \
-						pServer->status;
+					if ((*ppFound)->server.status == \
+						FDFS_STORAGE_STATUS_NONE && \
+						pServer->status != \
+						FDFS_STORAGE_STATUS_DELETED)
+					{
+						(*ppFound)->server.status = \
+							pServer->status;
+					if ((result=storage_sync_thread_start( \
+						&((*ppFound)->server))) != 0)
+						{
+							return result;
+						}
+					}
+					else
+					{
+						(*ppFound)->server.status = \
+							pServer->status;
+					}
 				}
 			}
 		}
