@@ -208,7 +208,6 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 		*meta_filename = '\0';
 	}
 
-	/*
 	end_time = time(NULL);
 	if (end_time - start_time > 1)  //need to rename filename
 	{
@@ -275,7 +274,6 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 		*filename_len = new_filename_len;
 		memcpy(filename, new_filename, new_filename_len+1);
 	}
-	*/
 
 	return 0;
 }
