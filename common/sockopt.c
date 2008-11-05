@@ -39,7 +39,7 @@
 #include "logger.h"
 #include "fdfs_global.h"
 
-#define FDFS_BUFF_SIZE  512 * 1024
+#define FDFS_BUFF_SIZE  128 * 1024
 
 int tcpgets(int sock, char* s, const int size, const int timeout)
 {
