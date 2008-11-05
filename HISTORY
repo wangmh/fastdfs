@@ -10,6 +10,7 @@ Version 1.12  2008-11-03
   * add protocol cmd TRACKER_PROTO_CMD_STORAGE_SYNC_REPORT to report last 
     synced timestamp as dest server
   * fix sync old data files to new server bug
+  * fcntl change to pthread_mutex_lock
 
 Version 1.11  2008-10-04
   * kill report and sync threads when recv terminate signal
