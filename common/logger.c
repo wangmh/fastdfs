@@ -18,6 +18,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/file.h>
+#include <pthread.h>
 #include "common_define.h"
 #include "fdfs_global.h"
 #include "shared_func.h"
@@ -25,6 +26,7 @@
 
 int g_log_level = LOG_INFO;
 int g_log_fd = STDERR_FILENO;
+static pthread_mutex_t log_thread_lock;
 
 static int check_and_mk_log_dir()
 {
@@ -57,6 +59,11 @@ int log_init(const char *filename_prefix)
 
 	log_destory();
 
+	if ((result=init_pthread_lock(&log_thread_lock)) != 0)
+	{
+		return result;
+	}
+
 	snprintf(logfile, MAX_PATH_SIZE, "%s/logs/%s.log", \
 		g_base_path, filename_prefix);
 
@@ -82,6 +89,8 @@ void log_destory()
 	{
 		close(g_log_fd);
 		g_log_fd = STDERR_FILENO;
+
+		pthread_mutex_destroy(&log_thread_lock);
 	}
 }
 
@@ -91,7 +100,8 @@ static void doLog(const char *caption, const char* text, const int text_len)
 	struct tm tm;
 	char buff[64];
 	int buff_len;
-	struct flock lock;
+	int result;
+	//struct flock lock;
 
 	t = time(NULL);
 	localtime_r(&t, &tm);
@@ -100,6 +110,15 @@ static void doLog(const char *caption, const char* text, const int text_len)
 			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
 			tm.tm_hour, tm.tm_min, tm.tm_sec, caption);
 
+	if ((result=pthread_mutex_lock(&log_thread_lock)) != 0)
+	{
+		fprintf(stderr, "file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	/*
 	if (g_log_fd != STDERR_FILENO)
 	{
 		lock.l_type = F_WRLCK;
@@ -113,6 +132,7 @@ static void doLog(const char *caption, const char* text, const int text_len)
 				 __LINE__, errno, strerror(errno));
 		}
 	}
+	*/
 
 	if (write(g_log_fd, buff, buff_len) != buff_len)
 	{
@@ -137,7 +157,6 @@ static void doLog(const char *caption, const char* text, const int text_len)
 
 	if (g_log_fd != STDERR_FILENO)
 	{
-
 		if (fsync(g_log_fd) != 0)
 		{
 			fprintf(stderr, "file: "__FILE__", line: %d, " \
@@ -145,8 +164,18 @@ static void doLog(const char *caption, const char* text, const int text_len)
 				 __LINE__, errno, strerror(errno));
 		}
 
+		/*
 		lock.l_type = F_UNLCK;
 		fcntl(g_log_fd, F_SETLKW, &lock);
+		*/
+	}
+
+	if ((result=pthread_mutex_unlock(&log_thread_lock)) != 0)
+	{
+		fprintf(stderr, "file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
 	}
 }
 
