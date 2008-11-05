@@ -566,11 +566,19 @@ int kill_storage_sync_threads()
 int storage_binlog_write(const int timestamp, const char op_type, \
 		const char *filename)
 {
-	struct flock lock;
+	//struct flock lock;
 	char buff[128];
 	int write_bytes;
 	int result;
 
+	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+	/*
 	lock.l_type = F_WRLCK;
 	lock.l_whence = SEEK_SET;
 	lock.l_start = 0;
@@ -584,6 +592,7 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : EACCES;
 	}
+	*/
 	
 	write_bytes = snprintf(buff, sizeof(buff), "%d %c %s\n", \
 			timestamp, op_type, filename);
@@ -633,6 +642,7 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 		}
 	}
 
+	/*
 	lock.l_type = F_UNLCK;
 	if (fcntl(g_binlog_fd, F_SETLKW, &lock) != 0)
 	{
@@ -642,6 +652,15 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 			__LINE__, get_writable_binlog_filename(NULL), \
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOENT;
+	}
+	*/
+
+	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
 	}
 
 	return result;
