@@ -532,7 +532,7 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes)
 			return result;
 		}
 
-		if (recv_bytes == sizeof(buff) && fsync(fd) != 0)
+		if (recv_bytes != remain_bytes && fsync(fd) != 0)
 		{
 			result = errno != 0 ? errno: EIO;
 			close(fd);
