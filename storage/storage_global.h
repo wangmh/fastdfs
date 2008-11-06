@@ -36,6 +36,7 @@ typedef struct
 
 extern int g_server_port;
 extern int g_max_connections;
+extern int g_max_write_thread_count;
 
 extern int g_storage_count;  //stoage server count in my group
 extern FDFSStorageServer g_storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
