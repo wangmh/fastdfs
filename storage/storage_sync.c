@@ -54,7 +54,7 @@ static off_t binlog_file_size = 0;
 
 int g_storage_sync_thread_count = 0;
 static pthread_mutex_t sync_thread_lock;
-static char binlog_write_cache_buff[4 * 1024];
+static char binlog_write_cache_buff[16 * 1024];
 static int binlog_write_cache_len = 0;
 
 /* save sync thread ids */
