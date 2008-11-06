@@ -526,10 +526,18 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes)
 
 		if (write(fd, buff, recv_bytes) != recv_bytes)
 		{
-			result = errno;
+			result = errno != 0 ? errno: EIO;
 			close(fd);
 			unlink(filename);
-			return result != 0 ? result : EIO;
+			return result;
+		}
+
+		if (recv_bytes == sizeof(buff) && fsync(fd) != 0)
+		{
+			result = errno != 0 ? errno: EIO;
+			close(fd);
+			unlink(filename);
+			return result;
 		}
 
 		remain_bytes -= recv_bytes;
