@@ -605,6 +605,7 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 			errno, strerror(errno));
 		result = errno != 0 ? errno : EIO;
 	}
+	/*
 	else if (fsync(g_binlog_fd) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -614,6 +615,7 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 			errno, strerror(errno));
 		result = errno != 0 ? errno : EIO;
 	}
+	*/
 	else
 	{
 		binlog_file_size += write_bytes;
@@ -1511,7 +1513,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			}
 
 			reader.binlog_offset += record_len;
-			if (++reader.scan_row_count % 100 == 0)
+			if (++reader.sync_row_count % 1000 == 0)
 			{
 				if (storage_write_to_mark_file(&reader) != 0)
 				{
