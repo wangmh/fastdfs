@@ -863,6 +863,96 @@ int storage_load_from_conf_file(const char *filename, \
 	return result;
 }
 
+int write_serialized(int fd, const char *buff, size_t count, const bool bSync)
+{
+	int result;
+	int fsync_ret;
+
+	if ((result=pthread_mutex_lock(&fsync_thread_mutex)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	while (fsync_thread_count >= g_max_write_thread_count)
+	{
+		if ((result=pthread_cond_wait(&fsync_thread_cond, \
+				&fsync_thread_mutex)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"pthread_cond_wait failed, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, strerror(result));
+			return result;
+		}
+	}
+
+	fsync_thread_count++;
+
+	if ((result=pthread_mutex_unlock(&fsync_thread_mutex)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	if (write(fd, buff, count) == count)
+	{
+		if (bSync && fsync(fd) != 0)
+		{
+			fsync_ret = errno != 0 ? errno : EIO;
+			logError("file: "__FILE__", line: %d, " \
+				"call fsync fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, fsync_ret, strerror(fsync_ret));
+		}
+		else
+		{
+			fsync_ret = 0;
+		}
+	}
+	else
+	{
+		fsync_ret = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"call write fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, fsync_ret, strerror(fsync_ret));
+	}
+
+	if ((result=pthread_mutex_lock(&fsync_thread_mutex)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	fsync_thread_count--;
+
+	if ((result=pthread_mutex_unlock(&fsync_thread_mutex)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	if ((result=pthread_cond_signal(&fsync_thread_cond)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"pthread_cond_signal failed, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	return fsync_ret;
+}
+
 int fsync_serialized(int fd)
 {
 	int result;
@@ -977,19 +1067,32 @@ int recv_file_serialized(int sock, const char *filename, \
 			return result;
 		}
 
-		if (write(fd, buff, recv_bytes) != recv_bytes)
+		if (recv_bytes == remain_bytes)  //last buff
 		{
-			result = errno != 0 ? errno : EIO;
-			close(fd);
-			unlink(filename);
-			return result;
+			if (write_serialized(fd, buff, recv_bytes, true) != 0)
+			{
+				result = errno != 0 ? errno : EIO;
+				close(fd);
+				unlink(filename);
+				return result;
+			}
 		}
-
-		if ((result=fsync_serialized(fd)) != 0)
+		else
 		{
-			close(fd);
-			unlink(filename);
-			return result;
+			if (write_serialized(fd, buff, recv_bytes, false) != 0)
+			{
+				result = errno != 0 ? errno : EIO;
+				close(fd);
+				unlink(filename);
+				return result;
+			}
+
+			if ((result=fsync_serialized(fd)) != 0)
+			{
+				close(fd);
+				unlink(filename);
+				return result;
+			}
 		}
 
 		remain_bytes -= recv_bytes;
