@@ -54,6 +54,8 @@ static off_t binlog_file_size = 0;
 
 int g_storage_sync_thread_count = 0;
 static pthread_mutex_t sync_thread_lock;
+static char binlog_write_cache_buff[4 * 1024];
+static int binlog_write_cache_len = 0;
 
 /* save sync thread ids */
 static pthread_t *sync_tids = NULL;
@@ -563,13 +565,10 @@ int kill_storage_sync_threads()
 	return result;
 }
 
-int storage_binlog_write(const int timestamp, const char op_type, \
-		const char *filename)
+static int storage_binlog_fsync()
 {
-	//struct flock lock;
-	char buff[128];
-	int write_bytes;
 	int result;
+	int write_ret;
 
 	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
 	{
@@ -578,34 +577,21 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 			"errno: %d, error info: %s", \
 			__LINE__, result, strerror(result));
 	}
-	/*
-	lock.l_type = F_WRLCK;
-	lock.l_whence = SEEK_SET;
-	lock.l_start = 0;
-	lock.l_len = 0;
-	if (fcntl(g_binlog_fd, F_SETLKW, &lock) != 0)
+
+	if (binlog_write_cache_len == 0) //ignore
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"lock binlog file \"%s\" fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, get_writable_binlog_filename(NULL), \
-			errno, strerror(errno));
-		return errno != 0 ? errno : EACCES;
+		write_ret = 0;  //skip
 	}
-	*/
-	
-	write_bytes = snprintf(buff, sizeof(buff), "%d %c %s\n", \
-			timestamp, op_type, filename);
-	if (write(g_binlog_fd, buff, write_bytes) != write_bytes)
+	else if (write(g_binlog_fd, binlog_write_cache_buff, \
+		binlog_write_cache_len) != binlog_write_cache_len)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"write to binlog file \"%s\" fail, " \
 			"errno: %d, error info: %s",  \
 			__LINE__, get_writable_binlog_filename(NULL), \
 			errno, strerror(errno));
-		result = errno != 0 ? errno : EIO;
+		write_ret = errno != 0 ? errno : EIO;
 	}
-	/*
 	else if (fsync(g_binlog_fd) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -613,22 +599,21 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 			"errno: %d, error info: %s",  \
 			__LINE__, get_writable_binlog_filename(NULL), \
 			errno, strerror(errno));
-		result = errno != 0 ? errno : EIO;
+		write_ret = errno != 0 ? errno : EIO;
 	}
-	*/
 	else
 	{
-		binlog_file_size += write_bytes;
+		binlog_file_size += binlog_write_cache_len;
 		if (binlog_file_size >= SYNC_BINLOG_FILE_MAX_SIZE)
 		{
 			g_binlog_index++;
-			if ((result=write_to_binlog_index()) == 0)
+			if ((write_ret=write_to_binlog_index()) == 0)
 			{
-				result = open_next_writable_binlog();
+				write_ret = open_next_writable_binlog();
 			}
 
 			binlog_file_size = 0;
-			if (result != 0)
+			if (write_ret != 0)
 			{
 				g_continue_flag = false;
 				logCrit("file: "__FILE__", line: %d, " \
@@ -640,22 +625,11 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 		}
 		else
 		{
-			result = 0;
+			write_ret = 0;
 		}
 	}
 
-	/*
-	lock.l_type = F_UNLCK;
-	if (fcntl(g_binlog_fd, F_SETLKW, &lock) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"unlock binlog file \"%s\" fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, get_writable_binlog_filename(NULL), \
-			errno, strerror(errno));
-		return errno != 0 ? errno : ENOENT;
-	}
-	*/
+	binlog_write_cache_len = 0;  //reset cache buff
 
 	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
 	{
@@ -665,7 +639,46 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 			__LINE__, result, strerror(result));
 	}
 
-	return result;
+	return write_ret;
+}
+
+int storage_binlog_write(const int timestamp, const char op_type, \
+		const char *filename)
+{
+	int result;
+	int write_ret;
+
+	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	binlog_write_cache_len += sprintf(binlog_write_cache_buff + \
+				binlog_write_cache_len, "%d %c %s\n", \
+				timestamp, op_type, filename);
+
+	//check if buff full
+	if (sizeof(binlog_write_cache_buff) - binlog_write_cache_len < 128)
+	{
+		write_ret = storage_binlog_fsync();  //sync to disk
+	}
+	else
+	{
+		write_ret = 0;
+	}
+
+	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	return write_ret;
 }
 
 static char *get_binlog_readable_filename(BinLogReader *pReader, \
@@ -1306,12 +1319,14 @@ static void* storage_sync_thread_entrance(void* arg)
 	int record_len;
 	int previousCode;
 	int nContinuousFail;
+	time_t last_check_sync_cache_time;
 	
 	memset(local_ip_addr, 0, sizeof(local_ip_addr));
 	memset(&reader, 0, sizeof(reader));
 
 	pStorage = (FDFSStorageBrief *)arg;
 
+	last_check_sync_cache_time = time(NULL);
 	strcpy(storage_server.ip_addr, pStorage->ip_addr);
 	strcpy(storage_server.group_name, g_group_name);
 	storage_server.port = g_server_port;
@@ -1483,6 +1498,13 @@ static void* storage_sync_thread_entrance(void* arg)
 						pStorage->ip_addr, \
 						pStorage->status);
 				}
+				}
+
+				if (binlog_write_cache_len > 0 && \
+					time(NULL) - last_check_sync_cache_time >= 60)
+				{
+					storage_binlog_fsync();
+					last_check_sync_cache_time = time(NULL);
 				}
 
 				usleep(g_sync_wait_usec);
