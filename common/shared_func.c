@@ -792,9 +792,9 @@ int init_pthread_attr(pthread_attr_t *pattr)
 		return result;
 	}
 
-	if (stack_size < 1024 * 1024)
+	if (stack_size < 2 * 1024 * 1024)
 	{
-		if ((result=pthread_attr_setstacksize(pattr, 1024 * 1024)) != 0)
+		if ((result=pthread_attr_setstacksize(pattr, 2*1024*1024)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"call pthread_attr_setstacksize fail, " \
