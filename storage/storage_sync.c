@@ -565,12 +565,12 @@ int kill_storage_sync_threads()
 	return result;
 }
 
-static int storage_binlog_fsync()
+static int storage_binlog_fsync(const bool bNeedLock)
 {
 	int result;
 	int write_ret;
 
-	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
+	if (bNeedLock && (result=pthread_mutex_lock(&sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -631,7 +631,7 @@ static int storage_binlog_fsync()
 
 	binlog_write_cache_len = 0;  //reset cache buff
 
-	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
+	if (bNeedLock && (result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
@@ -663,7 +663,7 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 	//check if buff full
 	if (sizeof(binlog_write_cache_buff) - binlog_write_cache_len < 128)
 	{
-		write_ret = storage_binlog_fsync();  //sync to disk
+		write_ret = storage_binlog_fsync(false);  //sync to disk
 	}
 	else
 	{
@@ -1503,7 +1503,7 @@ static void* storage_sync_thread_entrance(void* arg)
 				if (binlog_write_cache_len > 0 && \
 					time(NULL) - last_check_sync_cache_time >= 60)
 				{
-					storage_binlog_fsync();
+					storage_binlog_fsync(true);
 					last_check_sync_cache_time = time(NULL);
 				}
 
