@@ -174,8 +174,8 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 		return ENOENT;
 	}
 
-	if ((result=recv_file_serialized(pClientInfo->sock, 
-	//if ((result=tcprecvfile(pClientInfo->sock, 
+	//if ((result=recv_file_serialized(pClientInfo->sock, 
+	if ((result=tcprecvfile(pClientInfo->sock, 
 		full_filename, file_size)) != 0)
 	{
 		*filename = '\0';
@@ -972,8 +972,8 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 				break;
 			}
 		}
-		else if ((resp.status=recv_file_serialized(pClientInfo->sock, 
-		//else if ((resp.status=tcprecvfile(pClientInfo->sock, 
+		//else if ((resp.status=recv_file_serialized(pClientInfo->sock, 
+		else if ((resp.status=tcprecvfile(pClientInfo->sock, 
 				full_filename, file_bytes)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
