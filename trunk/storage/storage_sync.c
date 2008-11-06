@@ -1535,7 +1535,8 @@ static void* storage_sync_thread_entrance(void* arg)
 			}
 
 			reader.binlog_offset += record_len;
-			if (++reader.sync_row_count % 1000 == 0)
+			reader.scan_row_count++;
+			if (reader.sync_row_count % 1000 == 0)
 			{
 				if (storage_write_to_mark_file(&reader) != 0)
 				{
