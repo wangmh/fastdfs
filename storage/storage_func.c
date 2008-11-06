@@ -931,6 +931,14 @@ int fsync_serialized(int fd)
 			__LINE__, result, strerror(result));
 	}
 
+	if ((result=pthread_cond_signal(&fsync_thread_cond)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"pthread_cond_signal failed, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
 	return fsync_ret;
 }
 
