@@ -33,6 +33,10 @@ int storage_write_to_stat_file();
 int storage_check_and_make_data_dirs();
 int storage_write_to_sync_ini_file();
 
+int fsync_serialized(int fd);
+int recv_file_serialized(int sock, const char *filename, \
+		const int64_t file_bytes);
+
 #ifdef __cplusplus
 }
 #endif

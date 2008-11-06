@@ -14,6 +14,7 @@
 
 int g_server_port = FDFS_STORAGE_SERVER_DEF_PORT;
 int g_max_connections = DEFAULT_MAX_CONNECTONS;
+int g_max_write_thread_count = 2;
 
 int g_storage_count = 0;
 FDFSStorageServer g_storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
