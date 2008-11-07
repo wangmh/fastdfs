@@ -37,6 +37,10 @@
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
 
+static unsigned char g_path_index_high  = 0;
+static unsigned char g_path_index_low = 0;
+static int g_path_write_file_count = 0;
+
 static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 		const int file_size, const char *szFormattedExt, 
 		const int ext_name_len, const time_t timestamp, \
@@ -61,8 +65,25 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 
 	base64_encode_ex(buff, sizeof(int) * 4, encoded, filename_len, false);
 	n = PJWHash(encoded, *filename_len) % (1 << 16);
+
+	/*
 	len = sprintf(buff, STORAGE_DATA_DIR_FORMAT"/", (n >> 8) & 0xFF);
 	len += sprintf(buff + len, STORAGE_DATA_DIR_FORMAT"/", n & 0xFF);
+	*/
+
+	len = sprintf(buff, STORAGE_DATA_DIR_FORMAT"/", g_path_index_high);
+	len += sprintf(buff + len, STORAGE_DATA_DIR_FORMAT"/", g_path_index_low);
+
+	if (++g_path_write_file_count >= 100)
+	{
+		++g_path_index_low;
+		if (g_path_index_low == 0)
+		{
+			g_path_index_high++;
+		}
+
+		g_path_write_file_count = 0;
+	}
 
 	memcpy(filename, buff, len);
 	memcpy(filename+len, encoded, *filename_len);
