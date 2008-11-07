@@ -37,10 +37,6 @@
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
 
-static unsigned char g_path_index_high  = 0;
-static unsigned char g_path_index_low = 0;
-static int g_path_write_file_count = 0;
-
 static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 		const int file_size, const char *szFormattedExt, 
 		const int ext_name_len, const time_t timestamp, \
@@ -64,25 +60,43 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 	int2buff(r, buff+sizeof(int)*3);
 
 	base64_encode_ex(buff, sizeof(int) * 4, encoded, filename_len, false);
-	n = PJWHash(encoded, *filename_len) % (1 << 16);
 
-	/*
-	len = sprintf(buff, STORAGE_DATA_DIR_FORMAT"/", (n >> 8) & 0xFF);
-	len += sprintf(buff + len, STORAGE_DATA_DIR_FORMAT"/", n & 0xFF);
-	*/
-
-	len = sprintf(buff, STORAGE_DATA_DIR_FORMAT"/", g_path_index_high);
-	len += sprintf(buff + len, STORAGE_DATA_DIR_FORMAT"/", g_path_index_low);
-
-	if (++g_path_write_file_count >= 100)
+	if (g_file_distribute_path_mode == FDFS_FILE_DIST_PATH_SEQUENCE)
 	{
-		++g_path_index_low;
-		if (g_path_index_low == 0)
-		{
-			g_path_index_high++;
-		}
+		len = sprintf(buff, STORAGE_DATA_DIR_FORMAT"/", \
+				g_dist_path_index_high);
+		len += sprintf(buff + len, STORAGE_DATA_DIR_FORMAT"/", \
+				g_dist_path_index_low);
 
-		g_path_write_file_count = 0;
+		if (++g_dist_write_file_count >= g_file_distribute_rotate_count)
+		{
+			++g_dist_path_index_low;
+			if (g_dist_path_index_low > 255)  //rotate
+			{
+				g_dist_path_index_high++;
+				if (g_dist_path_index_high > 255)  //rotate
+				{
+					g_dist_path_index_high = 0;
+				}
+				g_dist_path_index_low = 0;
+			}
+
+			g_dist_write_file_count = 0;
+	
+			if (++g_stat_change_count%STORAGE_SYNC_STAT_FILE_FREQ==0)
+			{
+				if (storage_write_to_stat_file() != 0)
+				{
+				}
+			}
+		}
+	}  //random
+	else
+	{
+		n = PJWHash(encoded, *filename_len) % (1 << 16);
+
+		len = sprintf(buff, STORAGE_DATA_DIR_FORMAT"/", (n >> 8) & 0xFF);
+		len += sprintf(buff + len, STORAGE_DATA_DIR_FORMAT"/", n & 0xFF);
 	}
 
 	memcpy(filename, buff, len);

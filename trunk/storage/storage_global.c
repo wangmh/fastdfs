@@ -15,6 +15,12 @@
 int g_server_port = FDFS_STORAGE_SERVER_DEF_PORT;
 int g_max_connections = DEFAULT_MAX_CONNECTONS;
 int g_max_write_thread_count = 2;
+int g_file_distribute_path_mode = FDFS_FILE_DIST_PATH_SEQUENCE;
+int g_file_distribute_rotate_count = FDFS_FILE_DIST_DEFAULT_ROTATE_COUNT;
+
+int g_dist_path_index_high = 0; //current write to high path
+int g_dist_path_index_low = 0;  //current write to low path
+int g_dist_write_file_count = 0;  //current write file count
 
 int g_storage_count = 0;
 FDFSStorageServer g_storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];

@@ -52,6 +52,9 @@
 #define STAT_ITEM_SUCCESS_DELETE	"success_delete_count"
 #define STAT_ITEM_TOTAL_GET_META	"total_get_meta_count"
 #define STAT_ITEM_SUCCESS_GET_META	"success_get_meta_count"
+#define STAT_ITEM_DIST_PATH_INDEX_HIGH	"dist_path_index_high"
+#define STAT_ITEM_DIST_PATH_INDEX_LOW	"dist_path_index_low"
+#define STAT_ITEM_DIST_WRITE_FILE_COUNT	"dist_write_file_count"
 
 static int storage_stat_fd = -1;
 static pthread_mutex_t fsync_thread_mutex;
@@ -185,6 +188,16 @@ int storage_open_storage_stat()
 				STAT_ITEM_SUCCESS_GET_META, \
 				items, nItemCount, 0);
 
+		g_dist_path_index_high = iniGetIntValue( \
+				STAT_ITEM_DIST_PATH_INDEX_HIGH, \
+				items, nItemCount, 0);
+		g_dist_path_index_low = iniGetIntValue( \
+				STAT_ITEM_DIST_PATH_INDEX_LOW, \
+				items, nItemCount, 0);
+		g_dist_write_file_count = iniGetIntValue( \
+				STAT_ITEM_DIST_WRITE_FILE_COUNT, \
+				items, nItemCount, 0);
+
 		iniFreeItems(items);
 	}
 	else
@@ -240,7 +253,10 @@ int storage_write_to_stat_file()
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
-		"%s="INT64_PRINTF_FORMAT"\n", \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s=%d\n"  \
+		"%s=%d\n"  \
+		"%s=%d\n", \
 		STAT_ITEM_TOTAL_UPLOAD, g_storage_stat.total_upload_count, \
 		STAT_ITEM_SUCCESS_UPLOAD, g_storage_stat.success_upload_count, \
 		STAT_ITEM_TOTAL_DOWNLOAD, g_storage_stat.total_download_count, \
@@ -256,7 +272,10 @@ int storage_write_to_stat_file()
 		STAT_ITEM_SUCCESS_DELETE, g_storage_stat.success_delete_count, \
 		STAT_ITEM_TOTAL_GET_META, g_storage_stat.total_get_meta_count, \
 		STAT_ITEM_SUCCESS_GET_META, \
-		g_storage_stat.success_get_meta_count \
+		g_storage_stat.success_get_meta_count,  \
+		STAT_ITEM_DIST_PATH_INDEX_HIGH, g_dist_path_index_high, \
+		STAT_ITEM_DIST_PATH_INDEX_LOW, g_dist_path_index_low, \
+		STAT_ITEM_DIST_WRITE_FILE_COUNT, g_dist_write_file_count
 	    );
 
 	return storage_write_to_fd(storage_stat_fd, \
@@ -827,6 +846,18 @@ int storage_load_from_conf_file(const char *filename, \
 			return result;
 		}
 
+		g_file_distribute_path_mode = iniGetIntValue( \
+			"file_distribute_path_mode", items, nItemCount, \
+			FDFS_FILE_DIST_PATH_SEQUENCE);
+		g_file_distribute_rotate_count = iniGetIntValue( \
+			"file_distribute_rotate_count", items, nItemCount, \
+			FDFS_FILE_DIST_DEFAULT_ROTATE_COUNT);
+		if (g_file_distribute_rotate_count <= 0)
+		{
+			g_file_distribute_rotate_count = \
+				FDFS_FILE_DIST_DEFAULT_ROTATE_COUNT;
+		}
+
 		logInfo("FastDFS v%d.%d, base_path=%s, " \
 			"group_name=%s, " \
 			"network_timeout=%ds, "\
@@ -834,14 +865,17 @@ int storage_load_from_conf_file(const char *filename, \
 			"max_connections=%d, "    \
 			"heart_beat_interval=%ds, " \
 			"stat_report_interval=%ds, tracker_server_count=%d, " \
-			"sync_wait_msec=%dms, allow_ip_count=%d", \
+			"sync_wait_msec=%dms, allow_ip_count=%d, " \
+			"file_distribute_path_mode=%d, " \
+			"file_distribute_rotate_count=%d", \
 			g_version.major, g_version.minor, \
 			g_base_path, g_group_name, \
 			g_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_heart_beat_interval, g_stat_report_interval, \
 			g_tracker_server_count, g_sync_wait_usec / 1000, \
-			g_allow_ip_count);
+			g_allow_ip_count, g_file_distribute_path_mode, \
+			g_file_distribute_rotate_count);
 
 		break;
 	}
