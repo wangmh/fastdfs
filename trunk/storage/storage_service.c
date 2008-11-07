@@ -111,6 +111,8 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 			char *meta_buff, const int meta_size, \
 			char *filename, int *filename_len)
 {
+#define FILE_TIMESTAMP_ADVANCED_SECS	30
+
 	int result;
 	int i;
 	char full_filename[MAX_PATH_SIZE+64];
@@ -151,7 +153,8 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 	{
 		if ((result=storage_gen_filename(pClientInfo, file_size, \
 				szFormattedExt, FDFS_FILE_EXT_NAME_MAX_LEN+1, \
-				start_time + 1, filename, filename_len)) != 0)
+				start_time + FILE_TIMESTAMP_ADVANCED_SECS, \
+				filename, filename_len)) != 0)
 		{
 			return result;
 		}
@@ -211,8 +214,8 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 	}
 
 	end_time = time(NULL);
-	if (end_time - start_time > 1)  //need to rename filename
-	{
+	if (end_time - start_time > FILE_TIMESTAMP_ADVANCED_SECS)
+	{  //need to rename filename
 		char new_full_filename[MAX_PATH_SIZE+64];
 		char new_meta_filename[MAX_PATH_SIZE+64];
 		char new_filename[64];
