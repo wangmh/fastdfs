@@ -1399,6 +1399,28 @@ static void tracker_find_max_free_space_group()
 	g_groups.current_write_group = ppMaxGroup - g_groups.sorted_groups;
 }
 
+static void tracker_find_min_free_space(FDFSGroupInfo *pGroup)
+{
+	FDFSStorageDetail **ppServerEnd;
+	FDFSStorageDetail **ppServer;
+
+	if (pGroup->active_count == 0)
+	{
+		return;
+	}
+
+	pGroup->free_mb = (*(pGroup->active_servers))->free_mb;
+	ppServerEnd = pGroup->active_servers + pGroup->active_count;
+	for (ppServer=pGroup->active_servers+1; \
+		ppServer<ppServerEnd; ppServer++)
+	{
+		if ((*ppServer)->free_mb < pGroup->free_mb)
+		{
+			pGroup->free_mb = (*ppServer)->free_mb;
+		}
+	}
+}
+
 static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 			const int64_t nInPackLen)
 {
@@ -1607,8 +1629,14 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 			(pClientInfo->pStorage->free_mb < \
 				pClientInfo->pGroup->free_mb))
 		{
-		pClientInfo->pGroup->free_mb = \
-			pClientInfo->pStorage->free_mb;
+			pClientInfo->pGroup->free_mb = \
+				pClientInfo->pStorage->free_mb;
+		}
+		else if (pClientInfo->pGroup->free_mb <= g_storage_reserved_mb)
+		{
+			tracker_find_min_free_space(pClientInfo->pGroup);
+		}
+
 		if (g_groups.store_lookup == \
 			FDFS_STORE_LOOKUP_LOAD_BALANCE)
 		{
@@ -1629,7 +1657,6 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 					"errno: %d, error info: %s", \
 					__LINE__, result, strerror(result));
 			}
-		}
 		}
 
 		status = 0;
