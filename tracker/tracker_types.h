@@ -49,6 +49,12 @@
 #define FDFS_STORE_SERVER_ROUND_ROBIN	0  //round robin
 #define FDFS_STORE_SERVER_FIRST		1  //the first server
 
+//the mode of the files distributed to the data path
+#define FDFS_FILE_DIST_PATH_SEQUENCE	0  //sequence
+#define FDFS_FILE_DIST_PATH_RANDOM	1  //random
+
+#define FDFS_FILE_DIST_DEFAULT_ROTATE_COUNT   100
+
 typedef struct
 {
 	char status;
