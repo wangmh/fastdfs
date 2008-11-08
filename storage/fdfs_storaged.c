@@ -95,10 +95,10 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	if ((result=init_pthread_lock(&g_storage_thread_lock)) != 0)
+	if ((result=storage_service_init()) != 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
-			"init_pthread_lock fail, program exit!", __LINE__);
+			"storage_service_init fail, program exit!", __LINE__);
 		g_continue_flag = false;
 		return result;
 	}
@@ -219,8 +219,7 @@ int main(int argc, char *argv[])
 		g_tracker_servers = NULL;
 	}
 
-	pthread_mutex_destroy(&g_storage_thread_lock);
-	
+	storage_service_destroy();
 	storage_sync_destroy();
 	storage_close_storage_stat();
 

@@ -19,6 +19,8 @@ extern int g_storage_thread_count;
 extern pthread_mutex_t g_storage_thread_lock;
 
 void* storage_thread_entrance(void* arg);
+int storage_service_init();
+void storage_service_destroy();
 
 #ifdef __cplusplus
 }

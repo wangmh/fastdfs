@@ -37,11 +37,37 @@
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
 
+static pthread_mutex_t g_path_index_thread_lock;
+
+int storage_service_init()
+{
+	int result;
+
+	if ((result=init_pthread_lock(&g_storage_thread_lock)) != 0)
+	{
+		return result;
+	}
+
+	if ((result=init_pthread_lock(&g_path_index_thread_lock)) != 0)
+	{
+		return result;
+	}
+
+	return result;
+}
+
+void storage_service_destroy()
+{
+	pthread_mutex_destroy(&g_storage_thread_lock);
+	pthread_mutex_destroy(&g_path_index_thread_lock);
+}
+
 static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 		const int file_size, const char *szFormattedExt, 
 		const int ext_name_len, const time_t timestamp, \
 		char *filename, int *filename_len)
 {
+	int result;
 	int r;
 	char buff[sizeof(int) * 4];
 	char encoded[sizeof(int) * 6 + 1];
@@ -70,6 +96,17 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 
 		if (++g_dist_write_file_count >= g_file_distribute_rotate_count)
 		{
+			g_dist_write_file_count = 0;
+	
+			if ((result=pthread_mutex_lock( \
+					&g_path_index_thread_lock)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"call pthread_mutex_lock fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, result, strerror(result));
+			}
+
 			++g_dist_path_index_low;
 			if (g_dist_path_index_low > 255)  //rotate
 			{
@@ -81,13 +118,20 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 				g_dist_path_index_low = 0;
 			}
 
-			g_dist_write_file_count = 0;
-	
 			if (++g_stat_change_count%STORAGE_SYNC_STAT_FILE_FREQ==0)
 			{
 				if (storage_write_to_stat_file() != 0)
 				{
 				}
+			}
+
+			if ((result=pthread_mutex_unlock( \
+					&g_path_index_thread_lock)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"call pthread_mutex_unlock fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, result, strerror(result));
 			}
 		}
 	}  //random
