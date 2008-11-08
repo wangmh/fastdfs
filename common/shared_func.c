@@ -1554,7 +1554,7 @@ int kill_work_threads(pthread_t *tids, const int count)
 	return 0;
 }
 
-int parse_bytes(char *pStr, int64_t *bytes)
+int parse_bytes(char *pStr, const int default_unit_bytes, int64_t *bytes)
 {
 	char *pReservedEnd;
 
@@ -1570,7 +1570,7 @@ int parse_bytes(char *pStr, int64_t *bytes)
 
 	if (pReservedEnd == NULL || *pReservedEnd == '\0')
 	{
-		*bytes *= 1024 * 1024;
+		*bytes *= default_unit_bytes;
 	}
 	else if (*pReservedEnd == 'G' || *pReservedEnd == 'g')
 	{

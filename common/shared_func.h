@@ -92,7 +92,7 @@ int create_work_threads(int *count, void *(*start_func)(void *), \
 		void *arg, pthread_t *tids);
 int kill_work_threads(pthread_t *tids, const int count);
 
-int parse_bytes(char *pStr, int64_t *bytes);
+int parse_bytes(char *pStr, const int default_unit_bytes, int64_t *bytes);
 
 int set_rand_seed();
 

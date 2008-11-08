@@ -415,7 +415,7 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 		}
 
 		if ((result=tcprecvfile(pStorageServer->sock, \
-				*file_buff, in_bytes)) != 0)
+				*file_buff, in_bytes, 0)) != 0)
 		{
 			break;
 		}

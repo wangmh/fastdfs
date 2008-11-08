@@ -647,10 +647,12 @@ int storage_load_from_conf_file(const char *filename, \
 	char *pGroupName;
 	char *pRunByGroup;
 	char *pRunByUser;
+	char *pFsyncAfterWrittenBytes;
 	char *ppTrackerServers[FDFS_MAX_TRACKERS];
 	IniItemInfo *items;
 	int nItemCount;
 	int result;
+	int64_t fsync_after_written_bytes;
 
 	/*
 	while (nThreadCount > 0)
@@ -853,7 +855,7 @@ int storage_load_from_conf_file(const char *filename, \
 
 		g_file_distribute_path_mode = iniGetIntValue( \
 			"file_distribute_path_mode", items, nItemCount, \
-			FDFS_FILE_DIST_PATH_SEQUENCE);
+			FDFS_FILE_DIST_PATH_ROUND_ROBIN);
 		g_file_distribute_rotate_count = iniGetIntValue( \
 			"file_distribute_rotate_count", items, nItemCount, \
 			FDFS_FILE_DIST_DEFAULT_ROTATE_COUNT);
@@ -862,6 +864,19 @@ int storage_load_from_conf_file(const char *filename, \
 			g_file_distribute_rotate_count = \
 				FDFS_FILE_DIST_DEFAULT_ROTATE_COUNT;
 		}
+
+		pFsyncAfterWrittenBytes = iniGetStrValue( \
+			"fsync_after_written_bytes", items, nItemCount);
+		if (pFsyncAfterWrittenBytes == NULL)
+		{
+			fsync_after_written_bytes = 0;
+		}
+		else if ((result=parse_bytes(pFsyncAfterWrittenBytes, 1, \
+				&fsync_after_written_bytes)) != 0)
+		{
+			return result;
+		}
+		g_fsync_after_written_bytes = fsync_after_written_bytes;
 
 		logInfo("FastDFS v%d.%d, base_path=%s, " \
 			"group_name=%s, " \
@@ -872,7 +887,8 @@ int storage_load_from_conf_file(const char *filename, \
 			"stat_report_interval=%ds, tracker_server_count=%d, " \
 			"sync_wait_msec=%dms, allow_ip_count=%d, " \
 			"file_distribute_path_mode=%d, " \
-			"file_distribute_rotate_count=%d", \
+			"file_distribute_rotate_count=%d, " \
+			"fsync_after_written_bytes=%d", \
 			g_version.major, g_version.minor, \
 			g_base_path, g_group_name, \
 			g_network_timeout, \
@@ -880,7 +896,8 @@ int storage_load_from_conf_file(const char *filename, \
 			g_heart_beat_interval, g_stat_report_interval, \
 			g_tracker_server_count, g_sync_wait_usec / 1000, \
 			g_allow_ip_count, g_file_distribute_path_mode, \
-			g_file_distribute_rotate_count);
+			g_file_distribute_rotate_count, \
+			g_fsync_after_written_bytes);
 
 		break;
 	}
