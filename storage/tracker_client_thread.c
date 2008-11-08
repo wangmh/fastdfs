@@ -272,8 +272,7 @@ static void* tracker_report_thread_entrance(void* arg)
 			sync_old_done = true;
 		}
 
-		if (*g_sync_src_ip_addr != '\0' && \
-			tracker_sync_notify(pTrackerServer) != 0)
+		if (tracker_sync_notify(pTrackerServer) != 0)
 		{
 			fdfs_quit(pTrackerServer);
 			sleep(g_heart_beat_interval);
