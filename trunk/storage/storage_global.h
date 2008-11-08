@@ -36,7 +36,7 @@ typedef struct
 
 extern int g_server_port;
 extern int g_max_connections;
-extern int g_max_write_thread_count;
+//extern int g_max_write_thread_count;
 extern int g_file_distribute_path_mode;
 extern int g_file_distribute_rotate_count;
 

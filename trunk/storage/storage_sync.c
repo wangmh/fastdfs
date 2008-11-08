@@ -1503,8 +1503,8 @@ static void* storage_sync_thread_entrance(void* arg)
 				if (binlog_write_cache_len > 0 && \
 					time(NULL) - last_check_sync_cache_time >= 60)
 				{
-					storage_binlog_fsync(true);
 					last_check_sync_cache_time = time(NULL);
+					storage_binlog_fsync(true);
 				}
 
 				usleep(g_sync_wait_usec);

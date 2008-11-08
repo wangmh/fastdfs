@@ -57,9 +57,12 @@
 #define STAT_ITEM_DIST_WRITE_FILE_COUNT	"dist_write_file_count"
 
 static int storage_stat_fd = -1;
+
+/*
 static pthread_mutex_t fsync_thread_mutex;
 static pthread_cond_t fsync_thread_cond;
 static int fsync_thread_count = 0;
+*/
 
 static char *get_storage_stat_filename(const void *pArg, char *full_filename)
 {
@@ -608,6 +611,7 @@ static int copy_tracker_servers(const char *filename, char **ppTrackerServers)
 	return 0;
 }
 
+/*
 static int init_fsync_pthread_cond()
 {
 	int result;
@@ -633,6 +637,7 @@ static int init_fsync_pthread_cond()
 	pthread_condattr_destroy(&thread_condattr);
 	return 0;
 }
+*/
 
 int storage_load_from_conf_file(const char *filename, \
 		char *bind_addr, const int addr_size)
@@ -880,6 +885,7 @@ int storage_load_from_conf_file(const char *filename, \
 		break;
 	}
 
+	/*
 	if ((result=init_pthread_lock(&fsync_thread_mutex)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -891,12 +897,14 @@ int storage_load_from_conf_file(const char *filename, \
 	{
 		return result;
 	}
+	*/
 
 	iniFreeItems(items);
 
 	return result;
 }
 
+/*
 int write_serialized(int fd, const char *buff, size_t count, const bool bSync)
 {
 	int result;
@@ -1135,4 +1143,4 @@ int recv_file_serialized(int sock, const char *filename, \
 	close(fd);
 	return 0;
 }
-
+*/
