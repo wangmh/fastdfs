@@ -93,7 +93,7 @@ int tracker_load_from_conf_file(const char *filename, \
 	char *pBasePath;
 	char *pBindAddr;
 	char *pStorageReserved;
-	char *pReservedEnd;
+	int64_t storage_reserved;
 	char *pRunByGroup;
 	char *pRunByUser;
 	IniItemInfo *items;
@@ -205,40 +205,13 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 		else
 		{
-			pReservedEnd = NULL;
-			g_storage_reserved_mb = strtol(pStorageReserved, \
-						&pReservedEnd, 10);
-			if (g_storage_reserved_mb < 0)
+			if ((result=parse_bytes(pStorageReserved, 1, \
+					&storage_reserved)) != 0)
 			{
-				g_storage_reserved_mb = 0;
+				return result;
 			}
 
-			if (g_storage_reserved_mb > 0)
-			{
-				if (pReservedEnd == NULL || \
-					*pReservedEnd == '\0')
-				{
-					g_storage_reserved_mb /= FDFS_ONE_MB;
-				}
-				else if (*pReservedEnd == 'G' || \
-					*pReservedEnd == 'g')
-				{
-					g_storage_reserved_mb *= 1024;
-				}
-				else if (*pReservedEnd == 'M' || \
-					*pReservedEnd == 'm')
-				{
-				}
-				else if (*pReservedEnd == 'K' || \
-					*pReservedEnd == 'k')
-				{
-					g_storage_reserved_mb /= 1024;
-				}
-				else
-				{
-					g_storage_reserved_mb /= FDFS_ONE_MB;
-				}
-			}
+			g_storage_reserved_mb = storage_reserved / FDFS_ONE_MB;
 		}
 
 		g_max_connections = iniGetIntValue("max_connections", \

@@ -490,12 +490,14 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no)
 	return sock;
 }
 
-int tcprecvfile(int sock, const char *filename, const int64_t file_bytes)
+int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
+		const int fsync_after_written_bytes)
 {
 	int fd;
 	char buff[FDFS_WRITE_BUFF_SIZE];
 	int64_t remain_bytes;
 	int recv_bytes;
+	int written_bytes;
 	int result;
 
 	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -504,6 +506,7 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes)
 		return errno != 0 ? errno : EACCES;
 	}
 
+	written_bytes = 0;
 	remain_bytes = file_bytes;
 	while (remain_bytes > 0)
 	{
@@ -532,12 +535,20 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes)
 			return result;
 		}
 
-		if (recv_bytes != remain_bytes && fsync(fd) != 0)
+		if (fsync_after_written_bytes > 0)
 		{
-			result = errno != 0 ? errno: EIO;
-			close(fd);
-			unlink(filename);
-			return result;
+			written_bytes += recv_bytes;
+			if (written_bytes >= fsync_after_written_bytes)
+			{
+				written_bytes = 0;
+				if (fsync(fd) != 0)
+				{
+					result = errno != 0 ? errno: EIO;
+					close(fd);
+					unlink(filename);
+					return result;
+				}
+			}
 		}
 
 		remain_bytes -= recv_bytes;

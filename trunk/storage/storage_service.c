@@ -87,7 +87,7 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 
 	base64_encode_ex(buff, sizeof(int) * 4, encoded, filename_len, false);
 
-	if (g_file_distribute_path_mode == FDFS_FILE_DIST_PATH_SEQUENCE)
+	if (g_file_distribute_path_mode == FDFS_FILE_DIST_PATH_ROUND_ROBIN)
 	{
 		len = sprintf(buff, STORAGE_DATA_DIR_FORMAT"/", \
 				g_dist_path_index_high);
@@ -258,7 +258,7 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 
 	//if ((result=recv_file_serialized(pClientInfo->sock, 
 	if ((result=tcprecvfile(pClientInfo->sock, 
-		full_filename, file_size)) != 0)
+		full_filename, file_size, g_fsync_after_written_bytes)) != 0)
 	{
 		*filename = '\0';
 		*filename_len = 0;
@@ -1056,7 +1056,8 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		}
 		//else if ((resp.status=recv_file_serialized(pClientInfo->sock, 
 		else if ((resp.status=tcprecvfile(pClientInfo->sock, 
-				full_filename, file_bytes)) != 0)
+				full_filename, file_bytes, \
+				g_fsync_after_written_bytes)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv file buff fail, " \
