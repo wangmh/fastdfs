@@ -52,6 +52,7 @@ int main(int argc, char *argv[])
 	int64_t file_size;
 	char *operation;
 	char *meta_buff;
+	int store_path_index;
 
 	base64_init_ex(0, '-', '_', '.');
 	printf("This is FastDFS client test program v%d.%d\n" \
@@ -95,8 +96,9 @@ int main(int argc, char *argv[])
 		}
 
 		local_filename = argv[3];
+		store_path_index = 0;
 		if ((result=tracker_query_storage_store(pTrackerServer, \
-		                &storageServer)) != 0)
+		                &storageServer, &store_path_index)) != 0)
 		{
 			fdfs_client_destroy();
 			printf("tracker_query_storage fail, " \
@@ -131,8 +133,9 @@ int main(int argc, char *argv[])
 		strcpy(meta_list[meta_count].value, "115120");
 		meta_count++;
 		result = storage_upload_by_filename(pTrackerServer, \
-				&storageServer, local_filename, \
-				NULL, meta_list, meta_count, \
+				&storageServer, store_path_index, \
+				local_filename, NULL, \
+				meta_list, meta_count, \
 				group_name, remote_filename);
 		if (result != 0)
 		{
@@ -146,8 +149,8 @@ int main(int argc, char *argv[])
 		}
 
 		memset(buff, 0, sizeof(buff));
-		base64_decode_auto(remote_filename + 6, \
-			strlen(remote_filename) - 6 \
+		base64_decode_auto(remote_filename + FDFS_FILE_PATH_LEN, \
+			strlen(remote_filename) - FDFS_FILE_PATH_LEN \
 			 - (FDFS_FILE_EXT_NAME_MAX_LEN + 1), buff, &len);
 		printf("group_name=%s, remote_filename=%s\n", \
 			group_name, remote_filename);

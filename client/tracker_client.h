@@ -95,10 +95,11 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 * params:
 *	pTrackerServer: tracker server
 *	pStorageServer: return storage server
+*       store_path_index: return the index of path on the storage server
 * return: 0 success, !=0 fail, return the error code
 **/
 int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer);
+		TrackerServerInfo *pStorageServer, int *store_path_index);
 
 /**
 * query storage server to update (delete file or set meta data)

@@ -211,6 +211,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 				const int64_t nInPackLen)
 {
 	TrackerStorageJoinBody body;
+	int store_path_count;
 	int status;
 
 	while (1)
@@ -259,7 +260,18 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 		break;
 	}
 
-	status = tracker_mem_add_group_and_storage(pClientInfo, true);
+	store_path_count = (int)buff2long(body.store_path_count);
+	if (store_path_count <= 0 || store_path_count > 256)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid store_path_count: %d", \
+			__LINE__, pClientInfo->ip_addr, store_path_count);
+		status = EINVAL;
+		break;
+	}
+
+	status = tracker_mem_add_group_and_storage(pClientInfo, \
+				store_path_count, true);
 	break;
 	}
 
@@ -635,7 +647,8 @@ static int tracker_deal_service_query_fetch_update( \
 	FDFSGroupInfo *pGroup;
 	FDFSStorageDetail *pStorageServer;
 	FDFSStorageDetail *pStoreSrcServer;
-	char out_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_BODY_LEN];
+	char out_buff[sizeof(TrackerHeader) + \
+		TRACKER_QUERY_STORAGE_FETCH_BODY_LEN];
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
@@ -812,7 +825,7 @@ static int tracker_deal_service_query_fetch_update( \
 	resp.cmd = TRACKER_PROTO_CMD_SERVICE_RESP;
 	if (resp.status == 0)
 	{
-		out_len = TRACKER_QUERY_STORAGE_BODY_LEN;
+		out_len = TRACKER_QUERY_STORAGE_FETCH_BODY_LEN;
 		long2buff(out_len, resp.pkg_len);
 
 		memcpy(out_buff, &resp, sizeof(resp));
@@ -874,7 +887,8 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 	FDFSGroupInfo **ppFoundGroup;
 	FDFSGroupInfo **ppGroup;
 	FDFSStorageDetail *pStorageServer;
-	char out_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_BODY_LEN];
+	char out_buff[sizeof(TrackerHeader) + \
+		TRACKER_QUERY_STORAGE_STORE_BODY_LEN];
 	bool bHaveActiveServer;
 	int result;
 
@@ -1020,7 +1034,43 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
+		if (pStoreGroup->store_path_count <= 0)
+		{
+			resp.status = ENOENT;
+			break;
+		}
+
 		pStorageServer = tracker_get_writable_storage(pStoreGroup);
+		if (pStorageServer->path_free_mbs[pStorageServer-> \
+				current_write_path] <= g_storage_reserved_mb)
+		{
+			int i;
+			for (i=0; i<pStoreGroup->store_path_count; i++)
+			{
+				if (pStorageServer->path_free_mbs[i]
+				 	> g_storage_reserved_mb)
+				{
+					pStorageServer->current_write_path = i;
+					break;
+				}
+			}
+
+			if (i == pStoreGroup->store_path_count)
+			{
+				resp.status = ENOSPC;
+				break;
+			}
+		}
+
+		if (g_groups.store_path == FDFS_STORE_PATH_ROUND_ROBIN)
+		{
+			pStorageServer->current_write_path++;
+			if (pStorageServer->current_write_path >= \
+				pStoreGroup->store_path_count)
+			{
+				pStorageServer->current_write_path = 0;
+			}
+		}
 
 		/*
 		//printf("pStoreGroup->current_write_server: %d, " \
@@ -1036,7 +1086,7 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 	resp.cmd = TRACKER_PROTO_CMD_SERVICE_RESP;
 	if (resp.status == 0)
 	{
-		out_len = TRACKER_QUERY_STORAGE_BODY_LEN;
+		out_len = TRACKER_QUERY_STORAGE_STORE_BODY_LEN;
 		long2buff(out_len, resp.pkg_len);
 
 		memcpy(out_buff, &resp, sizeof(resp));
@@ -1046,6 +1096,8 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 				pStorageServer->ip_addr, IP_ADDRESS_SIZE-1);
 		long2buff(pStoreGroup->storage_port, out_buff + sizeof(resp) + \
 			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE-1);
+		*(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN + \
+		    IP_ADDRESS_SIZE) = (char)pStorageServer->current_write_path;
 	}
 	else
 	{
@@ -1591,25 +1643,45 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 {
 	int status;
 	int result;
-	TrackerStatReportReqBody statBuff;
- 
+	int i;
+	char in_buff[sizeof(TrackerStatReportReqBody) * 16];
+	char *pBuff;
+	TrackerStatReportReqBody *pStatBuff;
+	int64_t *path_total_mbs;
+	int64_t *path_free_mbs;
+
+	pBuff = in_buff;
 	while (1)
 	{
-		if (nInPackLen != sizeof(TrackerStatReportReqBody))
+		if (nInPackLen != sizeof(TrackerStatReportReqBody) * \
+			pClientInfo->pGroup->store_path_count != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, package size " \
-				INT64_PRINTF_FORMAT" is not correct, " \
-				"expect length: %d", \
-				__LINE__, \
+				INT64_PRINTF_FORMAT" is not correct, ",  \
+				"expect length: %d", __LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_REPORT, \
 				pClientInfo->ip_addr, nInPackLen, \
-				sizeof(TrackerStatReportReqBody));
+				sizeof(TrackerStatReportReqBody) * \
+                        	pClientInfo->pGroup->store_path_count);
 			status = EINVAL;
 			break;
 		}
 
-		if ((status=tcprecvdata(pClientInfo->sock, &statBuff, \
+		if (nInPackLen > sizeof(in_buff))
+		{
+			pBuff = (char *)malloc(nInPackLen);
+			if (pBuff == NULL)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"malloc %d bytes fail, " \
+					"errno: %d, error info: %s", \
+					nInPackLen, errno, strerror(errno));
+				status = errno != 0 ? errno : ENOMEM;
+				break;
+			}
+		}
+		if ((status=tcprecvdata(pClientInfo->sock, pBuff, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -1622,8 +1694,29 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		pClientInfo->pStorage->total_mb=buff2long(statBuff.sz_total_mb);
-		pClientInfo->pStorage->free_mb = buff2long(statBuff.sz_free_mb);
+		path_total_mbs = pClientInfo->pStorage->path_total_mbs;
+		path_free_mbs = pClientInfo->pStorage->path_free_mbs;
+		pClientInfo->pStorage->total_mb = 0;
+		pClientInfo->pStorage->free_mb = 0;
+
+		pStatBuff = (TrackerStatReportReqBody *)pBuff;
+		for (i=0; i<pClientInfo->pGroup->store_path_count; i++)
+		{
+			path_total_mbs[i] = buff2long(pStatBuff->sz_total_mb);
+			path_free_mbs[i] = buff2long(pStatBuff->sz_free_mb);
+
+			pClientInfo->pStorage->total_mb += path_total_mbs[i];
+			pClientInfo->pStorage->free_mb += path_free_mbs[i];
+
+			if (g_groups.store_path == FDFS_STORE_PATH_LOAD_BALANCE
+				&& path_free_mbs[i] > path_free_mbs[ \
+				pClientInfo->pStorage->current_write_path])
+			{
+				pClientInfo->pStorage->current_write_path = i;
+			}
+
+			pStatBuff += sizeof(TrackerStatReportReqBody);
+		}
 
 		if ((pClientInfo->pGroup->free_mb == 0) ||
 			(pClientInfo->pStorage->free_mb < \
@@ -1670,6 +1763,11 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 		*/
 
 		break;
+	}
+
+	if (pBuff != in_buff)
+	{
+		free(pBuff);
 	}
 
 	if (status == 0)

@@ -29,6 +29,7 @@
 #define FDFS_MAX_META_VALUE_LEN		256
 
 #define FDFS_FILE_EXT_NAME_MAX_LEN	5
+#define FDFS_FILE_PATH_LEN		10
 
 //status order is important!
 #define FDFS_STORAGE_STATUS_INIT	  0
@@ -48,6 +49,10 @@
 //which server to upload file
 #define FDFS_STORE_SERVER_ROUND_ROBIN	0  //round robin
 #define FDFS_STORE_SERVER_FIRST		1  //the first server
+
+//which path to upload file
+#define FDFS_STORE_PATH_ROUND_ROBIN	0  //round robin
+#define FDFS_STORE_PATH_LOAD_BALANCE	2  //load balance
 
 //the mode of the files distributed to the data path
 #define FDFS_FILE_DIST_PATH_ROUND_ROBIN	0  //round robin
@@ -133,6 +138,11 @@ typedef struct StructFDFSStorageDetail
 	int64_t total_mb;  //total disk storage in MB
 	int64_t free_mb;  //free disk storage in MB
 
+	int64_t *path_total_mbs; //total disk storage in MB
+	int64_t *path_free_mbs;  //free disk storage in MB
+
+	int current_write_path; //current write path index
+
 	int *ref_count;   //group/storage servers referer count
 	int version;      //current server version
 	FDFSStorageStat stat;
@@ -150,9 +160,14 @@ typedef struct
 	FDFSStorageDetail **sorted_servers;  //order by addr
 	int active_count;
 	FDFSStorageDetail **active_servers;  //order by addr
+
 	int current_read_server;
 	int current_write_server;
+
+	int store_path_count;  //store base path count of each storage server
+
 	int **last_sync_timestamps;//row for src storage, col for dest storage
+
 	int *ref_count;  //groups referer count
 	int version;     //current group version
 	time_t last_source_update;
@@ -169,6 +184,7 @@ typedef struct
 	int current_write_group;  //current group index to upload file
 	byte store_lookup;  //store to which group
 	byte store_server;  //store to which server
+	byte store_path;  //store to which path
 	char store_group[FDFS_GROUP_NAME_MAX_LEN + 1];
 } FDFSGroups;
 

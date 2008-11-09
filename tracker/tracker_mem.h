@@ -37,7 +37,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 			const bool bIncRef, bool *bInserted);
 int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr);
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
-			const bool bIncRef);
+			const int store_path_count, const bool bIncRef);
 int tracker_mem_offline_store_server(TrackerClientInfo *pClientInfo);
 int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 			FDFSStorageDetail *pTargetServer);

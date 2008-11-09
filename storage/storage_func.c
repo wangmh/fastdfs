@@ -64,6 +64,9 @@ static pthread_cond_t fsync_thread_cond;
 static int fsync_thread_count = 0;
 */
 
+static int storage_open_storage_stat();
+static int storage_close_storage_stat();
+
 static char *get_storage_stat_filename(const void *pArg, char *full_filename)
 {
 	static char buff[MAX_PATH_SIZE];
@@ -125,7 +128,7 @@ int storage_write_to_fd(int fd, get_filename_func filename_func, \
 	return 0;
 }
 
-int storage_open_storage_stat()
+static int storage_open_storage_stat()
 {
 	char full_filename[MAX_PATH_SIZE];
 	IniItemInfo *items;
@@ -221,7 +224,7 @@ int storage_open_storage_stat()
 	return storage_write_to_stat_file();
 }
 
-int storage_close_storage_stat()
+static int storage_close_storage_stat()
 {
 	int result;
 
@@ -639,10 +642,117 @@ static int init_fsync_pthread_cond()
 }
 */
 
-int storage_load_from_conf_file(const char *filename, \
+int storage_load_paths(IniItemInfo *items, const int nItemCount)
+{
+	char item_name[64];
+	char *pPath;
+	int i;
+
+	pPath = iniGetStrValue("base_path", items, nItemCount);
+	if (pPath == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"conf file must have item \"base_path\"!", __LINE__);
+		return ENOENT;
+	}
+
+	snprintf(g_base_path, sizeof(g_base_path), "%s", pPath);
+	chopPath(g_base_path);
+	if (!fileExists(g_base_path))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"\"%s\" can't be accessed, error info: %s", \
+			__LINE__, strerror(errno), g_base_path);
+		return errno != 0 ? errno : ENOENT;
+	}
+	if (!isDir(g_base_path))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"\"%s\" is not a directory!", \
+			__LINE__, g_base_path);
+		return ENOTDIR;
+	}
+
+	g_path_count = iniGetIntValue("store_path_count", \
+			items, nItemCount, 1);
+	if (g_path_count <= 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"store_path_count: %d is invalid!", \
+			__LINE__, g_path_count);
+		return EINVAL;
+	}
+
+	g_store_paths = (char **)malloc(sizeof(char *) *g_path_count);
+	if (g_store_paths == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, sizeof(char *) *g_path_count, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+	memset(g_store_paths, 0, sizeof(char *) *g_path_count);
+
+	pPath = iniGetStrValue("store_path0", items, nItemCount);
+	if (pPath == NULL)
+	{
+		pPath = g_base_path;
+	}
+	g_store_paths[0] = strdup(pPath);
+	if (g_store_paths[0] == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, strlen(pPath), errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	for (i=1; i<g_path_count; i++)
+	{
+		sprintf(item_name, "store_path%d", i);
+		pPath = iniGetStrValue(item_name, items, nItemCount);
+		if (pPath == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"conf file must have item \"%s\"!", \
+				__LINE__, item_name);
+			return ENOENT;
+		}
+
+		chopPath(pPath);
+		if (!fileExists(pPath))
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"\"%s\" can't be accessed, error info: %s", \
+				__LINE__, strerror(errno), pPath);
+			return errno != 0 ? errno : ENOENT;
+		}
+		if (!isDir(pPath))
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"\"%s\" is not a directory!", \
+				__LINE__, pPath);
+			return ENOTDIR;
+		}
+
+		g_store_paths[i] = strdup(pPath);
+		if (g_store_paths[i] == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				strlen(pPath), errno, strerror(errno));
+			return errno != 0 ? errno : ENOMEM;
+		}
+	}
+
+	return 0;
+}
+
+int storage_func_init(const char *filename, \
 		char *bind_addr, const int addr_size)
 {
-	char *pBasePath;
 	char *pBindAddr;
 	char *pGroupName;
 	char *pRunByGroup;
@@ -680,33 +790,8 @@ int storage_load_from_conf_file(const char *filename, \
 			break;
 		}
 
-		pBasePath = iniGetStrValue("base_path", items, nItemCount);
-		if (pBasePath == NULL)
+		if ((result=storage_load_paths(items, nItemCount)) != 0)
 		{
-			logError("file: "__FILE__", line: %d, " \
-				"conf file \"%s\" must have item " \
-				"\"base_path\"!", \
-				__LINE__, filename);
-			result = ENOENT;
-			break;
-		}
-
-		snprintf(g_base_path, sizeof(g_base_path), "%s", pBasePath);
-		chopPath(g_base_path);
-		if (!fileExists(g_base_path))
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"\"%s\" can't be accessed, error info: %s", \
-				__LINE__, strerror(errno), g_base_path);
-			result = errno != 0 ? errno : ENOENT;
-			break;
-		}
-		if (!isDir(g_base_path))
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"\"%s\" is not a directory!", \
-				__LINE__, g_base_path);
-			result = ENOTDIR;
 			break;
 		}
 
@@ -878,7 +963,7 @@ int storage_load_from_conf_file(const char *filename, \
 		}
 		g_fsync_after_written_bytes = fsync_after_written_bytes;
 
-		logInfo("FastDFS v%d.%d, base_path=%s, " \
+		logInfo("FastDFS v%d.%d, base_path=%s, store_path_count=%d, " \
 			"group_name=%s, " \
 			"network_timeout=%ds, "\
 			"port=%d, bind_addr=%s, " \
@@ -890,7 +975,7 @@ int storage_load_from_conf_file(const char *filename, \
 			"file_distribute_rotate_count=%d, " \
 			"fsync_after_written_bytes=%d", \
 			g_version.major, g_version.minor, \
-			g_base_path, g_group_name, \
+			g_base_path, g_path_count, g_group_name, \
 			g_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_heart_beat_interval, g_stat_report_interval, \
@@ -918,7 +1003,35 @@ int storage_load_from_conf_file(const char *filename, \
 
 	iniFreeItems(items);
 
-	return result;
+	if (result == 0)
+	{
+		return storage_open_storage_stat();
+	}
+	else
+	{
+		return result;
+	}
+}
+
+int storage_func_destroy()
+{
+	int i;
+
+	if (g_store_paths != NULL)
+	{
+		for (i=0; i<g_path_count; i++)
+		{
+			if (g_store_paths[i] != NULL)
+			{
+				free(g_store_paths[i]);
+				g_store_paths[i] = NULL;
+			}
+		}
+
+		g_store_paths = NULL;
+	}
+
+	return storage_close_storage_stat();
 }
 
 /*

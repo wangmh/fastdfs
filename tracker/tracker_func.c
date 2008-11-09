@@ -184,7 +184,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			break;
 		}
 
-		g_groups.store_server = iniGetIntValue("store_server", \
+		g_groups.store_server = (byte)iniGetIntValue("store_server", \
 			items, nItemCount, FDFS_STORE_SERVER_FIRST);
 		if (!(g_groups.store_server == FDFS_STORE_SERVER_FIRST || \
 			g_groups.store_server == FDFS_STORE_SERVER_ROUND_ROBIN))
@@ -195,6 +195,19 @@ int tracker_load_from_conf_file(const char *filename, \
 				__LINE__, g_groups.store_server, \
 				FDFS_STORE_SERVER_FIRST);
 			g_groups.store_server = FDFS_STORE_SERVER_FIRST;
+		}
+
+		g_groups.store_path = (byte)iniGetIntValue("store_path", \
+			items, nItemCount, FDFS_STORE_PATH_ROUND_ROBIN);
+		if (!(g_groups.store_path == FDFS_STORE_PATH_ROUND_ROBIN || \
+			g_groups.store_path == FDFS_STORE_PATH_LOAD_BALANCE))
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"store_path 's value %d is invalid, " \
+				"set to %d (round robin)!", \
+				__LINE__, g_groups.store_path , \
+				FDFS_STORE_PATH_ROUND_ROBIN);
+			g_groups.store_path = FDFS_STORE_PATH_ROUND_ROBIN;
 		}
 
 		pStorageReserved = iniGetStrValue("reserved_storage_space", \
@@ -246,7 +259,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			"port=%d, bind_addr=%s, " \
 			"max_connections=%d, "    \
 			"store_lookup=%d, store_group=%s, " \
-			"store_server=%d, " \
+			"store_server=%d, store_path=%d, " \
 			"reserved_storage_space=%dMB, " \
 			"allow_ip_count=%d", \
 			g_version.major, g_version.minor,  \
@@ -254,7 +267,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_groups.store_lookup, g_groups.store_group, \
-			g_groups.store_server, \
+			g_groups.store_server, g_groups.store_path, \
 			g_storage_reserved_mb, g_allow_ip_count);
 		break;
 	}
