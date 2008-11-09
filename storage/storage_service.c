@@ -620,12 +620,14 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 	char *in_buff;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char filename[64];
+	char true_filename[64];
 	char meta_filename[64+sizeof(STORAGE_META_FILE_EXT)];
 	char full_filename[MAX_PATH_SIZE + 64 + sizeof(STORAGE_META_FILE_EXT)];
 	char op_flag;
 	char sync_flag;
 	char *meta_buff;
 	int meta_bytes;
+	char *pBasePath;
 	int filename_len;
 	int result;
 
@@ -723,7 +725,12 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 		memcpy(filename, in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE + 1 + \
 			FDFS_GROUP_NAME_MAX_LEN, filename_len);
 		*(filename + filename_len) = '\0';
-		if ((resp.status=fdfs_check_data_filename(filename, \
+		if ((resp.status=storage_split_filename(filename, \
+			&filename_len, true_filename, &pBasePath)) != 0)
+		{
+			break;
+		}
+		if ((resp.status=fdfs_check_data_filename(true_filename, \
 			filename_len)) != 0)
 		{
 			break;
@@ -733,17 +740,17 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 				FDFS_GROUP_NAME_MAX_LEN + filename_len;
 		*(meta_buff + meta_bytes) = '\0';
 
-		sprintf(full_filename, "%s/data/%s", g_base_path, filename);
+		sprintf(full_filename, "%s/data/%s",pBasePath,true_filename);
 		if (!fileExists(full_filename))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, filename: %s not exist", \
-				__LINE__, pClientInfo->ip_addr, filename);
+				__LINE__, pClientInfo->ip_addr, true_filename);
 			resp.status = ENOENT;
 			break;
 		}
 
-		sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, filename);
+		sprintf(meta_filename,"%s"STORAGE_META_FILE_EXT,true_filename);
 		strcat(full_filename, STORAGE_META_FILE_EXT);
 
 		resp.status = storage_do_set_metadata(pClientInfo, \
@@ -756,6 +763,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 
 		if (sync_flag != '\0')
 		{
+			sprintf(meta_filename,"%s"STORAGE_META_FILE_EXT,filename);
 			resp.status = storage_binlog_write( \
 					time(NULL), sync_flag, meta_filename);
 		}
@@ -1000,8 +1008,10 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 	char in_buff[2 * FDFS_PROTO_PKG_LEN_SIZE + \
 			4 + FDFS_GROUP_NAME_MAX_LEN + 1];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char filename[128];
+	char true_filename[64];
+	char filename[64];
 	char full_filename[MAX_PATH_SIZE];
+	char *pBasePath;
 	int filename_len;
 	int64_t file_bytes;
 	int result;
@@ -1104,14 +1114,19 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 		*(filename + filename_len) = '\0';
-		if ((resp.status=fdfs_check_data_filename(filename, \
+		if ((resp.status=storage_split_filename(filename, \
+			&filename_len, true_filename, &pBasePath)) != 0)
+		{
+			break;
+		}
+		if ((resp.status=fdfs_check_data_filename(true_filename, \
 			filename_len)) != 0)
 		{
 			break;
 		}
 
 		snprintf(full_filename, sizeof(full_filename), \
-				"%s/data/%s", g_base_path, filename);
+				"%s/data/%s", pBasePath, true_filename);
 
 		if ((proto_cmd == STORAGE_PROTO_CMD_SYNC_CREATE_FILE) && \
 			fileExists(full_filename))
@@ -1195,8 +1210,11 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 64];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)+64];
-	char *file_buff;
+	char true_filename[64];
 	char *filename;
+	char *pBasePath;
+	char *file_buff;
+	int filename_len;
 	int64_t file_bytes;
 
 	memset(&resp, 0, sizeof(resp));
@@ -1258,13 +1276,19 @@ static int storage_get_metadata(StorageClientInfo *pClientInfo, \
 
 		*(in_buff + nInPackLen) = '\0';
 		filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
-		if ((resp.status=fdfs_check_data_filename(filename, \
-			nInPackLen - FDFS_GROUP_NAME_MAX_LEN)) != 0)
+		filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
+		if ((resp.status=storage_split_filename(filename, \
+			&filename_len, true_filename, &pBasePath)) != 0)
+		{
+			break;
+		}
+		if ((resp.status=fdfs_check_data_filename(true_filename, \
+			filename_len)) != 0)
 		{
 			break;
 		}
 
-		sprintf(full_filename, "%s/data/%s", g_base_path, filename);
+		sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
 		if (!fileExists(full_filename))
 		{
 			resp.status = ENOENT;
@@ -1416,7 +1440,7 @@ static int storage_download_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=fdfs_check_data_filename(filename, \
+		if ((resp.status=fdfs_check_data_filename(true_filename, \
 			filename_len)) != 0)
 		{
 			break;
@@ -1500,7 +1524,10 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 64];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)];
+	char true_filename[64];
+	char *pBasePath;
 	char *filename;
+	int filename_len;
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
@@ -1561,14 +1588,19 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 
 		*(in_buff + nInPackLen) = '\0';
 		filename = in_buff + 4 + FDFS_GROUP_NAME_MAX_LEN;
-		if ((resp.status=fdfs_check_data_filename(filename, \
-			nInPackLen - (4 + FDFS_GROUP_NAME_MAX_LEN))) != 0)
+		filename_len = nInPackLen - (4 + FDFS_GROUP_NAME_MAX_LEN);
+		if ((resp.status=storage_split_filename(filename, \
+			&filename_len, true_filename, &pBasePath)) != 0)
+		{
+			break;
+		}
+		if ((resp.status=fdfs_check_data_filename(true_filename, \
+			filename_len)) != 0)
 		{
 			break;
 		}
 
-		sprintf(full_filename, "%s/data/%s", \
-			g_base_path, filename);
+		sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
 		if (unlink(full_filename) != 0)
 		{
 			if (errno == ENOENT)
@@ -1629,7 +1661,10 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)];
 	char meta_filename[MAX_PATH_SIZE+sizeof(in_buff)];
+	char true_filename[64];
+	char *pBasePath;
 	char *filename;
+	int filename_len;
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
@@ -1689,14 +1724,19 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 
 		*(in_buff + nInPackLen) = '\0';
 		filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
-		if ((resp.status=fdfs_check_data_filename(filename, \
-			nInPackLen - FDFS_GROUP_NAME_MAX_LEN)) != 0)
+		filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
+		if ((resp.status=storage_split_filename(filename, \
+			&filename_len, true_filename, &pBasePath)) != 0)
+		{
+			break;
+		}
+		if ((resp.status=fdfs_check_data_filename(true_filename, \
+			filename_len)) != 0)
 		{
 			break;
 		}
 
-		sprintf(full_filename, "%s/data/%s", \
-			g_base_path, filename);
+		sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
 		if (unlink(full_filename) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -1732,8 +1772,7 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 			}
 		}
 
-		sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, \
-				filename);
+		sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, filename);
 		resp.status = storage_binlog_write(time(NULL), \
 			STORAGE_OP_TYPE_SOURCE_DELETE_FILE, meta_filename);
 		break;
