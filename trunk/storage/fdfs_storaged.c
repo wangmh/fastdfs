@@ -219,9 +219,9 @@ int main(int argc, char *argv[])
 		g_tracker_servers = NULL;
 	}
 
+	storage_close_storage_stat();
 	storage_service_destroy();
 	storage_sync_destroy();
-	storage_close_storage_stat();
 
 	free(tids);
 

@@ -37,7 +37,8 @@
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
 
-static pthread_mutex_t g_path_index_thread_lock;
+static pthread_mutex_t path_index_thread_lock;
+static pthread_mutex_t stat_count_thread_lock;
 
 int storage_service_init()
 {
@@ -48,7 +49,12 @@ int storage_service_init()
 		return result;
 	}
 
-	if ((result=init_pthread_lock(&g_path_index_thread_lock)) != 0)
+	if ((result=init_pthread_lock(&path_index_thread_lock)) != 0)
+	{
+		return result;
+	}
+
+	if ((result=init_pthread_lock(&stat_count_thread_lock)) != 0)
 	{
 		return result;
 	}
@@ -59,7 +65,8 @@ int storage_service_init()
 void storage_service_destroy()
 {
 	pthread_mutex_destroy(&g_storage_thread_lock);
-	pthread_mutex_destroy(&g_path_index_thread_lock);
+	pthread_mutex_destroy(&path_index_thread_lock);
+	pthread_mutex_destroy(&stat_count_thread_lock);
 }
 
 static int storage_gen_filename(StorageClientInfo *pClientInfo, \
@@ -99,7 +106,7 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 			g_dist_write_file_count = 0;
 	
 			if ((result=pthread_mutex_lock( \
-					&g_path_index_thread_lock)) != 0)
+					&path_index_thread_lock)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_lock fail, " \
@@ -126,7 +133,7 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 			}
 
 			if ((result=pthread_mutex_unlock( \
-					&g_path_index_thread_lock)) != 0)
+					&path_index_thread_lock)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_unlock fail, " \
@@ -1687,14 +1694,59 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 	}
 }
 
-#define CHECK_AND_WRITE_TO_STAT_FILE  \
+#define CHECK_AND_WRITE_TO_STAT_FILE1  \
+		pthread_mutex_lock(&stat_count_thread_lock); \
+\
+		if (pSrcStorage == NULL) \
+		{ \
+			pSrcStorage = get_storage_server(client_info.ip_addr); \
+		} \
+		if (pSrcStorage != NULL) \
+		{ \
+			pSrcStorage->last_sync_src_timestamp = \
+					src_sync_timestamp; \
+			g_sync_change_count++; \
+		} \
+\
+		g_storage_stat.last_sync_update = time(NULL); \
 		if (++g_stat_change_count % STORAGE_SYNC_STAT_FILE_FREQ == 0) \
 		{ \
 			if (storage_write_to_stat_file() != 0) \
 			{ \
+				pthread_mutex_unlock(&stat_count_thread_lock); \
 				break; \
 			} \
-		}
+		} \
+		pthread_mutex_unlock(&stat_count_thread_lock);
+
+#define CHECK_AND_WRITE_TO_STAT_FILE2(total_count, success_count)  \
+		pthread_mutex_lock(&stat_count_thread_lock); \
+		total_count++; \
+		success_count++; \
+		if (++g_stat_change_count % STORAGE_SYNC_STAT_FILE_FREQ == 0) \
+		{ \
+			if (storage_write_to_stat_file() != 0) \
+			{ \
+				pthread_mutex_unlock(&stat_count_thread_lock); \
+				break; \
+			} \
+		} \
+		pthread_mutex_unlock(&stat_count_thread_lock);
+
+#define CHECK_AND_WRITE_TO_STAT_FILE3(total_count, success_count, timestamp)  \
+		pthread_mutex_lock(&stat_count_thread_lock); \
+		total_count++; \
+		success_count++; \
+		timestamp = time(NULL); \
+		if (++g_stat_change_count % STORAGE_SYNC_STAT_FILE_FREQ == 0) \
+		{ \
+			if (storage_write_to_stat_file() != 0) \
+			{ \
+				pthread_mutex_unlock(&stat_count_thread_lock); \
+				break; \
+			} \
+		} \
+		pthread_mutex_unlock(&stat_count_thread_lock);
 
 void* storage_thread_entrance(void* arg)
 {
@@ -1825,50 +1877,65 @@ data buff (struct)
 
 		if (header.cmd == STORAGE_PROTO_CMD_DOWNLOAD_FILE)
 		{
-			g_storage_stat.total_download_count++;
 			if (storage_download_file(&client_info, \
 				nInPackLen) != 0)
 			{
-				break;
-			}
-			g_storage_stat.success_download_count++;
-			CHECK_AND_WRITE_TO_STAT_FILE
-		}
-		else if (header.cmd == STORAGE_PROTO_CMD_GET_METADATA)
-		{
-			g_storage_stat.total_get_meta_count++;
-			if (storage_get_metadata(&client_info, \
-				nInPackLen) != 0)
-			{
-				break;
-			}
-			g_storage_stat.success_get_meta_count++;
-			CHECK_AND_WRITE_TO_STAT_FILE
-		}
-		else if (header.cmd == STORAGE_PROTO_CMD_UPLOAD_FILE)
-		{
-			g_storage_stat.total_upload_count++;
-			if (storage_upload_file(&client_info, \
-				nInPackLen) != 0)
-			{
+				pthread_mutex_lock(&stat_count_thread_lock);
+				g_storage_stat.total_download_count++;
+				pthread_mutex_unlock(&stat_count_thread_lock);
 				break;
 			}
 
-			g_storage_stat.success_upload_count++;
-			g_storage_stat.last_source_update = time(NULL);
-			CHECK_AND_WRITE_TO_STAT_FILE
+			CHECK_AND_WRITE_TO_STAT_FILE2( \
+				g_storage_stat.total_download_count, \
+				g_storage_stat.success_download_count)
+		}
+		else if (header.cmd == STORAGE_PROTO_CMD_GET_METADATA)
+		{
+			if (storage_get_metadata(&client_info, \
+				nInPackLen) != 0)
+			{
+				pthread_mutex_lock(&stat_count_thread_lock);
+				g_storage_stat.total_get_meta_count++;
+				pthread_mutex_unlock(&stat_count_thread_lock);
+				break;
+			}
+
+			CHECK_AND_WRITE_TO_STAT_FILE2( \
+				g_storage_stat.total_get_meta_count, \
+				g_storage_stat.success_get_meta_count)
+		}
+		else if (header.cmd == STORAGE_PROTO_CMD_UPLOAD_FILE)
+		{
+			if (storage_upload_file(&client_info, \
+				nInPackLen) != 0)
+			{
+				pthread_mutex_lock(&stat_count_thread_lock);
+				g_storage_stat.total_upload_count++;
+				pthread_mutex_unlock(&stat_count_thread_lock);
+				break;
+			}
+
+			CHECK_AND_WRITE_TO_STAT_FILE3( \
+				g_storage_stat.total_upload_count, \
+				g_storage_stat.success_upload_count, \
+				g_storage_stat.last_source_update)
 		}
 		else if (header.cmd == STORAGE_PROTO_CMD_DELETE_FILE)
 		{
-			g_storage_stat.total_delete_count++;
 			if (storage_delete_file(&client_info, \
 				nInPackLen) != 0)
 			{
+				pthread_mutex_lock(&stat_count_thread_lock);
+				g_storage_stat.total_delete_count++;
+				pthread_mutex_unlock(&stat_count_thread_lock);
 				break;
 			}
-			g_storage_stat.success_delete_count++;
-			g_storage_stat.last_source_update = time(NULL);
-			CHECK_AND_WRITE_TO_STAT_FILE
+
+			CHECK_AND_WRITE_TO_STAT_FILE3( \
+				g_storage_stat.total_delete_count, \
+				g_storage_stat.success_delete_count, \
+				g_storage_stat.last_source_update)
 		}
 		else if (header.cmd == STORAGE_PROTO_CMD_SYNC_CREATE_FILE)
 		{
@@ -1878,20 +1945,7 @@ data buff (struct)
 				break;
 			}
 
-			if (pSrcStorage == NULL)
-			{
-				pSrcStorage = get_storage_server( \
-					client_info.ip_addr);
-			}
-			if (pSrcStorage != NULL)
-			{
-				pSrcStorage->last_sync_src_timestamp = \
-						src_sync_timestamp;
-				g_sync_change_count++;
-			}
-
-			g_storage_stat.last_sync_update = time(NULL);
-			CHECK_AND_WRITE_TO_STAT_FILE
+			CHECK_AND_WRITE_TO_STAT_FILE1
 		}
 		else if (header.cmd == STORAGE_PROTO_CMD_SYNC_DELETE_FILE)
 		{
@@ -1901,20 +1955,7 @@ data buff (struct)
 				break;
 			}
 
-			if (pSrcStorage == NULL)
-			{
-				pSrcStorage = get_storage_server( \
-					client_info.ip_addr);
-			}
-			if (pSrcStorage != NULL)
-			{
-				pSrcStorage->last_sync_src_timestamp = \
-						src_sync_timestamp;
-				g_sync_change_count++;
-			}
-
-			g_storage_stat.last_sync_update = time(NULL);
-			CHECK_AND_WRITE_TO_STAT_FILE
+			CHECK_AND_WRITE_TO_STAT_FILE1
 		}
 		else if (header.cmd == STORAGE_PROTO_CMD_SYNC_UPDATE_FILE)
 		{
@@ -1924,33 +1965,24 @@ data buff (struct)
 				break;
 			}
 
-			if (pSrcStorage == NULL)
-			{
-				pSrcStorage = get_storage_server( \
-					client_info.ip_addr);
-			}
-			if (pSrcStorage != NULL)
-			{
-				pSrcStorage->last_sync_src_timestamp = \
-						src_sync_timestamp;
-				g_sync_change_count++;
-			}
 
-			g_storage_stat.last_sync_update = time(NULL);
-			CHECK_AND_WRITE_TO_STAT_FILE
+			CHECK_AND_WRITE_TO_STAT_FILE1
 		}
 		else if (header.cmd == STORAGE_PROTO_CMD_SET_METADATA)
 		{
-			g_storage_stat.total_set_meta_count++;
 			if (storage_set_metadata(&client_info, \
 				nInPackLen) != 0)
 			{
+				pthread_mutex_lock(&stat_count_thread_lock);
+				g_storage_stat.total_set_meta_count++;
+				pthread_mutex_unlock(&stat_count_thread_lock);
 				break;
 			}
 
-			g_storage_stat.success_set_meta_count++;
-			g_storage_stat.last_source_update = time(NULL);
-			CHECK_AND_WRITE_TO_STAT_FILE
+			CHECK_AND_WRITE_TO_STAT_FILE3( \
+				g_storage_stat.total_set_meta_count, \
+				g_storage_stat.success_set_meta_count, \
+				g_storage_stat.last_source_update)
 		}
 		else if (header.cmd == FDFS_PROTO_CMD_QUIT)
 		{
