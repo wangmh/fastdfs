@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 
 	conf_filename = argv[1];
 	memset(bind_addr, 0, sizeof(bind_addr));
-	if ((result=storage_load_from_conf_file(conf_filename, \
+	if ((result=storage_func_init(conf_filename, \
 			bind_addr, sizeof(bind_addr))) != 0)
 	{
 		return result;
@@ -108,15 +108,6 @@ int main(int argc, char *argv[])
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"set_rand_seed fail, program exit!", __LINE__);
-		g_continue_flag = false;
-		return result;
-	}
-
-	if ((result=storage_open_storage_stat()) != 0)
-	{
-		logCrit("file: "__FILE__", line: %d, " \
-			"storage_open_storage_stat fail, " \
-			"program exit!", __LINE__);
 		g_continue_flag = false;
 		return result;
 	}
@@ -172,7 +163,7 @@ int main(int argc, char *argv[])
 			"tracker_report_thread_start fail, " \
 			"program exit!", __LINE__);
 		g_continue_flag = false;
-		storage_close_storage_stat();
+		storage_func_destroy();
 		return result;
 	}
 
@@ -219,9 +210,9 @@ int main(int argc, char *argv[])
 		g_tracker_servers = NULL;
 	}
 
-	storage_close_storage_stat();
 	storage_service_destroy();
 	storage_sync_destroy();
+	storage_func_destroy();
 
 	free(tids);
 

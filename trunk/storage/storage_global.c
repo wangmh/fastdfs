@@ -12,6 +12,9 @@
 #include "logger.h"
 #include "storage_global.h"
 
+char **g_store_paths = NULL;
+int g_path_count = 0;
+
 int g_server_port = FDFS_STORAGE_SERVER_DEF_PORT;
 int g_max_connections = DEFAULT_MAX_CONNECTONS;
 //int g_max_write_thread_count = 2;

@@ -347,7 +347,7 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 {
 	TrackerHeader header;
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 64];
-	char in_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_BODY_LEN];
+	char in_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_FETCH_BODY_LEN];
 	char *pInBuff;
 	int64_t in_bytes;
 	int result;
@@ -387,13 +387,13 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 		return result;
 	}
 
-	if (in_bytes != TRACKER_QUERY_STORAGE_BODY_LEN)
+	if (in_bytes != TRACKER_QUERY_STORAGE_FETCH_BODY_LEN)
 	{
 		logError("tracker server %s:%d response data " \
 			"length: "INT64_PRINTF_FORMAT" is invalid, expect length: %d.", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
-			TRACKER_QUERY_STORAGE_BODY_LEN);
+			TRACKER_QUERY_STORAGE_FETCH_BODY_LEN);
 		return EINVAL;
 	}
 
@@ -407,11 +407,12 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 }
 
 int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer)
+		TrackerServerInfo *pStorageServer, int *store_path_index)
 {
 
 	TrackerHeader header;
-	char in_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_BODY_LEN];
+	char in_buff[sizeof(TrackerHeader) + \
+		TRACKER_QUERY_STORAGE_STORE_BODY_LEN];
 	char *pInBuff;
 	int64_t in_bytes;
 	int result;
@@ -439,13 +440,13 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 		return result;
 	}
 
-	if (in_bytes != TRACKER_QUERY_STORAGE_BODY_LEN)
+	if (in_bytes != TRACKER_QUERY_STORAGE_STORE_BODY_LEN)
 	{
 		logError("tracker server %s:%d response data " \
-			"length: "INT64_PRINTF_FORMAT" is invalid, expect length: %d.", \
-			pTrackerServer->ip_addr, \
+			"length: "INT64_PRINTF_FORMAT" is invalid, " \
+			"expect length: %d.", pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
-			TRACKER_QUERY_STORAGE_BODY_LEN);
+			TRACKER_QUERY_STORAGE_STORE_BODY_LEN);
 		return EINVAL;
 	}
 
@@ -455,6 +456,8 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 			FDFS_GROUP_NAME_MAX_LEN, IP_ADDRESS_SIZE-1);
 	pStorageServer->port = (int)buff2long(in_buff + \
 				FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1);
+	*store_path_index = *(in_buff + FDFS_GROUP_NAME_MAX_LEN + \
+				IP_ADDRESS_SIZE);
 	return 0;
 }
 

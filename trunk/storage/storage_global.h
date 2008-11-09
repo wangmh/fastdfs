@@ -34,6 +34,9 @@ typedef struct
 	int last_sync_src_timestamp;
 } FDFSStorageServer;
 
+extern char **g_store_paths; //file store paths
+extern int g_path_count;   //store path count
+
 extern int g_server_port;
 extern int g_max_connections;
 //extern int g_max_write_thread_count;

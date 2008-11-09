@@ -26,6 +26,7 @@ extern "C" {
 * params:
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
+*       store_path_index: the index of path on the storage server
 *       local_filename: local filename to upload
 *       file_ext_name: file ext name, not include dot(.), 
 *                      if be NULL will abstract ext name from the local filename
@@ -36,7 +37,7 @@ extern "C" {
 * return: 0 success, !=0 fail, return the error code
 **/
 int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+		TrackerServerInfo *pStorageServer, const int store_path_index, \
 		const char *local_filename, const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
 		char *group_name, char *remote_filename);
@@ -46,6 +47,7 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 * params:
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
+*       store_path_index: the index of path on the storage server
 *       file_buff: file content/buff
 *       file_size: file size (bytes)
 *       file_ext_name: file ext name, not include dot(.), can be NULL
@@ -55,15 +57,18 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 *	remote_filename: return the new created filename
 * return: 0 success, !=0 fail, return the error code
 **/
-#define storage_upload_by_filebuff(pTrackerServer, pStorageServer, file_buff, \
+#define storage_upload_by_filebuff(pTrackerServer, pStorageServer, \
+		store_path_index, file_buff, \
 		file_size, file_ext_name, meta_list, meta_count, \
 		group_name, remote_filename) \
 	storage_do_upload_file(pTrackerServer, pStorageServer, \
-		false, file_buff, file_size, file_ext_name, meta_list, \
-		meta_count, group_name, remote_filename)
+		store_path_index, false, file_buff, file_size, \
+		file_ext_name, meta_list, meta_count, \
+		group_name, remote_filename)
 
 int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const bool bFilename, \
+		TrackerServerInfo *pStorageServer, const int store_path_index, \
+		const bool bFilename, \
 		const char *file_buff, const int64_t file_size, \
 		const char *file_ext_name, const FDFSMetaData *meta_list, \
 		const int meta_count, char *group_name, char *remote_filename);

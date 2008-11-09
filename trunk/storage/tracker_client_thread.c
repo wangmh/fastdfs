@@ -928,6 +928,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer)
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_JOIN;
 	strcpy(pReqBody->group_name, g_group_name);
 	long2buff(g_server_port, pReqBody->storage_port);
+	long2buff(g_path_count, pReqBody->store_path_count);
 
 	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \
 			sizeof(out_buff), g_network_timeout)) != 0)
@@ -994,34 +995,74 @@ static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer)
 
 static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer)
 {
-	char out_buff[sizeof(TrackerHeader) + sizeof(TrackerStatReportReqBody)];
+	char out_buff[sizeof(TrackerHeader) + \
+			sizeof(TrackerStatReportReqBody) * 16];
+	char *pBuff;
 	TrackerHeader *pHeader;
 	TrackerStatReportReqBody *pStatBuff;
 	struct statfs sbuf;
+	int body_len;
+	int total_len;
+	int i;
 	int result;
 
-	if (statfs(g_base_path, &sbuf) != 0)
+	body_len = (int)sizeof(TrackerStatReportReqBody) * g_path_count;
+	total_len = (int)sizeof(TrackerHeader) + body_len;
+	if (total_len <= sizeof(out_buff))
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"call statfs fail, errno: %d, error info: %s.", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EACCES;
+		pBuff = out_buff;
+	}
+	else
+	{
+		pBuff = (char *)malloc(total_len);
+		if (pBuff == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, total_len, \
+				errno, strerror(errno));
+			return errno != 0 ? errno : ENOMEM;
+		}
 	}
 
-	pHeader = (TrackerHeader *)out_buff;
+	pHeader = (TrackerHeader *)pBuff;
 	pStatBuff = (TrackerStatReportReqBody*) \
-			(out_buff + sizeof(TrackerHeader));
-	long2buff((int)sizeof(TrackerStatReportReqBody), pHeader->pkg_len);
+			(pBuff + sizeof(TrackerHeader));
+	long2buff(body_len, pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_REPORT;
 	pHeader->status = 0;
 
-	long2buff((((int64_t)(sbuf.f_blocks) * sbuf.f_bsize) / FDFS_ONE_MB),\
-		pStatBuff->sz_total_mb);
-	long2buff((((int64_t)(sbuf.f_bavail) * sbuf.f_bsize) / FDFS_ONE_MB),\
-		pStatBuff->sz_free_mb);
+	for (i=0; i<g_path_count; i++)
+	{
+		if (statfs(g_store_paths[i], &sbuf) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"call statfs fail, errno: %d, error info: %s.",\
+				__LINE__, errno, strerror(errno));
 
-	if((result=tcpsenddata(pTrackerServer->sock, out_buff, \
-		sizeof(out_buff), g_network_timeout)) != 0)
+			if (pBuff != out_buff)
+			{
+				free(pBuff);
+			}
+			return errno != 0 ? errno : EACCES;
+		}
+
+		long2buff((((int64_t)(sbuf.f_blocks) * sbuf.f_bsize) / FDFS_ONE_MB),\
+			pStatBuff->sz_total_mb);
+		long2buff((((int64_t)(sbuf.f_bavail) * sbuf.f_bsize) / FDFS_ONE_MB),\
+			pStatBuff->sz_free_mb);
+
+		pStatBuff += sizeof(TrackerStatReportReqBody);
+	}
+
+	result = tcpsenddata(pTrackerServer->sock, pBuff, \
+			total_len, g_network_timeout);
+	if (pBuff != out_buff)
+	{
+		free(pBuff);
+	}
+	if(result != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
