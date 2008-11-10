@@ -1,10 +1,11 @@
 
-Version 1.12  2008-11-03
-  * client download file support callback function
+Version 1.12  2008-11-10
+  * storage server support multi path (mount point)
   * upload file support file ext name, add source storage ip address to filename
   * add delete command to delete the invalid storage server
   * add client functions which combine group name and filename to file id,
     add anothor client test program: fdfs_test1.c to use file id
+  * client download file support callback function
   * add protocol cmd TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE, 
     and client API add tracker_query_storage_update
   * add protocol cmd TRACKER_PROTO_CMD_STORAGE_SYNC_REPORT to report last 
