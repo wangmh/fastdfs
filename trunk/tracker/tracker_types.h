@@ -74,6 +74,8 @@ typedef struct
 	int storage_port; //storage server port
 	int active_count; //active server count
 	int current_write_server; //current server index to upload file
+	int store_path_count;  //store base path count of each storage server
+	int subdir_count_per_path;
 } FDFSGroupStat;
 
 typedef struct
@@ -140,6 +142,9 @@ typedef struct StructFDFSStorageDetail
 
 	int64_t *path_total_mbs; //total disk storage in MB
 	int64_t *path_free_mbs;  //free disk storage in MB
+
+	int store_path_count;  //store base path count of each storage server
+	int subdir_count_per_path;
 
 	int current_write_path; //current write path index
 

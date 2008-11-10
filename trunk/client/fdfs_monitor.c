@@ -139,13 +139,17 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 		"storage server count = %d\n" \
 		"active server count = %d\n" \
 		"storage_port = %d\n" \
-		"current write server index = %d\n\n", \
+		"current write server index = %d\n" \
+		"store path count = %d\n" \
+		"subdir count per path= %d\n\n", \
 		pGroupStat->group_name, \
 		pGroupStat->free_mb / 1024, \
 		pGroupStat->count, \
 		pGroupStat->active_count, \
 		pGroupStat->storage_port, \
-		pGroupStat->current_write_server
+		pGroupStat->current_write_server, \
+		pGroupStat->store_path_count, \
+		pGroupStat->subdir_count_per_path
 	);
 
 	result = tracker_list_servers(pTrackerServer, \

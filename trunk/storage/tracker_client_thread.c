@@ -1054,7 +1054,7 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer)
 		long2buff((((int64_t)(sbuf.f_bavail) * sbuf.f_bsize) / FDFS_ONE_MB),\
 			pStatBuff->sz_free_mb);
 
-		pStatBuff += sizeof(TrackerStatReportReqBody);
+		pStatBuff++;
 	}
 
 	result = tcpsenddata(pTrackerServer->sock, pBuff, \
