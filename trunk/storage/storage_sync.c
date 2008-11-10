@@ -63,6 +63,7 @@ static pthread_t *sync_tids = NULL;
 static int storage_write_to_mark_file(BinLogReader *pReader);
 static int storage_binlog_reader_skip(BinLogReader *pReader);
 static void storage_reader_destroy(BinLogReader *pReader);
+static int storage_binlog_fsync(const bool bNeedLock);
 
 /**
 8 bytes: filename bytes
@@ -528,6 +529,7 @@ int storage_sync_destroy()
 	int result;
 	if (g_binlog_fd >= 0)
 	{
+		storage_binlog_fsync(true);
 		close(g_binlog_fd);
 		g_binlog_fd = -1;
 	}
@@ -1146,7 +1148,7 @@ static int storage_binlog_read(BinLogReader *pReader, \
 	while (1)
 	{
 		if ((*record_length=fd_gets(pReader->binlog_fd, line, \
-			sizeof(line), 45 + FDFS_FILE_EXT_NAME_MAX_LEN)) < 0)
+			sizeof(line), 49 + FDFS_FILE_EXT_NAME_MAX_LEN)) < 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"read a line from binlog file \"%s\" fail, " \
@@ -1221,16 +1223,19 @@ static int storage_binlog_read(BinLogReader *pReader, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"item \"filename\" in binlog " \
-			"file \"%s\" is invalid, file offset: "INT64_PRINTF_FORMAT", " \
-			"filename length: %d > %d", \
+			"file \"%s\" is invalid, file offset: " \
+			INT64_PRINTF_FORMAT", filename length: %d > %d", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset, \
 			pRecord->filename_len, sizeof(pRecord->filename)-1);
 		return EINVAL;
 	}
 
-	memcpy(pRecord->filename, cols[2], pRecord->filename_len);
-	pRecord->filename[pRecord->filename_len] = '\0';
+	if ((result=storage_split_filename(cols[2], &pRecord->filename_len, \
+			pRecord->filename, &pRecord->pBasePath)) != 0)
+	{
+		return result;
+	}
 
 	/*
 	//printf("timestamp=%d, op_type=%c, filename=%s(%d), line length=%d, " \
@@ -1242,7 +1247,6 @@ static int storage_binlog_read(BinLogReader *pReader, \
 
 	return 0;
 }
-
 
 static int storage_binlog_reader_skip(BinLogReader *pReader)
 {

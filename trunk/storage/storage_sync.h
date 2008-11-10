@@ -43,6 +43,7 @@ typedef struct
 	char op_type;
 	char filename[64];
 	int filename_len;
+	char *pBasePath;
 } BinLogRecord;
 
 extern int g_binlog_fd;

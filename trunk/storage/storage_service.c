@@ -377,52 +377,6 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 	return 0;
 }
 
-static int storage_split_filename(char *logic_filename, \
-		int *filename_len, \
-		char *true_filename, char **ppStorePath)
-{
-	char *p;
-	int store_path_index;
-	char *pEnd;
-
-	if (*filename_len <= FDFS_FILE_PATH_LEN)
-	{
-		return EINVAL;
-	}
-
-	if (*logic_filename != STORAGE_STORE_PATH_PREFIX_CHAR)
-	{ //version < V1.12
-		memcpy(true_filename, logic_filename, (*filename_len)+1);
-		*ppStorePath = g_store_paths[0];
-		return 0;
-	}
-
-	p = logic_filename + 3;
-	if (*p != '/')
-	{
-		return EINVAL;
-	}
-	*p = '\0';
-
-	pEnd = NULL;	
-	store_path_index = strtol(logic_filename+1, &pEnd, 16);
-	if (pEnd != NULL && *pEnd != '\0')
-	{
-		return EINVAL;
-	}
-
-	if (store_path_index < 0 || store_path_index >= g_path_count)
-	{
-		return EINVAL;
-	}
-
-	*filename_len -= 4;
-	memcpy(true_filename, logic_filename + 4, (*filename_len) + 1);
-	*ppStorePath = g_store_paths[store_path_index];
-
-	return 0;
-}
-
 static int storage_do_set_metadata(StorageClientInfo *pClientInfo, \
 		const char *full_meta_filename, char *meta_buff, \
 		const int meta_bytes, const char op_flag, char *sync_flag)
@@ -629,6 +583,7 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 	int meta_bytes;
 	char *pBasePath;
 	int filename_len;
+	int true_filename_len;
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
@@ -639,8 +594,8 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 					FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-				"is not correct, " \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
 				STORAGE_PROTO_CMD_SET_METADATA, \
@@ -725,13 +680,14 @@ static int storage_set_metadata(StorageClientInfo *pClientInfo, \
 		memcpy(filename, in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE + 1 + \
 			FDFS_GROUP_NAME_MAX_LEN, filename_len);
 		*(filename + filename_len) = '\0';
+		true_filename_len = filename_len;
 		if ((resp.status=storage_split_filename(filename, \
-			&filename_len, true_filename, &pBasePath)) != 0)
+			&true_filename_len, true_filename, &pBasePath)) != 0)
 		{
 			break;
 		}
 		if ((resp.status=fdfs_check_data_filename(true_filename, \
-			filename_len)) != 0)
+			true_filename_len)) != 0)
 		{
 			break;
 		}

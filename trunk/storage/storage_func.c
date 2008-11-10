@@ -66,6 +66,7 @@ static int fsync_thread_count = 0;
 
 static int storage_open_storage_stat();
 static int storage_close_storage_stat();
+static int storage_make_data_dirs(const char *pBasePath);
 
 static char *get_storage_stat_filename(const void *pArg, char *full_filename)
 {
@@ -331,43 +332,25 @@ int storage_write_to_sync_ini_file()
 	return 0;
 }
 
+
 int storage_check_and_make_data_dirs()
 {
-	char data_path[MAX_PATH_SIZE];
-	char dir_name[9];
-	char sub_name[9];
-	int i, k;
 	int result;
+	int i;
+	char data_path[MAX_PATH_SIZE];
+	char full_filename[MAX_PATH_SIZE];
 
-	snprintf(data_path, sizeof(data_path), "%s/data", g_base_path);
-	if (!fileExists(data_path))
-	{
-		if (mkdir(data_path, 0755) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"mkdir \"%s\" fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, data_path, errno, strerror(errno));
-			return errno != 0 ? errno : ENOENT;
-		}
-	}
-
-	if (chdir(data_path) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"chdir \"%s\" fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, data_path, errno, strerror(errno));
-		return errno != 0 ? errno : ENOENT;
-	}
-
-	if (fileExists(DATA_DIR_INITED_FILENAME))
+	snprintf(data_path, sizeof(data_path), "%s/data", \
+			g_base_path);
+	snprintf(full_filename, sizeof(full_filename), "%s/%s", \
+			data_path, DATA_DIR_INITED_FILENAME);
+	if (fileExists(full_filename))
 	{
 		IniItemInfo *items;
 		int nItemCount;
 		char *pValue;
 
-		if ((result=iniLoadItems(DATA_DIR_INITED_FILENAME, \
+		if ((result=iniLoadItems(full_filename, \
 				&items, &nItemCount)) \
 			 != 0)
 		{
@@ -375,7 +358,7 @@ int storage_check_and_make_data_dirs()
 				"load from file \"%s/%s\" fail, " \
 				"error code: %d", \
 				__LINE__, data_path, \
-				DATA_DIR_INITED_FILENAME, result);
+				full_filename, result);
 			return result;
 		}
 		
@@ -386,7 +369,7 @@ int storage_check_and_make_data_dirs()
 			iniFreeItems(items);
 			logError("file: "__FILE__", line: %d, " \
 				"in file \"%s/%s\", item \"%s\" not exists", \
-				__LINE__, data_path, DATA_DIR_INITED_FILENAME, \
+				__LINE__, data_path, full_filename, \
 				INIT_ITEM_STORAGE_JOIN_TIME);
 			return ENOENT;
 		}
@@ -399,7 +382,7 @@ int storage_check_and_make_data_dirs()
 			iniFreeItems(items);
 			logError("file: "__FILE__", line: %d, " \
 				"in file \"%s/%s\", item \"%s\" not exists", \
-				__LINE__, data_path, DATA_DIR_INITED_FILENAME, \
+				__LINE__, data_path, full_filename, \
 				INIT_ITEM_SYNC_OLD_DONE);
 			return ENOENT;
 		}
@@ -412,7 +395,7 @@ int storage_check_and_make_data_dirs()
 			iniFreeItems(items);
 			logError("file: "__FILE__", line: %d, " \
 				"in file \"%s/%s\", item \"%s\" not exists", \
-				__LINE__, data_path, DATA_DIR_INITED_FILENAME, \
+				__LINE__, data_path, full_filename, \
 				INIT_ITEM_SYNC_SRC_SERVER);
 			return ENOENT;
 		}
@@ -431,7 +414,60 @@ int storage_check_and_make_data_dirs()
 		return 0;
 	}
 
+	if (!fileExists(data_path))
+	{
+		if (mkdir(data_path, 0755) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"mkdir \"%s\" fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, data_path, errno, strerror(errno));
+			return errno != 0 ? errno : EPERM;
+		}
+	}
+
+	for (i=0; i<g_path_count; i++)
+	{
+		if ((result=storage_make_data_dirs(g_store_paths[i])) != 0)
+		{
+			return result;
+		}
+	}
+
 	g_storage_join_time = time(NULL);
+	return storage_write_to_sync_ini_file();
+}
+
+static int storage_make_data_dirs(const char *pBasePath)
+{
+	char data_path[MAX_PATH_SIZE];
+	char dir_name[9];
+	char sub_name[9];
+	int i, k;
+
+	snprintf(data_path, sizeof(data_path), "%s/data", pBasePath);
+	if (!fileExists(data_path))
+	{
+		if (mkdir(data_path, 0755) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"mkdir \"%s\" fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, data_path, errno, strerror(errno));
+			return errno != 0 ? errno : EPERM;
+		}
+	}
+
+	if (chdir(data_path) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"chdir \"%s\" fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, data_path, errno, strerror(errno));
+		return errno != 0 ? errno : ENOENT;
+	}
+
+	fprintf(stderr, "data path: %s, mkdir sub dir...\n", data_path);
 	for (i=0; i<DATA_DIR_COUNT_PER_PATH; i++)
 	{
 		sprintf(dir_name, STORAGE_DATA_DIR_FORMAT, i);
@@ -489,11 +525,9 @@ int storage_check_and_make_data_dirs()
 		}
 	}
 
-	fprintf(stderr, "mkdir data path done.\n");
+	fprintf(stderr, "data path: %s, mkdir sub dir done.\n", data_path);
 
-	result = storage_write_to_sync_ini_file();
-
-	return result;
+	return 0;
 }
 
 static int storage_cmp_by_ip_and_port(const void *p1, const void *p2)
@@ -1032,6 +1066,66 @@ int storage_func_destroy()
 	}
 
 	return storage_close_storage_stat();
+}
+
+int storage_split_filename(const char *logic_filename, \
+		int *filename_len, \
+		char *true_filename, char **ppStorePath)
+{
+	char buff[3];
+	int store_path_index;
+	char *pEnd;
+
+	if (*filename_len <= FDFS_FILE_PATH_LEN)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"filename_len: %d is invalid, <= %d", \
+			__LINE__, *filename_len, FDFS_FILE_PATH_LEN);
+		return EINVAL;
+	}
+
+	if (*logic_filename != STORAGE_STORE_PATH_PREFIX_CHAR)
+	{ //version < V1.12
+		memcpy(true_filename, logic_filename, (*filename_len)+1);
+		*ppStorePath = g_store_paths[0];
+		return 0;
+	}
+
+	if (*(logic_filename + 3) != '/')
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"filename: %s is invalid", \
+			__LINE__, logic_filename);
+		return EINVAL;
+	}
+
+	*buff = *(logic_filename+1);
+	*(buff+1) = *(logic_filename+2);
+	*(buff+2) = '\0';
+
+	pEnd = NULL;
+	store_path_index = strtol(buff, &pEnd, 16);
+	if (pEnd != NULL && *pEnd != '\0')
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"filename: %s is invalid", \
+			__LINE__, logic_filename);
+		return EINVAL;
+	}
+
+	if (store_path_index < 0 || store_path_index >= g_path_count)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"filename: %s is invalid, invalid store path index: %d",
+			__LINE__, logic_filename, store_path_index);
+		return EINVAL;
+	}
+
+	*filename_len -= 4;
+	memcpy(true_filename, logic_filename + 4, (*filename_len) + 1);
+	*ppStorePath = g_store_paths[store_path_index];
+
+	return 0;
 }
 
 /*

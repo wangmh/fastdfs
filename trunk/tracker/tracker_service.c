@@ -1654,7 +1654,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 	while (1)
 	{
 		if (nInPackLen != sizeof(TrackerStatReportReqBody) * \
-			pClientInfo->pGroup->store_path_count != 0)
+			pClientInfo->pGroup->store_path_count)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, package size " \
