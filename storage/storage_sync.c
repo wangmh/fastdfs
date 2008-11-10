@@ -87,7 +87,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	struct stat stat_buf;
 
 	snprintf(full_filename, sizeof(full_filename), \
-			"%s/data/%s", g_base_path, pRecord->filename);
+		"%s/data/%s", pRecord->pBasePath, pRecord->true_filename);
 	if (stat(full_filename, &stat_buf) != 0)
 	{
 		if (errno == ENOENT)
@@ -214,7 +214,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 	int64_t in_bytes;
 
 	snprintf(full_filename, sizeof(full_filename), \
-			"%s/data/%s", g_base_path, pRecord->filename);
+		"%s/data/%s", pRecord->pBasePath, pRecord->true_filename);
 	if (fileExists(full_filename))
 	{
 		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_DELETE_FILE)
@@ -422,8 +422,7 @@ int storage_sync_init()
 	int result;
 	int fd;
 
-	snprintf(data_path, sizeof(data_path), \
-			"%s/data", g_base_path);
+	snprintf(data_path, sizeof(data_path), "%s/data", g_base_path);
 	if (!fileExists(data_path))
 	{
 		if (mkdir(data_path, 0755) != 0)
@@ -1231,8 +1230,12 @@ static int storage_binlog_read(BinLogReader *pReader, \
 		return EINVAL;
 	}
 
-	if ((result=storage_split_filename(cols[2], &pRecord->filename_len, \
-			pRecord->filename, &pRecord->pBasePath)) != 0)
+	memcpy(pRecord->filename, cols[2], pRecord->filename_len);
+	*(pRecord->filename + pRecord->filename_len) = '\0';
+	pRecord->true_filename_len = pRecord->filename_len;
+	if ((result=storage_split_filename(pRecord->filename, \
+			&pRecord->true_filename_len, pRecord->true_filename, \
+			&pRecord->pBasePath)) != 0)
 	{
 		return result;
 	}
@@ -1516,11 +1519,8 @@ static void* storage_sync_thread_entrance(void* arg)
 			}
 			else if (read_result != 0)
 			{
-				logCrit("file: "__FILE__", line: %d, " \
-					"storage_binlog_read fail, " \
-					"program exit!", __LINE__);
-				g_continue_flag = false;
-				break;
+				sleep(5);
+				continue;
 			}
 
 			if ((sync_result=storage_sync_data(&reader, \
