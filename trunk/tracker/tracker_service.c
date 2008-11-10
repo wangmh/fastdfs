@@ -660,6 +660,7 @@ static int tracker_deal_service_query_fetch_update( \
 	FDFSStorageDetail *pStoreSrcServer;
 	char out_buff[sizeof(TrackerHeader) + \
 		TRACKER_QUERY_STORAGE_FETCH_BODY_LEN];
+	char szIpAddr[IP_ADDRESS_SIZE];
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
@@ -753,9 +754,27 @@ static int tracker_deal_service_query_fetch_update( \
 			storage_ip, file_timestamp);
 		*/
 
+		memset(szIpAddr, 0, sizeof(szIpAddr));
 		resp.status = 0;
 		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH)
 		{
+			if (g_groups.download_server == \
+				FDFS_DOWNLOAD_SERVER_SOURCE_FIRST && \
+				storage_ip != INADDR_NONE)
+			{
+				memset(&ip_addr, 0, sizeof(ip_addr));
+				ip_addr.s_addr = storage_ip;
+				pStoreSrcServer=tracker_mem_get_active_storage(\
+					pGroup, inet_ntop(AF_INET, &ip_addr, \
+					szIpAddr, sizeof(szIpAddr)));
+				if (pStoreSrcServer != NULL)
+				{
+					pStorageServer = pStoreSrcServer;
+					break;
+				}
+			}
+
+			//round robin
 			pStorageServer = *(pGroup->active_servers + \
 					   pGroup->current_read_server);
 
@@ -787,14 +806,19 @@ static int tracker_deal_service_query_fetch_update( \
 				break;
 			}
 
+			if (g_groups.download_server == \
+                                FDFS_DOWNLOAD_SERVER_ROUND_ROBIN)
+			{  //avoid search again
 			memset(&ip_addr, 0, sizeof(ip_addr));
 			ip_addr.s_addr = storage_ip;
 			pStoreSrcServer = tracker_mem_get_active_storage( \
-					pGroup, inet_ntoa(ip_addr));
+					pGroup, inet_ntop(AF_INET, &ip_addr, \
+					szIpAddr, sizeof(szIpAddr)));
 			if (pStoreSrcServer != NULL)
 			{
 				pStorageServer = pStoreSrcServer;
 				break;
+			}
 			}
 
 			if (g_groups.store_server == FDFS_STORE_SERVER_FIRST)
@@ -819,7 +843,8 @@ static int tracker_deal_service_query_fetch_update( \
 				memset(&ip_addr, 0, sizeof(ip_addr));
 				ip_addr.s_addr = storage_ip;
 				pStoreSrcServer=tracker_mem_get_active_storage(\
-					pGroup, inet_ntoa(ip_addr));
+					pGroup, inet_ntop(AF_INET, &ip_addr, \
+					szIpAddr, sizeof(szIpAddr)));
 				if (pStoreSrcServer != NULL)
 				{
 					pStorageServer = pStoreSrcServer;
@@ -1105,10 +1130,13 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 				FDFS_GROUP_NAME_MAX_LEN);
 		memcpy(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN, \
 				pStorageServer->ip_addr, IP_ADDRESS_SIZE-1);
+
 		long2buff(pStoreGroup->storage_port, out_buff + sizeof(resp) + \
 			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE-1);
+
 		*(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN + \
-		    IP_ADDRESS_SIZE) = (char)pStorageServer->current_write_path;
+		    IP_ADDRESS_SIZE - 1 + FDFS_PROTO_PKG_LEN_SIZE) = \
+				(char)pStorageServer->current_write_path;
 	}
 	else
 	{

@@ -320,11 +320,14 @@ in_addr_t getIpaddr(getnamefunc getname, int sock, \
 	
 	if (addrlen > 0)
 	{
-		snprintf(buff, bufferSize, "%s", inet_ntoa(addr.sin_addr));
+		if (inet_ntop(AF_INET, &addr.sin_addr, buff, bufferSize) == NULL)
+		{
+			*buff = '\0';
+		}
 	}
 	else
 	{
-		buff[0] = '\0';
+		*buff = '\0';
 	}
 	
 	return addr.sin_addr.s_addr;
@@ -360,8 +363,12 @@ in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize)
 	ip_addr.s_addr = *(addr_list[0]);
 	if (buff != NULL)
 	{
-		snprintf(buff, bufferSize, "%s", inet_ntoa(ip_addr));
+		if (inet_ntop(AF_INET, &ip_addr, buff, bufferSize) == NULL)
+		{
+			*buff = '\0';
+		}
 	}
+
 	return ip_addr.s_addr;
 }
 
