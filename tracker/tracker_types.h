@@ -50,6 +50,10 @@
 #define FDFS_STORE_SERVER_ROUND_ROBIN	0  //round robin
 #define FDFS_STORE_SERVER_FIRST		1  //the first server
 
+//which server to download file
+#define FDFS_DOWNLOAD_SERVER_ROUND_ROBIN	0  //round robin
+#define FDFS_DOWNLOAD_SERVER_SOURCE_FIRST	1  //the source server
+
 //which path to upload file
 #define FDFS_STORE_PATH_ROUND_ROBIN	0  //round robin
 #define FDFS_STORE_PATH_LOAD_BALANCE	2  //load balance
@@ -194,6 +198,7 @@ typedef struct
 	int current_write_group;  //current group index to upload file
 	byte store_lookup;  //store to which group
 	byte store_server;  //store to which server
+	byte download_server; //download from which server
 	byte store_path;  //store to which path
 	char store_group[FDFS_GROUP_NAME_MAX_LEN + 1];
 } FDFSGroups;

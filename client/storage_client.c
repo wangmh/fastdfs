@@ -187,7 +187,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	*meta_list = NULL;
 	*meta_count = 0;
 
-	if ((result=storage_get_read_connection(pTrackerServer, \
+	if ((result=storage_get_update_connection(pTrackerServer, \
 		&pStorageServer, group_name, filename, \
 		&storageServer, &new_connection)) != 0)
 	{

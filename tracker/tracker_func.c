@@ -185,16 +185,34 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 
 		g_groups.store_server = (byte)iniGetIntValue("store_server", \
-			items, nItemCount, FDFS_STORE_SERVER_FIRST);
+			items, nItemCount, FDFS_STORE_SERVER_ROUND_ROBIN);
 		if (!(g_groups.store_server == FDFS_STORE_SERVER_FIRST || \
 			g_groups.store_server == FDFS_STORE_SERVER_ROUND_ROBIN))
 		{
 			logWarning("file: "__FILE__", line: %d, " \
 				"store_server 's value %d is invalid, " \
-				"set to %d (use the first server)!", \
+				"set to %d (round robin)!", \
 				__LINE__, g_groups.store_server, \
-				FDFS_STORE_SERVER_FIRST);
-			g_groups.store_server = FDFS_STORE_SERVER_FIRST;
+				FDFS_STORE_SERVER_ROUND_ROBIN);
+
+			g_groups.store_server = FDFS_STORE_SERVER_ROUND_ROBIN;
+		}
+
+		g_groups.download_server = (byte)iniGetIntValue( \
+			"download_server", items, nItemCount, \
+			FDFS_DOWNLOAD_SERVER_ROUND_ROBIN);
+		if (!(g_groups.download_server==FDFS_DOWNLOAD_SERVER_ROUND_ROBIN
+			|| g_groups.download_server == 
+				FDFS_DOWNLOAD_SERVER_SOURCE_FIRST))
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"download_server 's value %d is invalid, " \
+				"set to %d (round robin)!", \
+				__LINE__, g_groups.download_server, \
+				FDFS_DOWNLOAD_SERVER_ROUND_ROBIN);
+
+			g_groups.download_server = \
+				FDFS_DOWNLOAD_SERVER_ROUND_ROBIN;
 		}
 
 		g_groups.store_path = (byte)iniGetIntValue("store_path", \
