@@ -75,6 +75,90 @@ static int tracker_malloc_storage_path_mbs(FDFSStorageDetail *pStorage, \
 	return 0;
 }
 
+static int tracker_realloc_storage_path_mbs(FDFSStorageDetail *pStorage, \
+		const int old_store_path_count, const int new_store_path_count)
+{
+	int alloc_bytes;
+	int copy_bytes;
+	int64_t *new_path_total_mbs;
+	int64_t *new_path_free_mbs;
+
+	if (new_store_path_count <= 0)
+	{
+		return EINVAL;
+	}
+
+	alloc_bytes = sizeof(int64_t) * new_store_path_count;
+
+	new_path_total_mbs = (int64_t *)malloc(alloc_bytes);
+	if (new_path_total_mbs == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, alloc_bytes, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	new_path_free_mbs = (int64_t *)malloc(alloc_bytes);
+	if (new_path_free_mbs == NULL)
+	{
+		free(new_path_total_mbs);
+
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, alloc_bytes, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	memset(new_path_total_mbs, 0, alloc_bytes);
+	memset(new_path_free_mbs, 0, alloc_bytes);
+
+	if (old_store_path_count == 0)
+	{
+		pStorage->path_total_mbs = new_path_total_mbs;
+		pStorage->path_free_mbs = new_path_free_mbs;
+
+		return 0;
+	}
+
+	copy_bytes = (old_store_path_count < new_store_path_count ? \
+		old_store_path_count : new_store_path_count) * sizeof(int64_t);
+	memcpy(new_path_total_mbs, pStorage->path_total_mbs, copy_bytes);
+	memcpy(new_path_free_mbs, pStorage->path_free_mbs, copy_bytes);
+
+	free(pStorage->path_total_mbs);
+	free(pStorage->path_free_mbs);
+
+	pStorage->path_total_mbs = new_path_total_mbs;
+	pStorage->path_free_mbs = new_path_free_mbs;
+
+	return 0;
+}
+
+static int tracker_realloc_group_path_mbs(FDFSGroupInfo *pGroup, \
+		const int new_store_path_count)
+{
+	FDFSStorageDetail *pStorage;
+	FDFSStorageDetail *pEnd;
+	int result;
+
+	pEnd = pGroup->all_servers + pGroup->alloc_size;
+	for (pStorage=pGroup->all_servers; pStorage<pEnd; pStorage++)
+	{
+		if ((result=tracker_realloc_storage_path_mbs(pStorage, \
+			pGroup->store_path_count, new_store_path_count)) != 0)
+		{
+			return result;
+		}
+	}
+
+	pGroup->store_path_count = new_store_path_count;
+
+	return 0;
+}
+
 static int tracker_malloc_group_path_mbs(FDFSGroupInfo *pGroup)
 {
 	FDFSStorageDetail *pStorage;
@@ -1910,6 +1994,8 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	bool bGroupInserted;
 	bool bStorageInserted;
 	FDFSStorageDetail *pStorageServer;
+	FDFSStorageDetail *pServer;
+	FDFSStorageDetail *pEnd;
 
 	if ((result=tracker_mem_add_group(pClientInfo, bIncRef, \
 			&bGroupInserted)) != 0)
@@ -1949,6 +2035,16 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		}
 	}
 
+	if ((result=tracker_mem_add_storage(pClientInfo, bIncRef, \
+			&bStorageInserted)) != 0)
+	{
+		return result;
+	}
+
+	pStorageServer = pClientInfo->pStorage;
+	pStorageServer->store_path_count = store_path_count;
+	pStorageServer->subdir_count_per_path = subdir_count_per_path;
+
 	if (pClientInfo->pGroup->store_path_count == 0)
 	{
 		pClientInfo->pGroup->store_path_count = store_path_count;
@@ -1966,14 +2062,42 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	{
 		if (pClientInfo->pGroup->store_path_count != store_path_count)
 		{
-			logError("file: "__FILE__", line: %d, " \
+			pEnd = pClientInfo->pGroup->all_servers + \
+				pClientInfo->pGroup->count;
+			for (pServer=pClientInfo->pGroup->all_servers; \
+				pServer<pEnd; pServer++)
+			{
+				if (pServer->store_path_count!=store_path_count)
+				{
+					break;
+				}
+			}
+
+			if (pServer == pEnd)  //all servers are same, adjust
+			{
+				if ((result=tracker_realloc_group_path_mbs( \
+			 	    pClientInfo->pGroup, store_path_count))!=0)
+				{
+					return result;
+				}
+
+				if ((result=tracker_save_groups()) != 0)
+				{
+					return result;
+				}
+			}
+			else
+			{
+				logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, store_path_count %d is not " \
 				"same in the group \"%s\", " \
 				"group store_path_count is %d", \
 				__LINE__, pClientInfo->ip_addr, \
 				store_path_count, pClientInfo->group_name, \
 				pClientInfo->pGroup->store_path_count);
-			return EINVAL;
+
+				return EINVAL;
+			}
 		}
 	}
 
@@ -1991,24 +2115,42 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		if (pClientInfo->pGroup->subdir_count_per_path != \
 				subdir_count_per_path)
 		{
-			logError("file: "__FILE__", line: %d, " \
+			pEnd = pClientInfo->pGroup->all_servers + \
+				pClientInfo->pGroup->count;
+			for (pServer=pClientInfo->pGroup->all_servers; \
+				pServer<pEnd; pServer++)
+			{
+				if (pServer->subdir_count_per_path != \
+					subdir_count_per_path)
+				{
+					break;
+				}
+			}
+
+			if (pServer == pEnd)  //all servers are same, adjust
+			{
+				pClientInfo->pGroup->subdir_count_per_path = \
+						subdir_count_per_path;
+				if ((result=tracker_save_groups()) != 0)
+				{
+					return result;
+				}
+			}
+			else
+			{
+				logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, subdir_count_per_path %d is " \
 				"not same in the group \"%s\", " \
 				"group subdir_count_per_path is %d", \
 				__LINE__, pClientInfo->ip_addr, \
 				subdir_count_per_path, pClientInfo->group_name,\
 				pClientInfo->pGroup->subdir_count_per_path);
-			return EINVAL;
+
+				return EINVAL;
+			}
 		}
 	}
 
-	if ((result=tracker_mem_add_storage(pClientInfo, bIncRef, \
-			&bStorageInserted)) != 0)
-	{
-		return result;
-	}
-
-	pStorageServer = pClientInfo->pStorage;
 	if (bStorageInserted)
 	{
 		pStorageServer->status = FDFS_STORAGE_STATUS_INIT;

@@ -334,6 +334,10 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 		pDest->active_count = buff2long(pSrc->sz_active_count);
 		pDest->current_write_server = buff2long( \
 				pSrc->sz_current_write_server);
+		pDest->store_path_count = buff2long( \
+				pSrc->sz_store_path_count);
+		pDest->subdir_count_per_path = buff2long( \
+				pSrc->sz_subdir_count_per_path);
 
 		pDest++;
 	}

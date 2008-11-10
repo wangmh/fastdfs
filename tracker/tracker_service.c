@@ -1149,13 +1149,11 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-				"is not correct, " \
-				"expect length: 0", \
-				__LINE__, \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length: 0", __LINE__, \
 				TRACKER_PROTO_CMD_SERVER_LIST_GROUP, \
-				pClientInfo->ip_addr,  \
-				nInPackLen);
+				pClientInfo->ip_addr, nInPackLen);
 			resp.status = EINVAL;
 			break;
 		}
@@ -1173,6 +1171,10 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 				pDest->sz_active_count);
 			long2buff((*ppGroup)->current_write_server, \
 				pDest->sz_current_write_server);
+			long2buff((*ppGroup)->store_path_count, \
+				pDest->sz_store_path_count);
+			long2buff((*ppGroup)->subdir_count_per_path, \
+				pDest->sz_subdir_count_per_path);
 			pDest++;
 		}
 
@@ -1726,7 +1728,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 				pClientInfo->pStorage->current_write_path = i;
 			}
 
-			pStatBuff += sizeof(TrackerStatReportReqBody);
+			pStatBuff++;
 		}
 
 		if ((pClientInfo->pGroup->free_mb == 0) ||

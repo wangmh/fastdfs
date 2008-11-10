@@ -80,6 +80,8 @@ typedef struct
 	char sz_storage_port[FDFS_PROTO_PKG_LEN_SIZE];
 	char sz_active_count[FDFS_PROTO_PKG_LEN_SIZE]; //active server count
 	char sz_current_write_server[FDFS_PROTO_PKG_LEN_SIZE];
+	char sz_store_path_count[FDFS_PROTO_PKG_LEN_SIZE];
+	char sz_subdir_count_per_path[FDFS_PROTO_PKG_LEN_SIZE];
 } TrackerGroupStat;
 
 typedef struct

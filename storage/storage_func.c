@@ -409,19 +409,26 @@ int storage_check_and_make_data_dirs()
 		//printf("g_sync_old_done = %d\n", g_sync_old_done);
 		//printf("g_sync_src_ip_addr = %s\n", g_sync_src_ip_addr);
 		//printf("g_sync_until_timestamp = %d\n", g_sync_until_timestamp);
-
-		return 0;
 	}
-
-	if (!fileExists(data_path))
+	else
 	{
-		if (mkdir(data_path, 0755) != 0)
+		if (!fileExists(data_path))
 		{
-			logError("file: "__FILE__", line: %d, " \
-				"mkdir \"%s\" fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, data_path, errno, strerror(errno));
-			return errno != 0 ? errno : EPERM;
+			if (mkdir(data_path, 0755) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"mkdir \"%s\" fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, data_path, \
+					errno, strerror(errno));
+				return errno != 0 ? errno : EPERM;
+			}
+		}
+
+		g_storage_join_time = time(NULL);
+		if ((result=storage_write_to_sync_ini_file()) != 0)
+		{
+			return result;
 		}
 	}
 
@@ -433,8 +440,7 @@ int storage_check_and_make_data_dirs()
 		}
 	}
 
-	g_storage_join_time = time(NULL);
-	return storage_write_to_sync_ini_file();
+	return 0;
 }
 
 static int storage_make_data_dirs(const char *pBasePath)
@@ -442,6 +448,8 @@ static int storage_make_data_dirs(const char *pBasePath)
 	char data_path[MAX_PATH_SIZE];
 	char dir_name[9];
 	char sub_name[9];
+	char min_sub_path[16];
+	char max_sub_path[16];
 	int i, k;
 
 	snprintf(data_path, sizeof(data_path), "%s/data", pBasePath);
@@ -464,6 +472,15 @@ static int storage_make_data_dirs(const char *pBasePath)
 			"errno: %d, error info: %s", \
 			__LINE__, data_path, errno, strerror(errno));
 		return errno != 0 ? errno : ENOENT;
+	}
+
+	sprintf(min_sub_path, STORAGE_DATA_DIR_FORMAT"/"STORAGE_DATA_DIR_FORMAT,
+			0, 0);
+	sprintf(max_sub_path, STORAGE_DATA_DIR_FORMAT"/"STORAGE_DATA_DIR_FORMAT,
+			g_subdir_count_per_path-1, g_subdir_count_per_path-1);
+	if (fileExists(min_sub_path) && fileExists(max_sub_path))
+	{
+		return 0;
 	}
 
 	fprintf(stderr, "data path: %s, mkdir sub dir...\n", data_path);
