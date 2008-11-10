@@ -32,7 +32,7 @@ static pthread_mutex_t mem_thread_lock;
 #define STORAGE_SYNC_TIMESTAMP_FILENAME	"storage_sync_timestamp.dat"
 #define STORAGE_DATA_FIELD_SEPERATOR	','
 
-#define TRACKER_MEM_ALLOC_ONCE	5
+#define TRACKER_MEM_ALLOC_ONCE	1
 
 static int tracker_malloc_storage_path_mbs(FDFSStorageDetail *pStorage, \
 		const int store_path_count)
@@ -1289,6 +1289,8 @@ int tracker_mem_realloc_groups()
 	FDFSGroupInfo **ppEnd;
 	int *new_ref_count;
 
+	printf("tracker_mem_realloc_groups %d\n", g_groups.alloc_size);
+
 	new_size = g_groups.alloc_size + TRACKER_MEM_ALLOC_ONCE;
 	new_groups = (FDFSGroupInfo *)malloc(sizeof(FDFSGroupInfo) * new_size);
 	if (new_groups == NULL)
@@ -1451,6 +1453,7 @@ int tracker_mem_realloc_store_server(FDFSGroupInfo *pGroup, const int inc_count)
 	int err_no;
 	int i;
 	
+	printf("tracker_mem_realloc_store_server %d\n", pGroup->alloc_size);
 	new_size = pGroup->alloc_size + inc_count + TRACKER_MEM_ALLOC_ONCE;
 	new_servers = (FDFSStorageDetail *) \
 		malloc(sizeof(FDFSStorageDetail) * new_size);
