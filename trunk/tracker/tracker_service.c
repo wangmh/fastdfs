@@ -212,6 +212,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 {
 	TrackerStorageJoinBody body;
 	int store_path_count;
+	int subdir_count_per_path;
 	int status;
 
 	while (1)
@@ -270,8 +271,18 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 		break;
 	}
 
+	subdir_count_per_path = (int)buff2long(body.subdir_count_per_path);
+	if (subdir_count_per_path <= 0 || subdir_count_per_path > 256)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid subdir_count_per_path: %d", \
+			__LINE__, pClientInfo->ip_addr, subdir_count_per_path);
+		status = EINVAL;
+		break;
+	}
+
 	status = tracker_mem_add_group_and_storage(pClientInfo, \
-				store_path_count, true);
+				store_path_count, subdir_count_per_path, true);
 	break;
 	}
 

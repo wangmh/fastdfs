@@ -21,6 +21,7 @@
 #define STORAGE_REPORT_DEF_INTERVAL  300
 #define STORAGE_DEF_SYNC_WAIT_MSEC   100
 #define STORAGE_SYNC_STAT_FILE_FREQ  50000
+#define DEFAULT_DATA_DIR_COUNT_PER_PATH	 256
 
 #define STORAGE_MAX_LOCAL_IP_ADDRS	4
 
@@ -36,6 +37,9 @@ typedef struct
 
 extern char **g_store_paths; //file store paths
 extern int g_path_count;   //store path count
+
+/* subdirs under store path, g_subdir_count * g_subdir_count 2 level subdirs */
+extern int g_subdir_count_per_path;
 
 extern int g_server_port;
 extern int g_max_connections;

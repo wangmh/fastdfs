@@ -119,7 +119,7 @@ static int tracker_malloc_all_group_path_mbs()
 
 static int tracker_load_groups(const char *data_path)
 {
-#define STORAGE_DATA_GROUP_FIELDS	3
+#define STORAGE_DATA_GROUP_FIELDS	4
 
 	FILE *fp;
 	char szLine[256];
@@ -150,7 +150,7 @@ static int tracker_load_groups(const char *data_path)
 		col_count = splitEx(szLine, STORAGE_DATA_FIELD_SEPERATOR, \
 			fields, STORAGE_DATA_GROUP_FIELDS);
 		if (col_count != STORAGE_DATA_GROUP_FIELDS && \
-			col_count != STORAGE_DATA_GROUP_FIELDS - 1)
+			col_count != STORAGE_DATA_GROUP_FIELDS - 2)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"the format of the file \"%s/%s\" is invalid", \
@@ -182,14 +182,17 @@ static int tracker_load_groups(const char *data_path)
 		}
 
 		clientInfo.pGroup->storage_port = atoi(trim(fields[1]));
-		if (col_count == STORAGE_DATA_GROUP_FIELDS - 1)
+		if (col_count == STORAGE_DATA_GROUP_FIELDS - 2)
 		{  //version < V1.12
 			clientInfo.pGroup->store_path_count = 0;
+			clientInfo.pGroup->subdir_count_per_path = 0;
 		}
 		else
 		{
 			clientInfo.pGroup->store_path_count = \
 				atoi(trim(fields[2]));
+			clientInfo.pGroup->subdir_count_per_path = \
+				atoi(trim(fields[3]));
 		}
 	}
 
@@ -685,7 +688,7 @@ static int tracker_load_data()
 static int tracker_save_groups()
 {
 	char filname[MAX_PATH_SIZE];
-	char buff[FDFS_GROUP_NAME_MAX_LEN + 32];
+	char buff[FDFS_GROUP_NAME_MAX_LEN + 64];
 	int fd;
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppEnd;
@@ -707,11 +710,14 @@ static int tracker_save_groups()
 	ppEnd = g_groups.sorted_groups + g_groups.count;
 	for (ppGroup=g_groups.sorted_groups; ppGroup<ppEnd; ppGroup++)
 	{
-		len = sprintf(buff, "%s%c%d%c%d\n", (*ppGroup)->group_name, \
+		len = sprintf(buff, "%s%c%d%c%d%c%d\n", \
+				(*ppGroup)->group_name, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
 				(*ppGroup)->storage_port, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppGroup)->store_path_count);
+				(*ppGroup)->store_path_count, \
+				STORAGE_DATA_FIELD_SEPERATOR, \
+				(*ppGroup)->subdir_count_per_path);
 		if (write(fd, buff, len) != len)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -1897,7 +1903,8 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 }
 
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
-			const int store_path_count, const bool bIncRef)
+		const int store_path_count, const int subdir_count_per_path, \
+		const bool bIncRef)
 {
 	int result;
 	bool bGroupInserted;
@@ -1966,6 +1973,31 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				__LINE__, pClientInfo->ip_addr, \
 				store_path_count, pClientInfo->group_name, \
 				pClientInfo->pGroup->store_path_count);
+			return EINVAL;
+		}
+	}
+
+	if (pClientInfo->pGroup->subdir_count_per_path == 0)
+	{
+		pClientInfo->pGroup->subdir_count_per_path = \
+				subdir_count_per_path;
+		if ((result=tracker_save_groups()) != 0)
+		{
+			return result;
+		}
+	}
+	else
+	{
+		if (pClientInfo->pGroup->subdir_count_per_path != \
+				subdir_count_per_path)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, subdir_count_per_path %d is " \
+				"not same in the group \"%s\", " \
+				"group subdir_count_per_path is %d", \
+				__LINE__, pClientInfo->ip_addr, \
+				subdir_count_per_path, pClientInfo->group_name,\
+				pClientInfo->pGroup->subdir_count_per_path);
 			return EINVAL;
 		}
 	}
