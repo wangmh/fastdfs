@@ -166,6 +166,11 @@ typedef struct
 
 	int store_path_count;  //store base path count of each storage server
 
+	/* subdir_count * subdir_count directories will be auto created
+	   under each store_path (disk) of the storage servers
+	*/
+	int subdir_count_per_path;
+
 	int **last_sync_timestamps;//row for src storage, col for dest storage
 
 	int *ref_count;  //groups referer count

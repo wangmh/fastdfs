@@ -929,6 +929,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer)
 	strcpy(pReqBody->group_name, g_group_name);
 	long2buff(g_server_port, pReqBody->storage_port);
 	long2buff(g_path_count, pReqBody->store_path_count);
+	long2buff(g_subdir_count_per_path, pReqBody->subdir_count_per_path);
 
 	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \
 			sizeof(out_buff), g_network_timeout)) != 0)

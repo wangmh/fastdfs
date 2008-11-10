@@ -115,10 +115,11 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 			}
 
 			++g_dist_path_index_low;
-			if (g_dist_path_index_low > 255)  //rotate
-			{
+			if (g_dist_path_index_low >= g_subdir_count_per_path)
+			{  //rotate
 				g_dist_path_index_high++;
-				if (g_dist_path_index_high > 255)  //rotate
+				if (g_dist_path_index_high >= \
+					g_subdir_count_per_path)  //rotate
 				{
 					g_dist_path_index_high = 0;
 				}
@@ -146,8 +147,10 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 	{
 		n = PJWHash(encoded, *filename_len) % (1 << 16);
 
-		len = sprintf(buff, STORAGE_DATA_DIR_FORMAT"/", (n >> 8) & 0xFF);
-		len += sprintf(buff + len, STORAGE_DATA_DIR_FORMAT"/", n & 0xFF);
+		len = sprintf(buff,STORAGE_DATA_DIR_FORMAT"/",((n >> 8)&0xFF) \
+				% g_subdir_count_per_path);
+		len += sprintf(buff+len, STORAGE_DATA_DIR_FORMAT"/",(n & 0xFF)\
+				 % g_subdir_count_per_path);
 	}
 
 	memcpy(filename, buff, len);

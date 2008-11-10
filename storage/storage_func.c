@@ -33,7 +33,6 @@
 
 #define DATA_DIR_INITED_FILENAME	".data_init_flag"
 #define STORAGE_STAT_FILENAME		"storage_stat.dat"
-#define DATA_DIR_COUNT_PER_PATH		256
 
 #define INIT_ITEM_STORAGE_JOIN_TIME	"storage_join_time"
 #define INIT_ITEM_SYNC_OLD_DONE		"sync_old_done"
@@ -468,7 +467,7 @@ static int storage_make_data_dirs(const char *pBasePath)
 	}
 
 	fprintf(stderr, "data path: %s, mkdir sub dir...\n", data_path);
-	for (i=0; i<DATA_DIR_COUNT_PER_PATH; i++)
+	for (i=0; i<g_subdir_count_per_path; i++)
 	{
 		sprintf(dir_name, STORAGE_DATA_DIR_FORMAT, i);
 
@@ -496,7 +495,7 @@ static int storage_make_data_dirs(const char *pBasePath)
 			return errno != 0 ? errno : ENOENT;
 		}
 
-		for (k=0; k<DATA_DIR_COUNT_PER_PATH; k++)
+		for (k=0; k<g_subdir_count_per_path; k++)
 		{
 			sprintf(sub_name, STORAGE_DATA_DIR_FORMAT, k);
 			if (mkdir(sub_name, 0755) != 0)
@@ -824,6 +823,17 @@ int storage_func_init(const char *filename, \
 			break;
 		}
 
+		g_subdir_count_per_path=iniGetIntValue("subdir_count_per_path",
+			 items, nItemCount, DEFAULT_DATA_DIR_COUNT_PER_PATH);
+		if (g_subdir_count_per_path <= 0 || g_subdir_count_per_path > 256)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"conf file \"%s\", invalid subdir_count: %d", \
+				__LINE__, filename, g_subdir_count_per_path);
+			result = EINVAL;
+			break;
+		}
+
 		if ((result=storage_load_paths(items, nItemCount)) != 0)
 		{
 			break;
@@ -998,7 +1008,7 @@ int storage_func_init(const char *filename, \
 		g_fsync_after_written_bytes = fsync_after_written_bytes;
 
 		logInfo("FastDFS v%d.%d, base_path=%s, store_path_count=%d, " \
-			"group_name=%s, " \
+			"subdir_count_per_path=%d, group_name=%s, " \
 			"network_timeout=%ds, "\
 			"port=%d, bind_addr=%s, " \
 			"max_connections=%d, "    \
@@ -1009,8 +1019,8 @@ int storage_func_init(const char *filename, \
 			"file_distribute_rotate_count=%d, " \
 			"fsync_after_written_bytes=%d", \
 			g_version.major, g_version.minor, \
-			g_base_path, g_path_count, g_group_name, \
-			g_network_timeout, \
+			g_base_path, g_path_count, g_subdir_count_per_path, \
+			g_group_name, g_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_heart_beat_interval, g_stat_report_interval, \
 			g_tracker_server_count, g_sync_wait_usec / 1000, \
