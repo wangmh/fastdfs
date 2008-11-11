@@ -279,6 +279,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			"store_lookup=%d, store_group=%s, " \
 			"store_server=%d, store_path=%d, " \
 			"reserved_storage_space=%dMB, " \
+			"download_server=%d, " \
 			"allow_ip_count=%d", \
 			g_version.major, g_version.minor,  \
 			g_base_path, \
@@ -286,7 +287,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_groups.store_lookup, g_groups.store_group, \
 			g_groups.store_server, g_groups.store_path, \
-			g_storage_reserved_mb, g_allow_ip_count);
+			g_storage_reserved_mb, g_groups.download_server, \
+			g_allow_ip_count);
 		break;
 	}
 
