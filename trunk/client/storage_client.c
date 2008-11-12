@@ -581,6 +581,7 @@ int storage_do_upload_file1(TrackerServerInfo *pTrackerServer, \
 }
 
 /**
+1 byte: store path index
 8 bytes: meta data bytes
 8 bytes: file size
 FDFS_FILE_EXT_NAME_MAX_LEN bytes: file ext name
@@ -630,13 +631,6 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 
 	while (1)
 	{
-	/**
-	1 byte: store path index
-	8 bytes: meta data bytes
-	meta data bytes: each meta data seperated by \x01,
-			 name and value seperated by \x02
-	file size bytes: file content
-	**/
 	if (meta_count <= MAX_STATIC_META_DATA_COUNT)
 	{
 		pMetaData = meta_buff;
