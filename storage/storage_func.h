@@ -30,7 +30,6 @@ int storage_func_destroy();
 
 int storage_write_to_stat_file();
 
-int storage_check_and_make_data_dirs();
 int storage_write_to_sync_ini_file();
 
 int storage_split_filename(const char *logic_filename, \

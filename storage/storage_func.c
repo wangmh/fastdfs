@@ -66,6 +66,7 @@ static int fsync_thread_count = 0;
 static int storage_open_storage_stat();
 static int storage_close_storage_stat();
 static int storage_make_data_dirs(const char *pBasePath);
+static int storage_check_and_make_data_dirs();
 
 static char *get_storage_stat_filename(const void *pArg, char *full_filename)
 {
@@ -331,8 +332,7 @@ int storage_write_to_sync_ini_file()
 	return 0;
 }
 
-
-int storage_check_and_make_data_dirs()
+static int storage_check_and_make_data_dirs()
 {
 	int result;
 	int i;
@@ -1063,6 +1063,14 @@ int storage_func_init(const char *filename, \
 	*/
 
 	iniFreeItems(items);
+
+	if ((result=storage_check_and_make_data_dirs()) != 0)
+	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"storage_check_and_make_data_dirs fail, " \
+			"program exit!", __LINE__);
+		return result;
+	}
 
 	if (result == 0)
 	{
