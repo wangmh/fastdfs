@@ -1695,7 +1695,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, package size " \
-				INT64_PRINTF_FORMAT" is not correct, ",  \
+				INT64_PRINTF_FORMAT" is not correct, " \
 				"expect length: %d", __LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_REPORT, \
 				pClientInfo->ip_addr, nInPackLen, \
@@ -1712,8 +1712,8 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"malloc %d bytes fail, " \
-					"errno: %d, error info: %s", \
-					nInPackLen, errno, strerror(errno));
+					"errno: %d, error info: %s", __LINE__, \
+					(int)nInPackLen, errno,strerror(errno));
 				status = errno != 0 ? errno : ENOMEM;
 				break;
 			}
