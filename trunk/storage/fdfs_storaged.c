@@ -86,15 +86,6 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	if ((result=storage_check_and_make_data_dirs()) != 0)
-	{
-		logCrit("file: "__FILE__", line: %d, " \
-			"storage_check_and_make_data_dirs fail, " \
-			"program exit!", __LINE__);
-		g_continue_flag = false;
-		return result;
-	}
-
 	if ((result=storage_service_init()) != 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
