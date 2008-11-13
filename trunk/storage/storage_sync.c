@@ -1552,6 +1552,8 @@ static void* storage_sync_thread_entrance(void* arg)
 					break;
 				}
 			}
+
+			usleep(g_sync_wait_usec);
 		}
 
 		if (reader.last_write_row_count != reader.scan_row_count)
