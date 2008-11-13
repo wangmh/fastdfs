@@ -1729,6 +1729,8 @@ static int storage_delete_file(StorageClientInfo *pClientInfo, \
 				resp.status = errno != 0 ? errno : EACCES;
 				break;
 			}
+
+			break;  //meta file do not exist, do not log to binlog
 		}
 
 		sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, filename);
