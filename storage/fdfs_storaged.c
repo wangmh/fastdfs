@@ -141,7 +141,6 @@ int main(int argc, char *argv[])
 	if(sigaction(SIGINT, &act, NULL) < 0 || \
 		sigaction(SIGTERM, &act, NULL) < 0 || \
 		sigaction(SIGABRT, &act, NULL) < 0 || \
-		sigaction(SIGSEGV, &act, NULL) < 0 || \
 		sigaction(SIGQUIT, &act, NULL) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -168,6 +167,7 @@ int main(int argc, char *argv[])
 			__LINE__, errno, strerror(errno));
 		return errno;
 	}
+	memset(tids, 0, sizeof(pthread_t) * g_max_connections);
 
 	g_storage_thread_count = g_max_connections;
 	if ((result=create_work_threads(&g_storage_thread_count, \
@@ -195,12 +195,6 @@ int main(int argc, char *argv[])
 
 	if ((result=tracker_report_destroy()) != 0)
 	{
-	}
-
-	if (g_tracker_servers != NULL)
-	{
-		free(g_tracker_servers);
-		g_tracker_servers = NULL;
 	}
 
 	storage_service_destroy();

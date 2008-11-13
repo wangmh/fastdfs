@@ -1168,6 +1168,7 @@ int tracker_report_thread_start()
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
+	memset(report_tids, 0, sizeof(pthread_t) * g_tracker_server_count);
 
 	g_tracker_reporter_count = 0;
 	pServerEnd = g_tracker_servers + g_tracker_server_count;

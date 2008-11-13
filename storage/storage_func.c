@@ -78,8 +78,7 @@ static char *get_storage_stat_filename(const void *pArg, char *full_filename)
 	}
 
 	snprintf(full_filename, MAX_PATH_SIZE, \
-			"%s/data/%s", g_base_path, \
-			STORAGE_STAT_FILENAME);
+			"%s/data/%s", g_base_path, STORAGE_STAT_FILENAME);
 	return full_filename;
 }
 
@@ -1098,6 +1097,12 @@ int storage_func_destroy()
 		}
 
 		g_store_paths = NULL;
+	}
+
+	if (g_tracker_servers != NULL)
+	{
+		free(g_tracker_servers);
+		g_tracker_servers = NULL;
 	}
 
 	return storage_close_storage_stat();
