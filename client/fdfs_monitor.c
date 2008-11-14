@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/types.h>
+#include "sockopt.h"
 #include "fdfs_client.h"
 
 static TrackerServerInfo *pTrackerServer;
@@ -132,6 +133,8 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 	char szSrcUpdTime[32];
 	char szSyncUpdTime[32];
 	char szSyncedTimestamp[32];
+	char szHostname[128];
+	char szHostnamePrompt[128+8];
 	int k;
 
 	printf( "group name = %s\n" \
@@ -168,8 +171,18 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 	{
 		pStorageStat = &(pStorage->stat);
 
+		getHostnameByIp(pStorage->ip_addr, szHostname, sizeof(szHostname));
+		if (*szHostname != '\0')
+		{
+			sprintf(szHostnamePrompt, " (%s)", szHostname);
+		}
+		else
+		{
+			*szHostnamePrompt = '\0';
+		}
+
 		printf( "\tHost %d:\n" \
-			"\t\tip_addr = %s  %s\n" \
+			"\t\tip_addr = %s%s  %s\n" \
 			"\t\ttotal storage = %dGB\n" \
 			"\t\tfree storage = %dGB\n" \
 			"\t\ttotal_upload_count = "INT64_PRINTF_FORMAT"\n"   \
@@ -185,7 +198,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tlast_source_update = %s\n" \
 			"\t\tlast_sync_update = %s\n"   \
 			"\t\tlast_synced_timestamp= %s\n",  \
-			++k, pStorage->ip_addr, \
+			++k, pStorage->ip_addr, szHostnamePrompt, \
 			get_storage_status_caption(pStorage->status), \
 			pStorage->total_mb / 1024, \
 			pStorage->free_mb / 1024,  \
