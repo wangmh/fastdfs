@@ -38,7 +38,9 @@ int tcpsetnonblockopt(int fd, const int timeout);
 
 in_addr_t getIpaddr(getnamefunc getname, int sock, \
 		char *buff, const int bufferSize);
+char *getHostnameByIp(const char *szIpAddr, char *buff, const int bufferSize);
 in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize);
+
 int socketServer(const char *bind_ipaddr, const int port, int *err_no);
 
 #define tcprecvdata(sock, data, size, timeout) \

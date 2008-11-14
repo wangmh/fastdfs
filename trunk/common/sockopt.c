@@ -333,6 +333,30 @@ in_addr_t getIpaddr(getnamefunc getname, int sock, \
 	return addr.sin_addr.s_addr;
 }
 
+char *getHostnameByIp(const char *szIpAddr, char *buff, const int bufferSize)
+{
+	struct in_addr ip_addr;
+	struct hostent *ent;
+
+	if (inet_pton(AF_INET, szIpAddr, &ip_addr) != 1)
+	{
+		*buff = '\0';
+		return buff;
+	}
+
+	ent = gethostbyaddr(&ip_addr, sizeof(ip_addr), AF_INET);
+	if (ent == NULL || ent->h_name == NULL)
+	{
+		*buff = '\0';
+	}
+	else
+	{
+		snprintf(buff, bufferSize, "%s", ent->h_name);
+	}
+
+	return buff;
+}
+
 in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize)
 {
     	struct in_addr ip_addr;
