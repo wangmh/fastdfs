@@ -1686,7 +1686,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 	TrackerStatReportReqBody *pStatBuff;
 	int64_t *path_total_mbs;
 	int64_t *path_free_mbs;
-	int64_t free_mb;
+	int64_t old_free_mb;
 
 	pBuff = in_buff;
 	while (1)
@@ -1732,10 +1732,11 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
+		old_free_mb = pClientInfo->pStorage->free_mb;
 		path_total_mbs = pClientInfo->pStorage->path_total_mbs;
 		path_free_mbs = pClientInfo->pStorage->path_free_mbs;
 		pClientInfo->pStorage->total_mb = 0;
-		free_mb = 0;
+		pClientInfo->pStorage->free_mb = 0;
 
 		pStatBuff = (TrackerStatReportReqBody *)pBuff;
 		for (i=0; i<pClientInfo->pGroup->store_path_count; i++)
@@ -1744,7 +1745,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 			path_free_mbs[i] = buff2long(pStatBuff->sz_free_mb);
 
 			pClientInfo->pStorage->total_mb += path_total_mbs[i];
-			free_mb += path_free_mbs[i];
+			pClientInfo->pStorage->free_mb += path_free_mbs[i];
 
 			if (g_groups.store_path == FDFS_STORE_PATH_LOAD_BALANCE
 				&& path_free_mbs[i] > path_free_mbs[ \
@@ -1757,16 +1758,16 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 		}
 
 		if ((pClientInfo->pGroup->free_mb == 0) ||
-			(free_mb < pClientInfo->pGroup->free_mb))
+			(pClientInfo->pStorage->free_mb < \
+				pClientInfo->pGroup->free_mb))
 		{
 			pClientInfo->pGroup->free_mb = \
-				free_mb;
+				pClientInfo->pStorage->free_mb;
 		}
-		else if (free_mb > pClientInfo->pStorage->free_mb)
+		else if (pClientInfo->pStorage->free_mb > old_free_mb)
 		{
 			tracker_find_min_free_space(pClientInfo->pGroup);
 		}
-		pClientInfo->pStorage->free_mb = free_mb;
 
 		if (g_groups.store_lookup == \
 			FDFS_STORE_LOOKUP_LOAD_BALANCE)
