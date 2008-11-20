@@ -1,5 +1,5 @@
 
-Version 1.13  2008-11
+Version 1.13  2008-11-20
   * re-calculate group 's free space when one of it's storage servers' 
     free space increase
 
