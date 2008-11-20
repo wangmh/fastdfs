@@ -1757,11 +1757,10 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 		}
 
 		if ((pClientInfo->pGroup->free_mb == 0) ||
-			(pClientInfo->pStorage->free_mb < \
-				pClientInfo->pGroup->free_mb))
+			(free_mb < pClientInfo->pGroup->free_mb))
 		{
 			pClientInfo->pGroup->free_mb = \
-				pClientInfo->pStorage->free_mb;
+				free_mb;
 		}
 		else if (free_mb > pClientInfo->pStorage->free_mb)
 		{
