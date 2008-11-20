@@ -1,4 +1,8 @@
 
+Version 1.13  2008-11
+  * re-calculate group 's free space when one of it's storage servers' 
+    free space increase
+
 Version 1.12  2008-11-12
   * storage server support multi path (mount point)
   * upload file support file ext name, add source storage ip address to filename
