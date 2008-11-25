@@ -47,6 +47,7 @@ install:
 	cp -f $(ALL_PRGS) /usr/local/bin
 	cp -f $(ALL_LIBS) /usr/local/lib/
 	cp -f $(HEADER_FILES) /usr/local/include/
-	ln -s /usr/local/lib/libfdfsclient.so.1 /usr/local/lib/libfdfsclient.so
+	ln -fs /usr/local/lib/libfdfsclient.so.1 /usr/local/lib/libfdfsclient.so
+	ln -fs /usr/local/lib/libfdfsclient.so.1 /usr/lib/libfdfsclient.so
 clean:
 	rm -f $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS)

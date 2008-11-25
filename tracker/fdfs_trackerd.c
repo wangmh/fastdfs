@@ -31,7 +31,7 @@
 #include "tracker_global.h"
 #include "tracker_func.h"
 
-bool bReloadFlag = false;
+bool bTerminateFlag = false;
 
 void sigQuitHandler(int sig);
 void sigHupHandler(int sig);
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 		return result;
 	}
 	
-	daemon_init(false);
+	daemon_init(true);
 	umask(0);
 	
 	if ((result=init_pthread_lock( \
@@ -150,12 +150,18 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
+	bTerminateFlag = false;
 	while (g_continue_flag)
 	{
+		if (bTerminateFlag)
+		{
+			kill_work_threads(tids, g_max_connections);
+			g_continue_flag = false;
+		}
+
 		sleep(1);
 	}
 
-	kill_work_threads(tids, g_max_connections);
 	while (g_tracker_thread_count != 0)
 	{
 		sleep(1);
@@ -174,9 +180,9 @@ int main(int argc, char *argv[])
 
 void sigQuitHandler(int sig)
 {
-	if (g_continue_flag)
+	if (!bTerminateFlag)
 	{
-		g_continue_flag = false;
+		bTerminateFlag = true;
 		logCrit("file: "__FILE__", line: %d, " \
 			"catch signal %d, program exiting...", \
 			__LINE__, sig);
@@ -185,7 +191,6 @@ void sigQuitHandler(int sig)
 
 void sigHupHandler(int sig)
 {
-	bReloadFlag = true;
 }
 
 void sigUsrHandler(int sig)
