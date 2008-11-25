@@ -35,6 +35,12 @@ typedef struct
 	int last_sync_src_timestamp;
 } FDFSStorageServer;
 
+typedef struct
+{
+	byte hour;
+	byte minute;
+} FDFSTimeInfo;
+
 extern char **g_store_paths; //file store paths
 extern int g_path_count;   //store path count
 
@@ -61,6 +67,10 @@ extern int g_tracker_reporter_count;
 extern int g_heart_beat_interval;
 extern int g_stat_report_interval;
 extern int g_sync_wait_usec;
+extern int g_sync_interval; //unit: milliseconds
+extern FDFSTimeInfo g_sync_start_time;
+extern FDFSTimeInfo g_sync_end_time;
+extern bool g_sync_part_time; //true for part time, false for all time of a day
 
 extern FDFSStorageStat g_storage_stat;
 extern int g_stat_change_count;

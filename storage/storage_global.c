@@ -35,7 +35,13 @@ char g_group_name[FDFS_GROUP_NAME_MAX_LEN + 1] = {0};
 int g_tracker_reporter_count = 0;
 int g_heart_beat_interval  = STORAGE_BEAT_DEF_INTERVAL;
 int g_stat_report_interval = STORAGE_REPORT_DEF_INTERVAL;
+
 int g_sync_wait_usec = STORAGE_DEF_SYNC_WAIT_MSEC;
+int g_sync_interval = 0; //unit: milliseconds
+FDFSTimeInfo g_sync_start_time = {0, 0};
+FDFSTimeInfo g_sync_end_time = {23, 59};
+bool g_sync_part_time = false;
+
 FDFSStorageStat g_storage_stat;
 int g_stat_change_count = 1;
 int g_sync_change_count = 0;
