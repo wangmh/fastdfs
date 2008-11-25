@@ -1312,6 +1312,39 @@ static int storage_unlink_mark_file(BinLogReader *pReader)
 	return 0;
 }
 
+static void storage_sync_get_start_end_times(time_t current_time, \
+	const FDFSTimeInfo *pStartTime, const FDFSTimeInfo *pEndTime, \
+	time_t *start_time, time_t *end_time)
+{
+	struct tm tm_time;
+	//char buff[32];
+
+	localtime_r(&current_time, &tm_time);
+	tm_time.tm_sec = 0;
+
+	/*
+	strftime(buff, sizeof(buff), "%Y-%m-%d %H:%M:%S", &tm_time);
+	//printf("current time: %s\n", buff);
+	*/
+
+	tm_time.tm_hour = pStartTime->hour;
+	tm_time.tm_min = pStartTime->minute;
+	*start_time = mktime(&tm_time);
+
+	//end time < start time
+	if (pEndTime->hour < pStartTime->hour || (pEndTime->hour == \
+		pStartTime->hour && pEndTime->minute < pStartTime->minute))
+	{
+		current_time += 24 * 3600;
+		localtime_r(&current_time, &tm_time);
+		tm_time.tm_sec = 0;
+	}
+
+	tm_time.tm_hour = pEndTime->hour;
+	tm_time.tm_min = pEndTime->minute;
+	*end_time = mktime(&tm_time);
+}
+
 static void* storage_sync_thread_entrance(void* arg)
 {
 	FDFSStorageBrief *pStorage;
@@ -1326,10 +1359,17 @@ static void* storage_sync_thread_entrance(void* arg)
 	int record_len;
 	int previousCode;
 	int nContinuousFail;
+	time_t current_time;
+	time_t start_time;
+	time_t end_time;
 	time_t last_check_sync_cache_time;
 	
 	memset(local_ip_addr, 0, sizeof(local_ip_addr));
 	memset(&reader, 0, sizeof(reader));
+
+	current_time =  time(NULL);
+	start_time = 0;
+	end_time = 0;
 
 	pStorage = (FDFSStorageBrief *)arg;
 
@@ -1361,6 +1401,22 @@ static void* storage_sync_thread_entrance(void* arg)
 			sleep(1);
 		}
 
+		if (g_sync_part_time)
+		{
+			current_time = time(NULL);
+			storage_sync_get_start_end_times(current_time, \
+				&g_sync_end_time, &g_sync_start_time, \
+				&start_time, &end_time);
+			start_time += 60;
+			end_time -= 60;
+			while (g_continue_flag && (current_time >= start_time \
+					&& current_time <= end_time))
+			{
+				current_time = time(NULL);
+				sleep(1);
+			}
+		}
+ 
 		previousCode = 0;
 		nContinuousFail = 0;
 		conn_result = 0;
@@ -1473,11 +1529,26 @@ static void* storage_sync_thread_entrance(void* arg)
 			}
 		}
 
+		if (g_sync_part_time)
+		{
+			current_time = time(NULL);
+			storage_sync_get_start_end_times(current_time, \
+				&g_sync_start_time, &g_sync_end_time, \
+				&start_time, &end_time);
+		}
+
 		sync_result = 0;
-		while (g_continue_flag && \
+		while (g_continue_flag && (!g_sync_part_time || \
+			(current_time >= start_time && \
+			current_time <= end_time)) && \
 			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
 			pStorage->status != FDFS_STORAGE_STATUS_NONE)
 		{
+			if (g_sync_part_time)
+			{
+				current_time = time(NULL);
+			}
+
 			read_result = storage_binlog_read(&reader, \
 					&record, &record_len);
 			if (read_result == ENOENT)
@@ -1508,7 +1579,7 @@ static void* storage_sync_thread_entrance(void* arg)
 				}
 
 				if (binlog_write_cache_len > 0 && \
-					time(NULL) - last_check_sync_cache_time >= 60)
+				    time(NULL)-last_check_sync_cache_time >= 60)
 				{
 					last_check_sync_cache_time = time(NULL);
 					storage_binlog_fsync(true);
@@ -1553,7 +1624,10 @@ static void* storage_sync_thread_entrance(void* arg)
 				}
 			}
 
-			usleep(g_sync_wait_usec);
+			if (g_sync_interval > 0)
+			{
+				usleep(g_sync_interval);
+			}
 		}
 
 		if (reader.last_write_row_count != reader.scan_row_count)

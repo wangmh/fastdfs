@@ -799,6 +799,44 @@ int storage_load_paths(IniItemInfo *items, const int nItemCount)
 	return 0;
 }
 
+static int storage_get_time(IniItemInfo *items, const int nItemCount, \
+		const char *item_name, FDFSTimeInfo *pTimeInfo, \
+		const byte default_hour, const byte default_minute)
+{
+	char *pValue;
+	int hour;
+	int minute;
+
+	pValue = iniGetStrValue(item_name, items, nItemCount);
+	if (pValue == NULL)
+	{
+		pTimeInfo->hour = default_hour;
+		pTimeInfo->minute = default_minute;
+		return 0;
+	}
+
+	if (sscanf(pValue, "%d:%d", &hour, &minute) != 2)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"item \"%s\" 's value \"%s\" is not an valid time", \
+			__LINE__, item_name, pValue);
+		return EINVAL;
+	}
+
+	if ((hour < 0 || hour > 23) || (minute < 0 || minute > 59))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"item \"%s\" 's value \"%s\" is not an valid time", \
+			__LINE__, item_name, pValue);
+		return EINVAL;
+	}
+
+	pTimeInfo->hour = (byte)hour;
+	pTimeInfo->minute = (byte)minute;
+
+	return 0;
+}
+
 int storage_func_init(const char *filename, \
 		char *bind_addr, const int addr_size)
 {
@@ -841,7 +879,8 @@ int storage_func_init(const char *filename, \
 
 		g_subdir_count_per_path=iniGetIntValue("subdir_count_per_path",
 			 items, nItemCount, DEFAULT_DATA_DIR_COUNT_PER_PATH);
-		if (g_subdir_count_per_path <= 0 || g_subdir_count_per_path > 256)
+		if (g_subdir_count_per_path <= 0 || \
+		    g_subdir_count_per_path > 256)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"conf file \"%s\", invalid subdir_count: %d", \
@@ -972,6 +1011,30 @@ int storage_func_init(const char *filename, \
 		}
 		g_sync_wait_usec *= 1000;
 
+		g_sync_interval = iniGetIntValue("sync_interval",\
+			 items, nItemCount, 0);
+		if (g_sync_interval < 0)
+		{
+			g_sync_interval = 0;
+		}
+		g_sync_interval *= 1000;
+
+		if ((result=storage_get_time(items, nItemCount, \
+			"sync_start_time", &g_sync_start_time, 0, 0)) != 0)
+		{
+			break;
+		}
+		if ((result=storage_get_time(items, nItemCount, \
+			"sync_end_time", &g_sync_end_time, 23, 59)) != 0)
+		{
+			break;
+		}
+
+		g_sync_part_time = !((g_sync_start_time.hour == 0 && \
+				g_sync_start_time.minute == 0) && \
+				(g_sync_end_time.hour == 23 && \
+				g_sync_end_time.minute == 59));
+
 		g_max_connections = iniGetIntValue("max_connections", \
 				items, nItemCount, DEFAULT_MAX_CONNECTONS);
 		if (g_max_connections <= 0)
@@ -1030,7 +1093,9 @@ int storage_func_init(const char *filename, \
 			"max_connections=%d, "    \
 			"heart_beat_interval=%ds, " \
 			"stat_report_interval=%ds, tracker_server_count=%d, " \
-			"sync_wait_msec=%dms, allow_ip_count=%d, " \
+			"sync_wait_msec=%dms, sync_interval=%dms, " \
+			"sync_start_time=%02d:%02d, sync_end_time: %02d:%02d, "\
+			"allow_ip_count=%d, " \
 			"file_distribute_path_mode=%d, " \
 			"file_distribute_rotate_count=%d, " \
 			"fsync_after_written_bytes=%d", \
@@ -1040,6 +1105,9 @@ int storage_func_init(const char *filename, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_heart_beat_interval, g_stat_report_interval, \
 			g_tracker_server_count, g_sync_wait_usec / 1000, \
+			g_sync_interval / 1000, \
+			g_sync_start_time.hour, g_sync_start_time.minute, \
+			g_sync_end_time.hour, g_sync_end_time.minute, \
 			g_allow_ip_count, g_file_distribute_path_mode, \
 			g_file_distribute_rotate_count, \
 			g_fsync_after_written_bytes);
