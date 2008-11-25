@@ -34,7 +34,7 @@
 #include "storage_service.h"
 #include "fdfs_base64.h"
 
-bool bReloadFlag = false;
+bool bTerminateFlag = false;
 
 static void sigQuitHandler(int sig);
 static void sigHupHandler(int sig);
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	daemon_init(false);
+	daemon_init(true);
 	umask(0);
 	
 	memset(&act, 0, sizeof(act));
@@ -177,14 +177,20 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
+	bTerminateFlag = false;
 	while (g_continue_flag)
 	{
+		if (bTerminateFlag)
+		{
+			kill_tracker_report_threads();
+			kill_storage_sync_threads();
+			kill_work_threads(tids, g_max_connections);
+
+			g_continue_flag = false;
+		}
+
 		sleep(1);
 	}
-
-	kill_tracker_report_threads();
-	kill_storage_sync_threads();
-	kill_work_threads(tids, g_max_connections);
 
 	while (g_storage_thread_count != 0 || \
 		g_tracker_reporter_count > 0 || \
@@ -193,10 +199,7 @@ int main(int argc, char *argv[])
 		sleep(1);
 	}
 
-	if ((result=tracker_report_destroy()) != 0)
-	{
-	}
-
+	tracker_report_destroy();
 	storage_service_destroy();
 	storage_sync_destroy();
 	storage_func_destroy();
@@ -210,9 +213,9 @@ int main(int argc, char *argv[])
 
 static void sigQuitHandler(int sig)
 {
-	if (g_continue_flag)
+	if (!bTerminateFlag)
 	{
-		g_continue_flag = false;
+		bTerminateFlag = true;
 		logCrit("file: "__FILE__", line: %d, " \
 			"catch signal %d, program exiting...", \
 			__LINE__, sig);
@@ -221,7 +224,6 @@ static void sigQuitHandler(int sig)
 
 static void sigHupHandler(int sig)
 {
-	bReloadFlag = true;
 }
 
 static void sigUsrHandler(int sig)

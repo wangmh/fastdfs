@@ -322,7 +322,7 @@ void daemon_init(bool bCloseFiles)
 	
 	if (bCloseFiles)
 	{
-		for(i=0;i<64;i++)
+		for(i=0; i<=2; i++)
 		{
 			close(i);
 		}
