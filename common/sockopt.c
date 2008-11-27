@@ -19,13 +19,13 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <fcntl.h>
 
 #ifdef USE_SENDFILE
 
 #ifdef OS_LINUX
-#include <netinet/tcp.h>
 #include <sys/sendfile.h>
 #else
 #ifdef OS_FREEBSD
@@ -795,6 +795,17 @@ int tcpsetnonblockopt(int fd, const int timeout)
 	printf("recv buff size: %d\n", bytes);
 	}
 	*/
+
+	flags = 1;
+	result = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, \
+			(char *)&flags, sizeof(flags));
+	if (result < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
 
 	flags = fcntl(fd, F_GETFL, 0);
 	if (flags < 0)
