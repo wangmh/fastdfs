@@ -378,7 +378,11 @@ static int open_next_writable_binlog()
 {
 	char full_filename[MAX_PATH_SIZE];
 
-	storage_sync_destroy();
+	if (g_binlog_fd >= 0)
+	{
+		close(g_binlog_fd);
+		g_binlog_fd = -1;
+	}
 
 	get_writable_binlog_filename(full_filename);
 	if (fileExists(full_filename))
@@ -526,6 +530,7 @@ int storage_sync_init()
 int storage_sync_destroy()
 {
 	int result;
+
 	if (g_binlog_fd >= 0)
 	{
 		storage_binlog_fsync(true);
