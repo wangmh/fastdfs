@@ -48,6 +48,8 @@ void logNotice(const char* format, ...);
 void logInfo(const char* format, ...);
 void logDebug(const char* format, ...);
 
+void log_sync_func(void *args);
+
 #endif
 
 #ifdef __cplusplus
