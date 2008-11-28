@@ -8,7 +8,7 @@ TARGET_PATH = /usr/local/bin
 
 COMMON_LIB =
 SHARED_OBJS = hash.o chain.o shared_func.o ini_file_reader.o \
-              logger.o sockopt.o fdfs_global.o fdfs_base64.o
+              logger.o sockopt.o fdfs_global.o fdfs_base64.o sched_thread.o
 ALL_OBJS = $(SHARED_OBJS)
 
 ALL_PRGS = 

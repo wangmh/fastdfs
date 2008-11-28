@@ -27,6 +27,10 @@
 int g_log_level = LOG_INFO;
 int g_log_fd = STDERR_FILENO;
 static pthread_mutex_t log_thread_lock;
+static char log_buff[64 * 1024];
+static char *pcurrent_log_buff = log_buff;
+
+static void log_fsync(const bool bNeedLock);
 
 static int check_and_mk_log_dir()
 {
@@ -87,6 +91,8 @@ void log_destory()
 {
 	if (g_log_fd >= 0 && g_log_fd != STDERR_FILENO)
 	{
+		log_fsync(true);
+
 		close(g_log_fd);
 		g_log_fd = STDERR_FILENO;
 
@@ -94,23 +100,23 @@ void log_destory()
 	}
 }
 
-static void doLog(const char *caption, const char* text, const int text_len)
+void log_sync_func(void *args)
 {
-	time_t t;
-	struct tm tm;
-	char buff[64];
-	int buff_len;
+	log_fsync(true);
+}
+
+static void log_fsync(const bool bNeedLock)
+{
 	int result;
-	//struct flock lock;
+	int write_bytes;
 
-	t = time(NULL);
-	localtime_r(&t, &tm);
-	buff_len = snprintf(buff, sizeof(buff), \
-			"[%04d-%02d-%02d %02d:%02d:%02d] %s - ", \
-			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
-			tm.tm_hour, tm.tm_min, tm.tm_sec, caption);
+	write_bytes = pcurrent_log_buff - log_buff;
+	if (write_bytes == 0)
+	{
+		return;
+	}
 
-	if ((result=pthread_mutex_lock(&log_thread_lock)) != 0)
+	if (bNeedLock && (result=pthread_mutex_lock(&log_thread_lock)) != 0)
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -118,37 +124,8 @@ static void doLog(const char *caption, const char* text, const int text_len)
 			__LINE__, result, strerror(result));
 	}
 
-	/*
-	if (g_log_fd != STDERR_FILENO)
-	{
-		lock.l_type = F_WRLCK;
-		lock.l_whence = SEEK_SET;
-		lock.l_start = 0;
-		lock.l_len = 0;
-		if (fcntl(g_log_fd, F_SETLKW, &lock) != 0)
-		{
-			fprintf(stderr, "file: "__FILE__", line: %d, " \
-				"call fcntl fail, errno: %d, error info: %s\n",\
-				 __LINE__, errno, strerror(errno));
-		}
-	}
-	*/
-
-	if (write(g_log_fd, buff, buff_len) != buff_len)
-	{
-		fprintf(stderr, "file: "__FILE__", line: %d, " \
-			"call write fail, errno: %d, error info: %s\n",\
-			 __LINE__, errno, strerror(errno));
-	}
-
-	if (write(g_log_fd, text, text_len) != text_len)
-	{
-		fprintf(stderr, "file: "__FILE__", line: %d, " \
-			"call write fail, errno: %d, error info: %s\n",\
-			 __LINE__, errno, strerror(errno));
-	}
-
-	if (write(g_log_fd, "\n", 1) != 1)
+	write_bytes = pcurrent_log_buff - log_buff;
+	if (write(g_log_fd, log_buff, write_bytes) != write_bytes)
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call write fail, errno: %d, error info: %s\n",\
@@ -163,11 +140,62 @@ static void doLog(const char *caption, const char* text, const int text_len)
 				"call fsync fail, errno: %d, error info: %s\n",\
 				 __LINE__, errno, strerror(errno));
 		}
+	}
 
-		/*
-		lock.l_type = F_UNLCK;
-		fcntl(g_log_fd, F_SETLKW, &lock);
-		*/
+	pcurrent_log_buff = log_buff;
+	if (bNeedLock && (result=pthread_mutex_unlock(&log_thread_lock)) != 0)
+	{
+		fprintf(stderr, "file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+}
+
+static void doLog(const char *caption, const char* text, const int text_len, \
+		const bool bNeedSync)
+{
+	time_t t;
+	struct tm tm;
+	int buff_len;
+	int result;
+
+	t = time(NULL);
+	localtime_r(&t, &tm);
+	if ((result=pthread_mutex_lock(&log_thread_lock)) != 0)
+	{
+		fprintf(stderr, "file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	if (text_len + 64 > sizeof(log_buff))
+	{
+		fprintf(stderr, "file: "__FILE__", line: %d, " \
+			"log buff size: %d < log text length: %d ", \
+			__LINE__, sizeof(log_buff), text_len + 64);
+		pthread_mutex_unlock(&log_thread_lock);
+		return;
+	}
+
+	if ((pcurrent_log_buff - log_buff) + text_len + 64 > sizeof(log_buff))
+	{
+		log_fsync(false);
+	}
+
+	buff_len = sprintf(pcurrent_log_buff, \
+			"[%04d-%02d-%02d %02d:%02d:%02d] %s - ", \
+			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
+			tm.tm_hour, tm.tm_min, tm.tm_sec, caption);
+	pcurrent_log_buff += buff_len;
+	memcpy(pcurrent_log_buff, text, text_len);
+	pcurrent_log_buff += text_len;
+	*pcurrent_log_buff++ = '\n';
+
+	if (bNeedSync)
+	{
+		log_fsync(false);
 	}
 
 	if ((result=pthread_mutex_unlock(&log_thread_lock)) != 0)
@@ -181,6 +209,7 @@ static void doLog(const char *caption, const char* text, const int text_len)
 
 void log_it(const int priority, const char* format, ...)
 {
+	bool bNeedSync;
 	char text[LINE_MAX];
 	char *caption;
 	int len;
@@ -193,41 +222,50 @@ void log_it(const int priority, const char* format, ...)
 	switch(priority)
 	{
 		case LOG_DEBUG:
+			bNeedSync = true;
 			caption = "DEBUG";
 			break;
 		case LOG_INFO:
+			bNeedSync = true;
 			caption = "INFO";
 			break;
 		case LOG_NOTICE:
+			bNeedSync = false;
 			caption = "NOTICE";
 			break;
 		case LOG_WARNING:
+			bNeedSync = false;
 			caption = "WARNING";
 			break;
 		case LOG_ERR:
+			bNeedSync = false;
 			caption = "ERROR";
 			break;
 		case LOG_CRIT:
+			bNeedSync = true;
 			caption = "CRIT";
 			break;
 		case LOG_ALERT:
+			bNeedSync = true;
 			caption = "ALERT";
 			break;
 		case LOG_EMERG:
+			bNeedSync = true;
 			caption = "EMERG";
 			break;
 		default:
+			bNeedSync = false;
 			caption = "UNKOWN";
 			break;
 	}
 
-	doLog(caption, text, len);
+	doLog(caption, text, len, bNeedSync);
 }
 
 
 #ifndef LOG_FORMAT_CHECK
 
-#define _DO_LOG(priority, caption) \
+#define _DO_LOG(priority, caption, bNeedSync) \
 	char text[LINE_MAX]; \
 	int len; \
 \
@@ -243,47 +281,47 @@ void log_it(const int priority, const char* format, ...)
 	va_end(ap); \
 	} \
 \
-	doLog(caption, text, len); \
+	doLog(caption, text, len, bNeedSync); \
 
 
 void logEmerg(const char* format, ...)
 {
-	_DO_LOG(LOG_EMERG, "EMERG")
+	_DO_LOG(LOG_EMERG, "EMERG", true)
 }
 
 void logAlert(const char* format, ...)
 {
-	_DO_LOG(LOG_ALERT, "ALERT")
+	_DO_LOG(LOG_ALERT, "ALERT", true)
 }
 
 void logCrit(const char* format, ...)
 {
-	_DO_LOG(LOG_CRIT, "CRIT")
+	_DO_LOG(LOG_CRIT, "CRIT", true)
 }
 
 void logError(const char *format, ...)
 {
-	_DO_LOG(LOG_ERR, "ERROR")
+	_DO_LOG(LOG_ERR, "ERROR", false)
 }
 
 void logWarning(const char *format, ...)
 {
-	_DO_LOG(LOG_WARNING, "WARNING")
+	_DO_LOG(LOG_WARNING, "WARNING", false)
 }
 
 void logNotice(const char* format, ...)
 {
-	_DO_LOG(LOG_NOTICE, "NOTICE")
+	_DO_LOG(LOG_NOTICE, "NOTICE", false)
 }
 
 void logInfo(const char *format, ...)
 {
-	_DO_LOG(LOG_INFO, "INFO")
+	_DO_LOG(LOG_INFO, "INFO", true)
 }
 
 void logDebug(const char* format, ...)
 {
-	_DO_LOG(LOG_DEBUG, "DEBUG")
+	_DO_LOG(LOG_DEBUG, "DEBUG", true)
 }
 
 #endif
