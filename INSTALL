@@ -10,7 +10,7 @@ Chinese language: http://www.csource.org/
 #step 1. download FastDFS source package and unpack it
 tar xzf FastDFS_v1.x.tar.gz
 #for example:
-tar xzf FastDFS_v1.12.tar.gz
+tar xzf FastDFS_v1.13.tar.gz
 
 #step 2. enter the FastDFS dir
 cd FastDFS
@@ -190,27 +190,29 @@ allow_hosts=*
 
 Item detail
 1. common items
---------------------------------------------
-|  item name     |  type  | default | Must |
---------------------------------------------
-| base_path      | string |         |  Y   |
---------------------------------------------
-| disabled       | boolean| false   |  N   |
---------------------------------------------
-| bind_addr      | string |         |  N   |
---------------------------------------------
-| network_timeout| int    | 30(s)   |  N   |
---------------------------------------------
-| max_connections| int    | 256     |  N   |
---------------------------------------------
-| log_level      | string | info    |  N   |
---------------------------------------------
-| run_by_group   | string |         |  N   |
---------------------------------------------
-| run_by_user    | string |         |  N   |
---------------------------------------------
-| allow_hosts    | string |   *     |  N   |
---------------------------------------------
+---------------------------------------------------
+|  item name            |  type  | default | Must |
+---------------------------------------------------
+| base_path             | string |         |  Y   |
+---------------------------------------------------
+| disabled              | boolean| false   |  N   |
+---------------------------------------------------
+| bind_addr             | string |         |  N   |
+---------------------------------------------------
+| network_timeout       | int    | 30(s)   |  N   |
+---------------------------------------------------
+| max_connections       | int    | 256     |  N   |
+---------------------------------------------------
+| log_level             | string | info    |  N   |
+---------------------------------------------------
+| run_by_group          | string |         |  N   |
+---------------------------------------------------
+| run_by_user           | string |         |  N   |
+---------------------------------------------------
+| allow_hosts           | string |   *     |  N   |
+---------------------------------------------------
+| sync_log_buff_interval| string |  10(s)  |  N   |
+---------------------------------------------------
 memo:
    * base_path is the base path of sub dirs: 
      data and logs. base_path must exist and it's sub dirs will 
