@@ -23,6 +23,7 @@ int log_init(const char *filename_prefix);
 void log_destory();
 
 void log_it(const int priority, const char* format, ...);
+void log_sync_func(void *args);
 
 //#define LOG_FORMAT_CHECK
 
@@ -47,8 +48,6 @@ void logWarning(const char* format, ...);
 void logNotice(const char* format, ...);
 void logInfo(const char* format, ...);
 void logDebug(const char* format, ...);
-
-void log_sync_func(void *args);
 
 #endif
 
