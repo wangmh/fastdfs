@@ -33,12 +33,15 @@
 #include "storage_sync.h"
 #include "storage_service.h"
 #include "fdfs_base64.h"
+#include "sched_thread.h"
 
 bool bTerminateFlag = false;
 
 static void sigQuitHandler(int sig);
 static void sigHupHandler(int sig);
 static void sigUsrHandler(int sig);
+
+#define SCHEDULE_ENTRIES_COUNT 1
 
 int main(int argc, char *argv[])
 {
@@ -48,7 +51,10 @@ int main(int argc, char *argv[])
 	int result;
 	int sock;
 	pthread_t *tids;
+	pthread_t schedule_tid;
 	struct sigaction act;
+	ScheduleEntry scheduleEntries[SCHEDULE_ENTRIES_COUNT];
+	ScheduleArray scheduleArray;
 
 	if (argc < 2)
 	{
@@ -159,6 +165,18 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
+	scheduleArray.entries = scheduleEntries;
+	scheduleArray.count = SCHEDULE_ENTRIES_COUNT;
+
+	memset(scheduleEntries, 0, sizeof(scheduleEntries));
+	scheduleEntries[0].interval = g_sync_log_buff_interval;
+	scheduleEntries[0].task_func = log_sync_func;
+	scheduleEntries[0].func_args = NULL;
+	if ((result=sched_start(&scheduleArray, &schedule_tid)) != 0)
+	{
+		return result;
+	}
+
 	tids = (pthread_t *)malloc(sizeof(pthread_t) * g_max_connections);
 	if (tids == NULL)
 	{
@@ -182,6 +200,7 @@ int main(int argc, char *argv[])
 	{
 		if (bTerminateFlag)
 		{
+			pthread_kill(schedule_tid, SIGINT);
 			kill_tracker_report_threads();
 			kill_storage_sync_threads();
 			kill_work_threads(tids, g_max_connections);
@@ -207,6 +226,7 @@ int main(int argc, char *argv[])
 	free(tids);
 
 	logInfo("exit nomally.\n");
+	log_destory();
 	
 	return 0;
 }

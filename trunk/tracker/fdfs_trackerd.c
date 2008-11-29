@@ -139,6 +139,18 @@ int main(int argc, char *argv[])
 		return errno;
 	}
 
+	scheduleArray.entries = scheduleEntries;
+	scheduleArray.count = SCHEDULE_ENTRIES_COUNT;
+
+	memset(scheduleEntries, 0, sizeof(scheduleEntries));
+	scheduleEntries[0].interval = g_sync_log_buff_interval;
+	scheduleEntries[0].task_func = log_sync_func;
+	scheduleEntries[0].func_args = NULL;
+	if ((result=sched_start(&scheduleArray, &schedule_tid)) != 0)
+	{
+		return result;
+	}
+
 	tids = (pthread_t *)malloc(sizeof(pthread_t) * g_max_connections);
 	if (tids == NULL)
 	{
@@ -146,20 +158,6 @@ int main(int argc, char *argv[])
 			"malloc fail, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno;
-	}
-
-	scheduleArray.entries = scheduleEntries;
-	scheduleArray.count = SCHEDULE_ENTRIES_COUNT;
-
-	memset(scheduleEntries, 0, sizeof(scheduleEntries));
-	scheduleEntries[0].interval = 30;
-	scheduleEntries[0].task_func = log_sync_func;
-	scheduleEntries[0].func_args = NULL;
-
-	if ((result=sched_start(&scheduleArray, &schedule_tid)) != 0)
-	{
-		free(tids);
-		return result;
 	}
 
 	g_tracker_thread_count = g_max_connections;
