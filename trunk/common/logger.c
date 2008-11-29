@@ -19,7 +19,6 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <pthread.h>
-#include "common_define.h"
 #include "fdfs_global.h"
 #include "shared_func.h"
 #include "logger.h"
@@ -27,6 +26,7 @@
 int g_log_level = LOG_INFO;
 int g_log_fd = STDERR_FILENO;
 static pthread_mutex_t log_thread_lock;
+static bool log_to_cache = false;
 static char log_buff[64 * 1024];
 static char *pcurrent_log_buff = log_buff;
 
@@ -51,11 +51,12 @@ static int check_and_mk_log_dir()
 	return 0;
 }
 
-int log_init(const char *filename_prefix)
+int log_init(const char *filename_prefix, const bool bLogCache)
 {
 	int result;
 	char logfile[MAX_PATH_SIZE];
 
+	log_to_cache = bLogCache;
 	if ((result=check_and_mk_log_dir()) != 0)
 	{
 		return result;
@@ -193,7 +194,7 @@ static void doLog(const char *caption, const char* text, const int text_len, \
 	pcurrent_log_buff += text_len;
 	*pcurrent_log_buff++ = '\n';
 
-	if (bNeedSync)
+	if (!log_to_cache || bNeedSync)
 	{
 		log_fsync(false);
 	}
