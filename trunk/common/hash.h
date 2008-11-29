@@ -11,6 +11,10 @@
 
 #include "chain.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef unsigned int (*HashFunc) (const void *key, const int key_len);
 
 typedef struct tagHashArray
@@ -56,6 +60,10 @@ unsigned int APHash(const void *key, const int key_len);
 unsigned int calc_hashnr (const void* key, const int key_len);
 unsigned int calc_hashnr1(const void* key, const int key_len);
 unsigned int simple_hash(const void* key, const int key_len);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
