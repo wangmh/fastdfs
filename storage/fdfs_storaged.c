@@ -195,6 +195,8 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
+	log_set_cache(true);
+
 	bTerminateFlag = false;
 	while (g_continue_flag)
 	{

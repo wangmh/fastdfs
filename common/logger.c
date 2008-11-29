@@ -51,12 +51,11 @@ static int check_and_mk_log_dir()
 	return 0;
 }
 
-int log_init(const char *filename_prefix, const bool bLogCache)
+int log_init(const char *filename_prefix)
 {
 	int result;
 	char logfile[MAX_PATH_SIZE];
 
-	log_to_cache = bLogCache;
 	if ((result=check_and_mk_log_dir()) != 0)
 	{
 		return result;
@@ -86,6 +85,11 @@ int log_init(const char *filename_prefix, const bool bLogCache)
 	}
 
 	return result;
+}
+
+void log_set_cache(const bool bLogCache)
+{
+	log_to_cache = bLogCache;
 }
 
 void log_destory()
