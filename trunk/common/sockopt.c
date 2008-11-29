@@ -344,7 +344,7 @@ char *getHostnameByIp(const char *szIpAddr, char *buff, const int bufferSize)
 		return buff;
 	}
 
-	ent = gethostbyaddr(&ip_addr, sizeof(ip_addr), AF_INET);
+	ent = gethostbyaddr((char *)&ip_addr, sizeof(ip_addr), AF_INET);
 	if (ent == NULL || ent->h_name == NULL)
 	{
 		*buff = '\0';
