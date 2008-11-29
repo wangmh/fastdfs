@@ -1,10 +1,10 @@
 
-Version 1.13  2008-11-27
+Version 1.13  2008-11-29
   * re-calculate group 's free space when one of it's storage servers' 
     free space increase
   * add parameters: sync_interval, sync_start_time and sync_end_time to 
     storage.conf
-  * performance enhancement: log to buffer, flush to disk every one minute
+  * performance enhancement: log to buffer, flush to disk every interval seconds
   * standard fds closed by daemon_init: 0(stdin), 1(stdout) and 2(stderr)
   * fix bug: pthread_kill sometimes cause core dump when program terminated
   * fix bug: sync.c open next binlog cause loop call

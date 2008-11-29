@@ -272,6 +272,14 @@ int tracker_load_from_conf_file(const char *filename, \
 			return result;
 		}
 
+		g_sync_log_buff_interval = iniGetIntValue( \
+				"sync_log_buff_interval", items, nItemCount, \
+				SYNC_LOG_BUFF_DEF_INTERVAL);
+		if (g_sync_log_buff_interval <= 0)
+		{
+			g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
+		}
+
 		logInfo("FastDFS v%d.%d, base_path=%s, " \
 			"network_timeout=%ds, "    \
 			"port=%d, bind_addr=%s, " \
@@ -280,7 +288,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			"store_server=%d, store_path=%d, " \
 			"reserved_storage_space=%dMB, " \
 			"download_server=%d, " \
-			"allow_ip_count=%d", \
+			"allow_ip_count=%d, sync_log_buff_interval=%ds", \
 			g_version.major, g_version.minor,  \
 			g_base_path, \
 			g_network_timeout, \
@@ -288,7 +296,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_groups.store_lookup, g_groups.store_group, \
 			g_groups.store_server, g_groups.store_path, \
 			g_storage_reserved_mb, g_groups.download_server, \
-			g_allow_ip_count);
+			g_allow_ip_count, g_sync_log_buff_interval);
 		break;
 	}
 

@@ -1086,6 +1086,14 @@ int storage_func_init(const char *filename, \
 		}
 		g_fsync_after_written_bytes = fsync_after_written_bytes;
 
+		g_sync_log_buff_interval = iniGetIntValue( \
+				"sync_log_buff_interval", items, nItemCount, \
+				SYNC_LOG_BUFF_DEF_INTERVAL);
+		if (g_sync_log_buff_interval <= 0)
+		{
+			g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
+		}
+
 		logInfo("FastDFS v%d.%d, base_path=%s, store_path_count=%d, " \
 			"subdir_count_per_path=%d, group_name=%s, " \
 			"network_timeout=%ds, "\
@@ -1098,7 +1106,8 @@ int storage_func_init(const char *filename, \
 			"allow_ip_count=%d, " \
 			"file_distribute_path_mode=%d, " \
 			"file_distribute_rotate_count=%d, " \
-			"fsync_after_written_bytes=%d", \
+			"fsync_after_written_bytes=%d, " \
+			"sync_log_buff_interval=%ds", \
 			g_version.major, g_version.minor, \
 			g_base_path, g_path_count, g_subdir_count_per_path, \
 			g_group_name, g_network_timeout, \
@@ -1110,7 +1119,7 @@ int storage_func_init(const char *filename, \
 			g_sync_end_time.hour, g_sync_end_time.minute, \
 			g_allow_ip_count, g_file_distribute_path_mode, \
 			g_file_distribute_rotate_count, \
-			g_fsync_after_written_bytes);
+			g_fsync_after_written_bytes, g_sync_log_buff_interval);
 
 		break;
 	}
