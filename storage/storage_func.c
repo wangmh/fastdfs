@@ -895,7 +895,7 @@ int storage_func_init(const char *filename, \
 		}
 
 		load_log_level(items, nItemCount);
-		if ((result=log_init(STORAGE_ERROR_LOG_FILENAME)) != 0)
+		if ((result=log_init(STORAGE_ERROR_LOG_FILENAME, true)) != 0)
 		{
 			break;
 		}

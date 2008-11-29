@@ -11,6 +11,7 @@
 #define LOGGER_H
 
 #include <syslog.h>
+#include "common_define.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,7 +20,7 @@ extern "C" {
 extern int g_log_level;
 extern int g_log_fd;
 
-int log_init(const char *filename_prefix);
+int log_init(const char *filename_prefix, const bool bLogCache);
 void log_destory();
 
 void log_it(const int priority, const char* format, ...);
