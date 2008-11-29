@@ -85,6 +85,7 @@ int main(int argc, char *argv[])
 		return errno != 0 ? errno : ECONNREFUSED;
 	}
 
+	local_filename = NULL;
 	if (strcmp(operation, "upload") == 0)
 	{
 		if (argc < 4)
