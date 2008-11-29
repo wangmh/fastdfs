@@ -208,6 +208,7 @@ int main(int argc, char *argv[])
 			kill_work_threads(tids, g_max_connections);
 
 			g_continue_flag = false;
+			break;
 		}
 
 		sleep(1);

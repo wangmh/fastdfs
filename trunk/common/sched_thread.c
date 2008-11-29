@@ -118,6 +118,11 @@ static void *sched_thread_entrance(void *args)
 			exec_count++;
 		}
 
+		if (pScheduleArray->count == 1)
+		{
+			continue;
+		}
+
 		if (exec_count > pScheduleArray->count / 2)
 		{
 			sched_make_chain(pScheduleArray);
