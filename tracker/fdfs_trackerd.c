@@ -178,6 +178,8 @@ int main(int argc, char *argv[])
 			pthread_kill(schedule_tid, SIGINT);
 			kill_work_threads(tids, g_max_connections);
 			g_continue_flag = false;
+
+			break;
 		}
 
 		sleep(1);
