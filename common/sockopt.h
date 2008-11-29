@@ -13,7 +13,7 @@
 
 #include "common_define.h"
 
-#define FDFS_WRITE_BUFF_SIZE  1024 * 1024
+#define FDFS_WRITE_BUFF_SIZE  512 * 1024
 
 #ifdef __cplusplus
 extern "C" {
