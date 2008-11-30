@@ -99,7 +99,10 @@ static void *sched_thread_entrance(void *args)
 		current_time = time(NULL);
 		sleep_time = pHead->next_call_time - current_time;
 
-		fprintf(stderr, "count=%d, sleep_time=%d\n", pScheduleArray->count, sleep_time);
+		/*
+		//fprintf(stderr, "count=%d, sleep_time=%d\n", \
+			pScheduleArray->count, sleep_time);
+		*/
 		if (sleep_time > 0)
 		{
 			sleep(sleep_time);
@@ -111,7 +114,7 @@ static void *sched_thread_entrance(void *args)
 		while (g_continue_flag && (pCurrent != NULL && \
 			pCurrent->next_call_time <= current_time))
 		{
-			fprintf(stderr, "exec task id=%d\n", pCurrent->id);
+			//fprintf(stderr, "exec task id=%d\n", pCurrent->id);
 			pCurrent->task_func(pCurrent->func_args);
 			pCurrent->next_call_time = current_time + \
 						pCurrent->interval;
