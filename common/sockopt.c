@@ -804,7 +804,7 @@ int tcpsetnonblockopt(int fd, const int timeout)
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : ENOMEM;
+		return errno != 0 ? errno : EINVAL;
 	}
 
 	flags = fcntl(fd, F_GETFL, 0);
@@ -822,6 +822,23 @@ int tcpsetnonblockopt(int fd, const int timeout)
 			"fcntl failed, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : EACCES;
+	}
+
+	return 0;
+}
+
+int tcpsetnodelay(int fd)
+{
+	int flags;
+
+	flags = 1;
+	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, \
+			(char *)&flags, sizeof(flags)) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EINVAL;
 	}
 
 	return 0;
