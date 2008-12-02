@@ -35,6 +35,7 @@ int tcpsenddata(int sock, void* data, const int size, const int timeout);
 int connectserverbyip(int sock, char* ip, short port);
 int nbaccept(int sock, const int timeout, int *err_no);
 int tcpsetnonblockopt(int fd, const int timeout);
+int tcpsetnodelay(int fd);
 
 in_addr_t getIpaddr(getnamefunc getname, int sock, \
 		char *buff, const int bufferSize);
