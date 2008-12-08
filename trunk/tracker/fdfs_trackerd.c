@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
 		sleep(1);
 	}
 
-	while (g_tracker_thread_count != 0)
+	while ((g_tracker_thread_count != 0) || g_schedule_flag)
 	{
 		sleep(1);
 	}

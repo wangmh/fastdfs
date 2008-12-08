@@ -1,8 +1,10 @@
 
-Version 1.14  2008-12-02
+Version 1.14  2008-12-08
   * storage/storage_sync.c: 
     old: if (reader.sync_row_count % 1000 == 0)
     new: if (reader.scan_row_count % 2000 == 0)
+  * little adjustment for common files can be used by FastDHT
+  * sched_thread.h /.c add global variable g_schedule_flag to quit normally
 
 Version 1.13  2008-11-29
   * re-calculate group 's free space when one of it's storage servers' 

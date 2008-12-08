@@ -37,7 +37,8 @@
 
 #include "sockopt.h"
 #include "logger.h"
-#include "fdfs_global.h"
+
+extern int g_network_timeout;
 
 int tcpgets(int sock, char* s, const int size, const int timeout)
 {

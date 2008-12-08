@@ -19,9 +19,10 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <pthread.h>
-#include "fdfs_global.h"
 #include "shared_func.h"
 #include "logger.h"
+
+extern char g_base_path[MAX_PATH_SIZE];
 
 int g_log_level = LOG_INFO;
 int g_log_fd = STDERR_FILENO;
