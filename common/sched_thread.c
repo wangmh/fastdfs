@@ -14,6 +14,8 @@
 #include "shared_func.h"
 #include "logger.h"
 
+bool g_schedule_flag = false;
+
 static int sched_cmp_by_next_call_time(const void *p1, const void *p2)
 {
 	return ((ScheduleEntry *)p1)->next_call_time - \
@@ -81,7 +83,6 @@ static void *sched_thread_entrance(void *args)
 	ScheduleEntry *pUntil;
 	int exec_count;
 	int i;
-
 	time_t current_time;
 	int sleep_time;
 
@@ -91,6 +92,8 @@ static void *sched_thread_entrance(void *args)
 		return NULL;
 	}
 	sched_make_chain(pScheduleArray);
+
+	g_schedule_flag = true;
 
 	pHead = pScheduleArray->entries;
 	pTail = pScheduleArray->entries + (pScheduleArray->count - 1);
@@ -172,6 +175,8 @@ static void *sched_thread_entrance(void *args)
 			pNode = pSaveNext;
 		}
 	}
+
+	g_schedule_flag = false;
 
 	return NULL;
 }

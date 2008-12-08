@@ -9,7 +9,7 @@
 #ifndef _SCHED_THREAD_H_
 #define _SCHED_THREAD_H_
 
-#include "fdfs_define.h"
+#include "common_define.h"
 
 typedef void (*TaskFunc) (void *args);
 
@@ -35,6 +35,8 @@ extern "C" {
 #endif
 
 extern bool g_continue_flag;
+extern bool g_schedule_flag;
+
 int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid);
 
 #ifdef __cplusplus
