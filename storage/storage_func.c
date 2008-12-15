@@ -799,44 +799,6 @@ int storage_load_paths(IniItemInfo *items, const int nItemCount)
 	return 0;
 }
 
-static int storage_get_time(IniItemInfo *items, const int nItemCount, \
-		const char *item_name, FDFSTimeInfo *pTimeInfo, \
-		const byte default_hour, const byte default_minute)
-{
-	char *pValue;
-	int hour;
-	int minute;
-
-	pValue = iniGetStrValue(item_name, items, nItemCount);
-	if (pValue == NULL)
-	{
-		pTimeInfo->hour = default_hour;
-		pTimeInfo->minute = default_minute;
-		return 0;
-	}
-
-	if (sscanf(pValue, "%d:%d", &hour, &minute) != 2)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"item \"%s\" 's value \"%s\" is not an valid time", \
-			__LINE__, item_name, pValue);
-		return EINVAL;
-	}
-
-	if ((hour < 0 || hour > 23) || (minute < 0 || minute > 59))
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"item \"%s\" 's value \"%s\" is not an valid time", \
-			__LINE__, item_name, pValue);
-		return EINVAL;
-	}
-
-	pTimeInfo->hour = (byte)hour;
-	pTimeInfo->minute = (byte)minute;
-
-	return 0;
-}
-
 int storage_func_init(const char *filename, \
 		char *bind_addr, const int addr_size)
 {
@@ -1019,12 +981,12 @@ int storage_func_init(const char *filename, \
 		}
 		g_sync_interval *= 1000;
 
-		if ((result=storage_get_time(items, nItemCount, \
+		if ((result=get_time_item_from_conf(items, nItemCount, \
 			"sync_start_time", &g_sync_start_time, 0, 0)) != 0)
 		{
 			break;
 		}
-		if ((result=storage_get_time(items, nItemCount, \
+		if ((result=get_time_item_from_conf(items, nItemCount, \
 			"sync_end_time", &g_sync_end_time, 23, 59)) != 0)
 		{
 			break;

@@ -74,6 +74,10 @@ void load_log_level(IniItemInfo *items, const int nItemCount);
 int load_allow_hosts(IniItemInfo *items, const int nItemCount, \
 		in_addr_t **allow_ip_addrs, int *allow_ip_count);
 
+int get_time_item_from_conf(IniItemInfo *items, const int nItemCount, \
+		const char *item_name, TimeInfo *pTimeInfo, \
+		const byte default_hour, const byte default_minute);
+
 void chopPath(char *filePath);
 int getFileContent(const char *filename, char **buff, off_t *file_size);
 int writeToFile(const char *filename, const char *buff, const int file_size);
