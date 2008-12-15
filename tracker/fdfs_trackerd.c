@@ -144,6 +144,8 @@ int main(int argc, char *argv[])
 
 	memset(scheduleEntries, 0, sizeof(scheduleEntries));
 	scheduleEntries[0].id = 1;
+	scheduleEntries[0].time_base.hour = TIME_NONE;
+	scheduleEntries[0].time_base.minute = TIME_NONE;
 	scheduleEntries[0].interval = g_sync_log_buff_interval;
 	scheduleEntries[0].task_func = log_sync_func;
 	scheduleEntries[0].func_args = NULL;

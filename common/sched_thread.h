@@ -16,6 +16,7 @@ typedef void (*TaskFunc) (void *args);
 typedef struct tagScheduleEntry
 {
 	int id;
+	TimeInfo time_base;
 	int interval;   //unit: second
 	TaskFunc task_func;
 	void *func_args;

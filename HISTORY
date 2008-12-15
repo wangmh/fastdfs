@@ -6,6 +6,7 @@ Version 1.14  2008-12-15
   * little adjustment for common files can be used by FastDHT
   * sched_thread.h /.c add global variable g_schedule_flag to quit normally
   * shared_func.h / .c add function get_time_item_from_conf
+  * sched_thread.h /.c support time_base of task
 
 Version 1.13  2008-11-29
   * re-calculate group 's free space when one of it's storage servers' 

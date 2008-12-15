@@ -27,6 +27,9 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 	ScheduleEntry *pEntry;
 	ScheduleEntry *pEnd;
 	time_t current_time;
+	time_t time_base;
+	struct tm tm_current;
+	struct tm tm_base;
 
 	if (pScheduleArray->count <= 0)
 	{
@@ -37,6 +40,7 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 	}
 
 	current_time = time(NULL);
+	localtime_r(&current_time, &tm_current);
 	pEnd = pScheduleArray->entries + pScheduleArray->count;
 	for (pEntry=pScheduleArray->entries; pEntry<pEnd; pEntry++)
 	{
@@ -48,9 +52,45 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 			return EINVAL;
 		}
 
-		pEntry->next_call_time = current_time + pEntry->interval;
-	}
+		if (pEntry->time_base.hour == TIME_NONE)
+		{
+			pEntry->next_call_time = current_time+pEntry->interval;
+		}
+		else
+		{
+			if (tm_current.tm_hour > pEntry->time_base.hour || \
+				(tm_current.tm_hour == pEntry->time_base.hour \
+				&& tm_current.tm_min >= pEntry->time_base.minute))
+			{
+				memcpy(&tm_base, &tm_current, sizeof(struct tm));
+			}
+			else
+			{
+				time_base = current_time - 24 * 3600;
+				localtime_r(&time_base, &tm_base);
+			}
 
+			tm_base.tm_hour = pEntry->time_base.hour;
+			tm_base.tm_min = pEntry->time_base.minute;
+			tm_base.tm_sec = 0;
+			time_base = mktime(&tm_base);
+
+			pEntry->next_call_time = current_time+pEntry->interval \
+				- (current_time - time_base) % pEntry->interval;
+		}
+
+		/*
+		{
+			char buff1[32];
+			char buff2[32];
+			logInfo("id=%d, current time=%s, first call time=%s\n", \
+				pEntry->id, formatDatetime(current_time, \
+				"%Y-%m-%d %H:%M:%S", buff1, sizeof(buff1)), \
+				formatDatetime(pEntry->next_call_time, \
+				"%Y-%m-%d %H:%M:%S", buff2, sizeof(buff2)));
+		}
+		*/
+	}
 
 	return 0;
 }
