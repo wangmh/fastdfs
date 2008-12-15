@@ -66,6 +66,7 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 #define DEFAULT_NETWORK_TIMEOUT			30
 #define DEFAULT_MAX_CONNECTONS			256
 #define SYNC_LOG_BUFF_DEF_INTERVAL              10
+#define TIME_NONE                               -1
 
 #define IP_ADDRESS_SIZE	16
 
