@@ -1605,3 +1605,41 @@ int set_rand_seed()
 	return 0;
 }
 
+int get_time_item_from_conf(IniItemInfo *items, const int nItemCount, \
+		const char *item_name, TimeInfo *pTimeInfo, \
+		const byte default_hour, const byte default_minute)
+{
+	char *pValue;
+	int hour;
+	int minute;
+
+	pValue = iniGetStrValue(item_name, items, nItemCount);
+	if (pValue == NULL)
+	{
+		pTimeInfo->hour = default_hour;
+		pTimeInfo->minute = default_minute;
+		return 0;
+	}
+
+	if (sscanf(pValue, "%d:%d", &hour, &minute) != 2)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"item \"%s\" 's value \"%s\" is not an valid time", \
+			__LINE__, item_name, pValue);
+		return EINVAL;
+	}
+
+	if ((hour < 0 || hour > 23) || (minute < 0 || minute > 59))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"item \"%s\" 's value \"%s\" is not an valid time", \
+			__LINE__, item_name, pValue);
+		return EINVAL;
+	}
+
+	pTimeInfo->hour = (byte)hour;
+	pTimeInfo->minute = (byte)minute;
+
+	return 0;
+}
+

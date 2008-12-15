@@ -89,6 +89,12 @@ typedef char  bool;
 extern "C" {
 #endif
 
+typedef struct
+{
+	byte hour;
+	byte minute;
+} TimeInfo;
+
 typedef void (*FreeDataFunc)(void *ptr);
 typedef int (*CompareFunc)(void *p1, void *p2);
 

@@ -1318,7 +1318,7 @@ static int storage_unlink_mark_file(BinLogReader *pReader)
 }
 
 static void storage_sync_get_start_end_times(time_t current_time, \
-	const FDFSTimeInfo *pStartTime, const FDFSTimeInfo *pEndTime, \
+	const TimeInfo *pStartTime, const TimeInfo *pEndTime, \
 	time_t *start_time, time_t *end_time)
 {
 	struct tm tm_time;

@@ -38,8 +38,8 @@ int g_stat_report_interval = STORAGE_REPORT_DEF_INTERVAL;
 
 int g_sync_wait_usec = STORAGE_DEF_SYNC_WAIT_MSEC;
 int g_sync_interval = 0; //unit: milliseconds
-FDFSTimeInfo g_sync_start_time = {0, 0};
-FDFSTimeInfo g_sync_end_time = {23, 59};
+TimeInfo g_sync_start_time = {0, 0};
+TimeInfo g_sync_end_time = {23, 59};
 bool g_sync_part_time = false;
 int g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
 
