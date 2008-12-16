@@ -35,8 +35,9 @@
 
 #endif
 
-#include "sockopt.h"
 #include "logger.h"
+#include "hash.h"
+#include "sockopt.h"
 
 extern int g_network_timeout;
 
@@ -587,6 +588,82 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 	}
 
 	close(fd);
+	return 0;
+}
+
+int tcprecvfile_ex(int sock, const char *filename, const int64_t file_bytes, \
+		const int fsync_after_written_bytes, \
+		unsigned int *hash_codes)
+{
+	int fd;
+	char buff[FDFS_WRITE_BUFF_SIZE];
+	int64_t remain_bytes;
+	int recv_bytes;
+	int written_bytes;
+	int result;
+
+	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (fd < 0)
+	{
+		return errno != 0 ? errno : EACCES;
+	}
+
+	INIT_HASH_CODES4(hash_codes)
+	
+	written_bytes = 0;
+	remain_bytes = file_bytes;
+	while (remain_bytes > 0)
+	{
+		if (remain_bytes > sizeof(buff))
+		{
+			recv_bytes = sizeof(buff);
+		}
+		else
+		{
+			recv_bytes = remain_bytes;
+		}
+
+		if ((result=tcprecvdata(sock, buff, recv_bytes, \
+				g_network_timeout)) != 0)
+		{
+			close(fd);
+			unlink(filename);
+			return result;
+		}
+
+		if (write(fd, buff, recv_bytes) != recv_bytes)
+		{
+			result = errno != 0 ? errno: EIO;
+			close(fd);
+			unlink(filename);
+			return result;
+		}
+
+		if (fsync_after_written_bytes > 0)
+		{
+			written_bytes += recv_bytes;
+			if (written_bytes >= fsync_after_written_bytes)
+			{
+				written_bytes = 0;
+				if (fsync(fd) != 0)
+				{
+					result = errno != 0 ? errno: EIO;
+					close(fd);
+					unlink(filename);
+					return result;
+				}
+			}
+		}
+
+		CALC_HASH_CODES4(buff, recv_bytes, hash_codes)
+
+		remain_bytes -= recv_bytes;
+	}
+
+	close(fd);
+
+	FINISH_HASH_CODES4(hash_codes)
+
 	return 0;
 }
 

@@ -98,7 +98,26 @@ unsigned int simple_hash_ex(const void* key, const int key_len, \
 unsigned int CRC32(void *key, const int key_len);
 unsigned int CRC32_ex(void *key, const int key_len, \
 	const unsigned int init_value);
-#define CRC32_final(crc)  (crc ^ CRC32_XOROT)
+#define CRC32_FINAL(crc)  (crc ^ CRC32_XOROT)
+
+
+#define INIT_HASH_CODES4(hash_codes) \
+	hash_codes[0] = CRC32_XINIT; \
+	hash_codes[1] = 0; \
+	hash_codes[2] = 0; \
+	hash_codes[3] = 0; \
+
+
+#define CALC_HASH_CODES4(buff, buff_len, hash_codes) \
+	hash_codes[0] = CRC32_ex(buff, buff_len, hash_codes[0]); \
+	hash_codes[1] = ELFHash_ex(buff, buff_len, hash_codes[1]); \
+	hash_codes[2] = APHash_ex(buff, buff_len, hash_codes[2]); \
+	hash_codes[3] = Time33Hash_ex(buff, buff_len, hash_codes[3]); \
+
+
+#define FINISH_HASH_CODES4(hash_codes) \
+	hash_codes[0] = CRC32_FINAL(hash_codes[0]); \
+
 
 #ifdef __cplusplus
 }
