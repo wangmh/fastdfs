@@ -15,6 +15,9 @@
 extern "C" {
 #endif
 
+#define CRC32_XINIT 0xFFFFFFFF		/* initial value */
+#define CRC32_XOROT 0xFFFFFFFF		/* final xor value */
+
 typedef unsigned int (*HashFunc) (const void *key, const int key_len);
 
 typedef struct tagHashArray
@@ -49,17 +52,53 @@ int hash_best_op(HashArray *pHash, const int suggest_capacity);
 void hash_stat_print(HashArray *pHash);
 
 unsigned int RSHash(const void *key, const int key_len);
+
 unsigned int JSHash(const void *key, const int key_len);
+unsigned int JSHash_ex(const void *key, const int key_len, \
+	const unsigned int init_value);
+
 unsigned int PJWHash(const void *key, const int key_len);
+unsigned int PJWHash_ex(const void *key, const int key_len, \
+	const unsigned int init_value);
+
 unsigned int ELFHash(const void *key, const int key_len);
+unsigned int ELFHash_ex(const void *key, const int key_len, \
+	const unsigned int init_value);
+
 unsigned int BKDRHash(const void *key, const int key_len);
+unsigned int BKDRHash_ex(const void *key, const int key_len, \
+	const unsigned int init_value);
+
 unsigned int SDBMHash(const void *key, const int key_len);
+unsigned int SDBMHash_ex(const void *key, const int key_len, \
+	const unsigned int init_value);
+
 unsigned int Time33Hash(const void *key, const int key_len);
+unsigned int Time33Hash_ex(const void *key, const int key_len, \
+	const unsigned int init_value);
+
 unsigned int DJBHash(const void *key, const int key_len);
+unsigned int DJBHash_ex(const void *key, const int key_len, \
+	const unsigned int init_value);
+
 unsigned int APHash(const void *key, const int key_len);
+unsigned int APHash_ex(const void *key, const int key_len, \
+	const unsigned int init_value);
+
 unsigned int calc_hashnr (const void* key, const int key_len);
+
 unsigned int calc_hashnr1(const void* key, const int key_len);
+unsigned int calc_hashnr1_ex(const void* key, const int key_len, \
+	const unsigned int init_value);
+
 unsigned int simple_hash(const void* key, const int key_len);
+unsigned int simple_hash_ex(const void* key, const int key_len, \
+	const unsigned int init_value);
+
+unsigned int CRC32(void *key, const int key_len);
+unsigned int CRC32_ex(void *key, const int key_len, \
+	const unsigned int init_value);
+#define CRC32_final(crc)  (crc ^ CRC32_XOROT)
 
 #ifdef __cplusplus
 }

@@ -96,6 +96,12 @@ typedef struct
 	byte minute;
 } TimeInfo;
 
+typedef struct
+{
+	char major;
+	char minor;
+} Version;
+
 typedef void (*FreeDataFunc)(void *ptr);
 typedef int (*CompareFunc)(void *p1, void *p2);
 
