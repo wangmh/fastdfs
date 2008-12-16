@@ -6,26 +6,27 @@
 * Please visit the FastDFS Home Page http://www.csource.org/ for more detail.
 **/
 
-//fdfs_global.h
+//fdht_define.h
 
-#ifndef _FDFS_GLOBAL_H
-#define _FDFS_GLOBAL_H
+#ifndef _FDHT_DEFINE_H_
+#define _FDHT_DEFINE_H_
 
+#include <pthread.h>
 #include "common_define.h"
-#include "fdfs_define.h"
+
+#define FDHT_SERVER_DEFAULT_PORT  24000
+#define FDHT_MAX_PKG_SIZE         64 * 1024
+#define FDHT_DEFAULT_MAX_THREADS  64
+#define DEFAULT_SYNC_DB_INVERVAL  30
+#define DEFAULT_SYNC_WAIT_MSEC    100
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern bool g_continue_flag;
-extern int g_network_timeout;
-extern char g_base_path[MAX_PATH_SIZE];
-extern Version g_version;
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

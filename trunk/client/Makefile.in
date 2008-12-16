@@ -8,21 +8,22 @@ TARGET_PATH = $(TARGET_PATH)
 STATIC_OBJS = ../common/hash.o ../common/chain.o \
               ../common/shared_func.o ../common/ini_file_reader.o \
               ../common/logger.o ../common/sockopt.o ../common/fdfs_global.o \
-              ../common/fdfs_base64.o \
+              ../common/fdfs_base64.o ../common/sched_thread.o \
               ../tracker/tracker_proto.o tracker_client.o client_func.o \
               client_global.o storage_client.o
 
 SHARED_OBJS = ../common/hash.lo ../common/chain.lo \
               ../common/shared_func.lo ../common/ini_file_reader.lo \
               ../common/logger.lo ../common/sockopt.lo ../common/fdfs_global.lo\
-              ../common/fdfs_base64.lo \
+              ../common/fdfs_base64.lo ../common/sched_thread.lo \
               ../tracker/tracker_proto.lo tracker_client.lo client_func.lo \
               client_global.lo storage_client.lo
 
 HEADER_FILES = ../common/common_define.h ../common/fdfs_define.h \
-               ../common/fdfs_global.h \
+               ../common/fdfs_global.h ../common/logger.h \
                ../common/fdfs_base64.h ../common/shared_func.h \
                ../common/ini_file_reader.h ../common/_os_bits.h \
+               ../common/sockopt.h ../common/sched_thread.h \
                ../tracker/tracker_types.h ../tracker/tracker_proto.h \
                tracker_client.h storage_client.h storage_client1.h \
                client_func.h client_global.h fdfs_client.h
@@ -44,7 +45,7 @@ libfdfsclient.so.1:
 .c.lo:
 	$(COMPILE) -c -fPIC -o $@ $<  $(INC_PATH)
 install:
-	cp -f $(ALL_PRGS) /usr/local/bin
+	cp -f $(ALL_PRGS) $(TARGET_PATH)
 	cp -f $(ALL_LIBS) /usr/local/lib/
 	cp -f $(HEADER_FILES) /usr/local/include/
 	ln -fs /usr/local/lib/libfdfsclient.so.1 /usr/local/lib/libfdfsclient.so
