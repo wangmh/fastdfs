@@ -195,8 +195,16 @@ static int storage_sort_metadata_buff(char *meta_buff, const int meta_size)
 	return 0;
 }
 
+#define STORAGE_GEN_FILE_SIGNATURE(file_size, hash_codes, sig_buff) \
+	long2buff(file_size, sig_buff); \
+	int2buff(hash_codes[0], sig_buff+8);  \
+	int2buff(hash_codes[1], sig_buff+12); \
+	int2buff(hash_codes[2], sig_buff+16); \
+	int2buff(hash_codes[3], sig_buff+20); \
+
+
 static int storage_save_file(StorageClientInfo *pClientInfo, \
-		const int store_path_index, const int file_size, \
+		const int store_path_index, const int64_t file_size, \
 		const char *file_ext_name,  \
 		char *meta_buff, const int meta_size, \
 		char *filename, int *filename_len)
@@ -214,6 +222,8 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 	int pad_len;
 	time_t start_time;
 	time_t end_time;
+	unsigned int file_hash_codes[4];
+	char file_signature[32];
 
 	ext_name_len = strlen(file_ext_name);
 	if (ext_name_len == 0)
@@ -269,9 +279,19 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 		return ENOENT;
 	}
 
-	//if ((result=recv_file_serialized(pClientInfo->sock, 
+	/*
 	if ((result=tcprecvfile(pClientInfo->sock, 
 		full_filename, file_size, g_fsync_after_written_bytes)) != 0)
+	{
+		*filename = '\0';
+		*filename_len = 0;
+		return result;
+	}
+	*/
+
+	if ((result=tcprecvfile_ex(pClientInfo->sock, 
+		full_filename, file_size, g_fsync_after_written_bytes, \
+		file_hash_codes)) != 0)
 	{
 		*filename = '\0';
 		*filename_len = 0;
@@ -371,6 +391,19 @@ static int storage_save_file(StorageClientInfo *pClientInfo, \
 		*filename_len = new_filename_len;
 		memcpy(filename, new_filename, new_filename_len+1);
 	}
+
+	STORAGE_GEN_FILE_SIGNATURE(file_size, file_hash_codes, file_signature)
+
+	/*
+	{
+	char buff1[64];
+	bin2hex(file_signature, 24, buff1);
+	
+	logInfo("code1=%X, code2=%X, code3=%X, code4=%X, file_signature=%s", 
+		file_hash_codes[0], file_hash_codes[1], file_hash_codes[2], 
+		file_hash_codes[3], buff1);
+	}
+	*/
 
 	*filename_len=sprintf(full_filename, "%c"STORAGE_DATA_DIR_FORMAT"/%s", \
 			STORAGE_STORE_PATH_PREFIX_CHAR, \
@@ -1110,7 +1143,6 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 				break;
 			}
 		}
-		//else if ((resp.status=recv_file_serialized(pClientInfo->sock, 
 		else if ((resp.status=tcprecvfile(pClientInfo->sock, 
 				full_filename, file_bytes, \
 				g_fsync_after_written_bytes)) != 0)

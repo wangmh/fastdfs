@@ -50,6 +50,10 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no);
 int tcpsendfile(int sock, const char *filename, const int64_t file_bytes);
 int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 		const int fsync_after_written_bytes);
+int tcprecvfile_ex(int sock, const char *filename, const int64_t file_bytes, \
+		const int fsync_after_written_bytes, \
+		unsigned int *hash_codes);
+
 int tcpdiscard(int sock, const int bytes);
 
 int gethostaddrs(char ip_addrs[][IP_ADDRESS_SIZE], \

@@ -662,7 +662,7 @@ unsigned int JSHash_ex(const void *key, const int key_len, \
     return hash; \
 
 
-// P.J.Weinberger Hash Function
+// P.J.Weinberger Hash Function, same as ELF Hash
 unsigned int PJWHash(const void *key, const int key_len)
 {
 	PJW_HASH_FUNC(0)
@@ -695,7 +695,7 @@ unsigned int PJWHash_ex(const void *key, const int key_len, \
     return hash; \
 
 
-// ELF Hash Function
+// ELF Hash Function, same as PJW Hash
 unsigned int ELFHash(const void *key, const int key_len)
 {
 	ELF_HASH_FUNC(0)
@@ -771,7 +771,7 @@ unsigned int SDBMHash_ex(const void *key, const int key_len, \
 	pEnd = (unsigned char *)key + key_len; \
 	for (pKey = (unsigned char *)key; pKey != pEnd; pKey++) \
 	{ \
-		nHash = (nHash << 5) + nHash + (*pKey); \
+		nHash += (nHash << 5) + (*pKey); \
 	} \
  \
 	return nHash; \
