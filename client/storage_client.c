@@ -850,7 +850,8 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader header;
 	int result;
 	TrackerServerInfo storageServer;
-	char out_buff[sizeof(TrackerHeader)+2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN+64];
+	char out_buff[sizeof(TrackerHeader)+2*FDFS_PROTO_PKG_LEN_SIZE+\
+			FDFS_GROUP_NAME_MAX_LEN+64];
 	char in_buff[1];
 	int64_t in_bytes;
 	char *pBuff;
@@ -997,5 +998,189 @@ int tracker_query_storage_update1(TrackerServerInfo *pTrackerServer, \
 
 	return tracker_query_storage_update(pTrackerServer, \
 		pStorageServer, group_name, filename);
+}
+
+/**
+pkg format:
+Header
+8 bytes: source filename len
+8 bytes: meta data bytes
+FDFS_GROUP_NAME_MAX_LEN bytes: group_name
+FDFS_FILE_EXT_NAME_MAX_LEN bytes: file ext name, do not include dot (.)
+source filename len: source filename without group name
+meta data bytes: each meta data seperated by \x01,
+		 name and value seperated by \x02
+**/
+int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const char *src_filename, const int src_filename_len, \
+		const char *group_name, const char *file_ext_name, \
+		const FDFSMetaData *meta_list, const int meta_count, \
+		char *remote_filename)
+{
+#define MAX_STATIC_META_DATA_COUNT 32
+	TrackerHeader header;
+	int result;
+	char meta_buff[2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN + \
+		FDFS_FILE_EXT_NAME_MAX_LEN + sizeof(FDFSMetaData) * \
+		MAX_STATIC_META_DATA_COUNT + 64];
+	char *pMetaData;
+	char *p;
+	int group_name_len;
+	int meta_bytes;
+	int64_t in_bytes;
+	char in_buff[128];
+	char *pInBuff;
+	TrackerServerInfo storageServer;
+	bool new_connection;
+
+	remote_filename[0] = '\0';
+	if (src_filename_len > 64)
+	{
+		return EINVAL;
+	}
+
+	if ((result=storage_get_update_connection(pTrackerServer, \
+		&pStorageServer, group_name, src_filename, \
+		&storageServer, &new_connection)) != 0)
+	{
+		return result;
+	}
+
+	/*
+	//printf("upload to storage %s:%d\n", \
+		pStorageServer->ip_addr, pStorageServer->port);
+	*/
+
+	while (1)
+	{
+	if (meta_count <= MAX_STATIC_META_DATA_COUNT)
+	{
+		pMetaData = meta_buff;
+	}
+	else
+	{
+		pMetaData = (char *)malloc(2 * FDFS_PROTO_PKG_LEN_SIZE + \
+                        FDFS_GROUP_NAME_MAX_LEN + FDFS_FILE_EXT_NAME_MAX_LEN + \
+			sizeof(FDFSMetaData) * meta_count + 64);
+		if (pMetaData == NULL)
+		{
+			result= errno != 0 ? errno : ENOMEM;
+
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", __LINE__, \
+				2 * FDFS_PROTO_PKG_LEN_SIZE + \
+				sizeof(FDFSMetaData) * meta_count + 2);
+			break;
+		}
+	}
+
+	if (meta_count > 0)
+	{
+		fdfs_pack_metadata(meta_list, meta_count, pMetaData + \
+			2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN + \
+			FDFS_FILE_EXT_NAME_MAX_LEN + src_filename_len, \
+			&meta_bytes);
+	}
+	else
+	{
+		meta_bytes = 0;
+	}
+
+	p = pMetaData;
+	long2buff(src_filename_len, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+	long2buff(meta_bytes, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+
+	group_name_len = strlen(group_name);
+	if (group_name_len > FDFS_GROUP_NAME_MAX_LEN)
+	{
+		group_name_len = FDFS_GROUP_NAME_MAX_LEN;
+	}
+	memcpy(p, group_name, group_name_len);
+	p += FDFS_GROUP_NAME_MAX_LEN;
+
+	memset(p, 0, FDFS_FILE_EXT_NAME_MAX_LEN);
+	if (file_ext_name != NULL)
+	{
+		int file_ext_len;
+
+		file_ext_len = strlen(file_ext_name);
+		if (file_ext_len > FDFS_FILE_EXT_NAME_MAX_LEN)
+		{
+			file_ext_len = FDFS_FILE_EXT_NAME_MAX_LEN;
+		}
+		if (file_ext_len > 0)
+		{
+			memcpy(p, file_ext_name, file_ext_len);
+		}
+	}
+	p += FDFS_FILE_EXT_NAME_MAX_LEN;
+
+	memcpy(p, src_filename, src_filename_len);
+	p += src_filename_len + meta_bytes;
+
+	long2buff(p - pMetaData, header.pkg_len);
+	header.cmd = STORAGE_PROTO_CMD_UPLOAD_FILE;
+	header.status = 0;
+	if ((result=tcpsenddata(pStorageServer->sock, &header, sizeof(header), \
+				g_network_timeout)) != 0)
+	{
+		logError("send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			pStorageServer->ip_addr, \
+			pStorageServer->port, \
+			result, strerror(result));
+		break;
+	}
+
+	if ((result=tcpsenddata(pStorageServer->sock, pMetaData, \
+		p - pMetaData, g_network_timeout)) != 0)
+	{
+		logError("send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			pStorageServer->ip_addr, \
+			pStorageServer->port, \
+			result, strerror(result));
+		break;
+	}
+
+	pInBuff = in_buff;
+	if ((result=fdfs_recv_response(pStorageServer, \
+		&pInBuff, sizeof(in_buff), &in_bytes)) != 0)
+	{
+		break;
+	}
+
+	if (in_bytes <= FDFS_GROUP_NAME_MAX_LEN)
+	{
+		logError("storage server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid, " \
+			"should > %d.", \
+			pStorageServer->ip_addr, pStorageServer->port, \
+			in_bytes, FDFS_GROUP_NAME_MAX_LEN);
+		result = EINVAL;
+		break;
+	}
+
+	in_buff[in_bytes] = '\0';
+	memcpy(remote_filename, in_buff + FDFS_GROUP_NAME_MAX_LEN, \
+		in_bytes - FDFS_GROUP_NAME_MAX_LEN + 1);
+
+	break;
+	}
+
+	if (new_connection)
+	{
+		fdfs_quit(pStorageServer);
+		tracker_disconnect_server(pStorageServer);
+	}
+	if (pMetaData != NULL && pMetaData != meta_buff)
+	{
+		free(pMetaData);
+	}
+
+	return result;
 }
 

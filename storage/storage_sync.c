@@ -269,6 +269,150 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 	return result;
 }
 
+/**
+8 bytes: dest(link) filename length
+8 bytes: source filename length
+4 bytes: source op timestamp
+FDFS_GROUP_NAME_MAX_LEN bytes: group_name
+dest filename length: dest filename
+source filename length: source filename
+**/
+static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
+		const BinLogRecord *pRecord)
+{
+	TrackerHeader *pHeader;
+	int result;
+	char full_filename[MAX_PATH_SIZE];
+	char out_buff[sizeof(TrackerHeader) + 2 * FDFS_PROTO_PKG_LEN_SIZE + \
+			4 + FDFS_GROUP_NAME_MAX_LEN + 128];
+	char in_buff[1];
+	char src_full_filename[MAX_PATH_SIZE];
+	char *pSrcFilename;
+	char *p;
+	int src_filename_len;
+	int out_body_len;
+	int64_t in_bytes;
+	char *pBuff;
+	struct stat stat_buf;
+
+	snprintf(full_filename, sizeof(full_filename), \
+		"%s/data/%s", pRecord->pBasePath, pRecord->true_filename);
+	if (stat(full_filename, &stat_buf) != 0)
+	{
+		if (errno == ENOENT)
+		{
+		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"sync data file, file: %s does not exist, " \
+				"maybe delete later?", \
+				__LINE__, full_filename);
+		}
+		}
+		else
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"call stat fail, file: %s, "\
+				"error no: %d, error info: %s", \
+				__LINE__, full_filename, \
+				errno, strerror(errno));
+		}
+
+		return 0;
+	}
+
+	if (!S_ISLNK(stat_buf.st_mode))
+	{
+		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"sync data file, file %s is not a symbol link,"\
+				"maybe create later?", \
+				__LINE__, full_filename);
+		}
+
+		return 0;
+	}
+
+	src_filename_len = readlink(full_filename, src_full_filename, \
+				sizeof(src_full_filename) - 1);
+	if (src_filename_len <= 0)
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"data file: %s, readlink fail, "\
+			"errno: %d, error info: %s", \
+			__LINE__, src_full_filename, errno, strerror(errno));
+		return 0;
+	}
+	*(src_full_filename + src_filename_len) = '\0';
+
+	pSrcFilename = strstr(src_full_filename, "/data/");
+	if (pSrcFilename == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"source data file: %s is invalid", \
+			__LINE__, src_full_filename);
+		return EINVAL;
+	}
+
+	pSrcFilename += 6;
+	p = strstr(pSrcFilename, "/data/");
+	while (p != NULL)
+	{
+		pSrcFilename = p + 6;
+		p = strstr(pSrcFilename, "/data/");
+	}
+	src_filename_len -= (pSrcFilename - src_full_filename);
+
+	while (1)
+	{
+	pHeader = (TrackerHeader *)out_buff;
+	memset(out_buff, 0, sizeof(out_buff));
+	long2buff(pRecord->filename_len, out_buff + sizeof(TrackerHeader));
+	long2buff(src_filename_len, out_buff + sizeof(TrackerHeader) + \
+			FDFS_PROTO_PKG_LEN_SIZE);
+	int2buff(pRecord->timestamp, out_buff + sizeof(TrackerHeader) + \
+			2 * FDFS_PROTO_PKG_LEN_SIZE);
+	sprintf(out_buff + sizeof(TrackerHeader) + 2 * FDFS_PROTO_PKG_LEN_SIZE\
+		 + 4, "%s", g_group_name);
+	memcpy(out_buff + sizeof(TrackerHeader) + 2 * FDFS_PROTO_PKG_LEN_SIZE \
+		+ 4 + FDFS_GROUP_NAME_MAX_LEN, \
+		pRecord->filename, pRecord->filename_len);
+	memcpy(out_buff + sizeof(TrackerHeader) + 2 * FDFS_PROTO_PKG_LEN_SIZE \
+		+ 4 + FDFS_GROUP_NAME_MAX_LEN + pRecord->filename_len, \
+		pSrcFilename, src_filename_len);
+
+	out_body_len = 2 * FDFS_PROTO_PKG_LEN_SIZE + 4 + \
+		FDFS_GROUP_NAME_MAX_LEN + pRecord->filename_len + \
+		src_filename_len;
+	long2buff(out_body_len, pHeader->pkg_len);
+	pHeader->cmd = STORAGE_PROTO_CMD_SYNC_CREATE_LINK;
+
+	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
+		sizeof(TrackerHeader) + out_body_len, g_network_timeout)) != 0)
+	{
+		logError("FILE: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pStorageServer->ip_addr, \
+			pStorageServer->port, \
+			result, strerror(result));
+		break;
+	}
+
+	pBuff = in_buff;
+	result = fdfs_recv_response(pStorageServer, &pBuff, 0, &in_bytes);
+	if (result == ENOENT)
+	{
+		result = 0;
+	}
+	
+	break;
+	}
+
+	return result;
+}
+
 #define STARAGE_CHECK_IF_NEED_SYNC_OLD(pReader, pRecord) \
 	if ((!pReader->need_sync_old) || pReader->sync_old_done || \
 		(pRecord->timestamp > pReader->until_timestamp)) \
@@ -295,6 +439,10 @@ static int storage_sync_data(BinLogReader *pReader, \
 			result = storage_sync_copy_file(pStorageServer, \
 				pRecord, STORAGE_PROTO_CMD_SYNC_UPDATE_FILE);
 			break;
+		case STORAGE_OP_TYPE_SOURCE_CREATE_LINK:
+			result = storage_sync_link_file(pStorageServer, \
+				pRecord);
+			break;
 		case STORAGE_OP_TYPE_REPLICA_CREATE_FILE:
 			STARAGE_CHECK_IF_NEED_SYNC_OLD(pReader, pRecord)
 			result = storage_sync_copy_file(pStorageServer, \
@@ -309,6 +457,11 @@ static int storage_sync_data(BinLogReader *pReader, \
 			STARAGE_CHECK_IF_NEED_SYNC_OLD(pReader, pRecord)
 			result = storage_sync_copy_file(pStorageServer, \
 				pRecord, STORAGE_PROTO_CMD_SYNC_UPDATE_FILE);
+			break;
+		case STORAGE_OP_TYPE_REPLICA_CREATE_LINK:
+			STARAGE_CHECK_IF_NEED_SYNC_OLD(pReader, pRecord)
+			result = storage_sync_link_file(pStorageServer, \
+				pRecord);
 			break;
 		default:
 			return EINVAL;

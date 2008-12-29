@@ -61,6 +61,7 @@ char g_local_host_ip_addrs[STORAGE_MAX_LOCAL_IP_ADDRS * \
 
 int g_allow_ip_count = 0;
 in_addr_t *g_allow_ip_addrs = NULL;
+bool g_check_file_duplicate = false;
 
 int storage_cmp_by_ip_addr(const void *p1, const void *p2)
 {

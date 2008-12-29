@@ -33,8 +33,9 @@ int storage_write_to_stat_file();
 int storage_write_to_sync_ini_file();
 
 int storage_split_filename(const char *logic_filename, \
-		int *filename_len, \
-		char *true_filename, char **ppStorePath);
+		int *filename_len, char *true_filename, char **ppStorePath);
+int storage_split_filename_ex(const char *logic_filename, \
+		int *filename_len, char *true_filename, int *store_path_index);
 
 /*
 int write_serialized(int fd, const char *buff, size_t count, const bool bSync);
