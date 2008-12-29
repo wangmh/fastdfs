@@ -113,6 +113,10 @@ typedef struct
 	*/
 	time_t last_synced_timestamp;
 
+	int64_t total_create_link_count;
+	int64_t success_create_link_count;
+	int64_t total_delete_link_count;
+	int64_t success_delete_link_count;
 } FDFSStorageStat;
 
 typedef struct
@@ -130,6 +134,10 @@ typedef struct
 	char sz_last_source_update[8];
 	char sz_last_sync_update[8];
 	char sz_last_synced_timestamp[8];
+	char sz_total_create_link_count[8];
+	char sz_success_create_link_count[8];
+	char sz_total_delete_link_count[8];
+	char sz_success_delete_link_count[8];
 } FDFSStorageStatBuff;
 
 typedef struct StructFDFSStorageDetail

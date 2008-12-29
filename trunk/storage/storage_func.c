@@ -30,6 +30,7 @@
 #include "tracker_proto.h"
 #include "storage_global.h"
 #include "storage_func.h"
+#include "fdht_client.h"
 
 #define DATA_DIR_INITED_FILENAME	".data_init_flag"
 #define STORAGE_STAT_FILENAME		"storage_stat.dat"
@@ -1056,6 +1057,17 @@ int storage_func_init(const char *filename, \
 			g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
 		}
 
+		g_check_file_duplicate = iniGetBoolValue( \
+				"check_file_duplicate", items, nItemCount);
+		if (g_check_file_duplicate)
+		{
+			if ((result=fdht_load_groups(items, nItemCount, \
+					&g_group_array)) != 0)
+			{
+				break;
+			}
+		}
+ 
 		logInfo("FastDFS v%d.%d, base_path=%s, store_path_count=%d, " \
 			"subdir_count_per_path=%d, group_name=%s, " \
 			"network_timeout=%ds, "\
@@ -1069,7 +1081,8 @@ int storage_func_init(const char *filename, \
 			"file_distribute_path_mode=%d, " \
 			"file_distribute_rotate_count=%d, " \
 			"fsync_after_written_bytes=%d, " \
-			"sync_log_buff_interval=%ds", \
+			"sync_log_buff_interval=%ds, " \
+			"check_file_duplicate=%d, FDHT group count=%d", \
 			g_version.major, g_version.minor, \
 			g_base_path, g_path_count, g_subdir_count_per_path, \
 			g_group_name, g_network_timeout, \
@@ -1081,7 +1094,8 @@ int storage_func_init(const char *filename, \
 			g_sync_end_time.hour, g_sync_end_time.minute, \
 			g_allow_ip_count, g_file_distribute_path_mode, \
 			g_file_distribute_rotate_count, \
-			g_fsync_after_written_bytes, g_sync_log_buff_interval);
+			g_fsync_after_written_bytes, g_sync_log_buff_interval, \
+			g_check_file_duplicate, g_group_array.count);
 
 		break;
 	}
@@ -1147,62 +1161,84 @@ int storage_func_destroy()
 	return storage_close_storage_stat();
 }
 
-int storage_split_filename(const char *logic_filename, \
-		int *filename_len, \
-		char *true_filename, char **ppStorePath)
-{
-	char buff[3];
-	int store_path_index;
-	char *pEnd;
-
-	if (*filename_len <= FDFS_FILE_PATH_LEN)
-	{
+#define SPLIT_FILENAME_BODY(logic_filename, \
+		filename_len, true_filename, store_path_index) \
+	char buff[3]; \
+	char *pEnd; \
+ \
+	while (1) \
+	{ \
+	if (*filename_len <= FDFS_FILE_PATH_LEN) \
+	{ \
 		logError("file: "__FILE__", line: %d, " \
 			"filename_len: %d is invalid, <= %d", \
-			__LINE__, *filename_len, FDFS_FILE_PATH_LEN);
-		return EINVAL;
-	}
-
-	if (*logic_filename != STORAGE_STORE_PATH_PREFIX_CHAR)
-	{ //version < V1.12
-		memcpy(true_filename, logic_filename, (*filename_len)+1);
-		*ppStorePath = g_store_paths[0];
-		return 0;
-	}
-
-	if (*(logic_filename + 3) != '/')
-	{
+			__LINE__, *filename_len, FDFS_FILE_PATH_LEN); \
+		return EINVAL; \
+	} \
+ \
+	if (*logic_filename != STORAGE_STORE_PATH_PREFIX_CHAR) \
+	{ /*version < V1.12 */ \
+		store_path_index = 0; \
+		memcpy(true_filename, logic_filename, (*filename_len)+1); \
+		break; \
+	} \
+ \
+	if (*(logic_filename + 3) != '/') \
+	{ \
 		logError("file: "__FILE__", line: %d, " \
 			"filename: %s is invalid", \
-			__LINE__, logic_filename);
-		return EINVAL;
-	}
-
-	*buff = *(logic_filename+1);
-	*(buff+1) = *(logic_filename+2);
-	*(buff+2) = '\0';
-
-	pEnd = NULL;
-	store_path_index = strtol(buff, &pEnd, 16);
-	if (pEnd != NULL && *pEnd != '\0')
-	{
+			__LINE__, logic_filename); \
+		return EINVAL; \
+	} \
+ \
+	*buff = *(logic_filename+1); \
+	*(buff+1) = *(logic_filename+2); \
+	*(buff+2) = '\0'; \
+ \
+	pEnd = NULL; \
+	store_path_index = strtol(buff, &pEnd, 16); \
+	if (pEnd != NULL && *pEnd != '\0') \
+	{ \
 		logError("file: "__FILE__", line: %d, " \
 			"filename: %s is invalid", \
-			__LINE__, logic_filename);
-		return EINVAL;
-	}
-
-	if (store_path_index < 0 || store_path_index >= g_path_count)
-	{
+			__LINE__, logic_filename); \
+		return EINVAL; \
+	} \
+ \
+	if (store_path_index < 0 || store_path_index >= g_path_count) \
+	{ \
 		logError("file: "__FILE__", line: %d, " \
-			"filename: %s is invalid, invalid store path index: %d",
-			__LINE__, logic_filename, store_path_index);
-		return EINVAL;
+			"filename: %s is invalid, " \
+			"invalid store path index: %d", \
+			__LINE__, logic_filename, store_path_index); \
+		return EINVAL; \
+	} \
+ \
+	*filename_len -= 4; \
+	memcpy(true_filename, logic_filename + 4, (*filename_len) + 1); \
+ \
+ 	break; \
 	}
 
-	*filename_len -= 4;
-	memcpy(true_filename, logic_filename + 4, (*filename_len) + 1);
+
+int storage_split_filename(const char *logic_filename, \
+		int *filename_len, char *true_filename, char **ppStorePath)
+{
+	int store_path_index;
+
+	SPLIT_FILENAME_BODY(logic_filename, \
+		filename_len, true_filename, store_path_index)
+
 	*ppStorePath = g_store_paths[store_path_index];
+
+	return 0;
+}
+
+int storage_split_filename_ex(const char *logic_filename, \
+		int *filename_len, char *true_filename, int *store_path_index)
+{
+	SPLIT_FILENAME_BODY(logic_filename, \
+		filename_len, true_filename, *store_path_index)
 
 	return 0;
 }
