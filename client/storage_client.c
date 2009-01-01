@@ -1004,24 +1004,27 @@ int tracker_query_storage_update1(TrackerServerInfo *pTrackerServer, \
 pkg format:
 Header
 8 bytes: source filename len
+8 bytes: source file signature len
 8 bytes: meta data bytes
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 FDFS_FILE_EXT_NAME_MAX_LEN bytes: file ext name, do not include dot (.)
 source filename len: source filename without group name
+source file signature len: source file signature
 meta data bytes: each meta data seperated by \x01,
 		 name and value seperated by \x02
 **/
 int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const char *src_filename, const int src_filename_len, \
+		const char *src_file_sig, const int src_file_sig_len, \
 		const char *group_name, const char *file_ext_name, \
 		char *meta_buff, const int meta_size, \
 		char *remote_filename, int *filename_len)
 {
 	TrackerHeader *pHeader;
 	int result;
-	char out_buff[sizeof(TrackerHeader) + 2*FDFS_PROTO_PKG_LEN_SIZE + \
-		FDFS_GROUP_NAME_MAX_LEN + FDFS_FILE_EXT_NAME_MAX_LEN + 64];
+	char out_buff[sizeof(TrackerHeader) + 3 * FDFS_PROTO_PKG_LEN_SIZE + \
+		FDFS_GROUP_NAME_MAX_LEN + FDFS_FILE_EXT_NAME_MAX_LEN + 128];
 	char in_buff[128];
 	char *p;
 	int group_name_len;
@@ -1031,7 +1034,7 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	bool new_connection;
 
 	*remote_filename = '\0';
-	if (src_filename_len > 64)
+	if (src_filename_len > 64 || src_file_sig_len > 64)
 	{
 		return EINVAL;
 	}
@@ -1048,6 +1051,8 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	memset(out_buff, 0, sizeof(out_buff));
 	p = out_buff + sizeof(TrackerHeader);
 	long2buff(src_filename_len, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+	long2buff(src_file_sig_len, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 	long2buff(meta_size, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
@@ -1078,6 +1083,8 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 
 	memcpy(p, src_filename, src_filename_len);
 	p += src_filename_len;
+	memcpy(p, src_file_sig, src_file_sig_len);
+	p += src_file_sig_len;
 
 	pHeader = (TrackerHeader *)out_buff;
 	long2buff(p - out_buff - sizeof(TrackerHeader) + meta_size, \

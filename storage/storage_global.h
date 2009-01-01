@@ -17,6 +17,7 @@
 #include "fdfs_define.h"
 #include "tracker_types.h"
 #include "client_global.h"
+#include "fdht_types.h"
 
 #define STORAGE_BEAT_DEF_INTERVAL    30
 #define STORAGE_REPORT_DEF_INTERVAL  300
@@ -85,6 +86,8 @@ extern int g_allow_ip_count;  /* -1 means match any ip address */
 extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
 
 extern bool g_check_file_duplicate;
+extern char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1];
+extern int g_namespace_len;
 
 int storage_cmp_by_ip_addr(const void *p1, const void *p2);
 

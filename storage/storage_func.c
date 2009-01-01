@@ -1062,6 +1062,26 @@ int storage_func_init(const char *filename, \
 				"check_file_duplicate", items, nItemCount);
 		if (g_check_file_duplicate)
 		{
+			char *pKeyNamespace;
+			pKeyNamespace = iniGetStrValue( \
+				"key_namespace", items, nItemCount);
+			if (pKeyNamespace == NULL || *pKeyNamespace == '\0')
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"item \"key_namespace\" does not " \
+					"exist or is empty", __LINE__);
+				result = EINVAL;
+				break;
+			}
+
+			g_namespace_len = strlen(pKeyNamespace);
+			if (g_namespace_len >= sizeof(g_key_namespace))
+			{
+				g_namespace_len = sizeof(g_key_namespace) - 1;
+			}
+			memcpy(g_key_namespace, pKeyNamespace, g_namespace_len);
+			*(g_key_namespace + g_namespace_len) = '\0';
+
 			if ((result=fdht_load_groups(items, nItemCount, \
 					&g_group_array)) != 0)
 			{
@@ -1083,7 +1103,8 @@ int storage_func_init(const char *filename, \
 			"file_distribute_rotate_count=%d, " \
 			"fsync_after_written_bytes=%d, " \
 			"sync_log_buff_interval=%ds, " \
-			"check_file_duplicate=%d, FDHT group count=%d", \
+			"check_file_duplicate=%d, FDHT group count=%d, " \
+			"key_namespace=%s", \
 			g_version.major, g_version.minor, \
 			g_base_path, g_path_count, g_subdir_count_per_path, \
 			g_group_name, g_network_timeout, \
@@ -1096,7 +1117,7 @@ int storage_func_init(const char *filename, \
 			g_allow_ip_count, g_file_distribute_path_mode, \
 			g_file_distribute_rotate_count, \
 			g_fsync_after_written_bytes, g_sync_log_buff_interval, \
-			g_check_file_duplicate, g_group_array.count);
+			g_check_file_duplicate, g_group_array.count, g_key_namespace);
 
 		break;
 	}
