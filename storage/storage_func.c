@@ -30,6 +30,7 @@
 #include "tracker_proto.h"
 #include "storage_global.h"
 #include "storage_func.h"
+#include "fdht_func.h"
 #include "fdht_client.h"
 
 #define DATA_DIR_INITED_FILENAME	".data_init_flag"
@@ -1116,16 +1117,16 @@ int storage_func_init(const char *filename, \
 
 	iniFreeItems(items);
 
-	if ((result=storage_check_and_make_data_dirs()) != 0)
-	{
-		logCrit("file: "__FILE__", line: %d, " \
-			"storage_check_and_make_data_dirs fail, " \
-			"program exit!", __LINE__);
-		return result;
-	}
-
 	if (result == 0)
 	{
+		if ((result=storage_check_and_make_data_dirs()) != 0)
+		{
+			logCrit("file: "__FILE__", line: %d, " \
+				"storage_check_and_make_data_dirs fail, " \
+				"program exit!", __LINE__);
+			return result;
+		}
+
 		return storage_open_storage_stat();
 	}
 	else

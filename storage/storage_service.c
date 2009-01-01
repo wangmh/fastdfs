@@ -34,12 +34,21 @@
 #include "fdfs_base64.h"
 #include "hash.h"
 #include "fdht_client.h"
+#include "tracker_client.h"
+#include "storage_client.h"
 
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
 
 static pthread_mutex_t path_index_thread_lock;
 static pthread_mutex_t stat_count_thread_lock;
+
+extern int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const char *src_filename, const int src_filename_len, \
+		const char *group_name, const char *file_ext_name, \
+		char *meta_buff, const int meta_size, \
+		char *remote_filename, int *filename_len);
 
 int storage_service_init()
 {
@@ -316,7 +325,46 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			value_len = sizeof(value) - 1;
 			if (fdht_get(&key_info, &pValue, &value_len) == 0)
 			{   //exists
+				char *pGroupName;
+				char *pSrcFilename;
+				char *pSeperator;
+				TrackerServerInfo trackerServer;
+
 				*(value + value_len) = '\0';
+
+				pSeperator = strchr(value, '/');
+				if (pSeperator == NULL)
+				{
+					logError("file: "__FILE__", line: %d, "\
+						"value %s is invalid", \
+						__LINE__, value);
+
+					*filename = '\0';
+					*filename_len = 0;
+					return EINVAL;
+				}
+
+				if ((result=tracker_get_connection_ex( \
+						&trackerServer)) != 0)
+				{
+					*filename = '\0';
+					*filename_len = 0;
+					return result;
+				}
+
+				*pSeperator = '\0';
+				pGroupName = value;
+				pSrcFilename = pSeperator + 1;
+				result = storage_client_create_link(\
+					&trackerServer, NULL, \
+					pSrcFilename, value_len - \
+					(pSrcFilename - value), \
+					pGroupName, file_ext_name, \
+					meta_buff, meta_size, \
+					filename, filename_len);
+
+				tracker_disconnect_server(&trackerServer);
+				return result;
 			}
 		}
 		else
@@ -463,8 +511,22 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		{
 			key_info.key_len = value_len;
 			memcpy(key_info.szKey, value, value_len);
+
+			logInfo("fdht_set key=%s(%d), value=1", value, value_len);
 			fdht_set(&key_info, FDHT_EXPIRES_NEVER, "1", 1);
 		}
+	}
+	else if (src_true_filename != NULL)	//create link
+	{
+		key_info.key_len = snprintf(key_info.szKey, 
+			sizeof(key_info.szKey), \
+			"%s/%c"STORAGE_DATA_DIR_FORMAT"/%s", \
+			g_group_name, STORAGE_STORE_PATH_PREFIX_CHAR, \
+			store_path_index, src_true_filename);
+		value_len = sizeof(value) - 1;
+		result = fdht_inc(&key_info, FDHT_EXPIRES_NEVER, 1, value, &value_len);
+		*(value + value_len) = '\0';
+		logInfo("fdht_inc result=%d, key=%s(%d), value=%s(%d)", result, key_info.szKey,  key_info.key_len, value, value_len);
 	}
 
 	return 0;
@@ -660,7 +722,7 @@ filename
 meta data bytes: each meta data seperated by \x01,
 		 name and value seperated by \x02
 **/
-static int storage_set_metadata(StorageClientInfo *pClientInfo, \
+static int storage_server_set_metadata(StorageClientInfo *pClientInfo, \
 				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
@@ -1462,7 +1524,7 @@ Header
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename
 **/
-static int storage_get_metadata(StorageClientInfo *pClientInfo, \
+static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
@@ -1620,7 +1682,7 @@ Header
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename
 **/
-static int storage_download_file(StorageClientInfo *pClientInfo, \
+static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
@@ -1913,7 +1975,7 @@ Header
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename
 **/
-static int storage_delete_file(StorageClientInfo *pClientInfo, \
+static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 				const int64_t nInPackLen)
 {
 	TrackerHeader resp;
@@ -2527,7 +2589,7 @@ data buff (struct)
 		switch (header.cmd)
 		{
 		case STORAGE_PROTO_CMD_DOWNLOAD_FILE:
-			if ((result=storage_download_file(&client_info, \
+			if ((result=storage_server_download_file(&client_info, \
 				nInPackLen)) != 0)
 			{
 				pthread_mutex_lock(&stat_count_thread_lock);
@@ -2541,7 +2603,7 @@ data buff (struct)
 				g_storage_stat.success_download_count)
 			break;
 		case STORAGE_PROTO_CMD_GET_METADATA:
-			if ((result=storage_get_metadata(&client_info, \
+			if ((result=storage_server_get_metadata(&client_info, \
 				nInPackLen)) != 0)
 			{
 				pthread_mutex_lock(&stat_count_thread_lock);
@@ -2570,7 +2632,7 @@ data buff (struct)
 				g_storage_stat.last_source_update)
 			break;
 		case STORAGE_PROTO_CMD_DELETE_FILE:
-			if ((result=storage_delete_file(&client_info, \
+			if ((result=storage_server_delete_file(&client_info, \
 				nInPackLen)) != 0)
 			{
 				pthread_mutex_lock(&stat_count_thread_lock);
@@ -2636,7 +2698,7 @@ data buff (struct)
 			CHECK_AND_WRITE_TO_STAT_FILE1
 			break;
 		case STORAGE_PROTO_CMD_SET_METADATA:
-			if ((result=storage_set_metadata(&client_info, \
+			if ((result=storage_server_set_metadata(&client_info, \
 				nInPackLen)) != 0)
 			{
 				pthread_mutex_lock(&stat_count_thread_lock);
