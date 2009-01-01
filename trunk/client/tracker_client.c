@@ -135,6 +135,49 @@ TrackerServerInfo *tracker_get_connection()
 	return NULL;
 }
 
+int tracker_get_connection_ex(TrackerServerInfo *pTrackerServer)
+{
+	TrackerServerInfo *pCurrentServer;
+	TrackerServerInfo *pServer;
+	TrackerServerInfo *pEnd;
+
+	pCurrentServer = g_tracker_servers + g_tracker_server_index;
+	memcpy(pTrackerServer, pCurrentServer, sizeof(TrackerServerInfo));
+	pTrackerServer->sock = -1;
+	if (tracker_connect_server(pTrackerServer) == 0)
+	{
+		g_tracker_server_index++;
+		if (g_tracker_server_index >= g_tracker_server_count)
+		{
+			g_tracker_server_index = 0;
+		}
+		return 0;
+	}
+
+	pEnd = g_tracker_servers + g_tracker_server_count;
+	for (pServer=pCurrentServer+1; pServer<pEnd; pServer++)
+	{
+		memcpy(pTrackerServer, pServer, sizeof(TrackerServerInfo));
+		pTrackerServer->sock = -1;
+		if (tracker_connect_server(pTrackerServer) == 0)
+		{
+			return 0;
+		}
+	}
+
+	for (pServer=g_tracker_servers; pServer<pCurrentServer; pServer++)
+	{
+		memcpy(pTrackerServer, pServer, sizeof(TrackerServerInfo));
+		pTrackerServer->sock = -1;
+		if (tracker_connect_server(pTrackerServer) == 0)
+		{
+			return 0;
+		}
+	}
+
+	return ENOENT;
+}
+
 int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 		const char *szGroupName, \
 		FDFSStorageInfo *storage_infos, const int max_storages, \

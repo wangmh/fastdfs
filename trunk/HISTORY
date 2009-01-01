@@ -9,6 +9,8 @@ Version 1.14  2008-12-15
   * sched_thread.h /.c support time_base of task
   * hash.h / .c add function CRC32, add hash function to support stream hash
   * add FastDHT client files in storage/fdht_client/
+  * create symbol link when the file content is duplicate, 
+    add item "check_file_duplicate" to conf file storage.conf
 
 Version 1.13  2008-11-29
   * re-calculate group 's free space when one of it's storage servers' 

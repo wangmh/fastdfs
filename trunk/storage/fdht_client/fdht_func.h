@@ -23,6 +23,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <fdht_types.h>
 
 #ifdef __cplusplus
 extern "C" {

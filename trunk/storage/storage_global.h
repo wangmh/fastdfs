@@ -16,6 +16,7 @@
 #include <string.h>
 #include "fdfs_define.h"
 #include "tracker_types.h"
+#include "client_global.h"
 
 #define STORAGE_BEAT_DEF_INTERVAL    30
 #define STORAGE_REPORT_DEF_INTERVAL  300
@@ -75,9 +76,6 @@ extern int g_storage_join_time;
 extern bool g_sync_old_done;
 extern char g_sync_src_ip_addr[IP_ADDRESS_SIZE];
 extern int g_sync_until_timestamp;
-
-extern int g_tracker_server_count;
-extern TrackerServerInfo *g_tracker_servers;
 
 extern int g_local_host_ip_count;
 extern char g_local_host_ip_addrs[STORAGE_MAX_LOCAL_IP_ADDRS * \

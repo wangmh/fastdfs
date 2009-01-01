@@ -52,9 +52,6 @@ bool g_sync_old_done = false;
 char g_sync_src_ip_addr[IP_ADDRESS_SIZE] = {0};
 int g_sync_until_timestamp = 0;
 
-int g_tracker_server_count = 0;
-TrackerServerInfo *g_tracker_servers = NULL;
-
 int g_local_host_ip_count = 0;
 char g_local_host_ip_addrs[STORAGE_MAX_LOCAL_IP_ADDRS * \
 				IP_ADDRESS_SIZE];

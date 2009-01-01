@@ -31,6 +31,15 @@ typedef struct
 **/
 TrackerServerInfo *tracker_get_connection();
 
+
+/**
+* get a connection to tracker server
+* params:
+*       pTrackerServer: tracker server
+* return: 0 success, !=0 fail
+**/
+int tracker_get_connection_ex(TrackerServerInfo *pTrackerServer);
+
 /**
 * connect to the tracker server
 * params:

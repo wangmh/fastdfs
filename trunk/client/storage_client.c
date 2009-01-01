@@ -1015,26 +1015,22 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const char *src_filename, const int src_filename_len, \
 		const char *group_name, const char *file_ext_name, \
-		const FDFSMetaData *meta_list, const int meta_count, \
-		char *remote_filename)
+		char *meta_buff, const int meta_size, \
+		char *remote_filename, int *filename_len)
 {
-#define MAX_STATIC_META_DATA_COUNT 32
-	TrackerHeader header;
+	TrackerHeader *pHeader;
 	int result;
-	char meta_buff[2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN + \
-		FDFS_FILE_EXT_NAME_MAX_LEN + sizeof(FDFSMetaData) * \
-		MAX_STATIC_META_DATA_COUNT + 64];
-	char *pMetaData;
+	char out_buff[sizeof(TrackerHeader) + 2*FDFS_PROTO_PKG_LEN_SIZE + \
+		FDFS_GROUP_NAME_MAX_LEN + FDFS_FILE_EXT_NAME_MAX_LEN + 64];
+	char in_buff[128];
 	char *p;
 	int group_name_len;
-	int meta_bytes;
 	int64_t in_bytes;
-	char in_buff[128];
 	char *pInBuff;
 	TrackerServerInfo storageServer;
 	bool new_connection;
 
-	remote_filename[0] = '\0';
+	*remote_filename = '\0';
 	if (src_filename_len > 64)
 	{
 		return EINVAL;
@@ -1047,50 +1043,16 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		return result;
 	}
 
-	/*
-	//printf("upload to storage %s:%d\n", \
+	logInfo("create link to storage %s:%d\n", \
 		pStorageServer->ip_addr, pStorageServer->port);
-	*/
 
 	while (1)
 	{
-	if (meta_count <= MAX_STATIC_META_DATA_COUNT)
-	{
-		pMetaData = meta_buff;
-	}
-	else
-	{
-		pMetaData = (char *)malloc(2 * FDFS_PROTO_PKG_LEN_SIZE + \
-                        FDFS_GROUP_NAME_MAX_LEN + FDFS_FILE_EXT_NAME_MAX_LEN + \
-			sizeof(FDFSMetaData) * meta_count + 64);
-		if (pMetaData == NULL)
-		{
-			result= errno != 0 ? errno : ENOMEM;
-
-			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail", __LINE__, \
-				2 * FDFS_PROTO_PKG_LEN_SIZE + \
-				sizeof(FDFSMetaData) * meta_count + 2);
-			break;
-		}
-	}
-
-	if (meta_count > 0)
-	{
-		fdfs_pack_metadata(meta_list, meta_count, pMetaData + \
-			2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN + \
-			FDFS_FILE_EXT_NAME_MAX_LEN + src_filename_len, \
-			&meta_bytes);
-	}
-	else
-	{
-		meta_bytes = 0;
-	}
-
-	p = pMetaData;
+	memset(out_buff, 0, sizeof(out_buff));
+	p = out_buff + sizeof(TrackerHeader);
 	long2buff(src_filename_len, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
-	long2buff(meta_bytes, p);
+	long2buff(meta_size, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 
 	group_name_len = strlen(group_name);
@@ -1101,7 +1063,6 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	memcpy(p, group_name, group_name_len);
 	p += FDFS_GROUP_NAME_MAX_LEN;
 
-	memset(p, 0, FDFS_FILE_EXT_NAME_MAX_LEN);
 	if (file_ext_name != NULL)
 	{
 		int file_ext_len;
@@ -1119,12 +1080,13 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	p += FDFS_FILE_EXT_NAME_MAX_LEN;
 
 	memcpy(p, src_filename, src_filename_len);
-	p += src_filename_len + meta_bytes;
+	p += src_filename_len;
 
-	long2buff(p - pMetaData, header.pkg_len);
-	header.cmd = STORAGE_PROTO_CMD_UPLOAD_FILE;
-	header.status = 0;
-	if ((result=tcpsenddata(pStorageServer->sock, &header, sizeof(header), \
+	pHeader = (TrackerHeader *)out_buff;
+	long2buff(p - out_buff - sizeof(TrackerHeader) + meta_size, \
+		pHeader->pkg_len);
+	pHeader->cmd = STORAGE_PROTO_CMD_CREATE_LINK;
+	if ((result=tcpsenddata(pStorageServer->sock, out_buff, p - out_buff, \
 				g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
@@ -1135,8 +1097,8 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	if ((result=tcpsenddata(pStorageServer->sock, pMetaData, \
-		p - pMetaData, g_network_timeout)) != 0)
+	if (meta_size > 0 && (result=tcpsenddata(pStorageServer->sock, \
+		meta_buff, meta_size, g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -1164,9 +1126,10 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	in_buff[in_bytes] = '\0';
+	*(in_buff + in_bytes) = '\0';
+	*filename_len = in_bytes - FDFS_GROUP_NAME_MAX_LEN;
 	memcpy(remote_filename, in_buff + FDFS_GROUP_NAME_MAX_LEN, \
-		in_bytes - FDFS_GROUP_NAME_MAX_LEN + 1);
+		(*filename_len) + 1);
 
 	break;
 	}
@@ -1175,10 +1138,6 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	{
 		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
-	}
-	if (pMetaData != NULL && pMetaData != meta_buff)
-	{
-		free(pMetaData);
 	}
 
 	return result;
