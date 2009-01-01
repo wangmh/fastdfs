@@ -217,15 +217,16 @@ static int storage_sort_metadata_buff(char *meta_buff, const int meta_size)
 
 #define storage_save_file(pClientInfo, store_path_index, \
 		file_size, file_ext_name, meta_buff, meta_size, \
-		filename, filename_len) \
+		filename, filename_len, bForwarded) \
 	storage_deal_file(pClientInfo, store_path_index, NULL, \
-		file_size, file_ext_name, meta_buff, meta_size, filename, filename_len)
+		file_size, file_ext_name, meta_buff, meta_size, \
+		filename, filename_len, bForwarded)
 
 static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		const int store_path_index, const char *src_true_filename, \
 		const int64_t file_size, const char *file_ext_name,  \
 		char *meta_buff, const int meta_size, \
-		char *filename, int *filename_len)
+		char *filename, int *filename_len, bool *bForwarded)
 {
 #define FILE_TIMESTAMP_ADVANCED_SECS	30
 
@@ -364,6 +365,8 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 					filename, filename_len);
 
 				tracker_disconnect_server(&trackerServer);
+
+				*bForwarded = true;
 				return result;
 			}
 		}
@@ -437,13 +440,14 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		char new_filename[64];
 		int new_filename_len;
 
+		*new_full_filename = '\0';
 		for (i=0; i<10; i++)
 		{
 			if ((result=storage_gen_filename(pClientInfo,file_size,\
 				szFormattedExt, FDFS_FILE_EXT_NAME_MAX_LEN+1, \
 				end_time, new_filename, &new_filename_len))!=0)
 			{
-				return 0;
+				break;
 			}
 
 			sprintf(new_full_filename, "%s/data/%s", \
@@ -456,11 +460,13 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			*new_full_filename = '\0';
 		}
 
-		if (*full_filename == '\0')
+		while (1)
+		{
+		if (*new_full_filename == '\0')
 		{
 			logWarning("file: "__FILE__", line: %d, " \
 				"Can't generate uniq filename", __LINE__);
-			return 0;
+			break;
 		}
 
 		if (rename(full_filename, new_full_filename) != 0)
@@ -470,7 +476,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 				"errno: %d, error info: %s", __LINE__, \
 				full_filename, new_full_filename, \
 				errno, strerror(errno));
-			return 0;
+			break;
 		}
 
 		if (*meta_filename != '\0')
@@ -494,6 +500,8 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 
 		*filename_len = new_filename_len;
 		memcpy(filename, new_filename, new_filename_len+1);
+		break;
+		}
 	}
 	}
 
@@ -512,7 +520,6 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			key_info.key_len = value_len;
 			memcpy(key_info.szKey, value, value_len);
 
-			logInfo("fdht_set key=%s(%d), value=1", value, value_len);
 			fdht_set(&key_info, FDHT_EXPIRES_NEVER, "1", 1);
 		}
 	}
@@ -526,9 +533,9 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		value_len = sizeof(value) - 1;
 		result = fdht_inc(&key_info, FDHT_EXPIRES_NEVER, 1, value, &value_len);
 		*(value + value_len) = '\0';
-		logInfo("fdht_inc result=%d, key=%s(%d), value=%s(%d)", result, key_info.szKey,  key_info.key_len, value, value_len);
 	}
 
+	*bForwarded = false;
 	return 0;
 }
 
@@ -919,10 +926,11 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	int out_len;
 	char in_buff[1+2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_FILE_EXT_NAME_MAX_LEN+1];
 	char meta_buff[64 * 1024];
-	char *pMetaData;
-	char *file_ext_name;
 	char out_buff[128];
 	char filename[128];
+	bool bForwarded;
+	char *pMetaData;
+	char *file_ext_name;
 	int meta_bytes;
 	int64_t file_bytes;
 	int filename_len;
@@ -1039,9 +1047,9 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 
 		resp.status = storage_save_file(pClientInfo, store_path_index,\
 			file_bytes, file_ext_name, pMetaData, meta_bytes, \
-			filename, &filename_len);
+			filename, &filename_len, &bForwarded);
 
-		if (resp.status != 0)
+		if (resp.status != 0 || bForwarded)
 		{
 			break;
 		}
@@ -2141,13 +2149,14 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 			FDFS_FILE_EXT_NAME_MAX_LEN + 1];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char meta_buff[64 * 1024];
-	char *pMetaData;
-	char *file_ext_name;
 	char out_buff[128];
 	char src_filename[64];
 	char src_true_filename[64];
 	char src_full_filename[MAX_PATH_SIZE+64];
 	char filename[128];
+	bool bForwarded;
+	char *pMetaData;
+	char *file_ext_name;
 	int meta_bytes;
 	int src_filename_len;
 	int filename_len;
@@ -2259,7 +2268,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 		sprintf(src_full_filename, "%s/data/%s", \
 			g_store_paths[store_path_index], src_true_filename);
 
-		if (stat(src_full_filename, &stat_buf) != 0)
+		if (lstat(src_full_filename, &stat_buf) != 0)
 		{
 			resp.status = errno != 0 ? errno : ENOENT;
 			logError("file: "__FILE__", line: %d, " \
@@ -2318,8 +2327,8 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 		resp.status = storage_deal_file(pClientInfo, \
 			store_path_index, src_true_filename, stat_buf.st_size, \
 			file_ext_name, pMetaData, meta_bytes, \
-			filename, &filename_len);
-		if (resp.status != 0)
+			filename, &filename_len, &bForwarded);
+		if (resp.status != 0 || bForwarded)
 		{
 			break;
 		}
