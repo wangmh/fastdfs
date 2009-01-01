@@ -294,10 +294,11 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	int64_t in_bytes;
 	char *pBuff;
 	struct stat stat_buf;
+	int src_path_index;
 
 	snprintf(full_filename, sizeof(full_filename), \
 		"%s/data/%s", pRecord->pBasePath, pRecord->true_filename);
-	if (stat(full_filename, &stat_buf) != 0)
+	if (lstat(full_filename, &stat_buf) != 0)
 	{
 		if (errno == ENOENT)
 		{
@@ -327,7 +328,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 		{
 			logWarning("file: "__FILE__", line: %d, " \
 				"sync data file, file %s is not a symbol link,"\
-				"maybe create later?", \
+				" maybe create later?", \
 				__LINE__, full_filename);
 		}
 
@@ -346,6 +347,8 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	}
 	*(src_full_filename + src_filename_len) = '\0';
 
+	//logInfo("src_full_filename=%s(%d)", src_full_filename, src_filename_len);
+
 	pSrcFilename = strstr(src_full_filename, "/data/");
 	if (pSrcFilename == NULL)
 	{
@@ -362,7 +365,47 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 		pSrcFilename = p + 6;
 		p = strstr(pSrcFilename, "/data/");
 	}
+
+	if (g_path_count == 1)
+	{
+		src_path_index = 0;
+	}
+	else
+	{
+		*(pSrcFilename - 6) = '\0';
+
+		for (src_path_index=0; src_path_index<g_path_count; \
+			src_path_index++)
+		{
+			if (strcmp(src_full_filename, \
+				g_store_paths[src_path_index]) == 0)
+			{
+				break;
+			}
+		}
+
+		if (src_path_index == g_path_count)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"source data file: %s is invalid", \
+				__LINE__, src_full_filename);
+			return EINVAL;
+		}
+	}
+
+	pSrcFilename -= 4;
 	src_filename_len -= (pSrcFilename - src_full_filename);
+	if (src_filename_len > 64)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"source data file: %s is invalid", \
+			__LINE__, src_full_filename);
+		return EINVAL;
+	}
+
+	sprintf(out_buff, "%c"STORAGE_DATA_DIR_FORMAT"/", \
+			STORAGE_STORE_PATH_PREFIX_CHAR, src_path_index);
+	memcpy(pSrcFilename, out_buff, 4);
 
 	while (1)
 	{

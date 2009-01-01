@@ -1436,6 +1436,12 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 		memcpy(dest_filename, in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE + \
 			4 + FDFS_GROUP_NAME_MAX_LEN, dest_filename_len);
 		*(dest_filename + dest_filename_len) = '\0';
+
+		memcpy(src_filename, in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE + \
+			4 + FDFS_GROUP_NAME_MAX_LEN + dest_filename_len, \
+			src_filename_len);
+		*(src_filename + src_filename_len) = '\0';
+
 		if ((resp.status=storage_split_filename(dest_filename, \
 			&dest_filename_len, dest_true_filename, \
 			&pDestBasePath)) != 0)
@@ -1450,10 +1456,6 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 		snprintf(dest_full_filename, sizeof(dest_full_filename), \
 			"%s/data/%s", pDestBasePath, dest_true_filename);
 
-		memcpy(src_filename, in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE + \
-			4 + FDFS_GROUP_NAME_MAX_LEN + dest_filename_len, \
-			src_filename_len);
-		*(src_filename + src_filename_len) = '\0';
 		if ((resp.status=storage_split_filename(src_filename, \
 			&src_filename_len, src_true_filename, \
 			&pSrcBasePath)) != 0)
