@@ -1043,9 +1043,6 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		return result;
 	}
 
-	logInfo("create link to storage %s:%d\n", \
-		pStorageServer->ip_addr, pStorageServer->port);
-
 	while (1)
 	{
 	memset(out_buff, 0, sizeof(out_buff));
