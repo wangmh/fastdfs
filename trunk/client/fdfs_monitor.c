@@ -195,6 +195,10 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tsuccess_download_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\ttotal_get_meta_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tsuccess_get_meta_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_create_link_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tsuccess_create_link_count = "INT64_PRINTF_FORMAT"\n"\
+			"\t\ttotal_delete_link_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tsuccess_delete_link_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tlast_source_update = %s\n" \
 			"\t\tlast_sync_update = %s\n"   \
 			"\t\tlast_synced_timestamp= %s\n",  \
@@ -212,6 +216,10 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			pStorageStat->success_download_count, \
 			pStorageStat->total_get_meta_count, \
 			pStorageStat->success_get_meta_count, \
+			pStorageStat->total_create_link_count, \
+			pStorageStat->success_create_link_count, \
+			pStorageStat->total_delete_link_count, \
+			pStorageStat->success_delete_link_count, \
 			formatDatetime(pStorageStat->last_source_update, \
 				"%Y-%m-%d %H:%M:%S", \
 				szSrcUpdTime, sizeof(szSrcUpdTime)), \
