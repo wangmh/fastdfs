@@ -53,6 +53,11 @@
 #define STAT_ITEM_SUCCESS_DELETE	"success_delete_count"
 #define STAT_ITEM_TOTAL_GET_META	"total_get_meta_count"
 #define STAT_ITEM_SUCCESS_GET_META	"success_get_meta_count"
+#define STAT_ITEM_TOTAL_CREATE_LINK	"total_create_link_count"
+#define STAT_ITEM_SUCCESS_CREATE_LINK	"success_create_link_count"
+#define STAT_ITEM_TOTAL_DELETE_LINK	"total_delete_link_count"
+#define STAT_ITEM_SUCCESS_DELETE_LINK	"success_delete_link_count"
+
 #define STAT_ITEM_DIST_PATH_INDEX_HIGH	"dist_path_index_high"
 #define STAT_ITEM_DIST_PATH_INDEX_LOW	"dist_path_index_low"
 #define STAT_ITEM_DIST_WRITE_FILE_COUNT	"dist_write_file_count"
@@ -195,6 +200,18 @@ static int storage_open_storage_stat()
 		g_storage_stat.success_get_meta_count = iniGetInt64Value( \
 				STAT_ITEM_SUCCESS_GET_META, \
 				items, nItemCount, 0);
+		g_storage_stat.total_create_link_count = iniGetInt64Value( \
+				STAT_ITEM_TOTAL_CREATE_LINK, \
+				items, nItemCount, 0);
+		g_storage_stat.success_create_link_count = iniGetInt64Value( \
+				STAT_ITEM_SUCCESS_CREATE_LINK, \
+				items, nItemCount, 0);
+		g_storage_stat.total_delete_link_count = iniGetInt64Value( \
+				STAT_ITEM_TOTAL_DELETE_LINK, \
+				items, nItemCount, 0);
+		g_storage_stat.success_delete_link_count = iniGetInt64Value( \
+				STAT_ITEM_SUCCESS_DELETE_LINK, \
+				items, nItemCount, 0);
 
 		g_dist_path_index_high = iniGetIntValue( \
 				STAT_ITEM_DIST_PATH_INDEX_HIGH, \
@@ -246,7 +263,7 @@ static int storage_close_storage_stat()
 
 int storage_write_to_stat_file()
 {
-	char buff[512];
+	char buff[1024];
 	int len;
 
 	len = sprintf(buff, 
@@ -256,6 +273,10 @@ int storage_write_to_stat_file()
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
@@ -281,6 +302,14 @@ int storage_write_to_stat_file()
 		STAT_ITEM_TOTAL_GET_META, g_storage_stat.total_get_meta_count, \
 		STAT_ITEM_SUCCESS_GET_META, \
 		g_storage_stat.success_get_meta_count,  \
+		STAT_ITEM_TOTAL_CREATE_LINK, \
+		g_storage_stat.total_create_link_count,  \
+		STAT_ITEM_SUCCESS_CREATE_LINK, \
+		g_storage_stat.success_create_link_count,  \
+		STAT_ITEM_TOTAL_DELETE_LINK, \
+		g_storage_stat.total_delete_link_count,  \
+		STAT_ITEM_SUCCESS_DELETE_LINK, \
+		g_storage_stat.success_delete_link_count,  \
 		STAT_ITEM_DIST_PATH_INDEX_HIGH, g_dist_path_index_high, \
 		STAT_ITEM_DIST_PATH_INDEX_LOW, g_dist_path_index_low, \
 		STAT_ITEM_DIST_WRITE_FILE_COUNT, g_dist_write_file_count

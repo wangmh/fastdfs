@@ -593,6 +593,15 @@ static int tracker_deal_server_list_group_storages( \
 				 pStatBuff->sz_last_sync_update);
 			long2buff(pStorageStat->last_synced_timestamp, \
 				 pStatBuff->sz_last_synced_timestamp);
+			long2buff(pStorageStat->total_create_link_count, \
+				 pStatBuff->sz_total_create_link_count);
+			long2buff(pStorageStat->success_create_link_count, \
+				 pStatBuff->sz_success_create_link_count);
+			long2buff(pStorageStat->total_delete_link_count, \
+				 pStatBuff->sz_total_delete_link_count);
+			long2buff(pStorageStat->success_delete_link_count, \
+				 pStatBuff->sz_success_delete_link_count);
+
 			pDest++;
 		}
 
@@ -1894,7 +1903,7 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 			buff2long(statBuff.sz_success_create_link_count);
 		pStat->total_delete_link_count = \
 			buff2long(statBuff.sz_total_delete_link_count);
-		pStat->success_delete_count = \
+		pStat->success_delete_link_count = \
 			buff2long(statBuff.sz_success_delete_link_count);
 
 		if (++g_storage_stat_chg_count % TRACKER_SYNC_TO_FILE_FREQ == 0)

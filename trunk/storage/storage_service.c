@@ -220,6 +220,14 @@ static int storage_sort_metadata_buff(char *meta_buff, const int meta_size)
 	int2buff(hash_codes[3], sig_buff+20); \
 
 
+#define STORAGE_CREATE_FLAG_NONE  0
+#define STORAGE_CREATE_FLAG_FILE  1
+#define STORAGE_CREATE_FLAG_LINK  2
+
+#define STORAGE_DELETE_FLAG_NONE  0
+#define STORAGE_DELETE_FLAG_FILE  1
+#define STORAGE_DELETE_FLAG_LINK  2
+
 typedef struct 
 {
 	char src_true_filename[64];
@@ -229,16 +237,16 @@ typedef struct
 
 #define storage_save_file(pClientInfo, store_path_index, \
 		file_size, file_ext_name, meta_buff, meta_size, \
-		filename, filename_len, bForwarded) \
+		filename, filename_len, create_flag) \
 	storage_deal_file(pClientInfo, store_path_index, NULL, \
 		file_size, file_ext_name, meta_buff, meta_size, \
-		filename, filename_len, bForwarded)
+		filename, filename_len, create_flag)
 
 static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		const int store_path_index, const SourceFileInfo *pSrcFileInfo,\
 		const int64_t file_size, const char *file_ext_name,  \
 		char *meta_buff, const int meta_size, \
-		char *filename, int *filename_len, bool *bForwarded)
+		char *filename, int *filename_len, int *create_flag)
 {
 #define FILE_TIMESTAMP_ADVANCED_SECS	30
 
@@ -258,6 +266,8 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 	char value[128];
 	char *pValue;
 	int value_len;
+
+	*create_flag = STORAGE_CREATE_FLAG_NONE;
 
 	ext_name_len = strlen(file_ext_name);
 	if (ext_name_len == 0)
@@ -406,7 +416,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 
 				tracker_disconnect_server(&trackerServer);
 
-				*bForwarded = true;
+				*create_flag = STORAGE_CREATE_FLAG_LINK;
 				return result;
 			}
 			else if (result == ENOENT)
@@ -492,7 +502,8 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 					return result;
 				}
 
-				*bForwarded = true;
+				*create_flag = STORAGE_CREATE_FLAG_FILE | \
+						STORAGE_CREATE_FLAG_LINK;
 				return result;
 			}
 			else //error
@@ -648,6 +659,8 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 
 	if (pSrcFileInfo != NULL)   //create link
 	{
+		*create_flag = STORAGE_CREATE_FLAG_LINK;
+
 		key_info.obj_id_len = snprintf(key_info.szObjectId, \
 			sizeof(key_info.szObjectId), \
 			"%s/%c"STORAGE_DATA_DIR_FORMAT"/%s", \
@@ -696,8 +709,11 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		*/
 		}
 	}
+	else //upload file
+	{
+		*create_flag = STORAGE_CREATE_FLAG_FILE;
+	}
 
-	*bForwarded = false;
 	return 0;
 }
 
@@ -1082,7 +1098,7 @@ meta data bytes: each meta data seperated by \x01,
 file size bytes: file content
 **/
 static int storage_upload_file(StorageClientInfo *pClientInfo, \
-				const int64_t nInPackLen)
+				const int64_t nInPackLen, int *create_flag)
 {
 	TrackerHeader resp;
 	int out_len;
@@ -1090,7 +1106,6 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	char meta_buff[64 * 1024];
 	char out_buff[128];
 	char filename[128];
-	bool bForwarded;
 	char *pMetaData;
 	char *file_ext_name;
 	int meta_bytes;
@@ -1209,9 +1224,9 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 
 		resp.status = storage_save_file(pClientInfo, store_path_index,\
 			file_bytes, file_ext_name, pMetaData, meta_bytes, \
-			filename, &filename_len, &bForwarded);
+			filename, &filename_len, create_flag);
 
-		if (resp.status != 0 || bForwarded)
+		if (resp.status!=0 || (*create_flag & STORAGE_CREATE_FLAG_LINK))
 		{
 			break;
 		}
@@ -2141,11 +2156,6 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 	return resp.status;
 }
 
-#define STORAGE_DELETE_FLAG_NONE  0
-#define STORAGE_DELETE_FLAG_FILE  1
-#define STORAGE_DELETE_FLAG_LINK  2
-#define STORAGE_DELETE_FLAG_BOTH  STORAGE_DELETE_FLAG_ONLY_FILE | \
-				  STORAGE_DELETE_FLAG_ONLY_LINK
 /**
 pkg format:
 Header
@@ -2535,7 +2545,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 	char src_filename[64];
 	char src_full_filename[MAX_PATH_SIZE+64];
 	char filename[128];
-	bool bForwarded;
+	int create_flag;
 	char *pMetaData;
 	char *file_ext_name;
 	int meta_bytes;
@@ -2743,8 +2753,8 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 		resp.status = storage_deal_file(pClientInfo, \
 			store_path_index, &sourceFileInfo, stat_buf.st_size, \
 			file_ext_name, pMetaData, meta_bytes, \
-			filename, &filename_len, &bForwarded);
-		if (resp.status != 0 || bForwarded)
+			filename, &filename_len, &create_flag);
+		if (resp.status != 0)
 		{
 			break;
 		}
@@ -2904,6 +2914,7 @@ data buff (struct)
 	int src_sync_timestamp;
 	FDFSStorageServer *pSrcStorage;
 	int server_sock;
+	int create_flag;
 	int delete_flag;
 	
 	server_sock = (int)arg;
@@ -3046,18 +3057,24 @@ data buff (struct)
 			break;
 		case STORAGE_PROTO_CMD_UPLOAD_FILE:
 			if ((result=storage_upload_file(&client_info, \
-				nInPackLen)) != 0)
+				nInPackLen, &create_flag)) != 0)
 			{
 				pthread_mutex_lock(&stat_count_thread_lock);
-				g_storage_stat.total_upload_count++;
+				if (create_flag & STORAGE_CREATE_FLAG_FILE)
+				{
+					g_storage_stat.total_upload_count++;
+				}
 				pthread_mutex_unlock(&stat_count_thread_lock);
 				break;
 			}
 
+			if (create_flag & STORAGE_CREATE_FLAG_FILE)
+			{
 			CHECK_AND_WRITE_TO_STAT_FILE3( \
 				g_storage_stat.total_upload_count, \
 				g_storage_stat.success_upload_count, \
 				g_storage_stat.last_source_update)
+			}
 			break;
 		case STORAGE_PROTO_CMD_DELETE_FILE:
 			if ((result=storage_server_delete_file(&client_info, \
@@ -3074,6 +3091,7 @@ data buff (struct)
 					g_storage_stat.total_delete_link_count++;
 				}
 				pthread_mutex_unlock(&stat_count_thread_lock);
+
 				break;
 			}
 
@@ -3084,6 +3102,7 @@ data buff (struct)
 				g_storage_stat.success_delete_count, \
 				g_storage_stat.last_source_update)
 			}
+
 			if (delete_flag & STORAGE_DELETE_FLAG_LINK)
 			{
 				CHECK_AND_WRITE_TO_STAT_FILE3( \
@@ -3091,6 +3110,7 @@ data buff (struct)
 				g_storage_stat.success_delete_link_count, \
 				g_storage_stat.last_source_update)
 			}
+
 			break;
 		case STORAGE_PROTO_CMD_CREATE_LINK:
 			if ((result=storage_create_link(&client_info, \
