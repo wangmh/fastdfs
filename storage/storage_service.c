@@ -51,9 +51,9 @@ extern int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		char *meta_buff, const int meta_size, \
 		char *remote_filename, int *filename_len);
 
-#define FDHT_KEY_NAME_FILE_ID	"f_id"
-#define FDHT_KEY_NAME_REF_COUNT	"ref_c"
-#define FDHT_KEY_NAME_FILE_SIG	"f_sig"
+#define FDHT_KEY_NAME_FILE_ID	"fid"
+#define FDHT_KEY_NAME_REF_COUNT	"ref"
+#define FDHT_KEY_NAME_FILE_SIG	"sig"
 
 int storage_service_init()
 {
@@ -254,7 +254,6 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 	int pad_len;
 	time_t start_time;
 	unsigned int file_hash_codes[4];
-	bool bGenFileSignature;
 	FDHTKeyInfo key_info;
 	char value[128];
 	char *pValue;
@@ -322,7 +321,11 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 	{
 		if (g_check_file_duplicate)
 		{
-			bGenFileSignature = true;
+			int nSigLen;
+			char szFileSig[FILE_SIGNATURE_SIZE];
+			char src_filename[MAX_PATH_SIZE];
+			TrackerServerInfo trackerServer;
+
 			if ((result=tcprecvfile_ex(pClientInfo->sock, 
 				full_filename, file_size, \
 				g_fsync_after_written_bytes, \
@@ -334,21 +337,37 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			}
 
 			STORAGE_GEN_FILE_SIGNATURE(file_size, file_hash_codes, \
-					key_info.szObjectId)
+					szFileSig)
 
-			key_info.obj_id_len = FILE_SIGNATURE_SIZE;
+			nSigLen = FILE_SIGNATURE_SIZE;
+			key_info.obj_id_len = nSigLen;
+			memcpy(key_info.szObjectId, szFileSig, nSigLen);
 			key_info.key_len = sizeof(FDHT_KEY_NAME_FILE_ID) - 1;
 			memcpy(key_info.szKey, FDHT_KEY_NAME_FILE_ID, \
 				sizeof(FDHT_KEY_NAME_FILE_ID) - 1);
 
 			pValue = value;
 			value_len = sizeof(value) - 1;
-			if (fdht_get(&key_info, &pValue, &value_len) == 0)
+			result = fdht_get(&key_info, &pValue, &value_len);
+			if (result == 0)
 			{   //exists
 				char *pGroupName;
 				char *pSrcFilename;
 				char *pSeperator;
-				TrackerServerInfo trackerServer;
+
+				if (unlink(full_filename) != 0)
+				{
+					result = errno != 0 ? errno : EPERM;
+					logError("file: "__FILE__", line: %d, "\
+						"unlink %s fail, errno: %d, " \
+						"error info: %s", \
+						__LINE__, full_filename, \
+						result, strerror(result));
+
+					*filename = '\0';
+					*filename_len = 0;
+					return result;
+				}
 
 				*(value + value_len) = '\0';
 
@@ -390,10 +409,95 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 				*bForwarded = true;
 				return result;
 			}
+			else if (result == ENOENT)
+			{
+				*filename_len=sprintf(src_filename, "%c" \
+					STORAGE_DATA_DIR_FORMAT"/%s", \
+					STORAGE_STORE_PATH_PREFIX_CHAR, \
+					store_path_index, filename);
+				value_len = sprintf(value, "%s/%s", \
+						g_group_name, src_filename);
+				if ((result=fdht_set(&key_info, \
+						FDHT_EXPIRES_NEVER, \
+						value, value_len)) != 0)
+				{
+					unlink(full_filename);
+					*filename = '\0';
+					*filename_len = 0;
+					return result;
+				}
+
+				key_info.obj_id_len = value_len;
+				memcpy(key_info.szObjectId, value, value_len);
+				key_info.key_len = sizeof( \
+						FDHT_KEY_NAME_REF_COUNT) - 1;
+				memcpy(key_info.szKey, FDHT_KEY_NAME_REF_COUNT,\
+						key_info.key_len);
+				if ((result=fdht_set(&key_info, \
+						FDHT_EXPIRES_NEVER, "0", 1))!=0)
+				{
+					unlink(full_filename);
+					*filename = '\0';
+					*filename_len = 0;
+					return result;
+				}
+
+				if ((result=tracker_get_connection_ex( \
+						&trackerServer)) != 0)
+				{
+					unlink(full_filename);
+					*filename = '\0';
+					*filename_len = 0;
+					return result;
+				}
+
+				result = storage_binlog_write(time(NULL), \
+					STORAGE_OP_TYPE_SOURCE_CREATE_FILE, \
+					src_filename);
+				if (result != 0)
+				{
+					unlink(full_filename);
+					*filename = '\0';
+					*filename_len = 0;
+					return result;
+				}
+
+				result = storage_client_create_link(\
+					&trackerServer, NULL, \
+					src_filename, *filename_len, \
+					szFileSig, nSigLen, \
+					g_group_name, file_ext_name, \
+					meta_buff, meta_size, \
+					filename, filename_len);
+
+				tracker_disconnect_server(&trackerServer);
+
+				if (result != 0)
+				{
+					unlink(full_filename);
+					*filename = '\0';
+					*filename_len = 0;
+					return result;
+				}
+
+				*bForwarded = true;
+				return result;
+			}
+			else //error
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"fdht_get fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, result, strerror(errno));
+
+				unlink(full_filename);
+				*filename = '\0';
+				*filename_len = 0;
+				return result;
+			}
 		}
 		else
 		{
-			bGenFileSignature = false;
 			if ((result=tcprecvfile(pClientInfo->sock, 
 				full_filename, file_size, \
 				g_fsync_after_written_bytes)) != 0)
@@ -406,7 +510,6 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 	}
 	else //create link
 	{
-		bGenFileSignature = false;
 		sprintf(src_full_filename, "%s/data/%s", pStorePath, \
 			pSrcFileInfo->src_true_filename);
 		if (symlink(src_full_filename, full_filename) != 0)
@@ -531,34 +634,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			store_path_index, filename);
 	memcpy(filename, full_filename, (*filename_len) + 1);
 
-	if (bGenFileSignature)
-	{
-		value_len = sprintf(value, "%s/%s", \
-			g_group_name, filename);
-		if (fdht_set(&key_info, FDHT_EXPIRES_NEVER, \
-			value, value_len) == 0)
-		{
-			char szFileSig[FDHT_MAX_OBJECT_ID_LEN + 1];
-			int nSigLen;
-
-			nSigLen = key_info.obj_id_len;
-			memcpy(szFileSig, key_info.szObjectId, nSigLen);
-
-			key_info.obj_id_len = value_len;
-			memcpy(key_info.szObjectId, value, value_len);
-			key_info.key_len = sizeof(FDHT_KEY_NAME_REF_COUNT) - 1;
-			memcpy(key_info.szKey, FDHT_KEY_NAME_REF_COUNT, \
-				key_info.key_len);
-			fdht_set(&key_info, FDHT_EXPIRES_NEVER, "1", 1);
-
-			key_info.key_len = sizeof(FDHT_KEY_NAME_FILE_SIG) - 1;
-			memcpy(key_info.szKey, FDHT_KEY_NAME_FILE_SIG, \
-				key_info.key_len);
-			fdht_set(&key_info, FDHT_EXPIRES_NEVER, \
-				szFileSig, nSigLen);
-		}
-	}
-	else if (pSrcFileInfo != NULL)	//create link
+	if (pSrcFileInfo != NULL)   //create link
 	{
 		key_info.obj_id_len = snprintf(key_info.szObjectId, \
 			sizeof(key_info.szObjectId), \
@@ -572,7 +648,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		value_len = sizeof(value) - 1;
 		result = fdht_inc(&key_info, FDHT_EXPIRES_NEVER, 1, \
 				value, &value_len);
-		//*(value + value_len) = '\0';
+		*(value + value_len) = '\0';
 
 		key_info.obj_id_len = snprintf(key_info.szObjectId, \
 			sizeof(key_info.szObjectId), \
@@ -584,9 +660,10 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			pSrcFileInfo->src_file_sig, \
 			pSrcFileInfo->src_file_sig_len);
 
+
 		/*
-		logInfo("create link, object_id=%s(%d), key=%s, value_len=(%d)", \
-			key_info.szObjectId, key_info.obj_id_len, \
+		logInfo("create link, counter=%s, object_id=%s(%d), key=%s, file_sig_len=(%d)", \
+			value, key_info.szObjectId, key_info.obj_id_len, \
 			FDHT_KEY_NAME_FILE_SIG, \
 			pSrcFileInfo->src_file_sig_len);
 		*/
@@ -2051,9 +2128,16 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)];
 	char meta_filename[MAX_PATH_SIZE+sizeof(in_buff)];
 	char true_filename[64];
+	char value[128];
+	FDHTKeyInfo key_info_fid;
+	FDHTKeyInfo key_info_ref;
+	FDHTKeyInfo key_info_sig;
+	char *pValue;
+	int value_len;
 	char *pBasePath;
 	char *filename;
 	int filename_len;
+	int src_file_nlink;
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
@@ -2114,6 +2198,64 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 		*(in_buff + nInPackLen) = '\0';
 		filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
 		filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
+
+		src_file_nlink = -1;
+		if (g_check_file_duplicate)
+		{
+			memset(&key_info_sig, 0, sizeof(key_info_sig));
+			key_info_sig.namespace_len = g_namespace_len;
+			memcpy(key_info_sig.szNameSpace, g_key_namespace, \
+				g_namespace_len);
+			key_info_sig.obj_id_len = snprintf(\
+				key_info_sig.szObjectId, \
+				sizeof(key_info_sig.szObjectId), "%s/%s", \
+				group_name, filename);
+
+			key_info_sig.key_len = sizeof(FDHT_KEY_NAME_FILE_SIG)-1;
+			memcpy(key_info_sig.szKey, FDHT_KEY_NAME_FILE_SIG, \
+				key_info_sig.key_len);
+			pValue = value;
+			value_len = sizeof(value) - 1;
+			if (fdht_get(&key_info_sig, &pValue, &value_len) == 0)
+			{
+				memcpy(&key_info_fid, &key_info_sig, \
+					sizeof(FDHTKeyInfo));
+				key_info_fid.obj_id_len = value_len;
+				memcpy(key_info_fid.szObjectId, pValue, \
+					value_len);
+
+			
+				key_info_fid.key_len = \
+					sizeof(FDHT_KEY_NAME_FILE_ID) - 1;
+				memcpy(key_info_fid.szKey, \
+					FDHT_KEY_NAME_FILE_ID, \
+					key_info_fid.key_len);
+				value_len = sizeof(value) - 1;
+				if (fdht_get(&key_info_fid, &pValue, \
+						&value_len) == 0)
+				{
+				memcpy(&key_info_ref, &key_info_sig, \
+					sizeof(FDHTKeyInfo));
+				key_info_ref.obj_id_len = value_len;
+				memcpy(key_info_ref.szObjectId, pValue, \
+					value_len);
+				key_info_ref.key_len = \
+					sizeof(FDHT_KEY_NAME_REF_COUNT)-1;
+				memcpy(key_info_ref.szKey, \
+					FDHT_KEY_NAME_REF_COUNT, \
+					key_info_ref.key_len);
+				value_len = sizeof(value) - 1;
+
+				if (fdht_get(&key_info_ref, &pValue, \
+						&value_len) == 0)
+				{
+					*(pValue + value_len) = '\0';
+					src_file_nlink = atoi(pValue);
+				}
+				}
+			}
+		}
+
 		if ((resp.status=storage_split_filename(filename, \
 			&filename_len, true_filename, &pBasePath)) != 0)
 		{
@@ -2166,6 +2308,68 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 		sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, filename);
 		resp.status = storage_binlog_write(time(NULL), \
 			STORAGE_OP_TYPE_SOURCE_DELETE_FILE, meta_filename);
+
+		if (resp.status != 0 || src_file_nlink < 0)
+		{
+			break;
+		}
+
+		fdht_delete(&key_info_sig);
+
+		value_len = sizeof(value) - 1;
+		if (fdht_inc(&key_info_ref, FDHT_EXPIRES_NEVER, -1, value, \
+			&value_len) == 0)
+		{
+			*(value + value_len) = '\0';
+			if (*value == '0' && *(value+1) == '\0')
+			{
+			char *pSeperator;
+
+			fdht_delete(&key_info_fid);
+			fdht_delete(&key_info_ref);
+
+			*(key_info_ref.szObjectId+key_info_ref.obj_id_len)='\0';
+			pSeperator = strchr(key_info_ref.szObjectId, '/');
+			if (pSeperator == NULL)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"invalid file_id: %s", __LINE__, \
+					key_info_ref.szObjectId);
+				break;
+			}
+
+			pSeperator++;
+			value_len = key_info_ref.obj_id_len - (pSeperator - \
+					key_info_ref.szObjectId);
+			memcpy(value, pSeperator, value_len + 1);
+			if (storage_split_filename(value, \
+				&value_len, true_filename, &pBasePath) != 0)
+			{
+				break;
+			}
+			if (fdfs_check_data_filename(true_filename, \
+						value_len) != 0)
+			{
+				break;
+			}
+
+			sprintf(full_filename, "%s/data/%s", pBasePath, \
+				true_filename);
+			if (unlink(full_filename) != 0)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"client ip: %s, delete source file " \
+					"%s fail, errno: %d, error info: %s", \
+					__LINE__, pClientInfo->ip_addr, \
+					full_filename, errno, strerror(errno));
+				break;
+			}
+
+			storage_binlog_write(time(NULL), \
+				STORAGE_OP_TYPE_SOURCE_DELETE_FILE, value);
+			}
+		}
+
 		break;
 	}
 
