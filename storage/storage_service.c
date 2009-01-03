@@ -2141,6 +2141,11 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 	return resp.status;
 }
 
+#define STORAGE_DELETE_FLAG_NONE  0
+#define STORAGE_DELETE_FLAG_FILE  1
+#define STORAGE_DELETE_FLAG_LINK  2
+#define STORAGE_DELETE_FLAG_BOTH  STORAGE_DELETE_FLAG_ONLY_FILE | \
+				  STORAGE_DELETE_FLAG_ONLY_LINK
 /**
 pkg format:
 Header
@@ -2148,7 +2153,7 @@ FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename
 **/
 static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
-				const int64_t nInPackLen)
+				const int64_t nInPackLen, int *delete_flag)
 {
 	TrackerHeader resp;
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 64];
@@ -2166,8 +2171,10 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 	char *filename;
 	int filename_len;
 	int src_file_nlink;
+	struct stat stat_buf;
 	int result;
 
+	*delete_flag = STORAGE_DELETE_FLAG_NONE;
 	memset(&resp, 0, sizeof(resp));
 	while (1)
 	{
@@ -2328,6 +2335,26 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 		}
 
 		sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
+		if (lstat(full_filename, &stat_buf) != 0)
+		{
+			resp.status = errno != 0 ? errno : ENOENT;
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, stat file %s fail, " \
+				"errno: %d, error info: %s.", \
+				__LINE__, pClientInfo->ip_addr, \
+				full_filename, \
+				resp.status, strerror(resp.status));
+			break;
+		}
+		if (S_ISREG(stat_buf.st_mode))
+		{
+			*delete_flag |= STORAGE_DELETE_FLAG_FILE;
+		}
+		else
+		{
+			*delete_flag |= STORAGE_DELETE_FLAG_LINK;
+		}
+
 		if (unlink(full_filename) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -2459,6 +2486,7 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 
 			storage_binlog_write(time(NULL), \
 				STORAGE_OP_TYPE_SOURCE_DELETE_FILE, value);
+			*delete_flag |= STORAGE_DELETE_FLAG_FILE;
 		}
 
 		break;
@@ -2876,6 +2904,7 @@ data buff (struct)
 	int src_sync_timestamp;
 	FDFSStorageServer *pSrcStorage;
 	int server_sock;
+	int delete_flag;
 	
 	server_sock = (int)arg;
 
@@ -3032,18 +3061,36 @@ data buff (struct)
 			break;
 		case STORAGE_PROTO_CMD_DELETE_FILE:
 			if ((result=storage_server_delete_file(&client_info, \
-				nInPackLen)) != 0)
+				nInPackLen, &delete_flag)) != 0)
 			{
 				pthread_mutex_lock(&stat_count_thread_lock);
-				g_storage_stat.total_delete_count++;
+				if (delete_flag == STORAGE_DELETE_FLAG_NONE ||\
+					(delete_flag & STORAGE_DELETE_FLAG_FILE))
+				{
+					g_storage_stat.total_delete_count++;
+				}
+				if (delete_flag & STORAGE_DELETE_FLAG_LINK)
+				{
+					g_storage_stat.total_delete_link_count++;
+				}
 				pthread_mutex_unlock(&stat_count_thread_lock);
 				break;
 			}
 
-			CHECK_AND_WRITE_TO_STAT_FILE3( \
+			if (delete_flag & STORAGE_DELETE_FLAG_FILE)
+			{
+				CHECK_AND_WRITE_TO_STAT_FILE3( \
 				g_storage_stat.total_delete_count, \
 				g_storage_stat.success_delete_count, \
 				g_storage_stat.last_source_update)
+			}
+			if (delete_flag & STORAGE_DELETE_FLAG_LINK)
+			{
+				CHECK_AND_WRITE_TO_STAT_FILE3( \
+				g_storage_stat.total_delete_link_count, \
+				g_storage_stat.success_delete_link_count, \
+				g_storage_stat.last_source_update)
+			}
 			break;
 		case STORAGE_PROTO_CMD_CREATE_LINK:
 			if ((result=storage_create_link(&client_info, \
