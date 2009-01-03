@@ -1,5 +1,5 @@
 
-Version 1.14  2008-12-15
+Version 1.14  2009-01-03
   * storage/storage_sync.c: 
     old: if (reader.sync_row_count % 1000 == 0)
     new: if (reader.scan_row_count % 2000 == 0)

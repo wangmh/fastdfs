@@ -1111,10 +1111,6 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_total_get_meta_count);
 		long2buff(g_storage_stat.success_get_meta_count, \
 		 	pStatBuff->sz_success_get_meta_count);
-		long2buff(g_storage_stat.last_source_update, \
-			pStatBuff->sz_last_source_update);
-		long2buff(g_storage_stat.last_sync_update, \
-			pStatBuff->sz_last_sync_update);
 		long2buff(g_storage_stat.total_create_link_count, \
 			pStatBuff->sz_total_create_link_count);
 		long2buff(g_storage_stat.success_create_link_count, \
@@ -1123,6 +1119,11 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_total_delete_link_count);
 		long2buff(g_storage_stat.success_delete_link_count, \
 			pStatBuff->sz_success_delete_link_count);
+		long2buff(g_storage_stat.last_source_update, \
+			pStatBuff->sz_last_source_update);
+		long2buff(g_storage_stat.last_sync_update, \
+			pStatBuff->sz_last_sync_update);
+
 		*pstat_chg_sync_count = g_stat_change_count;
 		body_len = sizeof(FDFSStorageStatBuff);
 	}
