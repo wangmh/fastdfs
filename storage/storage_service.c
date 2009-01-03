@@ -421,6 +421,12 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 						FDHT_EXPIRES_NEVER, \
 						value, value_len)) != 0)
 				{
+					logError("file: "__FILE__", line: %d, "\
+						"client ip: %s, fdht_set fail,"\
+						"errno: %d, error info: %s", \
+						__LINE__, pClientInfo->ip_addr, \
+						result, strerror(result));
+
 					unlink(full_filename);
 					*filename = '\0';
 					*filename_len = 0;
@@ -436,6 +442,12 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 				if ((result=fdht_set(&key_info, \
 						FDHT_EXPIRES_NEVER, "0", 1))!=0)
 				{
+					logError("file: "__FILE__", line: %d, "\
+						"client ip: %s, fdht_set fail,"\
+						"errno: %d, error info: %s", \
+						__LINE__, pClientInfo->ip_addr, \
+						result, strerror(result));
+
 					unlink(full_filename);
 					*filename = '\0';
 					*filename_len = 0;
@@ -646,9 +658,18 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		memcpy(key_info.szKey, FDHT_KEY_NAME_REF_COUNT, \
 			key_info.key_len);
 		value_len = sizeof(value) - 1;
-		result = fdht_inc(&key_info, FDHT_EXPIRES_NEVER, 1, \
-				value, &value_len);
-		*(value + value_len) = '\0';
+		if ((result=fdht_inc(&key_info, FDHT_EXPIRES_NEVER, 1, \
+				value, &value_len)) != 0)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip: %s, fdht_inc fail," \
+				"errno: %d, error info: %s", \
+				__LINE__, pClientInfo->ip_addr, \
+				result, strerror(result));
+		}
+		else
+		{
+		//*(value + value_len) = '\0';
 
 		key_info.obj_id_len = snprintf(key_info.szObjectId, \
 			sizeof(key_info.szObjectId), \
@@ -656,10 +677,16 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		key_info.key_len = sizeof(FDHT_KEY_NAME_FILE_SIG) - 1;
 		memcpy(key_info.szKey, FDHT_KEY_NAME_FILE_SIG, \
 			key_info.key_len);
-		fdht_set(&key_info, FDHT_EXPIRES_NEVER, \
+		if ((result=fdht_set(&key_info, FDHT_EXPIRES_NEVER, \
 			pSrcFileInfo->src_file_sig, \
-			pSrcFileInfo->src_file_sig_len);
-
+			pSrcFileInfo->src_file_sig_len)) != 0)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip: %s, fdht_set fail," \
+				"errno: %d, error info: %s", \
+				__LINE__, pClientInfo->ip_addr, \
+				result, strerror(result));
+		}
 
 		/*
 		logInfo("create link, counter=%s, object_id=%s(%d), key=%s, file_sig_len=(%d)", \
@@ -667,6 +694,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			FDHT_KEY_NAME_FILE_SIG, \
 			pSrcFileInfo->src_file_sig_len);
 		*/
+		}
 	}
 
 	*bForwarded = false;
@@ -1566,7 +1594,7 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, in request pkg, " \
 				"pgk length: "INT64_PRINTF_FORMAT \
-				" != bytes: "INT64_PRINTF_FORMAT"", \
+				" != bytes: %d", \
 				__LINE__, pClientInfo->ip_addr, \
 				nInPackLen, 2 * FDFS_PROTO_PKG_LEN_SIZE + \
 				FDFS_GROUP_NAME_MAX_LEN + dest_filename_len + \
@@ -2216,7 +2244,8 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 				key_info_sig.key_len);
 			pValue = value;
 			value_len = sizeof(value) - 1;
-			if (fdht_get(&key_info_sig, &pValue, &value_len) == 0)
+			result = fdht_get(&key_info_sig, &pValue, &value_len);
+			if (result == 0)
 			{
 				memcpy(&key_info_fid, &key_info_sig, \
 					sizeof(FDHTKeyInfo));
@@ -2224,15 +2253,15 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 				memcpy(key_info_fid.szObjectId, pValue, \
 					value_len);
 
-			
 				key_info_fid.key_len = \
 					sizeof(FDHT_KEY_NAME_FILE_ID) - 1;
 				memcpy(key_info_fid.szKey, \
 					FDHT_KEY_NAME_FILE_ID, \
 					key_info_fid.key_len);
 				value_len = sizeof(value) - 1;
-				if (fdht_get(&key_info_fid, &pValue, \
-						&value_len) == 0)
+				result = fdht_get(&key_info_fid, &pValue, \
+						&value_len);
+				if (result == 0)
 				{
 				memcpy(&key_info_ref, &key_info_sig, \
 					sizeof(FDHTKeyInfo));
@@ -2246,13 +2275,44 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 					key_info_ref.key_len);
 				value_len = sizeof(value) - 1;
 
-				if (fdht_get(&key_info_ref, &pValue, \
-						&value_len) == 0)
+				result = fdht_get(&key_info_ref, &pValue, \
+						&value_len);
+				if (result == 0)
 				{
 					*(pValue + value_len) = '\0';
 					src_file_nlink = atoi(pValue);
 				}
+				else if (result != ENOENT)
+				{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s, fdht_get fail," \
+					"errno: %d, error info: %s", \
+					__LINE__, pClientInfo->ip_addr, \
+					result, strerror(result));
+				resp.status = result;
+				break;
 				}
+				}
+				else if (result != ENOENT)
+				{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s, fdht_get fail," \
+					"errno: %d, error info: %s", \
+					__LINE__, pClientInfo->ip_addr, \
+					result, strerror(result));
+				resp.status = result;
+				break;
+				}
+			}
+			else if (result != ENOENT)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s, fdht_get fail," \
+					"errno: %d, error info: %s", \
+					__LINE__, pClientInfo->ip_addr, \
+					result, strerror(result));
+				resp.status = result;
+				break;
 			}
 		}
 
@@ -2314,19 +2374,51 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		fdht_delete(&key_info_sig);
+		if ((result=fdht_delete(&key_info_sig)) != 0)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip: %s, fdht_delete fail," \
+				"errno: %d, error info: %s", \
+				__LINE__, pClientInfo->ip_addr, \
+				result, strerror(result));
+		}
 
 		value_len = sizeof(value) - 1;
-		if (fdht_inc(&key_info_ref, FDHT_EXPIRES_NEVER, -1, value, \
-			&value_len) == 0)
+		result = fdht_inc(&key_info_ref, FDHT_EXPIRES_NEVER, -1, value, \
+			&value_len);
+		if (result != 0)
 		{
-			*(value + value_len) = '\0';
-			if (*value == '0' && *(value+1) == '\0')
-			{
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip: %s, fdht_inc fail," \
+				"errno: %d, error info: %s", \
+				__LINE__, pClientInfo->ip_addr, \
+				result, strerror(result));
+		}
+		else
+		{
 			char *pSeperator;
 
-			fdht_delete(&key_info_fid);
-			fdht_delete(&key_info_ref);
+			if (!(value_len == 1 && *value == '0')) //value == 0
+			{
+				break;
+			}
+
+			if ((result=fdht_delete(&key_info_fid)) != 0)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"client ip: %s, fdht_delete fail," \
+					"errno: %d, error info: %s", \
+					__LINE__, pClientInfo->ip_addr, \
+					result, strerror(result));
+			}
+			if ((result=fdht_delete(&key_info_ref)) != 0)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"client ip: %s, fdht_delete fail," \
+					"errno: %d, error info: %s", \
+					__LINE__, pClientInfo->ip_addr, \
+					result, strerror(result));
+			}
 
 			*(key_info_ref.szObjectId+key_info_ref.obj_id_len)='\0';
 			pSeperator = strchr(key_info_ref.szObjectId, '/');
@@ -2367,7 +2459,6 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 
 			storage_binlog_write(time(NULL), \
 				STORAGE_OP_TYPE_SOURCE_DELETE_FILE, value);
-			}
 		}
 
 		break;
@@ -2498,7 +2589,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, pkg length is not correct, " \
-				"invalid meta bytes: "INT64_PRINTF_FORMAT, \
+				"invalid meta bytes: %d", \
 				__LINE__, pClientInfo->ip_addr, meta_bytes);
 			resp.status = EINVAL;
 			break;
