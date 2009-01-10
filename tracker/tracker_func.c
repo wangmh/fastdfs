@@ -110,7 +110,7 @@ int tracker_load_from_conf_file(const char *filename, \
 
 	while (1)
 	{
-		if (iniGetBoolValue("disabled", items, nItemCount))
+		if (iniGetBoolValue("disabled", items, nItemCount, false))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"conf file \"%s\" disabled=true, exit", \

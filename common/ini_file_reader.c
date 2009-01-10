@@ -304,14 +304,14 @@ int iniGetIntValue(const char *szName, IniItemInfo *items, \
 }
 
 bool iniGetBoolValue(const char *szName, IniItemInfo *items, \
-		const int nItemCount)
+		const int nItemCount, const bool bDefaultValue)
 {
 	char *pValue;
 	
 	pValue = iniGetStrValue(szName, items, nItemCount);
 	if (pValue == NULL)
 	{
-		return false;
+		return bDefaultValue;
 	}
 	else
 	{

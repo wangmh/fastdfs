@@ -1188,10 +1188,10 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 				items, nItemCount, -1);
 		pReader->need_sync_old = iniGetBoolValue(   \
 				MARK_ITEM_NEED_SYNC_OLD, \
-				items, nItemCount);
+				items, nItemCount, false);
 		pReader->sync_old_done = iniGetBoolValue(  \
 				MARK_ITEM_SYNC_OLD_DONE, \
-				items, nItemCount);
+				items, nItemCount, false);
 		pReader->until_timestamp = iniGetIntValue( \
 				MARK_ITEM_UNTIL_TIMESTAMP, \
 				items, nItemCount, -1);
