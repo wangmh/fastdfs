@@ -861,7 +861,7 @@ int storage_func_init(const char *filename, \
 
 	while (1)
 	{
-		if (iniGetBoolValue("disabled", items, nItemCount))
+		if (iniGetBoolValue("disabled", items, nItemCount, false))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"conf file \"%s\" disabled=true, exit", \
@@ -1087,8 +1087,8 @@ int storage_func_init(const char *filename, \
 			g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
 		}
 
-		g_check_file_duplicate = iniGetBoolValue( \
-				"check_file_duplicate", items, nItemCount);
+		g_check_file_duplicate = iniGetBoolValue("check_file_duplicate",
+					items, nItemCount, false);
 		if (g_check_file_duplicate)
 		{
 			char *pKeyNamespace;

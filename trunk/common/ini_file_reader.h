@@ -45,7 +45,7 @@ IniItemInfo *iniGetValuesEx(const char *szName, IniItemInfo *items,
 int64_t iniGetInt64Value(const char *szName, IniItemInfo *items, \
 			const int nItemCount, const int64_t nDefaultValue);
 bool iniGetBoolValue(const char *szName, IniItemInfo *items, \
-		const int nItemCount);
+		const int nItemCount, const bool bDefaultValue);
 
 void iniPrintItems(IniItemInfo *items, const int nItemCount);
 
