@@ -1,5 +1,5 @@
 
-Version 1.14  2009-01-03
+Version 1.14  2009-01-18
   * storage/storage_sync.c: 
     old: if (reader.sync_row_count % 1000 == 0)
     new: if (reader.scan_row_count % 2000 == 0)
@@ -11,6 +11,8 @@ Version 1.14  2009-01-03
   * add FastDHT client files in storage/fdht_client/
   * create symbol link when the file content is duplicate, 
     add item "check_file_duplicate" to conf file storage.conf
+  * use FastDHT v1.02 client code
+  * auto delete invalid entry in FastDHT when the source file does not exist
 
 Version 1.13  2008-11-29
   * re-calculate group 's free space when one of it's storage servers' 

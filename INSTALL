@@ -10,7 +10,7 @@ Chinese language: http://www.csource.org/
 #step 1. download FastDFS source package and unpack it
 tar xzf FastDFS_v1.x.tar.gz
 #for example:
-tar xzf FastDFS_v1.13.tar.gz
+tar xzf FastDFS_v1.14.tar.gz
 
 #step 2. enter the FastDFS dir
 cd FastDFS
@@ -301,9 +301,18 @@ memo:
 -------------------------------------------------
 |subdir_count_per_path| int    |   256   |  N   |
 -------------------------------------------------
+|check_file_duplicate | boolean|   false |  N   |
+-------------------------------------------------
+|key_namespace        | string |         |  N   |
+-------------------------------------------------
 
 memo:
   * tracker_server can ocur more than once, and tracker_server format is
     "host:port", host can be hostname or ip address.
   * store_path#, # for digital, based 0
+  * check_file_duplicate: when set to true, must work with FastDHT server, 
+    more detail please see INSTALL of FastDHT. FastDHT download page: 
+    http://code.google.com/p/fastdht/downloads/list
+  * key_namespace: FastDHT key namespace, can't be empty when 
+    check_file_duplicate is true. the key namespace should short as possible
  

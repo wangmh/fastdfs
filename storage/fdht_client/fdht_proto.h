@@ -64,6 +64,7 @@ typedef struct
    	/* key expires, remain timeout = expires - timestamp */
 	char expires[FDHT_PROTO_PKG_LEN_SIZE];
 	char cmd;
+	char keep_alive;
 	char status;
 } ProtoHeader;
 
@@ -94,12 +95,14 @@ int fdht_connect_server(FDHTServerInfo *pServer);
 **/
 void fdht_disconnect_server(FDHTServerInfo *pServer);
 
-int fdht_client_set(FDHTServerInfo *pServer, const time_t timestamp, \
-	const time_t expires, const int prot_cmd, const int key_hash_code, \
-	FDHTKeyInfo *pKeyInfo, const char *pValue, const int value_len);
+int fdht_client_set(FDHTServerInfo *pServer, const char keep_alive, \
+	const time_t timestamp, const time_t expires, const int prot_cmd, \
+	const int key_hash_code, FDHTKeyInfo *pKeyInfo, \
+	const char *pValue, const int value_len);
 
-int fdht_client_delete(FDHTServerInfo *pServer, const time_t timestamp, \
-	const int prot_cmd, const int key_hash_code, FDHTKeyInfo *pKeyInfo);
+int fdht_client_delete(FDHTServerInfo *pServer, const char keep_alive, \
+	const time_t timestamp, const int prot_cmd, \
+	const int key_hash_code, FDHTKeyInfo *pKeyInfo);
 
 int fdht_client_heart_beat(FDHTServerInfo *pServer);
 

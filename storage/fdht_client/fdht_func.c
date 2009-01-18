@@ -566,6 +566,7 @@ void fdht_disconnect_all_servers(GroupArray *pGroupArray)
 			{
 				if (pServerInfo->sock > 0)
 				{
+					fdht_quit(pServerInfo);
 					close(pServerInfo->sock);
 					pServerInfo->sock = -1;
 				}

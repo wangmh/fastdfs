@@ -2694,25 +2694,43 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 			g_store_paths[store_path_index], \
 			sourceFileInfo.src_true_filename);
 
-		if (lstat(src_full_filename, &stat_buf) != 0)
+		result = lstat(src_full_filename, &stat_buf);
+		if (result != 0 || !S_ISREG(stat_buf.st_mode))
 		{
-			resp.status = errno != 0 ? errno : ENOENT;
+			FDHTKeyInfo key_info;
+
+			resp.status = errno != 0 ? errno : EINVAL;
 			logError("file: "__FILE__", line: %d, " \
-				"client ip: %s, stat file %s fail, " \
-				"errno: %d, error info: %s.", \
+				"client ip: %s, file: %s call stat fail " \
+				"or it is not a regular file, " \
+				"errno: %d, error info: %s", \
 				__LINE__, pClientInfo->ip_addr, \
 				src_full_filename, \
 				resp.status, strerror(resp.status));
-			break;
-		}
 
-		if (!S_ISREG(stat_buf.st_mode))
-		{
-			resp.status = EINVAL;
-			logError("file: "__FILE__", line: %d, " \
-				"client ip: %s, file %s is not a regular file",\
-				__LINE__, pClientInfo->ip_addr, \
-				src_full_filename);
+
+			//clean invalid entry
+			memset(&key_info, 0, sizeof(key_info));
+			key_info.namespace_len = g_namespace_len;
+			memcpy(key_info.szNameSpace, g_key_namespace, \
+				g_namespace_len);
+
+			key_info.obj_id_len = sourceFileInfo.src_file_sig_len;
+			memcpy(key_info.szObjectId, sourceFileInfo.src_file_sig,
+				key_info.obj_id_len);
+			key_info.key_len = sizeof(FDHT_KEY_NAME_FILE_ID) - 1;
+			memcpy(key_info.szKey, FDHT_KEY_NAME_FILE_ID, \
+				sizeof(FDHT_KEY_NAME_FILE_ID) - 1);
+			fdht_delete(&key_info);
+
+			key_info.obj_id_len = snprintf(key_info.szObjectId, \
+					sizeof(src_filename), "%s/%s", \
+					g_group_name, src_filename);
+			key_info.key_len = sizeof(FDHT_KEY_NAME_REF_COUNT) - 1;
+			memcpy(key_info.szKey, FDHT_KEY_NAME_REF_COUNT, \
+					key_info.key_len);
+			fdht_delete(&key_info);
+
 			break;
 		}
 
