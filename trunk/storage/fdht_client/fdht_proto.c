@@ -211,9 +211,10 @@ int fdht_connect_server(FDHTServerInfo *pServer)
 * response body format:
 *      none
 */
-int fdht_client_set(FDHTServerInfo *pServer, const time_t timestamp, \
-	const time_t expires, const int prot_cmd, const int key_hash_code, \
-	FDHTKeyInfo *pKeyInfo, const char *pValue, const int value_len)
+int fdht_client_set(FDHTServerInfo *pServer, const char keep_alive, \
+	const time_t timestamp, const time_t expires, const int prot_cmd, \
+	const int key_hash_code, FDHTKeyInfo *pKeyInfo, \
+	const char *pValue, const int value_len)
 {
 	int result;
 	char buff[sizeof(ProtoHeader) + FDHT_MAX_FULL_KEY_LEN + 16];
@@ -224,6 +225,7 @@ int fdht_client_set(FDHTServerInfo *pServer, const time_t timestamp, \
 	memset(buff, 0, sizeof(buff));
 	pHeader = (ProtoHeader *)buff;
 	pHeader->cmd = prot_cmd;
+	pHeader->keep_alive = keep_alive;
 	int2buff((int)timestamp, pHeader->timestamp);
 	int2buff((int)expires, pHeader->expires);
 	int2buff(key_hash_code, pHeader->key_hash_code);
@@ -289,8 +291,9 @@ int fdht_client_set(FDHTServerInfo *pServer, const time_t timestamp, \
 * response body format:
 *      none
 */
-int fdht_client_delete(FDHTServerInfo *pServer, const time_t timestamp, \
-	const int prot_cmd, const int key_hash_code, FDHTKeyInfo *pKeyInfo)
+int fdht_client_delete(FDHTServerInfo *pServer, const char keep_alive, \
+	const time_t timestamp, const int prot_cmd, \
+	const int key_hash_code, FDHTKeyInfo *pKeyInfo)
 {
 	int result;
 	ProtoHeader *pHeader;
@@ -301,6 +304,7 @@ int fdht_client_delete(FDHTServerInfo *pServer, const time_t timestamp, \
 	memset(buff, 0, sizeof(buff));
 	pHeader = (ProtoHeader *)buff;
 	pHeader->cmd = prot_cmd;
+	pHeader->keep_alive = keep_alive;
 	int2buff(timestamp, pHeader->timestamp);
 	int2buff(key_hash_code, pHeader->key_hash_code);
 	int2buff(12 + pKeyInfo->namespace_len + pKeyInfo->obj_id_len + \
@@ -350,6 +354,7 @@ int fdht_client_heart_beat(FDHTServerInfo *pServer)
 
 	memset(&header, 0, sizeof(header));
 	header.cmd = FDHT_PROTO_CMD_HEART_BEAT;
+	header.keep_alive = 1;
 
 	if ((result=tcpsenddata(pServer->sock, &header, \
 		sizeof(header), g_network_timeout)) != 0)
