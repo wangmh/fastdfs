@@ -507,7 +507,7 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no)
 		return -4;
 	}
 	
-	result = listen(sock, 128);
+	result = listen(sock, 1024);
 	if (result < 0)
 	{
 		*err_no = errno != 0 ? errno : EINVAL;
