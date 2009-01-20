@@ -1643,3 +1643,109 @@ int get_time_item_from_conf(IniItemInfo *items, const int nItemCount, \
 	return 0;
 }
 
+char *urlencode(const char *src, const int src_len, char *dest, int *dest_len)
+{
+	static unsigned char hex_chars[] = "0123456789ABCDEF";
+	const unsigned char *pSrc;
+	const unsigned char *pEnd;
+	char *pDest;
+
+	pDest = dest;
+	pEnd = (unsigned char *)src + src_len;
+	for (pSrc=(unsigned char *)src; pSrc<pEnd; pSrc++)
+	{
+		if ((*pSrc >= '0' && *pSrc <= '9') || 
+	 	    (*pSrc >= 'a' && *pSrc <= 'z') ||
+	 	    (*pSrc >= 'A' && *pSrc <= 'Z') ||
+		    (*pSrc == '_' || *pSrc == '-' || *pSrc == '.'))
+		{
+			*pDest++ = *pSrc;
+		}
+		else if (*pSrc == ' ')
+		{
+			*pDest++ = '+';
+		}
+		else
+		{
+			*pDest++ = '%';
+			*pDest++ = hex_chars[(*pSrc) >> 4];
+			*pDest++ = hex_chars[(*pSrc) & 0x0F];
+		}
+	}
+
+	*pDest = '\0';
+	*dest_len = pDest - dest;
+
+	return dest;
+}
+
+char *urldecode(const char *src, const int src_len, char *dest, int *dest_len)
+{
+#define IS_HEX_CHAR(ch) \
+	((ch >= '0' && ch <= '9') || \
+	 (ch >= 'a' && ch <= 'f') || \
+	 (ch >= 'A' && ch <= 'F'))
+
+#define HEX_VALUE(ch, value) \
+	if (ch >= '0' && ch <= '9') \
+	{ \
+		value = ch - '0'; \
+	} \
+	else if (ch >= 'a' && ch <= 'f') \
+	{ \
+		value = ch - 'a' + 10; \
+	} \
+	else \
+	{ \
+		value = ch - 'A' + 10; \
+	}
+
+	const unsigned char *pSrc;
+	const unsigned char *pEnd;
+	char *pDest;
+	unsigned char cHigh;
+	unsigned char cLow;
+	int valHigh;
+	int valLow;
+
+	pDest = dest;
+	pSrc = (unsigned char *)src;
+	pEnd = (unsigned char *)src + src_len;
+	while (pSrc < pEnd)
+	{
+		if (*pSrc == '%' && pSrc + 2 < pEnd)
+		{
+			cHigh = *(pSrc + 1);
+			cLow = *(pSrc + 2);
+
+			if (IS_HEX_CHAR(cHigh) && IS_HEX_CHAR(cLow))
+			{
+				HEX_VALUE(cHigh, valHigh)
+				HEX_VALUE(cLow, valLow)
+				*pDest++ = (valHigh << 4) | valLow;
+				pSrc += 3;
+			}
+			else
+			{
+				*pDest++ = *pSrc;
+				pSrc++;
+			}
+		}
+		else if (*pSrc == '+')
+		{
+			*pDest++ = ' ';
+			pSrc++;
+		}
+		else
+		{
+			*pDest++ = *pSrc;
+			pSrc++;
+		}
+	}
+
+	*pDest = '\0';
+	*dest_len = pDest - dest;
+
+	return dest;
+}
+
