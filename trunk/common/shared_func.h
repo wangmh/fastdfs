@@ -57,6 +57,9 @@ char *trim_left(char *pStr);
 char *trim_right(char *pStr);
 char *trim(char *pStr);
 
+char *urlencode(const char *src, const int src_len, char *dest, int *dest_len);
+char *urldecode(const char *src, const int src_len, char *dest, int *dest_len);
+
 int getOccurCount(const char *src, const char seperator);
 char **split(char *src, const char seperator, const int nMaxCols, \
 		int *nColCount);
