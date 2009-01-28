@@ -21,7 +21,6 @@
 #include "ini_file_reader.h"
 #include "fdht_types.h"
 #include "fdht_proto.h"
-#include "fdht_func.h"
 #include "fdht_client.h"
 
 GroupArray g_group_array = {NULL, 0};
@@ -111,14 +110,14 @@ void fdht_client_destroy()
 	fdht_free_group_array(&g_group_array);
 }
 
-#define get_readable_connection(pServerArray, hash_code, err_no) \
-	  get_connection(pServerArray, hash_code, err_no)
+#define get_readable_connection(pServerArray, bKeepAlive, hash_code, err_no) \
+	  get_connection(pServerArray, bKeepAlive, hash_code, err_no)
 
-#define get_writable_connection(pServerArray, hash_code, err_no) \
-	  get_connection(pServerArray, hash_code, err_no)
+#define get_writable_connection(pServerArray, bKeepAlive, hash_code, err_no) \
+	  get_connection(pServerArray, bKeepAlive, hash_code, err_no)
 
 static FDHTServerInfo *get_connection(ServerArray *pServerArray, \
-		const int hash_code, int *err_no)
+		const bool bKeepAlive, const int hash_code, int *err_no)
 {
 	FDHTServerInfo **ppServer;
 	FDHTServerInfo **ppEnd;
@@ -138,7 +137,7 @@ static FDHTServerInfo *get_connection(ServerArray *pServerArray, \
 
 		if (fdht_connect_server(*ppServer) == 0)
 		{
-			if (g_keep_alive)
+			if (bKeepAlive)
 			{
 				tcpsetnodelay((*ppServer)->sock);
 			}
@@ -156,7 +155,7 @@ static FDHTServerInfo *get_connection(ServerArray *pServerArray, \
 
 		if (fdht_connect_server(*ppServer) == 0)
 		{
-			if (g_keep_alive)
+			if (bKeepAlive)
 			{
 				tcpsetnodelay((*ppServer)->sock);
 			}
@@ -231,7 +230,8 @@ static FDHTServerInfo *get_connection(ServerArray *pServerArray, \
 *       value_len:  4 bytes big endian integer
 *       value:      value buff
 */
-int fdht_get_ex1(FDHTKeyInfo *pKeyInfo, const time_t expires, \
+int fdht_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
+		FDHTKeyInfo *pKeyInfo, const time_t expires, \
 		char **ppValue, int *value_len, MallocFunc malloc_func)
 {
 	int result;
@@ -247,9 +247,9 @@ int fdht_get_ex1(FDHTKeyInfo *pKeyInfo, const time_t expires, \
 	char *p;
 
 	CALC_KEY_HASH_CODE(pKeyInfo, hash_key, hash_key_len, key_hash_code)
-	group_id = ((unsigned int)key_hash_code) % g_group_array.group_count;
-	pServer = get_readable_connection((g_group_array.groups + group_id), \
-                	key_hash_code, &result);
+	group_id = ((unsigned int)key_hash_code) % pGroupArray->group_count;
+	pServer = get_readable_connection((pGroupArray->groups + group_id), \
+                	bKeepAlive, key_hash_code, &result);
 	if (pServer == NULL)
 	{
 		return result;
@@ -261,7 +261,7 @@ int fdht_get_ex1(FDHTKeyInfo *pKeyInfo, const time_t expires, \
 	pHeader = (ProtoHeader *)buff;
 
 	pHeader->cmd = FDHT_PROTO_CMD_GET;
-	pHeader->keep_alive = g_keep_alive;
+	pHeader->keep_alive = bKeepAlive;
 	int2buff((int)time(NULL), pHeader->timestamp);
 	int2buff((int)expires, pHeader->expires);
 	int2buff(key_hash_code, pHeader->key_hash_code);
@@ -359,7 +359,7 @@ int fdht_get_ex1(FDHTKeyInfo *pKeyInfo, const time_t expires, \
 		break;
 	}
 
-	if (g_keep_alive)
+	if (bKeepAlive)
 	{
 		if (result >= ENETDOWN) //network error
 		{
@@ -374,7 +374,8 @@ int fdht_get_ex1(FDHTKeyInfo *pKeyInfo, const time_t expires, \
 	return result;
 }
 
-int fdht_set(FDHTKeyInfo *pKeyInfo, const time_t expires, \
+int fdht_set_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
+		FDHTKeyInfo *pKeyInfo, const time_t expires, \
 		const char *pValue, const int value_len)
 {
 	int result;
@@ -385,20 +386,20 @@ int fdht_set(FDHTKeyInfo *pKeyInfo, const time_t expires, \
 	FDHTServerInfo *pServer;
 
 	CALC_KEY_HASH_CODE(pKeyInfo, hash_key, hash_key_len, key_hash_code)
-	group_id = ((unsigned int)key_hash_code) % g_group_array.group_count;
-	pServer = get_writable_connection((g_group_array.groups + group_id), \
-                	key_hash_code, &result);
+	group_id = ((unsigned int)key_hash_code) % pGroupArray->group_count;
+	pServer = get_writable_connection((pGroupArray->groups + group_id), \
+                	bKeepAlive, key_hash_code, &result);
 	if (pServer == NULL)
 	{
 		return result;
 	}
 
 	//printf("set group_id=%d\n", group_id);
-	result = fdht_client_set(pServer, g_keep_alive, time(NULL), expires, \
+	result = fdht_client_set(pServer, bKeepAlive, time(NULL), expires, \
 			FDHT_PROTO_CMD_SET, key_hash_code, \
 			pKeyInfo, pValue, value_len);
 
-	if (g_keep_alive)
+	if (bKeepAlive)
 	{
 		if (result >= ENETDOWN) //network error
 		{
@@ -426,8 +427,9 @@ int fdht_set(FDHTKeyInfo *pKeyInfo, const time_t expires, \
 *      value_len: 4 bytes big endian integer
 *      value :  value_len bytes
 */
-int fdht_inc(FDHTKeyInfo *pKeyInfo, const time_t expires, const int increase, \
-		char *pValue, int *value_len)
+int fdht_inc_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
+		FDHTKeyInfo *pKeyInfo, const time_t expires, \
+		const int increase, char *pValue, int *value_len)
 {
 	int result;
 	ProtoHeader *pHeader;
@@ -442,9 +444,9 @@ int fdht_inc(FDHTKeyInfo *pKeyInfo, const time_t expires, const int increase, \
 	char *p;
 
 	CALC_KEY_HASH_CODE(pKeyInfo, hash_key, hash_key_len, key_hash_code)
-	group_id = ((unsigned int)key_hash_code) % g_group_array.group_count;
-	pServer = get_writable_connection((g_group_array.groups + group_id), \
-                	key_hash_code, &result);
+	group_id = ((unsigned int)key_hash_code) % pGroupArray->group_count;
+	pServer = get_writable_connection((pGroupArray->groups + group_id), \
+                	bKeepAlive, key_hash_code, &result);
 	if (pServer == NULL)
 	{
 		return result;
@@ -456,7 +458,7 @@ int fdht_inc(FDHTKeyInfo *pKeyInfo, const time_t expires, const int increase, \
 	pHeader = (ProtoHeader *)buff;
 
 	pHeader->cmd = FDHT_PROTO_CMD_INC;
-	pHeader->keep_alive = g_keep_alive;
+	pHeader->keep_alive = bKeepAlive;
 	int2buff((int)time(NULL), pHeader->timestamp);
 	int2buff((int)expires, pHeader->expires);
 	int2buff(key_hash_code, pHeader->key_hash_code);
@@ -511,7 +513,7 @@ int fdht_inc(FDHTKeyInfo *pKeyInfo, const time_t expires, const int increase, \
 		break;
 	}
 
-	if (g_keep_alive)
+	if (bKeepAlive)
 	{
 		if (result >= ENETDOWN) //network error
 		{
@@ -526,7 +528,8 @@ int fdht_inc(FDHTKeyInfo *pKeyInfo, const time_t expires, const int increase, \
 	return result;
 }
 
-int fdht_delete(FDHTKeyInfo *pKeyInfo)
+int fdht_delete_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
+		FDHTKeyInfo *pKeyInfo)
 {
 	int result;
 	FDHTServerInfo *pServer;
@@ -536,19 +539,19 @@ int fdht_delete(FDHTKeyInfo *pKeyInfo)
 	int key_hash_code;
 
 	CALC_KEY_HASH_CODE(pKeyInfo, hash_key, hash_key_len, key_hash_code)
-	group_id = ((unsigned int)key_hash_code) % g_group_array.group_count;
-	pServer = get_writable_connection((g_group_array.groups + group_id), \
-                	key_hash_code , &result);
+	group_id = ((unsigned int)key_hash_code) % pGroupArray->group_count;
+	pServer = get_writable_connection((pGroupArray->groups + group_id), \
+                	bKeepAlive, key_hash_code , &result);
 	if (pServer == NULL)
 	{
 		return result;
 	}
 
 	//printf("del group_id=%d\n", group_id);
-	result = fdht_client_delete(pServer, g_keep_alive, time(NULL), \
+	result = fdht_client_delete(pServer, bKeepAlive, time(NULL), \
 			FDHT_PROTO_CMD_DEL, key_hash_code, pKeyInfo);
 
-	if (g_keep_alive)
+	if (bKeepAlive)
 	{
 		if (result >= ENETDOWN) //network error
 		{

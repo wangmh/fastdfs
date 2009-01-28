@@ -221,6 +221,10 @@ check_file_duplicate=0
 # this item must be set when check_file_duplicate is true / on
 key_namespace=FastDFS
 
+# set keep_alive to 1 to enable persistent connection with FastDHT servers
+# default value is 0 (short connection)
+keep_alive=0
+
 # you can use <#include> directive to load FastDHT server list
 # must set FastDHT server list when check_file_duplicate is true / on
 # please see INSTALL of FastDHT for detail
@@ -342,9 +346,11 @@ memo:
 -------------------------------------------------
 |subdir_count_per_path| int    |   256   |  N   |
 -------------------------------------------------
-|check_file_duplicate | boolean|   false |  N   |
+|check_file_duplicate | boolean|    0    |  N   |
 -------------------------------------------------
-|key_namespace        | string |         |  N   |
+| key_namespace       | string |         |  N   |
+-------------------------------------------------
+| keep_alive          | boolean|    0    |  N   |
 -------------------------------------------------
 
 memo:

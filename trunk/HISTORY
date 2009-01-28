@@ -1,6 +1,7 @@
 
 Version 1.15  2009-01-28
   * use FastDHT v1.04 client code
+  * use FastDHT client thread safely
 
 Version 1.14  2009-01-18
   * storage/storage_sync.c: 
