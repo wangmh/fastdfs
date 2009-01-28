@@ -1133,7 +1133,7 @@ int storage_func_init(const char *filename, \
 			"fsync_after_written_bytes=%d, " \
 			"sync_log_buff_interval=%ds, " \
 			"check_file_duplicate=%d, FDHT group count=%d, " \
-			"key_namespace=%s", \
+			"FDHT server count=%d, key_namespace=%s", \
 			g_version.major, g_version.minor, \
 			g_base_path, g_path_count, g_subdir_count_per_path, \
 			g_group_name, g_network_timeout, \
@@ -1146,7 +1146,8 @@ int storage_func_init(const char *filename, \
 			g_allow_ip_count, g_file_distribute_path_mode, \
 			g_file_distribute_rotate_count, \
 			g_fsync_after_written_bytes, g_sync_log_buff_interval, \
-			g_check_file_duplicate, g_group_array.count, g_key_namespace);
+			g_check_file_duplicate, g_group_array.group_count, \
+			g_group_array.server_count, g_key_namespace);
 
 		break;
 	}

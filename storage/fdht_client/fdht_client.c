@@ -89,12 +89,14 @@ int fdht_client_init(const char *filename)
 			break;
 		}
 
+		load_log_level(items, nItemCount);
+
 		logInfo("file: "__FILE__", line: %d, " \
 			"base_path=%s, " \
 			"network_timeout=%d, keep_alive=%d, "\
-			"group_count=%d", __LINE__, \
+			"group_count=%d, server_count=%d", __LINE__, \
 			g_base_path, g_network_timeout, g_keep_alive, \
-			g_group_array.count);
+			g_group_array.group_count, g_group_array.server_count);
 
 		break;
 	}
@@ -118,49 +120,47 @@ void fdht_client_destroy()
 static FDHTServerInfo *get_connection(ServerArray *pServerArray, \
 		const int hash_code, int *err_no)
 {
-	FDHTServerInfo *pServer;
-	FDHTServerInfo *pEnd;
+	FDHTServerInfo **ppServer;
+	FDHTServerInfo **ppEnd;
 	int server_index;
 	unsigned int new_hash_code;
 
 	new_hash_code = (hash_code << 16) | (hash_code >> 16);
 	server_index = new_hash_code % pServerArray->count;
-
-	//printf("server_index=%d\n", server_index);
-	pEnd = pServerArray->servers + pServerArray->count;
-	for (pServer = pServerArray->servers + server_index; \
-		pServer<pEnd; pServer++)
+	ppEnd = pServerArray->servers + pServerArray->count;
+	for (ppServer = pServerArray->servers + server_index; \
+		ppServer<ppEnd; ppServer++)
 	{
-		if (pServer->sock > 0)  //already connected
+		if ((*ppServer)->sock > 0)  //already connected
 		{
-			return pServer;
+			return *ppServer;
 		}
 
-		if (fdht_connect_server(pServer) == 0)
+		if (fdht_connect_server(*ppServer) == 0)
 		{
 			if (g_keep_alive)
 			{
-				tcpsetnodelay(pServer->sock);
+				tcpsetnodelay((*ppServer)->sock);
 			}
-			return pServer;
+			return *ppServer;
 		}
 	}
 
-	pEnd = pServerArray->servers + server_index;
-	for (pServer = pServerArray->servers; pServer<pEnd; pServer++)
+	ppEnd = pServerArray->servers + server_index;
+	for (ppServer = pServerArray->servers; ppServer<ppEnd; ppServer++)
 	{
-		if (pServer->sock > 0)  //already connected
+		if ((*ppServer)->sock > 0)  //already connected
 		{
-			return pServer;
+			return *ppServer;
 		}
 
-		if (fdht_connect_server(pServer) == 0)
+		if (fdht_connect_server(*ppServer) == 0)
 		{
 			if (g_keep_alive)
 			{
-				tcpsetnodelay(pServer->sock);
+				tcpsetnodelay((*ppServer)->sock);
 			}
-			return pServer;
+			return *ppServer;
 		}
 	}
 
@@ -247,8 +247,8 @@ int fdht_get_ex1(FDHTKeyInfo *pKeyInfo, const time_t expires, \
 	char *p;
 
 	CALC_KEY_HASH_CODE(pKeyInfo, hash_key, hash_key_len, key_hash_code)
-	group_id = ((unsigned int)key_hash_code) % g_group_array.count;
-	pServer = get_readable_connection(g_group_array.groups + group_id, \
+	group_id = ((unsigned int)key_hash_code) % g_group_array.group_count;
+	pServer = get_readable_connection((g_group_array.groups + group_id), \
                 	key_hash_code, &result);
 	if (pServer == NULL)
 	{
@@ -385,8 +385,8 @@ int fdht_set(FDHTKeyInfo *pKeyInfo, const time_t expires, \
 	FDHTServerInfo *pServer;
 
 	CALC_KEY_HASH_CODE(pKeyInfo, hash_key, hash_key_len, key_hash_code)
-	group_id = ((unsigned int)key_hash_code) % g_group_array.count;
-	pServer = get_writable_connection(g_group_array.groups + group_id, \
+	group_id = ((unsigned int)key_hash_code) % g_group_array.group_count;
+	pServer = get_writable_connection((g_group_array.groups + group_id), \
                 	key_hash_code, &result);
 	if (pServer == NULL)
 	{
@@ -442,8 +442,8 @@ int fdht_inc(FDHTKeyInfo *pKeyInfo, const time_t expires, const int increase, \
 	char *p;
 
 	CALC_KEY_HASH_CODE(pKeyInfo, hash_key, hash_key_len, key_hash_code)
-	group_id = ((unsigned int)key_hash_code) % g_group_array.count;
-	pServer = get_writable_connection(g_group_array.groups + group_id, \
+	group_id = ((unsigned int)key_hash_code) % g_group_array.group_count;
+	pServer = get_writable_connection((g_group_array.groups + group_id), \
                 	key_hash_code, &result);
 	if (pServer == NULL)
 	{
@@ -536,8 +536,8 @@ int fdht_delete(FDHTKeyInfo *pKeyInfo)
 	int key_hash_code;
 
 	CALC_KEY_HASH_CODE(pKeyInfo, hash_key, hash_key_len, key_hash_code)
-	group_id = ((unsigned int)key_hash_code) % g_group_array.count;
-	pServer = get_writable_connection(g_group_array.groups + group_id, \
+	group_id = ((unsigned int)key_hash_code) % g_group_array.group_count;
+	pServer = get_writable_connection((g_group_array.groups + group_id), \
                 	key_hash_code , &result);
 	if (pServer == NULL)
 	{

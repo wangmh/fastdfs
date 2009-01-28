@@ -987,6 +987,7 @@ static int storage_report_storage_status(const char *ip_addr, \
 					"socket create failed, errno: %d, " \
 					"error info: %s.", \
 					__LINE__, result, strerror(result));
+				sleep(5);
 				break;
 			}
 
