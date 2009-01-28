@@ -1,4 +1,7 @@
 
+Version 1.15  2009-01-28
+  * use FastDHT v1.04 client code
+
 Version 1.14  2009-01-18
   * storage/storage_sync.c: 
     old: if (reader.sync_row_count % 1000 == 0)
