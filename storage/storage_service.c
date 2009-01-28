@@ -235,14 +235,15 @@ typedef struct
 	int src_file_sig_len;
 } SourceFileInfo;
 
-#define storage_save_file(pClientInfo, store_path_index, \
+#define storage_save_file(pClientInfo, pGroupArray, store_path_index, \
 		file_size, file_ext_name, meta_buff, meta_size, \
 		filename, filename_len, create_flag) \
-	storage_deal_file(pClientInfo, store_path_index, NULL, \
+	storage_deal_file(pClientInfo, pGroupArray, store_path_index, NULL, \
 		file_size, file_ext_name, meta_buff, meta_size, \
 		filename, filename_len, create_flag)
 
 static int storage_deal_file(StorageClientInfo *pClientInfo, \
+		GroupArray *pGroupArray, \
 		const int store_path_index, const SourceFileInfo *pSrcFileInfo,\
 		const int64_t file_size, const char *file_ext_name,  \
 		char *meta_buff, const int meta_size, \
@@ -358,7 +359,9 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 
 			pValue = value;
 			value_len = sizeof(value) - 1;
-			result = fdht_get(&key_info, &pValue, &value_len);
+			result = fdht_get_ex1(pGroupArray, g_keep_alive, \
+					&key_info, FDHT_EXPIRES_NONE, \
+					&pValue, &value_len, malloc);
 			if (result == 0)
 			{   //exists
 				char *pGroupName;
@@ -427,7 +430,8 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 					store_path_index, filename);
 				value_len = sprintf(value, "%s/%s", \
 						g_group_name, src_filename);
-				if ((result=fdht_set(&key_info, \
+				if ((result=fdht_set_ex(pGroupArray, \
+						g_keep_alive, &key_info, \
 						FDHT_EXPIRES_NEVER, \
 						value, value_len)) != 0)
 				{
@@ -449,7 +453,8 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 						FDHT_KEY_NAME_REF_COUNT) - 1;
 				memcpy(key_info.szKey, FDHT_KEY_NAME_REF_COUNT,\
 						key_info.key_len);
-				if ((result=fdht_set(&key_info, \
+				if ((result=fdht_set_ex(pGroupArray, \
+						g_keep_alive, &key_info, \
 						FDHT_EXPIRES_NEVER, "0", 1))!=0)
 				{
 					logError("file: "__FILE__", line: %d, "\
@@ -657,7 +662,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			store_path_index, filename);
 	memcpy(filename, full_filename, (*filename_len) + 1);
 
-	if (pSrcFileInfo != NULL)   //create link
+	if (pSrcFileInfo != NULL && g_check_file_duplicate)   //create link
 	{
 		*create_flag = STORAGE_CREATE_FLAG_LINK;
 
@@ -671,8 +676,8 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		memcpy(key_info.szKey, FDHT_KEY_NAME_REF_COUNT, \
 			key_info.key_len);
 		value_len = sizeof(value) - 1;
-		if ((result=fdht_inc(&key_info, FDHT_EXPIRES_NEVER, 1, \
-				value, &value_len)) != 0)
+		if ((result=fdht_inc_ex(pGroupArray, g_keep_alive, &key_info, \
+			FDHT_EXPIRES_NEVER, 1, value, &value_len)) != 0)
 		{
 			logWarning("file: "__FILE__", line: %d, " \
 				"client ip: %s, fdht_inc fail," \
@@ -690,7 +695,8 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		key_info.key_len = sizeof(FDHT_KEY_NAME_FILE_SIG) - 1;
 		memcpy(key_info.szKey, FDHT_KEY_NAME_FILE_SIG, \
 			key_info.key_len);
-		if ((result=fdht_set(&key_info, FDHT_EXPIRES_NEVER, \
+		if ((result=fdht_set_ex(pGroupArray, g_keep_alive, \
+			&key_info, FDHT_EXPIRES_NEVER, \
 			pSrcFileInfo->src_file_sig, \
 			pSrcFileInfo->src_file_sig_len)) != 0)
 		{
@@ -1098,7 +1104,7 @@ meta data bytes: each meta data seperated by \x01,
 file size bytes: file content
 **/
 static int storage_upload_file(StorageClientInfo *pClientInfo, \
-				const int64_t nInPackLen, int *create_flag)
+	GroupArray *pGroupArray, const int64_t nInPackLen, int *create_flag)
 {
 	TrackerHeader resp;
 	int out_len;
@@ -1222,9 +1228,10 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			*pMetaData = '\0';
 		}
 
-		resp.status = storage_save_file(pClientInfo, store_path_index,\
-			file_bytes, file_ext_name, pMetaData, meta_bytes, \
-			filename, &filename_len, create_flag);
+		resp.status = storage_save_file(pClientInfo, pGroupArray, \
+			store_path_index, file_bytes, file_ext_name, \
+			pMetaData, meta_bytes, filename, &filename_len, \
+			create_flag);
 
 		if (resp.status!=0 || (*create_flag & STORAGE_CREATE_FLAG_LINK))
 		{
@@ -2163,7 +2170,7 @@ FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename
 **/
 static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
-				const int64_t nInPackLen, int *delete_flag)
+	GroupArray *pGroupArray, const int64_t nInPackLen, int *delete_flag)
 {
 	TrackerHeader resp;
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 64];
@@ -2261,7 +2268,9 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 				key_info_sig.key_len);
 			pValue = value;
 			value_len = sizeof(value) - 1;
-			result = fdht_get(&key_info_sig, &pValue, &value_len);
+			result = fdht_get_ex1(pGroupArray, g_keep_alive, \
+					&key_info_sig, FDHT_EXPIRES_NONE, \
+					&pValue, &value_len, malloc);
 			if (result == 0)
 			{
 				memcpy(&key_info_fid, &key_info_sig, \
@@ -2276,8 +2285,10 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 					FDHT_KEY_NAME_FILE_ID, \
 					key_info_fid.key_len);
 				value_len = sizeof(value) - 1;
-				result = fdht_get(&key_info_fid, &pValue, \
-						&value_len);
+				result = fdht_get_ex1(pGroupArray, \
+					g_keep_alive, &key_info_fid, \
+					FDHT_EXPIRES_NONE, &pValue, \
+					&value_len, malloc);
 				if (result == 0)
 				{
 				memcpy(&key_info_ref, &key_info_sig, \
@@ -2292,8 +2303,10 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 					key_info_ref.key_len);
 				value_len = sizeof(value) - 1;
 
-				result = fdht_get(&key_info_ref, &pValue, \
-						&value_len);
+				result = fdht_get_ex1(pGroupArray, \
+					g_keep_alive, &key_info_ref, \
+					FDHT_EXPIRES_NONE, &pValue, \
+					&value_len, malloc);
 				if (result == 0)
 				{
 					*(pValue + value_len) = '\0';
@@ -2411,36 +2424,12 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((result=fdht_delete(&key_info_sig)) != 0)
-		{
-			logWarning("file: "__FILE__", line: %d, " \
-				"client ip: %s, fdht_delete fail," \
-				"errno: %d, error info: %s", \
-				__LINE__, pClientInfo->ip_addr, \
-				result, strerror(result));
-		}
-
-		value_len = sizeof(value) - 1;
-		result = fdht_inc(&key_info_ref, FDHT_EXPIRES_NEVER, -1, value, \
-			&value_len);
-		if (result != 0)
-		{
-			logWarning("file: "__FILE__", line: %d, " \
-				"client ip: %s, fdht_inc fail," \
-				"errno: %d, error info: %s", \
-				__LINE__, pClientInfo->ip_addr, \
-				result, strerror(result));
-		}
-		else
+		if (g_check_file_duplicate)
 		{
 			char *pSeperator;
 
-			if (!(value_len == 1 && *value == '0')) //value == 0
-			{
-				break;
-			}
-
-			if ((result=fdht_delete(&key_info_fid)) != 0)
+			if ((result=fdht_delete_ex(pGroupArray, g_keep_alive, \
+					&key_info_sig)) != 0)
 			{
 				logWarning("file: "__FILE__", line: %d, " \
 					"client ip: %s, fdht_delete fail," \
@@ -2448,7 +2437,37 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 					__LINE__, pClientInfo->ip_addr, \
 					result, strerror(result));
 			}
-			if ((result=fdht_delete(&key_info_ref)) != 0)
+
+			value_len = sizeof(value) - 1;
+			result = fdht_inc_ex(pGroupArray, g_keep_alive, \
+				&key_info_ref, FDHT_EXPIRES_NEVER, -1, \
+				value, &value_len);
+			if (result != 0)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"client ip: %s, fdht_inc fail," \
+					"errno: %d, error info: %s", \
+					__LINE__, pClientInfo->ip_addr, \
+					result, strerror(result));
+				break;
+			}
+
+			if (!(value_len == 1 && *value == '0')) //value == 0
+			{
+				break;
+			}
+
+			if ((result=fdht_delete_ex(pGroupArray, g_keep_alive, \
+					&key_info_fid)) != 0)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"client ip: %s, fdht_delete fail," \
+					"errno: %d, error info: %s", \
+					__LINE__, pClientInfo->ip_addr, \
+					result, strerror(result));
+			}
+			if ((result=fdht_delete_ex(pGroupArray, g_keep_alive, \
+					&key_info_ref)) != 0)
 			{
 				logWarning("file: "__FILE__", line: %d, " \
 					"client ip: %s, fdht_delete fail," \
@@ -2533,7 +2552,7 @@ meta data bytes: each meta data seperated by \x01,
 		 name and value seperated by \x02
 **/
 static int storage_create_link(StorageClientInfo *pClientInfo, \
-				const int64_t nInPackLen)
+		GroupArray *pGroupArray, const int64_t nInPackLen)
 {
 	TrackerHeader resp;
 	int out_len;
@@ -2709,6 +2728,8 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 				resp.status, strerror(resp.status));
 
 
+			if (g_check_file_duplicate)
+			{
 			//clean invalid entry
 			memset(&key_info, 0, sizeof(key_info));
 			key_info.namespace_len = g_namespace_len;
@@ -2721,7 +2742,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 			key_info.key_len = sizeof(FDHT_KEY_NAME_FILE_ID) - 1;
 			memcpy(key_info.szKey, FDHT_KEY_NAME_FILE_ID, \
 				sizeof(FDHT_KEY_NAME_FILE_ID) - 1);
-			fdht_delete(&key_info);
+			fdht_delete_ex(pGroupArray, g_keep_alive, &key_info);
 
 			key_info.obj_id_len = snprintf(key_info.szObjectId, \
 					sizeof(src_filename), "%s/%s", \
@@ -2729,7 +2750,8 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 			key_info.key_len = sizeof(FDHT_KEY_NAME_REF_COUNT) - 1;
 			memcpy(key_info.szKey, FDHT_KEY_NAME_REF_COUNT, \
 					key_info.key_len);
-			fdht_delete(&key_info);
+			fdht_delete_ex(pGroupArray, g_keep_alive, &key_info);
+			}
 
 			break;
 		}
@@ -2768,7 +2790,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 			*pMetaData = '\0';
 		}
 
-		resp.status = storage_deal_file(pClientInfo, \
+		resp.status = storage_deal_file(pClientInfo, pGroupArray, \
 			store_path_index, &sourceFileInfo, stat_buf.st_size, \
 			file_ext_name, pMetaData, meta_bytes, \
 			filename, &filename_len, &create_flag);
@@ -2934,8 +2956,21 @@ data buff (struct)
 	int server_sock;
 	int create_flag;
 	int delete_flag;
+	GroupArray group_array;
 	
 	server_sock = (int)arg;
+
+	if (g_check_file_duplicate)
+	{
+		if ((result=fdht_copy_group_array(&group_array, \
+				&g_group_array)) != 0)
+		{
+			pthread_mutex_lock(&g_storage_thread_lock);
+			g_storage_thread_count--;
+			pthread_mutex_unlock(&g_storage_thread_lock);
+			return NULL;
+		}
+	}
 
 	while (g_continue_flag)
 	{
@@ -3075,7 +3110,7 @@ data buff (struct)
 			break;
 		case STORAGE_PROTO_CMD_UPLOAD_FILE:
 			if ((result=storage_upload_file(&client_info, \
-				nInPackLen, &create_flag)) != 0)
+				&group_array, nInPackLen, &create_flag)) != 0)
 			{
 				pthread_mutex_lock(&stat_count_thread_lock);
 				if (create_flag & STORAGE_CREATE_FLAG_FILE)
@@ -3096,7 +3131,7 @@ data buff (struct)
 			break;
 		case STORAGE_PROTO_CMD_DELETE_FILE:
 			if ((result=storage_server_delete_file(&client_info, \
-				nInPackLen, &delete_flag)) != 0)
+				&group_array, nInPackLen, &delete_flag)) != 0)
 			{
 				pthread_mutex_lock(&stat_count_thread_lock);
 				if (delete_flag == STORAGE_DELETE_FLAG_NONE ||\
@@ -3132,7 +3167,7 @@ data buff (struct)
 			break;
 		case STORAGE_PROTO_CMD_CREATE_LINK:
 			if ((result=storage_create_link(&client_info, \
-				nInPackLen)) != 0)
+				&group_array, nInPackLen)) != 0)
 			{
 				pthread_mutex_lock(&stat_count_thread_lock);
 				g_storage_stat.total_create_link_count++;
@@ -3225,6 +3260,16 @@ data buff (struct)
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, result, strerror(result));
+	}
+
+	if (g_check_file_duplicate)
+	{
+		if (g_keep_alive)
+		{
+			fdht_disconnect_all_servers(&group_array);
+		}
+
+		fdht_free_group_array(&group_array);
 	}
 
 	return NULL;

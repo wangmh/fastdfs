@@ -589,6 +589,94 @@ int fdht_load_groups(IniItemInfo *items, const int nItemCount, \
 	return 0;
 }
 
+int fdht_copy_group_array(GroupArray *pDestGroupArray, \
+		GroupArray *pSrcGroupArray)
+{
+	ServerArray *pSrcArray;
+	ServerArray *pServerArray;
+	ServerArray *pArrayEnd;
+	FDHTServerInfo *pServerInfo;
+	FDHTServerInfo *pServerEnd;
+	FDHTServerInfo **ppSrcServer;
+	FDHTServerInfo **ppServerInfo;
+	FDHTServerInfo **ppServerEnd;
+
+	memcpy(pDestGroupArray, pSrcGroupArray, sizeof(GroupArray));
+	pDestGroupArray->groups = (ServerArray *)malloc(sizeof(ServerArray) * \
+					pDestGroupArray->group_count);
+	if (pDestGroupArray->groups == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, sizeof(ServerArray) * \
+			pDestGroupArray->group_count, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	pDestGroupArray->servers = (FDHTServerInfo *)malloc( \
+			sizeof(FDHTServerInfo) * pDestGroupArray->server_count);
+	if (pDestGroupArray->servers == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, sizeof(FDHTServerInfo) * \
+			pDestGroupArray->server_count, \
+			errno, strerror(errno));
+
+		free(pDestGroupArray->groups);
+		pDestGroupArray->groups = NULL;
+		return errno != 0 ? errno : ENOMEM;
+	}
+	memcpy(pDestGroupArray->servers, pSrcGroupArray->servers, \
+		sizeof(FDHTServerInfo) * pDestGroupArray->server_count);
+
+	pSrcArray = pSrcGroupArray->groups;
+	pArrayEnd = pDestGroupArray->groups + pDestGroupArray->group_count;
+	for (pServerArray=pDestGroupArray->groups; pServerArray<pArrayEnd;
+			pServerArray++)
+	{
+		pServerArray->count = pSrcArray->count;
+		pServerArray->servers = (FDHTServerInfo **)malloc( \
+				sizeof(FDHTServerInfo *) * \
+				pServerArray->count);
+		if (pServerArray->servers == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, sizeof(FDHTServerInfo *) * \
+				pServerArray->count, \
+				errno, strerror(errno));
+			return errno != 0 ? errno : ENOMEM;
+		}
+
+		ppSrcServer = pSrcArray->servers;
+		ppServerEnd = pServerArray->servers + pServerArray->count;
+		for (ppServerInfo=pServerArray->servers; \
+			ppServerInfo<ppServerEnd; ppServerInfo++)
+		{
+			*ppServerInfo = pDestGroupArray->servers + \
+				(*ppSrcServer - pSrcGroupArray->servers);
+			ppSrcServer++;
+		}
+
+		pSrcArray++;
+	}
+
+	pServerEnd = pDestGroupArray->servers + pDestGroupArray->server_count;
+	for (pServerInfo=pDestGroupArray->servers; \
+			pServerInfo<pServerEnd; pServerInfo++)
+	{
+		if (pServerInfo->sock > 0)
+		{
+			pServerInfo->sock = -1;
+		}
+	}
+
+	return 0;
+}
+
 void fdht_free_group_array(GroupArray *pGroupArray)
 {
 	ServerArray *pServerArray;
