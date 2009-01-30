@@ -1,4 +1,54 @@
 #labels Featured
+* Version 1.15 === 2009-01-28
+{{{
+  * use FastDHT v1.04 client code
+  * use FastDHT client thread safely
+}}}
+
+* Version 1.14 === 2009-01-18
+{{{
+  * storage/storage_sync.c:
+    old: if (reader.sync_row_count % 1000 == 0)
+    new: if (reader.scan_row_count % 2000 == 0)
+  * little adjustment for common files can be used by FastDHT
+  * sched_thread.h /.c add global variable g_schedule_flag to quit normally
+  * shared_func.h / .c add function get_time_item_from_conf
+  * sched_thread.h /.c support time_base of task
+  * hash.h / .c add function CRC32, add hash function to support stream hash
+  * add FastDHT client files in storage/fdht_client/
+  * create symbol link when the file content is duplicate,
+    add item "check_file_duplicate" to conf file storage.conf
+  * use FastDHT v1.02 client code
+  * auto delete invalid entry in FastDHT when the source file does not exist
+}}}
+
+* Version 1.13 === 2008-11-29
+{{{
+  * re-calculate group 's free space when one of it's storage servers'
+    free space increase
+  * add parameters: sync_interval, sync_start_time and sync_end_time to
+    storage.conf
+  * performance enhancement: log to buffer, flush to disk every interval seconds
+  * standard fds closed by daemon_init: 0(stdin), 1(stdout) and 2(stderr)
+  * fix bug: pthread_kill sometimes cause core dump when program terminated
+  * fix bug: sync.c open next binlog cause loop call
+}}}
+
+* Version 1.12 === 2008-11-12
+{{{
+  * storage server support multi path (mount point)
+  * upload file support file ext name, add source storage ip address to filename
+  * add delete command to delete the invalid storage server
+  * add client functions which combine group name and filename to file id,
+    add anothor client test program: fdfs_test1.c to use file id
+  * client download file support callback function
+  * add protocol cmd TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE,
+    and client API add tracker_query_storage_update
+  * add protocol cmd TRACKER_PROTO_CMD_STORAGE_SYNC_REPORT to report last
+    synced timestamp as dest server
+  * fix sync old data files to new server bug
+  * fcntl change to pthread_mutex_lock
+}}}
 
 * Version 1.11 === 2008-10-04
 {{{
