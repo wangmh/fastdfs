@@ -41,6 +41,7 @@ int main(int argc, char *argv[])
 	TrackerServerInfo *pTrackerServer;
 	int result;
 	TrackerServerInfo storageServer;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN];
 	char file_id[FDFS_GROUP_NAME_MAX_LEN + 64];
 	FDFSMetaData meta_list[32];
 	int meta_count;
@@ -132,10 +133,19 @@ int main(int argc, char *argv[])
 		strcpy(meta_list[meta_count].name, "file_size");
 		strcpy(meta_list[meta_count].value, "115120");
 		meta_count++;
+
+		/*
+		strcpy(group_name, "group1");
+		result = storage_upload_by_filename1(pTrackerServer, \
+				NULL, store_path_index, \
+				local_filename, NULL, \
+				meta_list, meta_count, group_name, file_id);
+		*/
+		strcpy(group_name, "");
 		result = storage_upload_by_filename1(pTrackerServer, \
 				&storageServer, store_path_index, \
 				local_filename, NULL, \
-				meta_list, meta_count, file_id);
+				meta_list, meta_count, group_name, file_id);
 		if (result != 0)
 		{
 			printf("storage_upload_by_filename fail, " \
@@ -328,7 +338,7 @@ int main(int argc, char *argv[])
 			}
 
 			if ((result=storage_set_metadata1(pTrackerServer, \
-				&storageServer, file_id, \
+				NULL, file_id, \
 				pMetaList, meta_count, *argv[4])) == 0)
 			{
 				printf("set meta data success\n");
@@ -346,7 +356,7 @@ int main(int argc, char *argv[])
 		else if(strcmp(operation, "delete") == 0)
 		{
 			if ((result=storage_delete_file1(pTrackerServer, \
-			&storageServer, file_id)) == 0)
+			NULL, file_id)) == 0)
 			{
 				printf("delete file success\n");
 			}

@@ -133,11 +133,21 @@ int main(int argc, char *argv[])
 		strcpy(meta_list[meta_count].name, "file_size");
 		strcpy(meta_list[meta_count].value, "115120");
 		meta_count++;
+
+		strcpy(group_name, "");
 		result = storage_upload_by_filename(pTrackerServer, \
 				&storageServer, store_path_index, \
 				local_filename, NULL, \
 				meta_list, meta_count, \
 				group_name, remote_filename);
+		/*
+		strcpy(group_name, "group1");
+		result = storage_upload_by_filename(pTrackerServer, \
+				NULL, store_path_index, \
+				local_filename, NULL, \
+				meta_list, meta_count, \
+				group_name, remote_filename);
+		*/
 		if (result != 0)
 		{
 			printf("storage_upload_by_filename fail, " \
@@ -339,7 +349,7 @@ int main(int argc, char *argv[])
 			}
 
 			if ((result=storage_set_metadata(pTrackerServer, \
-				&storageServer, group_name, remote_filename, \
+				NULL, group_name, remote_filename, \
 				pMetaList, meta_count, *argv[5])) == 0)
 			{
 				printf("set meta data success\n");
@@ -357,7 +367,7 @@ int main(int argc, char *argv[])
 		else if(strcmp(operation, "delete") == 0)
 		{
 			if ((result=storage_delete_file(pTrackerServer, \
-			&storageServer, group_name, remote_filename)) == 0)
+			NULL, group_name, remote_filename)) == 0)
 			{
 				printf("delete file success\n");
 			}

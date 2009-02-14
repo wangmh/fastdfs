@@ -99,6 +99,10 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 		FDFSStorageInfo *storage_infos, const int max_storages, \
 		int *storage_count);
 
+#define tracker_query_storage_store(pTrackerServer, pStorageServer, \
+		store_path_index) \
+	 tracker_query_storage_store_without_group(pTrackerServer, \
+		pStorageServer, store_path_index)
 /**
 * query storage server to upload file
 * params:
@@ -107,8 +111,21 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 *       store_path_index: return the index of path on the storage server
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
+int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 		TrackerServerInfo *pStorageServer, int *store_path_index);
+
+/**
+* query storage server to upload file
+* params:
+*	pTrackerServer: tracker server
+*       group_name: the group name to upload file to
+*	pStorageServer: return storage server
+*       store_path_index: return the index of path on the storage server
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
+		const char *group_name, TrackerServerInfo *pStorageServer, \
+		int *store_path_index);
 
 /**
 * query storage server to update (delete file or set meta data)
