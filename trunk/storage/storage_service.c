@@ -417,6 +417,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 					meta_buff, meta_size, \
 					filename, filename_len);
 
+				fdfs_quit(&trackerServer);
 				tracker_disconnect_server(&trackerServer);
 
 				*create_flag = STORAGE_CREATE_FLAG_LINK;
@@ -497,6 +498,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 					meta_buff, meta_size, \
 					filename, filename_len);
 
+				fdfs_quit(&trackerServer);
 				tracker_disconnect_server(&trackerServer);
 
 				if (result != 0)

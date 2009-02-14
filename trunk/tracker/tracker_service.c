@@ -919,15 +919,18 @@ static FDFSStorageDetail *tracker_get_writable_storage( \
 	}
 }
 
-static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
-				const int64_t nInPackLen)
+static int tracker_deal_service_query_storage( \
+		TrackerClientInfo *pClientInfo, \
+		const int64_t nInPackLen, char cmd)
 {
 	TrackerHeader resp;
+	int expect_pkg_len;
 	int out_len;
 	FDFSGroupInfo *pStoreGroup;
 	FDFSGroupInfo **ppFoundGroup;
 	FDFSGroupInfo **ppGroup;
 	FDFSStorageDetail *pStorageServer;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char out_buff[sizeof(TrackerHeader) + \
 		TRACKER_QUERY_STORAGE_STORE_BODY_LEN];
 	bool bHaveActiveServer;
@@ -938,16 +941,23 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 	pStorageServer = NULL;
 	while (1)
 	{
-		if (nInPackLen != 0)
+		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP)
+		{
+			expect_pkg_len = FDFS_GROUP_NAME_MAX_LEN;
+		}
+		else
+		{
+			expect_pkg_len = 0;
+		}
+
+		if (nInPackLen != expect_pkg_len)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-				"is not correct, " \
-				"expect length: 0", \
-				__LINE__, \
-				TRACKER_PROTO_CMD_SERVICE_QUERY_STORE, \
-				pClientInfo->ip_addr,  \
-				nInPackLen);
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT"is not correct, " \
+				"expect length: %d", __LINE__, \
+				cmd, pClientInfo->ip_addr, \
+				nInPackLen, expect_pkg_len);
 			resp.status = EINVAL;
 			break;
 		}
@@ -958,8 +968,45 @@ static int tracker_deal_service_query_storage(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (g_groups.store_lookup == FDFS_STORE_LOOKUP_ROUND_ROBIN || \
-		    g_groups.store_lookup == FDFS_STORE_LOOKUP_LOAD_BALANCE)
+		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP)
+		{
+			if ((resp.status=tcprecvdata(pClientInfo->sock, \
+					group_name, nInPackLen, \
+					g_network_timeout)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s, recv data fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, pClientInfo->ip_addr, \
+					resp.status, strerror(resp.status));
+				break;
+			}
+			group_name[nInPackLen] = '\0';
+
+			pStoreGroup = tracker_mem_get_group(group_name);
+			if (pStoreGroup == NULL)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s, invalid group name: %s", \
+					__LINE__, pClientInfo->ip_addr, group_name);
+				resp.status = ENOENT;
+				break;
+			}
+
+			if (pStoreGroup->active_count == 0)
+			{
+				resp.status = ENOENT;
+				break;
+			}
+
+			if (pStoreGroup->free_mb <= g_storage_reserved_mb)
+			{
+				resp.status = ENOSPC;
+				break;
+			}
+		}
+		else if (g_groups.store_lookup == FDFS_STORE_LOOKUP_ROUND_ROBIN
+			||g_groups.store_lookup==FDFS_STORE_LOOKUP_LOAD_BALANCE)
 		{
 			bHaveActiveServer = false;
 			ppFoundGroup = g_groups.sorted_groups + \
@@ -2047,148 +2094,102 @@ data buff (struct)
 
 		tracker_check_dirty(&client_info);
 
-		if (header.cmd == TRACKER_PROTO_CMD_STORAGE_BEAT)
+		switch(header.cmd)
 		{
-			if (tracker_check_logined(&client_info) != 0)
+		case TRACKER_PROTO_CMD_STORAGE_BEAT:
+			if ((result=tracker_check_logined(&client_info)) != 0)
 			{
 				break;
 			}
 
-			if (tracker_deal_storage_beat(&client_info, \
-				nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_STORAGE_SYNC_REPORT)
-		{
-			if (tracker_check_logined(&client_info) != 0)
-			{
-				break;
-			}
-
-			if (tracker_deal_storage_sync_report(&client_info, \
-				nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_STORAGE_REPORT)
-		{
-			if (tracker_check_logined(&client_info) != 0)
-			{
-				break;
-			}
-
-			if (tracker_deal_storage_df_report(&client_info, \
-				nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_STORAGE_JOIN)
-		{ 
-			if (tracker_deal_storage_join(&client_info, \
-				nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG)
-		{
-			if (tracker_check_logined(&client_info) != 0)
-			{
-				break;
-			}
-
-			if (tracker_deal_storage_replica_chg(&client_info, \
-				nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH)
-		{
-			if (tracker_deal_service_query_fetch_update( \
-				&client_info, header.cmd, nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE)
-		{
-			if (tracker_deal_service_query_fetch_update(
-				&client_info, header.cmd, nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE)
-		{
-			if (tracker_deal_service_query_storage(&client_info, \
-				nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_SERVER_LIST_GROUP)
-		{
-			if (tracker_deal_server_list_groups(&client_info, \
-				nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_SERVER_LIST_STORAGE)
-		{
-			if (tracker_deal_server_list_group_storages( \
-				&client_info, nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ)
-		{
-			if (tracker_deal_storage_sync_src_req( \
-				&client_info, nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ)
-		{
-			if (tracker_deal_storage_sync_dest_req( \
-				&client_info, nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY)
-		{
-			if (tracker_deal_storage_sync_notify( \
-				&client_info, nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE)
-		{
-			if (tracker_deal_server_delete_storage( \
-				&client_info, nInPackLen) != 0)
-			{
-				break;
-			}
-		}
-		else if (header.cmd == FDFS_PROTO_CMD_QUIT)
-		{
+			result = tracker_deal_storage_beat(&client_info, \
+				nInPackLen);
 			break;
-		}
-		else
-		{
-			logError("file: "__FILE__", line: %d, "   \
+		case TRACKER_PROTO_CMD_STORAGE_SYNC_REPORT:
+			if ((result=tracker_check_logined(&client_info)) != 0)
+			{
+				break;
+			}
+
+			result = tracker_deal_storage_sync_report( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_REPORT:
+			if ((result=tracker_check_logined(&client_info)) != 0)
+			{
+				break;
+			}
+
+			result = tracker_deal_storage_df_report(&client_info, \
+				nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_JOIN:
+			result = tracker_deal_storage_join(&client_info, \
+				nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG:
+			if ((result=tracker_check_logined(&client_info)) != 0)
+			{
+				break;
+			}
+
+			result = tracker_deal_storage_replica_chg( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH:
+			result = tracker_deal_service_query_fetch_update( \
+				&client_info, header.cmd, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE:
+			result = tracker_deal_service_query_fetch_update( \
+				&client_info, header.cmd, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITHOUT_GROUP:
+			result = tracker_deal_service_query_storage(
+				&client_info, nInPackLen, header.cmd);
+			break;
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP:
+			result = tracker_deal_service_query_storage( \
+				&client_info, nInPackLen, header.cmd);
+			break;
+		case TRACKER_PROTO_CMD_SERVER_LIST_GROUP:
+			result = tracker_deal_server_list_groups( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_SERVER_LIST_STORAGE:
+			result = tracker_deal_server_list_group_storages( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ:
+			result = tracker_deal_storage_sync_src_req( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ:
+			result = tracker_deal_storage_sync_dest_req( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY:
+			result = tracker_deal_storage_sync_notify( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE:
+			result = tracker_deal_server_delete_storage( \
+				&client_info, nInPackLen);
+			break;
+		case FDFS_PROTO_CMD_QUIT:
+			result = ECONNRESET;  //for quit loop
+			break;
+		default:
+			logError("file: "__FILE__", line: %d, "  \
 				"client ip: %s, unkown cmd: %d", \
 				__LINE__, client_info.ip_addr, \
 				header.cmd);
+			result = EINVAL;
+			break;
+		}
+
+		if (result != 0)
+		{
 			break;
 		}
 

@@ -113,18 +113,31 @@ static int storage_get_connection(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-static int storage_get_write_connection(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo **ppStorageServer, 
+static int storage_get_upload_connection(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo **ppStorageServer, const char *group_name, \
 		TrackerServerInfo *pNewStorage, int *store_path_index, \
 		bool *new_connection)
 {
 	int result;
 	if (*ppStorageServer == NULL)
 	{
-		if ((result=tracker_query_storage_store(pTrackerServer, \
-		                pNewStorage, store_path_index)) != 0)
+		if (*group_name == '\0')
 		{
-			return result;
+			if ((result=tracker_query_storage_store_without_group( \
+				pTrackerServer, pNewStorage, \
+				store_path_index)) != 0)
+			{
+				return result;
+			}
+		}
+		else
+		{
+			if ((result=tracker_query_storage_store_with_group( \
+				pTrackerServer, group_name, pNewStorage, \
+				store_path_index)) != 0)
+			{
+				return result;
+			}
 		}
 
 		if ((result=tracker_connect_server(pNewStorage)) != 0)
@@ -527,19 +540,20 @@ int storage_upload_by_filename1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const int store_path_index, \
 		const char *local_filename, const char *file_ext_name, \
 		const FDFSMetaData *meta_list, \
-		const int meta_count, char *file_id)
+		const int meta_count, const char *group_name, char *file_id)
 {
-	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char remote_filename[64];
 	int result;
 
+	snprintf(new_group_name, sizeof(new_group_name), "%s", group_name);
 	result = storage_upload_by_filename(pTrackerServer, \
 			pStorageServer, store_path_index, \
 			local_filename, file_ext_name, \
-			meta_list, meta_count, group_name, remote_filename);
+			meta_list, meta_count, new_group_name, remote_filename);
 	if (result == 0)
 	{
-		sprintf(file_id, "%s%c%s", group_name, \
+		sprintf(file_id, "%s%c%s", new_group_name, \
 			FDFS_FILE_ID_SEPERATOR, remote_filename);
 	}
 	else
@@ -555,21 +569,21 @@ int storage_do_upload_file1(TrackerServerInfo *pTrackerServer, \
 		const int store_path_index, const bool bFilename, \
 		const char *file_buff, const int64_t file_size, \
 		const char *file_ext_name, const FDFSMetaData *meta_list, \
-		const int meta_count, \
-		char *file_id)
+		const int meta_count, const char *group_name, char *file_id)
 {
-	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char remote_filename[64];
 	int result;
 
+	snprintf(new_group_name, sizeof(new_group_name), "%s", group_name);
 	result = storage_do_upload_file(pTrackerServer, \
 			pStorageServer, store_path_index, bFilename, \
 			file_buff, file_size, file_ext_name, \
 			meta_list, meta_count, \
-			group_name, remote_filename);
+			new_group_name, remote_filename);
 	if (result == 0)
 	{
-		sprintf(file_id, "%s%c%s", group_name, \
+		sprintf(file_id, "%s%c%s", new_group_name, \
 			FDFS_FILE_ID_SEPERATOR, remote_filename);
 	}
 	else
@@ -613,16 +627,18 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	bool new_connection;
 	int new_store_path;
 
-	group_name[0] = '\0';
-	remote_filename[0] = '\0';
+	*remote_filename = '\0';
 
 	new_store_path = store_path_index;
-	if ((result=storage_get_write_connection(pTrackerServer, \
-		&pStorageServer, &storageServer, \
+	if ((result=storage_get_upload_connection(pTrackerServer, \
+		&pStorageServer, group_name, &storageServer, \
 		&new_store_path, &new_connection)) != 0)
 	{
+		*group_name = '\0';
 		return result;
 	}
+
+	*group_name = '\0';
 
 	/*
 	//printf("upload to storage %s:%d\n", \

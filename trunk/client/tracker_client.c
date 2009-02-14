@@ -460,7 +460,7 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
+int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 		TrackerServerInfo *pStorageServer, int *store_path_index)
 {
 
@@ -475,9 +475,71 @@ int tracker_query_storage_store(TrackerServerInfo *pTrackerServer, \
 	pStorageServer->sock = -1;
 
 	memset(&header, 0, sizeof(header));
-	header.cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_STORE;
+	header.cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITHOUT_GROUP;
 	if ((result=tcpsenddata(pTrackerServer->sock, &header, \
 			sizeof(header), g_network_timeout)) != 0)
+	{
+		logError("send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, strerror(result));
+		return result;
+	}
+
+	pInBuff = in_buff;
+	if ((result=fdfs_recv_response(pTrackerServer, \
+		&pInBuff, sizeof(in_buff), &in_bytes)) != 0)
+	{
+		return result;
+	}
+
+	if (in_bytes != TRACKER_QUERY_STORAGE_STORE_BODY_LEN)
+	{
+		logError("tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid, " \
+			"expect length: %d.", pTrackerServer->ip_addr, \
+			pTrackerServer->port, in_bytes, \
+			TRACKER_QUERY_STORAGE_STORE_BODY_LEN);
+		return EINVAL;
+	}
+
+	memcpy(pStorageServer->group_name, in_buff, \
+			FDFS_GROUP_NAME_MAX_LEN);
+	memcpy(pStorageServer->ip_addr, in_buff + \
+			FDFS_GROUP_NAME_MAX_LEN, IP_ADDRESS_SIZE-1);
+	pStorageServer->port = (int)buff2long(in_buff + \
+				FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1);
+	*store_path_index = *(in_buff + FDFS_GROUP_NAME_MAX_LEN + \
+				IP_ADDRESS_SIZE);
+	return 0;
+}
+
+int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
+		const char *group_name, TrackerServerInfo *pStorageServer, \
+		int *store_path_index)
+{
+	TrackerHeader *pHeader;
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN];
+	char in_buff[sizeof(TrackerHeader) + \
+		TRACKER_QUERY_STORAGE_STORE_BODY_LEN];
+	char *pInBuff;
+	int64_t in_bytes;
+	int result;
+
+	memset(pStorageServer, 0, sizeof(TrackerServerInfo));
+	pStorageServer->sock = -1;
+
+	pHeader = (TrackerHeader *)out_buff;
+	memset(out_buff, 0, sizeof(out_buff));
+	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
+			sizeof(TrackerHeader),  "%s", group_name);
+	
+	long2buff(FDFS_GROUP_NAME_MAX_LEN, pHeader->pkg_len);
+	pHeader->cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP;
+	if ((result=tcpsenddata(pTrackerServer->sock, out_buff, \
+			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
+			g_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \

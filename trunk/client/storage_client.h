@@ -32,7 +32,8 @@ extern "C" {
 *                      if be NULL will abstract ext name from the local filename
 *	meta_list: meta info array
 *       meta_count: meta item count
-*	group_name: return the group name to store the file
+*	group_name: if not empty, specify the group name. 
+	 	    return the group name to store the file
 *	remote_filename: return the new created filename
 * return: 0 success, !=0 fail, return the error code
 **/
@@ -53,7 +54,8 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 *       file_ext_name: file ext name, not include dot(.), can be NULL
 *	meta_list: meta info array
 *       meta_count: meta item count
-*	group_name: return the group name to store the file
+*	group_name: if not empty, specify the group name. 
+		    return the group name to store the file
 *	remote_filename: return the new created filename
 * return: 0 success, !=0 fail, return the error code
 **/

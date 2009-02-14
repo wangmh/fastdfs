@@ -1,4 +1,10 @@
 
+Version 1.16  2009-02-14
+  * client can specify group name when upload file
+  * tracker_service.c: cmd dispatch changed to "switch ... case" 
+    not "if ... else if"
+  * storage_service.c: call fdfs_quit before tracker_disconnect_server
+
 Version 1.15  2009-01-28
   * use FastDHT v1.04 client code
   * use FastDHT client thread safely
