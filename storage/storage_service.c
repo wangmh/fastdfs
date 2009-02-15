@@ -3039,14 +3039,12 @@ data buff (struct)
 
 	pSrcStorage = NULL;
 	count = 0;
-	result = 0;
-	while (result == 0 && g_continue_flag)
+	while (g_continue_flag)
 	{
 		result = tcprecvdata_ex(client_info.sock, &header, \
 			sizeof(header), g_network_timeout, &recv_bytes);
 		if (result == ETIMEDOUT)
 		{
-			result = 0;
 			continue;
 		}
 
@@ -3234,7 +3232,7 @@ data buff (struct)
 				g_storage_stat.last_source_update)
 			break;
 		case FDFS_PROTO_CMD_QUIT:
-			result = ENOENT;
+			result = ECONNRESET;  //for quit loop
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "   \
@@ -3243,6 +3241,12 @@ data buff (struct)
 			result = EINVAL;
 			break;
 		}
+
+		if (result != 0)
+		{
+			break;
+		}
+
 		count++;
 	}
 	close(client_info.sock);
