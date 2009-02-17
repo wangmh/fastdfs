@@ -1,4 +1,7 @@
 
+Version 1.17  2009-02-17
+  * add test programs at sub directory test/
+
 Version 1.16  2009-02-14
   * client can specify group name when upload file
   * tracker_service.c: cmd dispatch changed to "switch ... case" 
