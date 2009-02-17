@@ -282,7 +282,7 @@ int main(int argc, char *argv[])
 		else if (strcmp(operation, "getmeta") == 0)
 		{
 			if ((result=storage_get_metadata1(pTrackerServer, \
-				&storageServer, file_id, \
+				NULL, file_id, \
 				&pMetaList, &meta_count)) == 0)
 			{
 				printf("get meta data success, " \
