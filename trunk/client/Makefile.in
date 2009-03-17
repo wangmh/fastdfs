@@ -35,7 +35,7 @@ ALL_LIBS = libfdfsclient.so.1
 
 all: $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS)
 libfdfsclient.so.1:
-	$(COMPILE) -o $@ $< -shared -Wl,-soname,libfdfsclient.so.1 $(SHARED_OBJS) $(LIB_PATH)
+	$(COMPILE) -o $@ $< -shared $(SHARED_OBJS) $(LIB_PATH)
 .o:
 	$(COMPILE) -o $@ $<  $(STATIC_OBJS) $(LIB_PATH) $(INC_PATH)
 .c:
