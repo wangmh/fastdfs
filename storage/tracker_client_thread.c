@@ -16,9 +16,8 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
-#ifdef OS_LINUX
-#include <sys/vfs.h>
-#include <sys/statfs.h>
+#if defined(OS_LINUX) || defined(OS_SUNOS)
+#include <sys/statvfs.h>
 #endif
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -1001,7 +1000,11 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer)
 	char *pBuff;
 	TrackerHeader *pHeader;
 	TrackerStatReportReqBody *pStatBuff;
-	struct statfs sbuf;
+//#if defined(OS_SUNOS) 
+	struct statvfs sbuf;
+//#else
+//	struct statfs sbuf;
+//#endif
 	int body_len;
 	int total_len;
 	int i;
@@ -1036,7 +1039,11 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer)
 
 	for (i=0; i<g_path_count; i++)
 	{
-		if (statfs(g_store_paths[i], &sbuf) != 0)
+		result = statvfs(g_store_paths[i], &sbuf);
+//#else
+//		result = statfs(g_store_paths[i], &sbuf); 
+//#endif
+		if (result != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"call statfs fail, errno: %d, error info: %s.",\
@@ -1049,9 +1056,9 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer)
 			return errno != 0 ? errno : EACCES;
 		}
 
-		long2buff((((int64_t)(sbuf.f_blocks) * sbuf.f_bsize) / FDFS_ONE_MB),\
+		long2buff((((int64_t)(sbuf.f_blocks) * sbuf.f_frsize) / FDFS_ONE_MB),\
 			pStatBuff->sz_total_mb);
-		long2buff((((int64_t)(sbuf.f_bavail) * sbuf.f_bsize) / FDFS_ONE_MB),\
+		long2buff((((int64_t)(sbuf.f_bavail) * sbuf.f_frsize) / FDFS_ONE_MB),\
 			pStatBuff->sz_free_mb);
 
 		pStatBuff++;

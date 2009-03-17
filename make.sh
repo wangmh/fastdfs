@@ -31,14 +31,18 @@ TARGET_PATH=/usr/local/bin
 CFLAGS='-O3 -Wall -D_FILE_OFFSET_BITS=64'
 #CFLAGS='-g -Wall -D_FILE_OFFSET_BITS=64 -D__DEBUG__'
 
+LIBS=''
 uname=`uname`
 if [ "$uname" = "Linux" ]; then
   CFLAGS="$CFLAGS -DOS_LINUX"
 elif [ "$uname" = "FreeBSD" ]; then
   CFLAGS="$CFLAGS -DOS_FREEBSD"
+elif [ "$uname" = "SunOS" ]; then
+  CFLAGS="$CFLAGS -DOS_SUNOS"
+  LIBS="$LIBS -lsocket -lnsl -lresolv"
+  export CC=gcc
 fi
 
-LIBS=''
 if [ -f /usr/lib/libpthread.so ] || [ -f /usr/local/lib/libpthread.so ] || [ -f /usr/lib64/libpthread.so ]; then
   LIBS="$LIBS -lpthread"
 else

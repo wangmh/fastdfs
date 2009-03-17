@@ -84,6 +84,10 @@ typedef char  bool;
 #define ubyte unsigned char
 #endif
 
+#ifndef INADDR_NONE
+#define  INADDR_NONE  ((in_addr_t) 0xffffffff)
+#endif
+
 #define IS_UPPER_HEX(ch) ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F'))
 
 #ifdef __cplusplus
