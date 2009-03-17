@@ -16,9 +16,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
-#if defined(OS_LINUX) || defined(OS_SUNOS)
 #include <sys/statvfs.h>
-#endif
 #include <sys/param.h>
 #include <sys/mount.h>
 #include "fdfs_define.h"
@@ -1000,11 +998,7 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer)
 	char *pBuff;
 	TrackerHeader *pHeader;
 	TrackerStatReportReqBody *pStatBuff;
-//#if defined(OS_SUNOS) 
 	struct statvfs sbuf;
-//#else
-//	struct statfs sbuf;
-//#endif
 	int body_len;
 	int total_len;
 	int i;
@@ -1039,11 +1033,7 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer)
 
 	for (i=0; i<g_path_count; i++)
 	{
-		result = statvfs(g_store_paths[i], &sbuf);
-//#else
-//		result = statfs(g_store_paths[i], &sbuf); 
-//#endif
-		if (result != 0)
+		if (statvfs(g_store_paths[i], &sbuf) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"call statfs fail, errno: %d, error info: %s.",\
