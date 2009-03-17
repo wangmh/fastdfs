@@ -77,7 +77,7 @@ typedef char  bool;
 #endif
 
 #ifndef byte
-#define byte char
+#define byte signed char
 #endif
 
 #ifndef ubyte
