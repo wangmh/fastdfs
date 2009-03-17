@@ -3,6 +3,7 @@ Version 1.17  2009-03-17
   * add test programs at sub directory test/
   * common/shared_func.c: rindex change to strrchr, add #include <netinet/in.h>
   * support SunOS (Solaris), compile passed on SunOS 5.10
+  * support AIX, compile passed on AIX 5.3
   * sys call statfs change to statvfs
 
 Version 1.16  2009-02-14

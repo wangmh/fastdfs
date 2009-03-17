@@ -18,7 +18,6 @@
 #include <time.h>
 #include <sys/statvfs.h>
 #include <sys/param.h>
-#include <sys/mount.h>
 #include "fdfs_define.h"
 #include "logger.h"
 #include "fdfs_global.h"
