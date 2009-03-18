@@ -68,6 +68,7 @@ extern TimeInfo g_sync_start_time;
 extern TimeInfo g_sync_end_time;
 extern bool g_sync_part_time; //true for part time, false for all time of a day
 extern int g_sync_log_buff_interval; //sync log buff to disk every interval seconds
+extern int g_sync_binlog_buff_interval; //sync binlog buff to disk every interval seconds
 
 extern FDFSStorageStat g_storage_stat;
 extern int g_stat_change_count;

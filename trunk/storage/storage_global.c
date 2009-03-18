@@ -42,6 +42,7 @@ TimeInfo g_sync_start_time = {0, 0};
 TimeInfo g_sync_end_time = {23, 59};
 bool g_sync_part_time = false;
 int g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
+int g_sync_binlog_buff_interval = SYNC_BINLOG_BUFF_DEF_INTERVAL;
 
 FDFSStorageStat g_storage_stat;
 int g_stat_change_count = 1;

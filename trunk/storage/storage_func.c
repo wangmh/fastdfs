@@ -1087,6 +1087,14 @@ int storage_func_init(const char *filename, \
 			g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
 		}
 
+		g_sync_binlog_buff_interval = iniGetIntValue( \
+				"sync_binlog_buff_interval", items, nItemCount,\
+				SYNC_BINLOG_BUFF_DEF_INTERVAL);
+		if (g_sync_binlog_buff_interval <= 0)
+		{
+			g_sync_binlog_buff_interval=SYNC_BINLOG_BUFF_DEF_INTERVAL;
+		}
+
 		g_check_file_duplicate = iniGetBoolValue("check_file_duplicate",
 					items, nItemCount, false);
 		if (g_check_file_duplicate)
@@ -1135,6 +1143,7 @@ int storage_func_init(const char *filename, \
 			"file_distribute_rotate_count=%d, " \
 			"fsync_after_written_bytes=%d, " \
 			"sync_log_buff_interval=%ds, " \
+			"sync_binlog_buff_interval=%ds, " \
 			"check_file_duplicate=%d, FDHT group count=%d, " \
 			"FDHT server count=%d, FDHT key_namespace=%s, " \
 			"FDHT keep_alive=%d", \
@@ -1150,8 +1159,9 @@ int storage_func_init(const char *filename, \
 			g_allow_ip_count, g_file_distribute_path_mode, \
 			g_file_distribute_rotate_count, \
 			g_fsync_after_written_bytes, g_sync_log_buff_interval, \
-			g_check_file_duplicate, g_group_array.group_count, \
-			g_group_array.server_count, g_key_namespace, g_keep_alive);
+			g_sync_binlog_buff_interval, g_check_file_duplicate, \
+			g_group_array.group_count, g_group_array.server_count, \
+			g_key_namespace, g_keep_alive);
 
 		break;
 	}
