@@ -767,6 +767,14 @@ int kill_storage_sync_threads()
 	return result;
 }
 
+void fdfs_binlog_sync_func(void *args)
+{
+	if (binlog_write_cache_len > 0)
+	{
+		storage_binlog_fsync(true);
+	}
+}
+
 static int storage_binlog_fsync(const bool bNeedLock)
 {
 	int result;
@@ -1564,7 +1572,6 @@ static void* storage_sync_thread_entrance(void* arg)
 	time_t current_time;
 	time_t start_time;
 	time_t end_time;
-	time_t last_check_sync_cache_time;
 	
 	memset(local_ip_addr, 0, sizeof(local_ip_addr));
 	memset(&reader, 0, sizeof(reader));
@@ -1575,7 +1582,6 @@ static void* storage_sync_thread_entrance(void* arg)
 
 	pStorage = (FDFSStorageBrief *)arg;
 
-	last_check_sync_cache_time = time(NULL);
 	strcpy(storage_server.ip_addr, pStorage->ip_addr);
 	strcpy(storage_server.group_name, g_group_name);
 	storage_server.port = g_server_port;
@@ -1778,13 +1784,6 @@ static void* storage_sync_thread_entrance(void* arg)
 						pStorage->ip_addr, \
 						pStorage->status);
 				}
-				}
-
-				if (binlog_write_cache_len > 0 && \
-				    time(NULL)-last_check_sync_cache_time >= 60)
-				{
-					last_check_sync_cache_time = time(NULL);
-					storage_binlog_fsync(true);
 				}
 
 				usleep(g_sync_wait_usec);

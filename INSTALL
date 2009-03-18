@@ -211,6 +211,11 @@ fsync_after_written_bytes=0
 # default value is 10 seconds
 sync_log_buff_interval=10
 
+# sync binlog buff / cache to disk every interval seconds
+# this parameter is valid when write_to_binlog set to 1
+# default value is 60 seconds
+sync_binlog_buff_interval=60
+
 # if check file duplicate, when set to true, use FastDHT to store file indexes
 # 1 or yes: need check
 # 0 or no: do not check
@@ -351,6 +356,8 @@ memo:
 | key_namespace       | string |         |  N   |
 -------------------------------------------------
 | keep_alive          | boolean|    0    |  N   |
+-------------------------------------------------
+| sync_binlog_buff_interval| int |   60s |  N   |
 -------------------------------------------------
 
 memo:

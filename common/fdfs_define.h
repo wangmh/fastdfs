@@ -23,6 +23,8 @@
 #define FDFS_RECORD_SEPERATOR	'\x01'
 #define FDFS_FIELD_SEPERATOR	'\x02'
 
+#define SYNC_BINLOG_BUFF_DEF_INTERVAL  60
+
 #ifdef __cplusplus
 extern "C" {
 #endif
