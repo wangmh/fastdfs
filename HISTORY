@@ -1,5 +1,5 @@
 
-Version 1.17  2009-03-18
+Version 1.17  2009-03-19
   * add test programs at sub directory test/
   * common/shared_func.c: rindex change to strrchr, add #include <netinet/in.h>
   * support SunOS (Solaris), compile passed on SunOS 5.10
@@ -7,6 +7,7 @@ Version 1.17  2009-03-18
   * sys call statfs change to statvfs
   * use scheduling thread to sync binlog buff / cache to disk, add parameter
    "sync_binlog_buff_interval" to conf file storage.conf
+  * use FastDHT v1.07 client code
 
 Version 1.16  2009-02-14
   * client can specify group name when upload file

@@ -62,6 +62,29 @@ typedef struct
 
 typedef struct
 {
+	int namespace_len;
+	int obj_id_len;
+	char szNameSpace[FDHT_MAX_NAMESPACE_LEN + 1];
+	char szObjectId[FDHT_MAX_OBJECT_ID_LEN + 1];
+} FDHTObjectInfo;
+
+typedef struct
+{
+	int key_len;
+	char szKey[FDHT_MAX_SUB_KEY_LEN + 1];
+} FDHTSubKey;
+
+typedef struct
+{
+	int key_len;
+	int value_len;
+	char szKey[FDHT_MAX_SUB_KEY_LEN + 1];
+	char *pValue;
+	char status;
+} FDHTKeyValuePair;
+
+typedef struct
+{
 	int sock;
 	int port;
 	char ip_addr[IP_ADDRESS_SIZE];
