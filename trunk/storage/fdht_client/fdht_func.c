@@ -397,6 +397,7 @@ int fdht_load_groups(IniItemInfo *items, const int nItemCount, \
 		return errno != 0 ? errno : ENOMEM;
 	}
 
+	pGroupArray->server_count = 0;
 	pServerArray = pGroupArray->groups;
 	for (group_id=0; group_id<pGroupArray->group_count; group_id++)
 	{
