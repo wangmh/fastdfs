@@ -34,12 +34,17 @@ for i in $list; do
     break
   fi
   param="$param $p"
+  first_ch=`$EXPR substr "$p" 1 1`
+  echo $first_ch
+  if [ "$first_ch" = "-" ]; then
+      p="'\\$p'"
+  fi
   grep_cmd="$grep_cmd | $GREP -w $p"
 done
-cmd="/bin/ps auxww | $grep_cmd | $GREP -v grep | $AWK '{print \$2;}'"
-echo "$cmd"
-pids=`$cmd`
-if [ -z "$pids" ]; then
+
+cmd="/bin/ps auxww | $grep_cmd | $GREP -v grep | $GREP -v $0 | $AWK '{print \$2;}'"
+pids=`/bin/sh -c "$cmd"`
+if [ ! -z "$pids" ]; then
   i=0
   count=0
   /bin/echo "stopping $program ..."
@@ -52,10 +57,10 @@ if [ -z "$pids" ]; then
            /bin/kill $pid >/dev/null 2>&1
         fi
 
-        count=`$EXPR $count + 1`
     	if [ $? -eq 0 ]; then
            new_pids="$new_pids $pid"
     	fi
+        count=`$EXPR $count + 1`
     done
 
     if [ -z "$new_pids" ]; then
@@ -70,7 +75,8 @@ if [ -z "$pids" ]; then
 fi
 
 /bin/echo ""
-count=`/bin/ps auxww | $grep_cmd | $GREP -v grep | $GREP -v $0 | /usr/bin/wc -l`
+cmd="/bin/ps auxww | $grep_cmd | $GREP -v grep | $GREP -v $0 | /usr/bin/wc -l"
+count=`/bin/sh -c "$cmd"`
 if [ $count -eq 0 ]; then
   /bin/echo "starting $program ..."
   exec $1 $param
