@@ -1,4 +1,7 @@
 
+Version 1.18  2009-04-07
+  * restart.sh only kill the programs match the program name and all parameters
+
 Version 1.17  2009-03-19
   * add test programs at sub directory test/
   * common/shared_func.c: rindex change to strrchr, add #include <netinet/in.h>
