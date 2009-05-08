@@ -1,6 +1,7 @@
-
-Version 1.18  2009-04-07
-  * restart.sh only kill the programs match the program name and all parameters
+ 
+Version 1.18  2009-05-08
+ * restart.sh only kill the programs match the program name and all parameters
+ * correct get local ip addresses
 
 Version 1.17  2009-03-19
   * add test programs at sub directory test/
