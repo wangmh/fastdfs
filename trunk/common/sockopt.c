@@ -22,6 +22,12 @@
 #include <netinet/tcp.h>
 #include <netdb.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+
+#ifdef OS_SUNOS
+#include <sys/sockio.h>
+#endif
 
 #ifdef USE_SENDFILE
 
@@ -316,7 +322,7 @@ in_addr_t getIpaddr(getnamefunc getname, int sock, \
 	
 	if (getname(sock, (struct sockaddr *)&addr, &addrlen) != 0)
 	{
-		buff[0] = '\0';
+		*buff = '\0';
 		return INADDR_NONE;
 	}
 	
@@ -927,10 +933,60 @@ int gethostaddrs(char ip_addrs[][IP_ADDRESS_SIZE], \
 {
 	struct hostent *ent;
 	char hostname[128];
-	char ip_addr[IP_ADDRESS_SIZE];
 	int k;
+	int sock;
+	struct ifreq req;
+	struct sockaddr_in *addr;
+	int ret;
 
 	*count = 0;
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"socket create failed, errno: %d, error info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EMFILE;
+	}
+
+#ifdef OS_FREEBSD
+  #define IF_NAME_PREFIX   "bge"
+#else
+  #ifdef OS_SUNOS
+      #define IF_NAME_PREFIX   "e1000g"
+  #else
+      #ifdef OS_AIX
+          #define IF_NAME_PREFIX   "en"
+      #else
+          #define IF_NAME_PREFIX   "eth"
+      #endif
+  #endif
+#endif
+
+	memset(&req, 0, sizeof(req));
+	for (k=0; k<max_count; k++)
+	{
+		sprintf(req.ifr_name, "%s%d", IF_NAME_PREFIX, k);
+		ret = ioctl(sock, SIOCGIFADDR, &req);
+		if (ret == -1)
+		{
+			break;
+		}
+
+		addr = (struct sockaddr_in*)&req.ifr_addr;
+		if (inet_ntop(AF_INET, &addr->sin_addr, ip_addrs[*count], \
+			IP_ADDRESS_SIZE) != NULL)
+		{
+			(*count)++;
+		}
+	}
+
+	close(sock);
+	if (*count > 0)
+	{
+		return 0;
+	}
+
 	if (gethostname(hostname, sizeof(hostname)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -940,11 +996,13 @@ int gethostaddrs(char ip_addrs[][IP_ADDRESS_SIZE], \
 		return errno != 0 ? errno : EFAULT;
 	}
 
-	memset(ip_addr, 0, sizeof(ip_addr));
         ent = gethostbyname(hostname);
 	if (ent == NULL)
 	{
-		*count = 0;
+		logError("file: "__FILE__", line: %d, " \
+			"call gethostbyname fail, " \
+			"error no: %d, error info: %s", \
+			__LINE__, h_errno, strerror(h_errno));
 		return h_errno != 0 ? h_errno : EFAULT;
 	}
 
