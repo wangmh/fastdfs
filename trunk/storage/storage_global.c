@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include "logger.h"
+#include "sockopt.h"
 #include "storage_global.h"
 
 char **g_store_paths = NULL;
@@ -108,37 +109,19 @@ int insert_into_local_host_ip(const char *client_ip)
 
 void load_local_host_ip_addrs()
 {
-	struct hostent *ent;
-	char hostname[128];
-	char ip_addr[IP_ADDRESS_SIZE];
+	char ip_addresses[STORAGE_MAX_LOCAL_IP_ADDRS][IP_ADDRESS_SIZE];
+	int count;
 	int k;
 
 	insert_into_local_host_ip("127.0.0.1");
-
-	if (gethostname(hostname, sizeof(hostname)) != 0)
+	if (gethostaddrs(ip_addresses, STORAGE_MAX_LOCAL_IP_ADDRS, &count) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"call gethostname fail, " \
-			"error no: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
 		return;
 	}
 
-	memset(ip_addr, 0, sizeof(ip_addr));
-        ent = gethostbyname(hostname);
-        if (ent != NULL)
+	for (k=0; k<count; k++)
 	{
-        	k = 0;
-        	while (ent->h_addr_list[k] != NULL)
-        	{
-			if (inet_ntop(ent->h_addrtype, ent->h_addr_list[k], \
-				ip_addr, sizeof(ip_addr)) != NULL)
-			{
-				insert_into_local_host_ip(ip_addr);
-			}
-
-			k++;
-        	}
+		insert_into_local_host_ip(ip_addresses[k]);
 	}
 }
 
