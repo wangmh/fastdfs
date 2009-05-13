@@ -22,8 +22,6 @@
 #include "shared_func.h"
 #include "logger.h"
 
-extern char g_base_path[MAX_PATH_SIZE];
-
 int g_log_level = LOG_INFO;
 int g_log_fd = STDERR_FILENO;
 static pthread_mutex_t log_thread_lock;
@@ -33,11 +31,11 @@ static char *pcurrent_log_buff = log_buff;
 
 static void log_fsync(const bool bNeedLock);
 
-static int check_and_mk_log_dir()
+static int check_and_mk_log_dir(const char *base_path)
 {
 	char data_path[MAX_PATH_SIZE];
 
-	snprintf(data_path, sizeof(data_path), "%s/logs", g_base_path);
+	snprintf(data_path, sizeof(data_path), "%s/logs", base_path);
 	if (!fileExists(data_path))
 	{
 		if (mkdir(data_path, 0755) != 0)
@@ -52,12 +50,12 @@ static int check_and_mk_log_dir()
 	return 0;
 }
 
-int log_init(const char *filename_prefix)
+int log_init(const char *base_path, const char *filename_prefix)
 {
 	int result;
 	char logfile[MAX_PATH_SIZE];
 
-	if ((result=check_and_mk_log_dir()) != 0)
+	if ((result=check_and_mk_log_dir(base_path)) != 0)
 	{
 		return result;
 	}
@@ -70,7 +68,7 @@ int log_init(const char *filename_prefix)
 	}
 
 	snprintf(logfile, MAX_PATH_SIZE, "%s/logs/%s.log", \
-		g_base_path, filename_prefix);
+		base_path, filename_prefix);
 
 	if ((g_log_fd = open(logfile, O_WRONLY | O_CREAT | O_APPEND, 0644)) < 0)
 	{

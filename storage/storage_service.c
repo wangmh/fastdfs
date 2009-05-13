@@ -340,7 +340,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			if ((result=tcprecvfile_ex(pClientInfo->sock, 
 				full_filename, file_size, \
 				g_fsync_after_written_bytes, \
-				file_hash_codes)) != 0)
+				file_hash_codes, g_network_timeout)) != 0)
 			{
 				*filename = '\0';
 				*filename_len = 0;
@@ -530,7 +530,8 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		{
 			if ((result=tcprecvfile(pClientInfo->sock, 
 				full_filename, file_size, \
-				g_fsync_after_written_bytes)) != 0)
+				g_fsync_after_written_bytes, \
+				g_network_timeout)) != 0)
 			{
 				*filename = '\0';
 				*filename_len = 0;
@@ -1444,7 +1445,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 				pClientInfo->ip_addr, full_filename);
 
 			if ((resp.status=tcpdiscard(pClientInfo->sock, \
-					file_bytes)) != 0)
+					file_bytes, g_network_timeout)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"client ip: %s, discard buff fail, " \
@@ -1458,7 +1459,8 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		}
 		else if ((resp.status=tcprecvfile(pClientInfo->sock, 
 				full_filename, file_bytes, \
-				g_fsync_after_written_bytes)) != 0)
+				g_fsync_after_written_bytes, \
+				g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv file buff fail, " \
@@ -2013,7 +2015,7 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 	}
 
 	result = tcpsendfile(pClientInfo->sock, \
-		full_filename, file_bytes);
+		full_filename, file_bytes, g_network_timeout);
 	if(result != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
