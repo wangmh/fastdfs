@@ -45,8 +45,6 @@
 #include "hash.h"
 #include "sockopt.h"
 
-extern int g_network_timeout;
-
 int tcpgets(int sock, char* s, const int size, const int timeout)
 {
 	int result;
@@ -530,7 +528,7 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no)
 }
 
 int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
-		const int fsync_after_written_bytes)
+		const int fsync_after_written_bytes, const int timeout)
 {
 	int fd;
 	char buff[FDFS_WRITE_BUFF_SIZE];
@@ -559,7 +557,7 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 		}
 
 		if ((result=tcprecvdata(sock, buff, recv_bytes, \
-				g_network_timeout)) != 0)
+				timeout)) != 0)
 		{
 			close(fd);
 			unlink(filename);
@@ -599,7 +597,7 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 
 int tcprecvfile_ex(int sock, const char *filename, const int64_t file_bytes, \
 		const int fsync_after_written_bytes, \
-		unsigned int *hash_codes)
+		unsigned int *hash_codes, const int timeout)
 {
 	int fd;
 	char buff[FDFS_WRITE_BUFF_SIZE];
@@ -630,7 +628,7 @@ int tcprecvfile_ex(int sock, const char *filename, const int64_t file_bytes, \
 		}
 
 		if ((result=tcprecvdata(sock, buff, recv_bytes, \
-				g_network_timeout)) != 0)
+				timeout)) != 0)
 		{
 			close(fd);
 			unlink(filename);
@@ -673,7 +671,7 @@ int tcprecvfile_ex(int sock, const char *filename, const int64_t file_bytes, \
 	return 0;
 }
 
-int tcpdiscard(int sock, const int bytes)
+int tcpdiscard(int sock, const int bytes, const int timeout)
 {
 	char buff[FDFS_WRITE_BUFF_SIZE];
 	int remain_bytes;
@@ -693,7 +691,7 @@ int tcpdiscard(int sock, const int bytes)
 		}
 
 		if ((result=tcprecvdata(sock, buff, recv_bytes, \
-				g_network_timeout)) != 0)
+				timeout)) != 0)
 		{
 			return result;
 		}
@@ -704,7 +702,8 @@ int tcpdiscard(int sock, const int bytes)
 	return 0;
 }
 
-int tcpsendfile(int sock, const char *filename, const int64_t file_bytes)
+int tcpsendfile(int sock, const char *filename, \
+		const int64_t file_bytes, const int timeout)
 {
 	int fd;
 	int send_bytes;
@@ -791,7 +790,7 @@ int tcpsendfile(int sock, const char *filename, const int64_t file_bytes)
 		//printf("send bytes=%d, total send1: %d, remain_bytes1=%d\n", send_bytes, file_bytes - remain_bytes, remain_bytes);
 
 		if ((result=tcpsenddata(sock, buff, send_bytes, \
-				g_network_timeout)) != 0)
+				timeout)) != 0)
 		{
 			close(fd);
 			return result;

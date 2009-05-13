@@ -154,7 +154,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 
 		if((stat_buf.st_size > 0) && ((result=tcpsendfile( \
 			pStorageServer->sock, full_filename, \
-			stat_buf.st_size)) != 0))
+			stat_buf.st_size, g_network_timeout)) != 0))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"sync data to storage server %s:%d fail, " \

@@ -149,7 +149,8 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 
 		load_log_level(items, nItemCount);
-		if ((result=log_init(TRACKER_ERROR_LOG_FILENAME)) != 0)
+		if ((result=log_init(g_base_path, \
+				TRACKER_ERROR_LOG_FILENAME)) != 0)
 		{
 			break;
 		}

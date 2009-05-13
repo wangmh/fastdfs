@@ -20,7 +20,7 @@ extern "C" {
 extern int g_log_level;
 extern int g_log_fd;
 
-int log_init(const char *filename_prefix);
+int log_init(const char *base_path, const char *filename_prefix);
 void log_destory();
 
 void log_it(const int priority, const char* format, ...);

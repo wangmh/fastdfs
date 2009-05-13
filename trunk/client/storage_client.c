@@ -430,7 +430,8 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 		}
 
 		if ((result=tcprecvfile(pStorageServer->sock, \
-				*file_buff, in_bytes, 0)) != 0)
+				*file_buff, in_bytes, 0, \
+				g_network_timeout)) != 0)
 		{
 			break;
 		}
@@ -731,7 +732,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	if (bFilename)
 	{
 		if ((result=tcpsendfile(pStorageServer->sock, file_buff, \
-			file_size)) != 0)
+			file_size, g_network_timeout)) != 0)
 		{
 			break;
 		}
