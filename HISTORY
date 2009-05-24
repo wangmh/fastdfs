@@ -5,6 +5,7 @@ Version 1.18  2009-05-24
  * common files do not use global vars like g_network_timeout and g_base_path
  * download file support offset and download bytes
  * hash function change type from unsigned int to signed int
+ * file size in file name support 64 bits, old bytes is 4, new bytes is 8
 
 Version 1.17  2009-03-19
   * add test programs at sub directory test/
