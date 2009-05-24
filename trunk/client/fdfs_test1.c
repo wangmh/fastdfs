@@ -168,7 +168,8 @@ int main(int argc, char *argv[])
 			printf("file_id=%s\n", file_id);
 			printf("file timestamp=%d\n", \
 				buff2int(buff + sizeof(int)));
-			printf("file size=%d\n", buff2int(buff+sizeof(int)*2));
+			printf("file size="INT64_PRINTF_FORMAT"\n", \
+				buff2long(buff+sizeof(int)*2));
 		}
 	}
 	else if (strcmp(operation, "download") == 0 || 

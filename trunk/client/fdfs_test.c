@@ -166,7 +166,8 @@ int main(int argc, char *argv[])
 		printf("group_name=%s, remote_filename=%s\n", \
 			group_name, remote_filename);
 		printf("file timestamp=%d\n", buff2int(buff+sizeof(int)));
-		printf("file size=%d\n", buff2int(buff+sizeof(int)*2));
+		printf("file size="INT64_PRINTF_FORMAT"\n", \
+			buff2long(buff+sizeof(int)*2));
 	}
 	else if (strcmp(operation, "download") == 0 || 
 		strcmp(operation, "getmeta") == 0 ||
