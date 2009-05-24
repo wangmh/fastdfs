@@ -47,8 +47,12 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no);
 #define tcprecvdata(sock, data, size, timeout) \
 	tcprecvdata_ex(sock, data, size, timeout, NULL)
 
-int tcpsendfile(int sock, const char *filename, \
+#define tcpsendfile(sock, filename, file_bytes, timeout) \
+	tcpsendfile_ex(sock, filename, 0, file_bytes, timeout)
+
+int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 		const int64_t file_bytes, const int timeout);
+
 int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 		const int fsync_after_written_bytes, const int timeout);
 int tcprecvfile_ex(int sock, const char *filename, const int64_t file_bytes, \

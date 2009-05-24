@@ -702,7 +702,7 @@ int tcpdiscard(int sock, const int bytes, const int timeout)
 	return 0;
 }
 
-int tcpsendfile(int sock, const char *filename, \
+int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 		const int64_t file_bytes, const int timeout)
 {
 	int fd;
@@ -719,8 +719,6 @@ int tcpsendfile(int sock, const char *filename, \
 	}
 
 #ifdef USE_SENDFILE
-
-	//printf("sendfile.............., file_bytes=%d\n", file_bytes);
 #ifdef OS_LINUX
 	/*
 	result = 1;
@@ -734,7 +732,7 @@ int tcpsendfile(int sock, const char *filename, \
 	}
 	*/
 
-	offset = 0;
+	offset = file_offset;
 	send_bytes = sendfile(sock, fd, &offset, file_bytes);
 	close(fd);
 	if (send_bytes != file_bytes)
@@ -747,7 +745,7 @@ int tcpsendfile(int sock, const char *filename, \
 	}
 #else
 #ifdef OS_FREEBSD
-	offset = 0;
+	offset = file_offset;
 	result = sendfile(fd, sock, offset, file_bytes, NULL, NULL, 0);
 	close(fd);
 	if (result != 0)
@@ -763,11 +761,17 @@ int tcpsendfile(int sock, const char *filename, \
 
 #endif
 
-	//printf("file_bytes=%d\n", file_bytes);
-
 	{
 	char buff[FDFS_WRITE_BUFF_SIZE];
 	int64_t remain_bytes;
+
+	if (file_offset > 0 && lseek(fd, file_offset, SEEK_SET) < 0)
+	{
+		result = errno;
+		close(fd);
+		return result != 0 ? result : EIO;
+	}
+
 	remain_bytes = file_bytes;
 	while (remain_bytes > 0)
 	{
@@ -787,8 +791,6 @@ int tcpsendfile(int sock, const char *filename, \
 			return result != 0 ? result : EIO;
 		}
 
-		//printf("send bytes=%d, total send1: %d, remain_bytes1=%d\n", send_bytes, file_bytes - remain_bytes, remain_bytes);
-
 		if ((result=tcpsenddata(sock, buff, send_bytes, \
 				timeout)) != 0)
 		{
@@ -797,7 +799,6 @@ int tcpsendfile(int sock, const char *filename, \
 		}
 
 		remain_bytes -= send_bytes;
-		//printf("total send2: %d, remain_bytes2=%d\n\n", file_bytes - remain_bytes, remain_bytes);
 	}
 	}
 

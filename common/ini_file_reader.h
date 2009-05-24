@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "common_define.h"
 
 #define INI_ITEM_NAME_LEN		64
 #define INI_ITEM_VALUE_LEN		128

@@ -1745,10 +1745,9 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-				"is not correct, " \
-				"expect length > %d", \
-				__LINE__, \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length > %d", __LINE__, \
 				STORAGE_PROTO_CMD_UPLOAD_FILE, \
 				pClientInfo->ip_addr,  \
 				nInPackLen, FDFS_GROUP_NAME_MAX_LEN);
@@ -1759,10 +1758,9 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-				"is too large, " \
-				"expect length should < %d", \
-				__LINE__, \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is too large, " \
+				"expect length should < %d", __LINE__, \
 				STORAGE_PROTO_CMD_UPLOAD_FILE, \
 				pClientInfo->ip_addr,  \
 				nInPackLen, sizeof(in_buff));
@@ -1877,6 +1875,8 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 /**
 pkg format:
 Header
+8 bytes: file offset
+8 bytes: download file bytes
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename
 **/
@@ -1885,30 +1885,32 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 {
 	TrackerHeader resp;
 	int result;
-	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 64];
+	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 128];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)+16];
 	char true_filename[64];
 	char *pBasePath;
 	char *filename;
 	int filename_len;
+	int64_t file_offset;
+	int64_t download_bytes;
 	int64_t file_bytes;
 	struct stat stat_buf;
 
 	memset(&resp, 0, sizeof(resp));
-	file_bytes = 0;
-	while (1)
+	file_offset = 0;
+	download_bytes = 0;
+	do
 	{
-		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
+		if (nInPackLen <= 16 + FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-				"is not correct, " \
-				"expect length > %d", \
-				__LINE__, \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length > %d", __LINE__, \
 				STORAGE_PROTO_CMD_UPLOAD_FILE, \
 				pClientInfo->ip_addr,  \
-				nInPackLen, FDFS_GROUP_NAME_MAX_LEN);
+				nInPackLen, 16 + FDFS_GROUP_NAME_MAX_LEN);
 			resp.status = EINVAL;
 			break;
 		}
@@ -1916,10 +1918,9 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-				"is too large, " \
-				"expect length should < %d", \
-				__LINE__, \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is too large, " \
+				"expect length should < %d", __LINE__, \
 				STORAGE_PROTO_CMD_UPLOAD_FILE, \
 				pClientInfo->ip_addr,  \
 				nInPackLen, sizeof(in_buff));
@@ -1938,7 +1939,28 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
+		file_offset = buff2long(in_buff);
+		download_bytes = buff2long(in_buff + 8);
+		if (file_offset < 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, invalid file offset: " \
+				INT64_PRINTF_FORMAT,  __LINE__, \
+				pClientInfo->ip_addr, file_offset);
+			resp.status = EINVAL;
+			break;
+		}
+		if (download_bytes < 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, invalid download file bytes: " \
+				INT64_PRINTF_FORMAT,  __LINE__, \
+				pClientInfo->ip_addr, download_bytes);
+			resp.status = EINVAL;
+			break;
+		}
+
+		memcpy(group_name, in_buff+16, FDFS_GROUP_NAME_MAX_LEN);
 		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
 		if (strcmp(group_name, g_group_name) != 0)
 		{
@@ -1952,8 +1974,9 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 		}
 
 		*(in_buff + nInPackLen) = '\0';
-		filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
-		filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
+		filename = in_buff + 16 + FDFS_GROUP_NAME_MAX_LEN;
+		filename_len = nInPackLen - (16 + FDFS_GROUP_NAME_MAX_LEN);
+
 		if ((resp.status=storage_split_filename(filename, \
 			&filename_len, true_filename, &pBasePath)) != 0)
 		{
@@ -1983,6 +2006,7 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 		}
 		else
 		{
+			file_bytes = 0;
 			resp.status = errno != 0 ? errno : ENOENT;
 
 			logError("file: "__FILE__", line: %d, " \
@@ -1990,14 +2014,31 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 				"error no: %d, error info: %s", \
 				__LINE__, full_filename, \
 				errno, strerror(errno));
+			break;
 		}
 
-		break;
-	}
+		if (download_bytes == 0)
+		{
+			download_bytes  = file_bytes - file_offset;
+		}
+		else if (download_bytes > file_bytes - file_offset)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, invalid download file bytes: " \
+				INT64_PRINTF_FORMAT" > file remain bytes: " \
+				INT64_PRINTF_FORMAT,  __LINE__, \
+				pClientInfo->ip_addr, download_bytes, \
+				file_bytes - file_offset);
+			resp.status = EINVAL;
+			break;
+		}
+	} while (0);
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
-	long2buff(file_bytes, resp.pkg_len);
-
+	if (resp.status == 0)
+	{
+		long2buff(download_bytes, resp.pkg_len);
+	}
 	if ((result=tcpsenddata(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
@@ -2014,8 +2055,8 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 		return resp.status;
 	}
 
-	result = tcpsendfile(pClientInfo->sock, \
-		full_filename, file_bytes, g_network_timeout);
+	result = tcpsendfile_ex(pClientInfo->sock, full_filename, \
+			file_offset, download_bytes, g_network_timeout);
 	if(result != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
