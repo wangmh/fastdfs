@@ -18,7 +18,7 @@ extern "C" {
 #define CRC32_XINIT 0xFFFFFFFF		/* initial value */
 #define CRC32_XOROT 0xFFFFFFFF		/* final xor value */
 
-typedef unsigned int (*HashFunc) (const void *key, const int key_len);
+typedef int (*HashFunc) (const void *key, const int key_len);
 
 typedef struct tagHashArray
 {
@@ -38,7 +38,14 @@ typedef struct tagHashData
 	unsigned int hash_code;
 } HashData;
 
-typedef void (*HashWalkFunc)(const int index, const HashData *data, void *args);
+/*
+hash walk function
+index: item index based 0
+data: hash data, including key and value
+args: passed by hash_walk function
+return 0 for success, != 0 for error
+*/
+typedef int (*HashWalkFunc)(const int index, const HashData *data, void *args);
 
 int hash_init(HashArray *pHash, HashFunc hash_func, \
 		const unsigned int capacity, const double load_factor);
@@ -47,57 +54,57 @@ int hash_insert(HashArray *pHash, const void *key, const int key_len, \
 		void *value);
 void *hash_find(HashArray *pHash, const void *key, const int key_len);
 int hash_delete(HashArray *pHash, const void *key, const int key_len);
-void hash_walk(HashArray *pHash, HashWalkFunc walkFunc, void *args);
+int hash_walk(HashArray *pHash, HashWalkFunc walkFunc, void *args);
 int hash_best_op(HashArray *pHash, const int suggest_capacity);
 void hash_stat_print(HashArray *pHash);
 
-unsigned int RSHash(const void *key, const int key_len);
+int RSHash(const void *key, const int key_len);
 
-unsigned int JSHash(const void *key, const int key_len);
-unsigned int JSHash_ex(const void *key, const int key_len, \
-	const unsigned int init_value);
+int JSHash(const void *key, const int key_len);
+int JSHash_ex(const void *key, const int key_len, \
+	const int init_value);
 
-unsigned int PJWHash(const void *key, const int key_len);
-unsigned int PJWHash_ex(const void *key, const int key_len, \
-	const unsigned int init_value);
+int PJWHash(const void *key, const int key_len);
+int PJWHash_ex(const void *key, const int key_len, \
+	const int init_value);
 
-unsigned int ELFHash(const void *key, const int key_len);
-unsigned int ELFHash_ex(const void *key, const int key_len, \
-	const unsigned int init_value);
+int ELFHash(const void *key, const int key_len);
+int ELFHash_ex(const void *key, const int key_len, \
+	const int init_value);
 
-unsigned int BKDRHash(const void *key, const int key_len);
-unsigned int BKDRHash_ex(const void *key, const int key_len, \
-	const unsigned int init_value);
+int BKDRHash(const void *key, const int key_len);
+int BKDRHash_ex(const void *key, const int key_len, \
+	const int init_value);
 
-unsigned int SDBMHash(const void *key, const int key_len);
-unsigned int SDBMHash_ex(const void *key, const int key_len, \
-	const unsigned int init_value);
+int SDBMHash(const void *key, const int key_len);
+int SDBMHash_ex(const void *key, const int key_len, \
+	const int init_value);
 
-unsigned int Time33Hash(const void *key, const int key_len);
-unsigned int Time33Hash_ex(const void *key, const int key_len, \
-	const unsigned int init_value);
+int Time33Hash(const void *key, const int key_len);
+int Time33Hash_ex(const void *key, const int key_len, \
+	const int init_value);
 
-unsigned int DJBHash(const void *key, const int key_len);
-unsigned int DJBHash_ex(const void *key, const int key_len, \
-	const unsigned int init_value);
+int DJBHash(const void *key, const int key_len);
+int DJBHash_ex(const void *key, const int key_len, \
+	const int init_value);
 
-unsigned int APHash(const void *key, const int key_len);
-unsigned int APHash_ex(const void *key, const int key_len, \
-	const unsigned int init_value);
+int APHash(const void *key, const int key_len);
+int APHash_ex(const void *key, const int key_len, \
+	const int init_value);
 
-unsigned int calc_hashnr (const void* key, const int key_len);
+int calc_hashnr (const void* key, const int key_len);
 
-unsigned int calc_hashnr1(const void* key, const int key_len);
-unsigned int calc_hashnr1_ex(const void* key, const int key_len, \
-	const unsigned int init_value);
+int calc_hashnr1(const void* key, const int key_len);
+int calc_hashnr1_ex(const void* key, const int key_len, \
+	const int init_value);
 
-unsigned int simple_hash(const void* key, const int key_len);
-unsigned int simple_hash_ex(const void* key, const int key_len, \
-	const unsigned int init_value);
+int simple_hash(const void* key, const int key_len);
+int simple_hash_ex(const void* key, const int key_len, \
+	const int init_value);
 
-unsigned int CRC32(void *key, const int key_len);
-unsigned int CRC32_ex(void *key, const int key_len, \
-	const unsigned int init_value);
+int CRC32(void *key, const int key_len);
+int CRC32_ex(void *key, const int key_len, \
+	const int init_value);
 #define CRC32_FINAL(crc)  (crc ^ CRC32_XOROT)
 
 
