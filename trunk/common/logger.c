@@ -178,7 +178,7 @@ static void doLog(const char *caption, const char* text, const int text_len, \
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"log buff size: %d < log text length: %d ", \
-			__LINE__, sizeof(log_buff), text_len + 64);
+			__LINE__, (int)sizeof(log_buff), text_len + 64);
 		pthread_mutex_unlock(&log_thread_lock);
 		return;
 	}

@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
 				{
 				result = storage_download_file_ex1( \
 					pTrackerServer, &storageServer, \
-					file_id, \
+					file_id, 0, 0, \
 					writeToFileCallback, fp, &file_size);
 				fclose(fp);
 				}

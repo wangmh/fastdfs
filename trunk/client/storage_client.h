@@ -123,20 +123,45 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 **/
 #define storage_download_file(pTrackerServer, pStorageServer, group_name, \
 			remote_filename, file_buff, file_size)  \
-	storage_do_download_file(pTrackerServer, pStorageServer, \
+	storage_do_download_file_ex(pTrackerServer, pStorageServer, \
 			FDFS_DOWNLOAD_TO_BUFF, group_name, remote_filename, \
-			file_buff, NULL, file_size)
+			0, 0, file_buff, NULL, file_size)
 
 #define storage_download_file_to_buff(pTrackerServer, pStorageServer, \
 			group_name, remote_filename, file_buff, file_size)  \
-	storage_do_download_file(pTrackerServer, pStorageServer, \
+	storage_do_download_file_ex(pTrackerServer, pStorageServer, \
 			FDFS_DOWNLOAD_TO_BUFF, group_name, remote_filename, \
-			file_buff, NULL, file_size)
+			0, 0, file_buff, NULL, file_size)
 
-int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
+#define storage_do_download_file(pTrackerServer, pStorageServer, \
+		download_type, group_name, remote_filename, \
+		file_buff, arg, file_size) \
+	storage_do_download_file_ex(pTrackerServer, pStorageServer, \
+		download_type, group_name, remote_filename, \
+		0, 0, file_buff, arg, file_size);
+
+/**
+* download file from storage server
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       download_type: FDFS_DOWNLOAD_TO_BUFF or FDFS_DOWNLOAD_TO_FILE 
+*                      or FDFS_DOWNLOAD_TO_CALLBACK
+*	group_name: the group name of storage server
+*	remote_filename: filename on storage server
+*       file_offset: the start offset to download
+*       download_bytes: download bytes, 0 means from start offset to the file end
+*       file_buff: return file content/buff, must be freed
+*       arg: additional argument for callback(valid only when download_tyee
+*                       is FDFS_DOWNLOAD_TO_CALLBACK), can be NULL
+*       file_size: return file size (bytes)
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const int download_type, \
 		const char *group_name, const char *remote_filename, \
+		const int64_t file_offset, const int64_t download_bytes, \
 		char **file_buff, void *arg, int64_t *file_size);
 
 /**
@@ -151,9 +176,9 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 * return: 0 success, !=0 fail, return the error code
 **/
 int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
-			const char *group_name, const char *remote_filename, \
-			const char *local_filename, int64_t *file_size);
+		TrackerServerInfo *pStorageServer, \
+		const char *group_name, const char *remote_filename, \
+		const char *local_filename, int64_t *file_size);
 
 /**
 * get all metadata items from storage server
@@ -192,6 +217,8 @@ typedef int (*DownloadCallback) (void *arg, const int64_t file_size, \
 *       pStorageServer: storage server
 *	group_name: the group name of storage server
 *	remote_filename: filename on storage server
+*       file_offset: the start offset to download
+*       download_bytes: download bytes, 0 means from start offset to the file end
 *	callback: callback function
 *	arg: callback extra arguement
 *       file_size: return file size (bytes)
@@ -200,6 +227,7 @@ typedef int (*DownloadCallback) (void *arg, const int64_t file_size, \
 int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const char *group_name, const char *remote_filename, \
+		const int64_t file_offset, const int64_t download_bytes, \
 		DownloadCallback callback, void *arg, int64_t *file_size);
 
 #ifdef __cplusplus

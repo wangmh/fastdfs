@@ -355,27 +355,32 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_do_download_file1(TrackerServerInfo *pTrackerServer, \
+int storage_do_download_file1_ex(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const int download_type, const char *file_id, \
+		const int64_t file_offset, const int64_t download_bytes, \
 		char **file_buff, void *arg, int64_t *file_size)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
 
-	return storage_do_download_file(pTrackerServer, pStorageServer, \
+	return storage_do_download_file_ex(pTrackerServer, pStorageServer, \
 		download_type, group_name, filename, \
-		file_buff, arg, file_size);
+		file_offset, download_bytes, file_buff, arg, file_size);
 }
 
-int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const int download_type, \
+int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		const int download_type, \
 		const char *group_name, const char *remote_filename, \
+		const int64_t file_offset, const int64_t download_bytes, \
 		char **file_buff, void *arg, int64_t *file_size)
 {
-	TrackerHeader header;
+	TrackerHeader *pHeader;
 	int result;
 	TrackerServerInfo storageServer;
-	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+64];
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
+	char *p;
+	int out_bytes;
 	int64_t in_bytes;
 	int filename_len;
 	bool new_connection;
@@ -392,26 +397,30 @@ int storage_do_download_file(TrackerServerInfo *pTrackerServer, \
 	{
 	/**
 	send pkg format:
+	8 bytes: file offset
+	8 bytes: download file bytes
 	FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 	remain bytes: filename
 	**/
 
 	memset(out_buff, 0, sizeof(out_buff));
-	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
-		sizeof(TrackerHeader),  "%s", group_name);
-	filename_len = snprintf(out_buff + sizeof(TrackerHeader) + \
-			FDFS_GROUP_NAME_MAX_LEN, \
-			sizeof(out_buff) - sizeof(TrackerHeader) - \
-			FDFS_GROUP_NAME_MAX_LEN,  "%s", remote_filename);
-
-	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, header.pkg_len);
-	header.cmd = STORAGE_PROTO_CMD_DOWNLOAD_FILE;
-	header.status = 0;
-	memcpy(out_buff, &header, sizeof(TrackerHeader));
+	pHeader = (TrackerHeader *)out_buff;
+	p = out_buff + sizeof(TrackerHeader);
+	long2buff(file_offset, p);
+	p += 8;
+	long2buff(download_bytes, p);
+	p += 8;
+	snprintf(p, sizeof(out_buff) - (p - out_buff), "%s", group_name);
+	p += FDFS_GROUP_NAME_MAX_LEN;
+	filename_len = snprintf(p, sizeof(out_buff) - (p - out_buff), \
+				"%s", remote_filename);
+	p += filename_len;
+	out_bytes = p - out_buff;
+	long2buff(out_bytes - sizeof(TrackerHeader), pHeader->pkg_len);
+	pHeader->cmd = STORAGE_PROTO_CMD_DOWNLOAD_FILE;
 
 	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
-		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
-		filename_len, g_network_timeout)) != 0)
+		out_bytes, g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -977,24 +986,27 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 int storage_download_file_ex1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const char *file_id, \
+		const int64_t file_offset, const int64_t download_bytes, \
 		DownloadCallback callback, void *arg, int64_t *file_size)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
 
 	return storage_download_file_ex(pTrackerServer, pStorageServer, \
-		group_name, filename, callback, arg, file_size);
+		group_name, filename, file_offset, download_bytes, \
+		callback, arg, file_size);
 }
 
 int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const char *group_name, const char *remote_filename, \
+		const int64_t file_offset, const int64_t download_bytes, \
 		DownloadCallback callback, void *arg, int64_t *file_size)
 {
 	char *pCallback;
 	pCallback = (char *)callback;
-	return storage_do_download_file(pTrackerServer, pStorageServer, \
-			FDFS_DOWNLOAD_TO_CALLBACK, group_name, remote_filename, \
-			&pCallback, arg, file_size);
+	return storage_do_download_file_ex(pTrackerServer, pStorageServer, \
+		FDFS_DOWNLOAD_TO_CALLBACK, group_name, remote_filename, \
+		file_offset, download_bytes, &pCallback, arg, file_size);
 }
 
 int tracker_query_storage_fetch1(TrackerServerInfo *pTrackerServer, \

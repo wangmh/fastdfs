@@ -110,19 +110,38 @@ int storage_set_metadata1(TrackerServerInfo *pTrackerServer, \
 **/
 #define storage_download_file1(pTrackerServer, pStorageServer, file_id, \
 			file_buff, file_size)  \
-	storage_do_download_file1(pTrackerServer, pStorageServer, \
-			FDFS_DOWNLOAD_TO_BUFF, file_id, \
+	storage_do_download_file1_ex(pTrackerServer, pStorageServer, \
+			FDFS_DOWNLOAD_TO_BUFF, file_id, 0, 0, \
 			file_buff, NULL, file_size)
 
 #define storage_download_file_to_buff1(pTrackerServer, pStorageServer, \
 			file_id, file_buff, file_size)  \
-	storage_do_download_file1(pTrackerServer, pStorageServer, \
-			FDFS_DOWNLOAD_TO_BUFF, file_id, \
+	storage_do_download_file1_ex(pTrackerServer, pStorageServer, \
+			FDFS_DOWNLOAD_TO_BUFF, file_id, 0, 0, \
 			file_buff, NULL, file_size)
 
-int storage_do_download_file1(TrackerServerInfo *pTrackerServer, \
+#define storage_do_download_file1(pTrackerServer, pStorageServer, \
+			download_type, file_id, file_buff, file_size) \
+	storage_do_download_file1_ex(pTrackerServer, pStorageServer, \
+			download_type, file_id, \
+			0, 0, file_buff, NULL, file_size)
+
+/**
+* download file from storage server
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*	file_id: the file id (including group name and filename)
+*       file_offset: the start offset to download
+*       download_bytes: download bytes, 0 means from start offset to the file end
+*       file_buff: return file content/buff, must be freed
+*       file_size: return file size (bytes)
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_do_download_file1_ex(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const int download_type, const char *file_id, \
+		const int64_t file_offset, const int64_t download_bytes, \
 		char **file_buff, void *arg, int64_t *file_size);
 
 /**
@@ -162,6 +181,8 @@ int storage_get_metadata1(TrackerServerInfo *pTrackerServer, \
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
 *	file_id: the file id (including group name and filename)
+*       file_offset: the start offset to download
+*       download_bytes: download bytes, 0 means from start offset to the file end
 *	callback: callback function
 *	arg: callback extra arguement
 *       file_size: return file size (bytes)
@@ -170,6 +191,7 @@ int storage_get_metadata1(TrackerServerInfo *pTrackerServer, \
 int storage_download_file_ex1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const char *file_id, \
+		const int64_t file_offset, const int64_t download_bytes, \
 		DownloadCallback callback, void *arg, int64_t *file_size);
 
 /**
