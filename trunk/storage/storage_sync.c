@@ -1357,7 +1357,7 @@ static int storage_binlog_read(BinLogReader *pReader, \
 	while (1)
 	{
 		if ((*record_length=fd_gets(pReader->binlog_fd, line, \
-			sizeof(line), 49 + FDFS_FILE_EXT_NAME_MAX_LEN)) < 0)
+			sizeof(line), 53 + FDFS_FILE_EXT_NAME_MAX_LEN)) < 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"read a line from binlog file \"%s\" fail, " \
@@ -1413,6 +1413,8 @@ static int storage_binlog_read(BinLogReader *pReader, \
 			pReader->binlog_offset, *record_length);
 		return ENOENT;
 	}
+
+	logInfo("record_length=%d", *record_length);
 
 	if ((result=splitEx(line, ' ', cols, 3)) < 3)
 	{

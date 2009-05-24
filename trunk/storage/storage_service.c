@@ -85,14 +85,14 @@ void storage_service_destroy()
 }
 
 static int storage_gen_filename(StorageClientInfo *pClientInfo, \
-		const int file_size, \
+		const int64_t file_size, \
 		const char *szFormattedExt, const int ext_name_len, \
 		const time_t timestamp, char *filename, int *filename_len)
 {
 	int result;
 	int r;
-	char buff[sizeof(int) * 4];
-	char encoded[sizeof(int) * 6 + 1];
+	char buff[sizeof(int) * 5];
+	char encoded[sizeof(int) * 8 + 1];
 	char szStorageIp[IP_ADDRESS_SIZE];
 	int n;
 	int len;
@@ -104,10 +104,10 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 
 	int2buff(server_ip, buff);
 	int2buff(timestamp, buff+sizeof(int));
-	int2buff(file_size, buff+sizeof(int)*2);
-	int2buff(r, buff+sizeof(int)*3);
+	long2buff(file_size, buff+sizeof(int)*2);
+	int2buff(r, buff+sizeof(int)*4);
 
-	base64_encode_ex(buff, sizeof(int) * 4, encoded, filename_len, false);
+	base64_encode_ex(buff, sizeof(int) * 5, encoded, filename_len, false);
 
 	if (g_file_distribute_path_mode == FDFS_FILE_DIST_PATH_ROUND_ROBIN)
 	{
