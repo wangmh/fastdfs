@@ -31,10 +31,14 @@ typedef int (*getnamefunc)(int socket, struct sockaddr *address, \
 int tcpgets(int sock, char *s, const int size, const int timeout);
 int tcprecvdata_ex(int sock, void *data, const int size, \
 		const int timeout, int *count);
+int tcprecvdata_nb_ex(int sock, void *data, const int size, \
+		const int timeout, int *count);
 int tcpsenddata(int sock, void* data, const int size, const int timeout);
+int tcpsenddata_nb(int sock, void* data, const int size, const int timeout);
 int connectserverbyip(int sock, char* ip, short port);
 int nbaccept(int sock, const int timeout, int *err_no);
-int tcpsetnonblockopt(int fd, const int timeout);
+int tcpsetserveropt(int fd, const int timeout);
+int tcpsetnonblockopt(int fd);
 int tcpsetnodelay(int fd);
 
 in_addr_t getIpaddr(getnamefunc getname, int sock, \
@@ -49,6 +53,9 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no);
 
 #define tcpsendfile(sock, filename, file_bytes, timeout) \
 	tcpsendfile_ex(sock, filename, 0, file_bytes, timeout)
+
+#define tcprecvdata_nb(sock, data, size, timeout) \
+	tcprecvdata_nb_ex(sock, data, size, timeout, NULL)
 
 int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 		const int64_t file_bytes, const int timeout);

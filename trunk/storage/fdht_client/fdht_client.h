@@ -27,9 +27,6 @@ typedef void* (*MallocFunc)(size_t size);
 
 extern GroupArray g_group_array; //group info, including server list
 extern bool g_keep_alive;  //persistent connection flag
-extern bool g_use_proxy;
-extern char g_proxy_ip[IP_ADDRESS_SIZE];
-extern int g_proxy_port;
 
 /*
 init function
@@ -50,6 +47,12 @@ return: 0 for success, != 0 for fail (errno)
 */
 int fdht_load_conf(const char *filename, GroupArray *pGroupArray, \
 		bool *bKeepAlive);
+
+
+int fdht_connect_all_servers(GroupArray *pGroupArray, const bool bKeepAlive, \
+			int *success_count, int *fail_count);
+
+void fdht_disconnect_all_servers(GroupArray *pGroupArray);
 
 /*
 destroy function, free resource
@@ -96,6 +99,8 @@ void fdht_client_destroy();
 	 fdht_batch_delete_ex((&g_group_array), g_keep_alive, pObjectInfo, \
 			key_list, key_count, success_count)
 
+#define fdht_stat(server_index, buff, size) \
+	fdht_stat_ex((&g_group_array), g_keep_alive, server_index, buff, size)
 
 /*
 get value of the key
@@ -208,6 +213,18 @@ return: 0 for success, != 0 for fail (errno)
 int fdht_batch_delete_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 		FDHTObjectInfo *pObjectInfo, FDHTKeyValuePair *key_list, \
 		const int key_count, int *success_count);
+
+/*
+query stat of server
+param:
+	pGroupArray: group info, can use &g_group_array
+	server_index: index of server, based 0
+	buff: return stat buff, key value pair as key=value, row seperated by \n
+	size: buff size
+return: 0 for success, != 0 for fail (errno)
+*/
+int fdht_stat_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
+		const int server_index, char *buff, const int size);
 
 #ifdef __cplusplus
 }

@@ -122,6 +122,8 @@ typedef struct
 	FDHTServerInfo *servers;
 	int group_count;  //group count
 	int server_count;
+	FDHTServerInfo proxy_server;
+	bool use_proxy;
 } GroupArray;
 
 #ifdef __cplusplus

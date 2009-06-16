@@ -24,7 +24,7 @@ int log_init(const char *base_path, const char *filename_prefix);
 void log_destory();
 
 void log_it(const int priority, const char* format, ...);
-void log_sync_func(void *args);
+int log_sync_func(void *args);
 void log_set_cache(const bool bLogCache);
 
 //#define LOG_FORMAT_CHECK

@@ -11,7 +11,7 @@
 
 #include "common_define.h"
 
-typedef void (*TaskFunc) (void *args);
+typedef int (*TaskFunc) (void *args);
 
 typedef struct tagScheduleEntry
 {

@@ -12,81 +12,7 @@
 #define _FDHT_PROTO_H_
 
 #include "fdht_types.h"
-
-#define FDHT_PROTO_CMD_QUIT	10
-
-#define FDHT_PROTO_CMD_SET		11
-#define FDHT_PROTO_CMD_INC		12
-#define FDHT_PROTO_CMD_GET		13
-#define FDHT_PROTO_CMD_DEL		14
-#define FDHT_PROTO_CMD_BATCH_SET	15
-#define FDHT_PROTO_CMD_BATCH_GET	16
-#define FDHT_PROTO_CMD_BATCH_DEL	17
-
-#define FDHT_PROTO_CMD_SYNC_REQ	   21
-#define FDHT_PROTO_CMD_SYNC_NOTIFY 22  //sync done notify
-#define FDHT_PROTO_CMD_SYNC_SET	   23
-#define FDHT_PROTO_CMD_SYNC_DEL	   24
-
-#define FDHT_PROTO_CMD_HEART_BEAT  30
-
-#define FDHT_PROTO_CMD_RESP        40
-
-#define FDHT_PROTO_PKG_LEN_SIZE		4
-#define FDHT_PROTO_CMD_SIZE		1
-
-typedef int fdht_pkg_size_t;
-
-#define PACK_BODY_UNTIL_KEY(pKeyInfo, p) \
-	int2buff(pKeyInfo->namespace_len, p); \
-	p += 4; \
-	if (pKeyInfo->namespace_len > 0) \
-	{ \
-		memcpy(p, pKeyInfo->szNameSpace, pKeyInfo->namespace_len); \
-		p += pKeyInfo->namespace_len; \
-	} \
-	int2buff(pKeyInfo->obj_id_len, p);  \
-	p += 4; \
-	if (pKeyInfo->obj_id_len> 0) \
-	{ \
-		memcpy(p, pKeyInfo->szObjectId, pKeyInfo->obj_id_len); \
-		p += pKeyInfo->obj_id_len; \
-	} \
-	int2buff(pKeyInfo->key_len, p); \
-	p += 4; \
-	memcpy(p, pKeyInfo->szKey, pKeyInfo->key_len); \
-	p += pKeyInfo->key_len; \
-
-
-#define PACK_BODY_OBJECT(pObjectInfo, p) \
-	int2buff(pObjectInfo->namespace_len, p); \
-	p += 4; \
-	memcpy(p, pObjectInfo->szNameSpace, pObjectInfo->namespace_len); \
-	p += pObjectInfo->namespace_len; \
-	int2buff(pObjectInfo->obj_id_len, p);  \
-	p += 4; \
-	memcpy(p, pObjectInfo->szObjectId, pObjectInfo->obj_id_len); \
-	p += pObjectInfo->obj_id_len; \
-
-
-typedef struct
-{
-	/*
-#ifdef FDHT_SESSION_MODE
-	char session_id[8];
-#endif
-	*/
-
-	char pkg_len[FDHT_PROTO_PKG_LEN_SIZE];  //body length
-	char key_hash_code[FDHT_PROTO_PKG_LEN_SIZE]; //the key hash code
-	char timestamp[FDHT_PROTO_PKG_LEN_SIZE]; //current time
-
-   	/* key expires, remain timeout = expires - timestamp */
-	char expires[FDHT_PROTO_PKG_LEN_SIZE];
-	char cmd;
-	char keep_alive;
-	char status;
-} FDHTProtoHeader;
+#include "fdht_proto_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -115,16 +41,6 @@ int fdht_connect_server(FDHTServerInfo *pServer);
 **/
 void fdht_disconnect_server(FDHTServerInfo *pServer);
 
-/**
-* connect to the proxy server
-* params:
-*       proxy_ip_addr: proxy server ip addr
-*       proxy_port: proxy server port
-*	pServer: dest server
-* return: 0 success, !=0 fail, return the error code
-**/
-int fdht_connect_proxy_server(const char *proxy_ip_addr, const int proxy_port,\
-		FDHTServerInfo *pServer);
 
 int fdht_client_set(FDHTServerInfo *pServer, const char keep_alive, \
 	const time_t timestamp, const time_t expires, const int prot_cmd, \

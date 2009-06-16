@@ -29,7 +29,7 @@ static bool log_to_cache = false;
 static char log_buff[64 * 1024];
 static char *pcurrent_log_buff = log_buff;
 
-static void log_fsync(const bool bNeedLock);
+static int log_fsync(const bool bNeedLock);
 
 static int check_and_mk_log_dir(const char *base_path)
 {
@@ -104,12 +104,12 @@ void log_destory()
 	}
 }
 
-void log_sync_func(void *args)
+int log_sync_func(void *args)
 {
-	log_fsync(true);
+	return log_fsync(true);
 }
 
-static void log_fsync(const bool bNeedLock)
+static int log_fsync(const bool bNeedLock)
 {
 	int result;
 	int write_bytes;
@@ -117,9 +117,10 @@ static void log_fsync(const bool bNeedLock)
 	write_bytes = pcurrent_log_buff - log_buff;
 	if (write_bytes == 0)
 	{
-		return;
+		return 0;
 	}
 
+	result = 0;
 	if (bNeedLock && (result=pthread_mutex_lock(&log_thread_lock)) != 0)
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
@@ -131,18 +132,20 @@ static void log_fsync(const bool bNeedLock)
 	write_bytes = pcurrent_log_buff - log_buff;
 	if (write(g_log_fd, log_buff, write_bytes) != write_bytes)
 	{
+		result = errno != 0 ? errno : EIO;
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call write fail, errno: %d, error info: %s\n",\
-			 __LINE__, errno, strerror(errno));
+			 __LINE__, result, strerror(result));
 	}
 
 	if (g_log_fd != STDERR_FILENO)
 	{
 		if (fsync(g_log_fd) != 0)
 		{
+			result = errno != 0 ? errno : EIO;
 			fprintf(stderr, "file: "__FILE__", line: %d, " \
 				"call fsync fail, errno: %d, error info: %s\n",\
-				 __LINE__, errno, strerror(errno));
+				 __LINE__, result, strerror(result));
 		}
 	}
 
@@ -154,6 +157,8 @@ static void log_fsync(const bool bNeedLock)
 			"errno: %d, error info: %s", \
 			__LINE__, result, strerror(result));
 	}
+
+	return result;
 }
 
 static void doLog(const char *caption, const char* text, const int text_len, \

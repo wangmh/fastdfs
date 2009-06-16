@@ -767,11 +767,15 @@ int kill_storage_sync_threads()
 	return result;
 }
 
-void fdfs_binlog_sync_func(void *args)
+int fdfs_binlog_sync_func(void *args)
 {
 	if (binlog_write_cache_len > 0)
 	{
-		storage_binlog_fsync(true);
+		return storage_binlog_fsync(true);
+	}
+	else
+	{
+		return 0;
 	}
 }
 

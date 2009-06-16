@@ -29,21 +29,43 @@ bool g_keep_alive = false;
 extern int g_network_timeout;
 extern char g_base_path[MAX_PATH_SIZE];
 
-bool g_use_proxy = false;
-char g_proxy_ip[IP_ADDRESS_SIZE] = {0};
-int g_proxy_port = 0;
+static void fdht_proxy_extra_deal(GroupArray *pGroupArray, bool *bKeepAlive)
+{
+	int group_id;
+	ServerArray *pServerArray;
+	FDHTServerInfo **ppServer;
+	FDHTServerInfo **ppServerEnd;
 
-/*
-bool g_use_proxy = true;
-char g_proxy_ip[IP_ADDRESS_SIZE] = "127.0.0.1";
-int g_proxy_port = 12345;
-*/
+	if (!pGroupArray->use_proxy)
+	{
+		return;
+	}
+
+	*bKeepAlive = true;
+	pGroupArray->server_count = 1;
+	memcpy(pGroupArray->servers, &pGroupArray->proxy_server, \
+			sizeof(FDHTServerInfo));
+
+	pServerArray = pGroupArray->groups;
+	for (group_id=0; group_id<pGroupArray->group_count; group_id++)
+	{
+		ppServerEnd = pServerArray->servers + pServerArray->count;
+		for (ppServer=pServerArray->servers; \
+				ppServer<ppServerEnd; ppServer++)
+		{
+			*ppServer = pGroupArray->servers;
+		}
+
+		pServerArray++;
+	}
+}
 
 int fdht_client_init(const char *filename)
 {
 	char *pBasePath;
 	IniItemInfo *items;
 	int nItemCount;
+	char szProxyPrompt[64];
 	int result;
 
 	if ((result=iniLoadItems(filename, &items, &nItemCount)) != 0)
@@ -98,14 +120,28 @@ int fdht_client_init(const char *filename)
 			break;
 		}
 
+		if (g_group_array.use_proxy)
+		{
+			sprintf(szProxyPrompt, "proxy_addr=%s, proxy_port=%d, ",
+				g_group_array.proxy_server.ip_addr, 
+				g_group_array.proxy_server.port);
+		}
+		else
+		{
+			*szProxyPrompt = '\0';
+		}
+
 		load_log_level(items, nItemCount);
 
 		logInfo("file: "__FILE__", line: %d, " \
 			"base_path=%s, " \
-			"network_timeout=%d, keep_alive=%d, "\
+			"network_timeout=%d, keep_alive=%d, use_proxy=%d, %s"\
 			"group_count=%d, server_count=%d", __LINE__, \
 			g_base_path, g_network_timeout, g_keep_alive, \
+			g_group_array.use_proxy, szProxyPrompt, \
 			g_group_array.group_count, g_group_array.server_count);
+
+		fdht_proxy_extra_deal(&g_group_array, &g_keep_alive);
 
 		break;
 	}
@@ -138,6 +174,8 @@ int fdht_load_conf(const char *filename, GroupArray *pGroupArray, \
 		return result;
 	}
 
+	fdht_proxy_extra_deal(pGroupArray, bKeepAlive);
+
 	iniFreeItems(items);
 	return 0;
 }
@@ -145,19 +183,6 @@ int fdht_load_conf(const char *filename, GroupArray *pGroupArray, \
 void fdht_client_destroy()
 {
 	fdht_free_group_array(&g_group_array);
-}
-
-static int fdht_client_connect_server(FDHTServerInfo *pServer)
-{
-	if (g_use_proxy)
-	{
-		return fdht_connect_proxy_server(g_proxy_ip, g_proxy_port, \
-				pServer);
-	}
-	else
-	{
-		return fdht_connect_server(pServer);
-	}
 }
 
 #define get_readable_connection(pServerArray, bKeepAlive, hash_code, err_no) \
@@ -185,7 +210,7 @@ static FDHTServerInfo *get_connection(ServerArray *pServerArray, \
 			return *ppServer;
 		}
 
-		if (fdht_client_connect_server(*ppServer) == 0)
+		if (fdht_connect_server(*ppServer) == 0)
 		{
 			if (bKeepAlive)
 			{
@@ -203,7 +228,7 @@ static FDHTServerInfo *get_connection(ServerArray *pServerArray, \
 			return *ppServer;
 		}
 
-		if (fdht_client_connect_server(*ppServer) == 0)
+		if (fdht_connect_server(*ppServer) == 0)
 		{
 			if (bKeepAlive)
 			{
@@ -331,19 +356,24 @@ int fdht_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 	int group_id;
 	int hash_key_len;
 	int key_hash_code;
+	int i;
+	ServerArray *pGroup;
 	FDHTServerInfo *pServer;
 	char *p;
 
 	CALC_KEY_HASH_CODE(pKeyInfo, hash_key, hash_key_len, key_hash_code)
 	group_id = ((unsigned int)key_hash_code) % pGroupArray->group_count;
-	pServer = get_readable_connection((pGroupArray->groups + group_id), \
-                	bKeepAlive, key_hash_code, &result);
+	//printf("get group_id=%d\n", group_id);
+
+	pGroup = pGroupArray->groups + group_id;
+	for (i=0; i<=pGroup->count; i++)
+	{
+	pServer = get_readable_connection(pGroup, bKeepAlive, \
+			key_hash_code, &result);
 	if (pServer == NULL)
 	{
 		return result;
 	}
-
-	//printf("get group_id=%d\n", group_id);
 
 	memset(buff, 0, sizeof(buff));
 	pHeader = (FDHTProtoHeader *)buff;
@@ -356,11 +386,11 @@ int fdht_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 	int2buff(12 + pKeyInfo->namespace_len + pKeyInfo->obj_id_len + \
 		pKeyInfo->key_len, pHeader->pkg_len);
 
-	while (1)
+	do
 	{
 		p = buff + sizeof(FDHTProtoHeader);
 		PACK_BODY_UNTIL_KEY(pKeyInfo, p)
-		if ((result=tcpsenddata(pServer->sock, buff, p - buff, \
+		if ((result=tcpsenddata_nb(pServer->sock, buff, p - buff, \
 			g_network_timeout)) != 0)
 		{
 			logError("send data to server %s:%d fail, " \
@@ -383,7 +413,7 @@ int fdht_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 			break;
 		}
 
-		if ((result=tcprecvdata(pServer->sock, buff, \
+		if ((result=tcprecvdata_nb(pServer->sock, buff, \
 			4, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -431,7 +461,7 @@ int fdht_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 			}
 		}
 
-		if ((result=tcprecvdata(pServer->sock, *ppValue, \
+		if ((result=tcprecvdata_nb(pServer->sock, *ppValue, \
 			*value_len, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -444,19 +474,25 @@ int fdht_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 		}
 
 		*(*ppValue + *value_len) = '\0';
-		break;
-	}
+	} while(0);
 
 	if (bKeepAlive)
 	{
 		if (result >= ENETDOWN) //network error
 		{
 			fdht_disconnect_server(pServer);
+			if (result == ENOTCONN)
+			{
+				continue;  //retry
+			}
 		}
 	}
 	else
 	{
 		fdht_disconnect_server(pServer);
+	}
+
+	break;
 	}
 
 	return result;
@@ -480,6 +516,8 @@ int fdht_batch_set_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 	int group_id;
 	int hash_key_len;
 	int key_hash_code;
+	int i;
+	ServerArray *pGroup;
 	FDHTServerInfo *pServer;
 	FDHTKeyValuePair *pKeyValuePair;
 	FDHTKeyValuePair *pKeyValueEnd;
@@ -494,8 +532,11 @@ int fdht_batch_set_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 
 	CALC_OBJECT_HASH_CODE(pObjectInfo, hash_key, hash_key_len, key_hash_code)
 	group_id = ((unsigned int)key_hash_code) % pGroupArray->group_count;
-	pServer = get_writable_connection((pGroupArray->groups + group_id), \
-                	bKeepAlive, key_hash_code, &result);
+	pGroup = pGroupArray->groups + group_id;
+	for (i=0; i<=pGroup->count; i++)
+	{
+	pServer = get_writable_connection(pGroup, bKeepAlive, \
+			key_hash_code, &result);
 	if (pServer == NULL)
 	{
 		return result;
@@ -558,7 +599,7 @@ int fdht_batch_set_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 	do
 	{
 		int2buff(pkg_total_len - sizeof(FDHTProtoHeader), pHeader->pkg_len);
-		if ((result=tcpsenddata(pServer->sock, pBuff, pkg_total_len, \
+		if ((result=tcpsenddata_nb(pServer->sock, pBuff, pkg_total_len, \
 			g_network_timeout)) != 0)
 		{
 			logError("send data to server %s:%d fail, " \
@@ -582,7 +623,7 @@ int fdht_batch_set_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 			break;
 		}
 
-		if ((result=tcprecvdata(pServer->sock, pBuff, \
+		if ((result=tcprecvdata_nb(pServer->sock, pBuff, \
 			in_bytes, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -628,11 +669,17 @@ int fdht_batch_set_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 		if (result >= ENETDOWN) //network error
 		{
 			fdht_disconnect_server(pServer);
+			if (result == ENOTCONN)
+			{
+				continue;  //retry
+			}
 		}
 	}
 	else
 	{
 		fdht_disconnect_server(pServer);
+	}
+	break;
 	}
 
 	return result;
@@ -652,6 +699,8 @@ int fdht_batch_delete_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 	int group_id;
 	int hash_key_len;
 	int key_hash_code;
+	int i;
+	ServerArray *pGroup;
 	FDHTServerInfo *pServer;
 	FDHTKeyValuePair *pKeyValuePair;
 	FDHTKeyValuePair *pKeyValueEnd;
@@ -666,8 +715,11 @@ int fdht_batch_delete_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 
 	CALC_OBJECT_HASH_CODE(pObjectInfo, hash_key, hash_key_len, key_hash_code)
 	group_id = ((unsigned int)key_hash_code) % pGroupArray->group_count;
-	pServer = get_readable_connection((pGroupArray->groups + group_id), \
-                	bKeepAlive, key_hash_code, &result);
+	pGroup = pGroupArray->groups + group_id;
+	for (i=0; i<=pGroup->count; i++)
+	{
+	pServer = get_readable_connection(pGroup, bKeepAlive, \
+			key_hash_code, &result);
 	if (pServer == NULL)
 	{
 		return result;
@@ -700,7 +752,7 @@ int fdht_batch_delete_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 	do
 	{
 		int2buff((p - buff) - sizeof(FDHTProtoHeader), pHeader->pkg_len);
-		if ((result=tcpsenddata(pServer->sock, buff, p - buff, \
+		if ((result=tcpsenddata_nb(pServer->sock, buff, p - buff, \
 			g_network_timeout)) != 0)
 		{
 			logError("send data to server %s:%d fail, " \
@@ -724,7 +776,7 @@ int fdht_batch_delete_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 			break;
 		}
 
-		if ((result=tcprecvdata(pServer->sock, buff, \
+		if ((result=tcprecvdata_nb(pServer->sock, buff, \
 			in_bytes, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -765,11 +817,18 @@ int fdht_batch_delete_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 		if (result >= ENETDOWN) //network error
 		{
 			fdht_disconnect_server(pServer);
+			if (result == ENOTCONN)
+			{
+				continue;  //retry
+			}
 		}
 	}
 	else
 	{
 		fdht_disconnect_server(pServer);
+	}
+
+	break;
 	}
 
 	return result;
@@ -792,6 +851,8 @@ int fdht_batch_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 	int hash_key_len;
 	int key_hash_code;
 	char *pInBuff;
+	int i;
+	ServerArray *pGroup;
 	FDHTServerInfo *pServer;
 	FDHTKeyValuePair *pKeyValuePair;
 	FDHTKeyValuePair *pKeyValueEnd;
@@ -806,8 +867,11 @@ int fdht_batch_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 
 	CALC_OBJECT_HASH_CODE(pObjectInfo, hash_key, hash_key_len, key_hash_code)
 	group_id = ((unsigned int)key_hash_code) % pGroupArray->group_count;
-	pServer = get_readable_connection((pGroupArray->groups + group_id), \
-                	bKeepAlive, key_hash_code, &result);
+	pGroup = pGroupArray->groups + group_id;
+	for (i=0; i<=pGroup->count; i++)
+	{
+	pServer = get_readable_connection(pGroup, bKeepAlive, \
+			key_hash_code, &result);
 	if (pServer == NULL)
 	{
 		return result;
@@ -839,7 +903,7 @@ int fdht_batch_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 	do
 	{
 		int2buff((p - buff) - sizeof(FDHTProtoHeader), pHeader->pkg_len);
-		if ((result=tcpsenddata(pServer->sock, buff, p - buff, \
+		if ((result=tcpsenddata_nb(pServer->sock, buff, p - buff, \
 			g_network_timeout)) != 0)
 		{
 			logError("send data to server %s:%d fail, " \
@@ -877,7 +941,7 @@ int fdht_batch_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 			}
 		}
 
-		if ((result=tcprecvdata(pServer->sock, pInBuff, \
+		if ((result=tcprecvdata_nb(pServer->sock, pInBuff, \
 			in_bytes, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -981,11 +1045,18 @@ int fdht_batch_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 		if (result >= ENETDOWN) //network error
 		{
 			fdht_disconnect_server(pServer);
+			if (result == ENOTCONN)
+			{
+				continue;  //retry
+			}
 		}
 	}
 	else
 	{
 		fdht_disconnect_server(pServer);
+	}
+
+	break;
 	}
 
 	return result;
@@ -1000,16 +1071,24 @@ int fdht_set_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 	int group_id;
 	int hash_key_len;
 	int key_hash_code;
+	int i;
+	ServerArray *pGroup;
 	FDHTServerInfo *pServer;
 
 	CALC_KEY_HASH_CODE(pKeyInfo, hash_key, hash_key_len, key_hash_code)
 	group_id = ((unsigned int)key_hash_code) % pGroupArray->group_count;
-	pServer = get_writable_connection((pGroupArray->groups + group_id), \
-                	bKeepAlive, key_hash_code, &result);
+
+	pGroup = pGroupArray->groups + group_id;
+	for (i=0; i<=pGroup->count; i++)
+	{
+	pServer = get_writable_connection(pGroup, bKeepAlive, \
+			key_hash_code, &result);
 	if (pServer == NULL)
 	{
 		return result;
 	}
+
+	//printf("key_hash_code=%d, group_id=%d\n", key_hash_code, group_id);
 
 	//printf("set group_id=%d\n", group_id);
 	result = fdht_client_set(pServer, bKeepAlive, time(NULL), expires, \
@@ -1021,11 +1100,18 @@ int fdht_set_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 		if (result >= ENETDOWN) //network error
 		{
 			fdht_disconnect_server(pServer);
+			if (result == ENOTCONN)
+			{
+				continue;  //retry
+			}
 		}
 	}
 	else
 	{
 		fdht_disconnect_server(pServer);
+	}
+
+	break;
 	}
 
 	return result;
@@ -1057,13 +1143,18 @@ int fdht_inc_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 	int group_id;
 	int hash_key_len;
 	int key_hash_code;
+	int i;
+	ServerArray *pGroup;
 	FDHTServerInfo *pServer;
 	char *p;
 
 	CALC_KEY_HASH_CODE(pKeyInfo, hash_key, hash_key_len, key_hash_code)
 	group_id = ((unsigned int)key_hash_code) % pGroupArray->group_count;
-	pServer = get_writable_connection((pGroupArray->groups + group_id), \
-                	bKeepAlive, key_hash_code, &result);
+	pGroup = pGroupArray->groups + group_id;
+	for (i=0; i<=pGroup->count; i++)
+	{
+	pServer = get_writable_connection(pGroup, bKeepAlive, \
+			key_hash_code, &result);
 	if (pServer == NULL)
 	{
 		return result;
@@ -1088,7 +1179,7 @@ int fdht_inc_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 		PACK_BODY_UNTIL_KEY(pKeyInfo, p)
 		int2buff(increase, p);
 		p += 4;
-		if ((result=tcpsenddata(pServer->sock, buff, p - buff, \
+		if ((result=tcpsenddata_nb(pServer->sock, buff, p - buff, \
 			g_network_timeout)) != 0)
 		{
 			logError("send data to server %s:%d fail, " \
@@ -1135,11 +1226,18 @@ int fdht_inc_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 		if (result >= ENETDOWN) //network error
 		{
 			fdht_disconnect_server(pServer);
+			if (result == ENOTCONN)
+			{
+				continue;  //retry
+			}
 		}
 	}
 	else
 	{
 		fdht_disconnect_server(pServer);
+	}
+
+	break;
 	}
 
 	return result;
@@ -1149,16 +1247,21 @@ int fdht_delete_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 		FDHTKeyInfo *pKeyInfo)
 {
 	int result;
-	FDHTServerInfo *pServer;
 	char hash_key[FDHT_MAX_FULL_KEY_LEN + 1];
 	int group_id;
 	int hash_key_len;
 	int key_hash_code;
+	int i;
+	ServerArray *pGroup;
+	FDHTServerInfo *pServer;
 
 	CALC_KEY_HASH_CODE(pKeyInfo, hash_key, hash_key_len, key_hash_code)
 	group_id = ((unsigned int)key_hash_code) % pGroupArray->group_count;
-	pServer = get_writable_connection((pGroupArray->groups + group_id), \
-                	bKeepAlive, key_hash_code , &result);
+	pGroup = pGroupArray->groups + group_id;
+	for (i=0; i<=pGroup->count; i++)
+	{
+	pServer = get_writable_connection(pGroup, bKeepAlive, \
+			key_hash_code , &result);
 	if (pServer == NULL)
 	{
 		return result;
@@ -1173,11 +1276,183 @@ int fdht_delete_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 		if (result >= ENETDOWN) //network error
 		{
 			fdht_disconnect_server(pServer);
+			if (result == ENOTCONN)
+			{
+				continue;  //retry
+			}
 		}
 	}
 	else
 	{
 		fdht_disconnect_server(pServer);
+	}
+
+	break;
+	}
+
+	return result;
+}
+
+int fdht_connect_all_servers(GroupArray *pGroupArray, const bool bKeepAlive, \
+			int *success_count, int *fail_count)
+{
+	FDHTServerInfo *pServerInfo;
+	FDHTServerInfo *pServerEnd;
+	int conn_result;
+	int result;
+
+	*success_count = 0;
+	*fail_count = 0;
+	if (pGroupArray->servers == NULL)
+	{
+		return ENOENT;
+	}
+
+	result = 0;
+
+	pServerEnd = pGroupArray->servers + pGroupArray->server_count;
+	for (pServerInfo=pGroupArray->servers; \
+			pServerInfo<pServerEnd; pServerInfo++)
+	{
+		if ((conn_result=fdht_connect_server(pServerInfo)) != 0)
+		{
+			result = conn_result;
+			(*fail_count)++;
+		}
+		else //connect success
+		{
+			(*success_count)++;
+			if (bKeepAlive || pGroupArray->use_proxy)
+			{
+				tcpsetnodelay(pServerInfo->sock);
+			}
+		}
+	}
+
+	if (result != 0)
+	{
+		return result;
+	}
+	else
+	{
+		return  *success_count > 0 ? 0: ENOENT;
+	}
+}
+
+void fdht_disconnect_all_servers(GroupArray *pGroupArray)
+{
+	FDHTServerInfo *pServerInfo;
+	FDHTServerInfo *pServerEnd;
+
+	if (pGroupArray->servers != NULL)
+	{
+		pServerEnd = pGroupArray->servers + pGroupArray->server_count;
+		for (pServerInfo=pGroupArray->servers; \
+				pServerInfo<pServerEnd; pServerInfo++)
+		{
+			if (pServerInfo->sock >= 0)
+			{
+				if (!pGroupArray->use_proxy)
+				{
+					fdht_quit(pServerInfo);
+				}
+				close(pServerInfo->sock);
+				pServerInfo->sock = -1;
+			}
+		}
+	}
+}
+
+int fdht_stat_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
+		const int server_index, char *buff, const int size)
+{
+	int result;
+	int in_bytes;
+	int i;
+	FDHTProtoHeader header;
+	FDHTServerInfo *pServer;
+
+	memset(buff, 0, size);
+	if (server_index < 0 || server_index > pGroupArray->server_count)
+	{
+		logError("invalid servier_index: %d", server_index);
+		return EINVAL;
+	}
+
+	pServer = pGroupArray->servers + server_index;
+	for (i=0; i<2; i++)
+	{
+	if ((result=fdht_connect_server(pServer)) != 0)
+	{
+		return result;
+	}
+
+	if (bKeepAlive)
+	{
+		tcpsetnodelay(pServer->sock);
+	}
+
+	memset(&header, 0, sizeof(header));
+	header.cmd = FDHT_PROTO_CMD_STAT;
+	header.keep_alive = bKeepAlive;
+	int2buff((int)time(NULL), header.timestamp);
+
+	do
+	{
+		if ((result=tcpsenddata_nb(pServer->sock, &header, \
+			sizeof(header), g_network_timeout)) != 0)
+		{
+			logError("send data to server %s:%d fail, " \
+				"errno: %d, error info: %s", \
+				pServer->ip_addr, pServer->port, \
+				result, strerror(result));
+			break;
+		}
+
+		if ((result=fdht_recv_header(pServer, &in_bytes)) != 0)
+		{
+			break;
+		}
+
+		if (in_bytes >= size)
+		{
+			logError("server %s:%d reponse bytes: %d >= buff size",
+				pServer->ip_addr, pServer->port, 
+				in_bytes, size);
+			result = ENOSPC;
+			break;
+		}
+
+		if ((result=tcprecvdata_nb(pServer->sock, buff, \
+			in_bytes, g_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"server: %s:%d, recv data fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pServer->ip_addr, \
+				pServer->port, \
+				result, strerror(result));
+			break;
+		}
+	} while (0);
+
+	if (bKeepAlive)
+	{
+		if (result >= ENETDOWN) //network error
+		{
+			fdht_disconnect_server(pServer);
+			if (result == ENOTCONN)
+			{
+				continue;  //retry
+			}
+		}
+	}
+	else
+	{
+		fdht_disconnect_server(pServer);
+	}
+
+	break;
 	}
 
 	return result;

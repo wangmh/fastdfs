@@ -24,7 +24,6 @@
 #include "sockopt.h"
 #include "shared_func.h"
 #include "ini_file_reader.h"
-#include "fdht_proto.h"
 #include "fdht_func.h"
 
 int fdht_split_ids(const char *szIds, int **ppIds, int *id_count)
@@ -335,8 +334,8 @@ static void fdht_insert_sorted_servers(GroupArray *pGroupArray, \
 	memcpy(pCurrent,  pInsertedServer, sizeof(FDHTServerInfo));
 }
 
-int fdht_load_groups(IniItemInfo *items, const int nItemCount, \
-		GroupArray *pGroupArray)
+int fdht_load_groups_ex(IniItemInfo *items, const int nItemCount, \
+		GroupArray *pGroupArray, const bool bLoadProxyParams)
 {
 	IniItemInfo *pItemInfo;
 	IniItemInfo *pItemEnd;
@@ -351,6 +350,7 @@ int fdht_load_groups(IniItemInfo *items, const int nItemCount, \
 	FDHTServerInfo *pFound;
 	int alloc_server_count;
 	char *ip_port[2];
+	char *pProxyIpAddr;
 
 	pGroupArray->group_count = iniGetIntValue("group_count", \
 			items, nItemCount, 0);
@@ -587,6 +587,45 @@ int fdht_load_groups(IniItemInfo *items, const int nItemCount, \
 		}
 	}
 
+	memset(&pGroupArray->proxy_server, 0, sizeof(FDHTServerInfo));
+	if (!bLoadProxyParams)
+	{
+		return 0;
+	}
+
+	pGroupArray->use_proxy = iniGetBoolValue("use_proxy", \
+			items, nItemCount, false);
+	if (!pGroupArray->use_proxy)
+	{
+		return 0;
+	}
+
+	pProxyIpAddr = iniGetStrValue("proxy_addr", \
+			items, nItemCount);
+	if (pProxyIpAddr == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"item \"proxy_addr\" not exists!", \
+			__LINE__);
+		return ENOENT;
+	}
+	snprintf(pGroupArray->proxy_server.ip_addr, \
+		sizeof(pGroupArray->proxy_server.ip_addr), \
+		"%s", pProxyIpAddr);
+
+	pGroupArray->proxy_server.port = iniGetIntValue("proxy_port", \
+		items, nItemCount, FDHT_DEFAULT_PROXY_PORT);
+	if (pGroupArray->proxy_server.port <= 0 || \
+		pGroupArray->proxy_server.port > 65535)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"proxy_port: %d is invalid!", \
+			__LINE__, pGroupArray->proxy_server.port);
+		return EINVAL;
+	}
+
+	pGroupArray->proxy_server.sock = -1;
+
 	return 0;
 }
 
@@ -658,7 +697,7 @@ int fdht_copy_group_array(GroupArray *pDestGroupArray, \
 			ppServerInfo<ppServerEnd; ppServerInfo++)
 		{
 			*ppServerInfo = pDestGroupArray->servers + \
-				(*ppSrcServer - pSrcGroupArray->servers);
+					(*ppSrcServer - pSrcGroupArray->servers);
 			ppSrcServer++;
 		}
 
@@ -669,7 +708,7 @@ int fdht_copy_group_array(GroupArray *pDestGroupArray, \
 	for (pServerInfo=pDestGroupArray->servers; \
 			pServerInfo<pServerEnd; pServerInfo++)
 	{
-		if (pServerInfo->sock > 0)
+		if (pServerInfo->sock >= 0)
 		{
 			pServerInfo->sock = -1;
 		}
@@ -704,7 +743,7 @@ void fdht_free_group_array(GroupArray *pGroupArray)
 		for (pServerInfo=pGroupArray->servers; \
 				pServerInfo<pServerEnd; pServerInfo++)
 		{
-			if (pServerInfo->sock > 0)
+			if (pServerInfo->sock >= 0)
 			{
 				close(pServerInfo->sock);
 				pServerInfo->sock = -1;
@@ -713,81 +752,12 @@ void fdht_free_group_array(GroupArray *pGroupArray)
 
 		free(pGroupArray->servers);
 		pGroupArray->servers = NULL;
-
 	}
 
 	if (pGroupArray->groups != NULL)
 	{
 		free(pGroupArray->groups);
 		pGroupArray->groups = NULL;
-	}
-}
-
-int fdht_connect_all_servers(GroupArray *pGroupArray, const bool bNoDelay, \
-			int *success_count, int *fail_count)
-{
-	FDHTServerInfo *pServerInfo;
-	FDHTServerInfo *pServerEnd;
-	int conn_result;
-	int result;
-
-	*success_count = 0;
-	*fail_count = 0;
-	if (pGroupArray->servers == NULL)
-	{
-		return ENOENT;
-	}
-
-	result = 0;
-
-	pServerEnd = pGroupArray->servers + pGroupArray->server_count;
-	for (pServerInfo=pGroupArray->servers; \
-			pServerInfo<pServerEnd; pServerInfo++)
-	{
-		if ((conn_result=fdht_connect_server( \
-						pServerInfo)) != 0)
-		{
-			result = conn_result;
-			(*fail_count)++;
-		}
-		else //connect success
-		{
-			(*success_count)++;
-			if (bNoDelay)
-			{
-				tcpsetnodelay(pServerInfo->sock);
-			}
-		}
-	}
-
-	if (result != 0)
-	{
-		return result;
-	}
-	else
-	{
-		return  *success_count > 0 ? 0: ENOENT;
-	}
-}
-
-void fdht_disconnect_all_servers(GroupArray *pGroupArray)
-{
-	FDHTServerInfo *pServerInfo;
-	FDHTServerInfo *pServerEnd;
-
-	if (pGroupArray->servers != NULL)
-	{
-		pServerEnd = pGroupArray->servers + pGroupArray->server_count;
-		for (pServerInfo=pGroupArray->servers; \
-				pServerInfo<pServerEnd; pServerInfo++)
-		{
-			if (pServerInfo->sock > 0)
-			{
-				fdht_quit(pServerInfo);
-				close(pServerInfo->sock);
-				pServerInfo->sock = -1;
-			}
-		}
 	}
 }
 
