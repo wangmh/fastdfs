@@ -23,8 +23,8 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
-#include <fdht_types.h>
-#include <ini_file_reader.h>
+#include "fdht_types.h"
+#include "ini_file_reader.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,17 +32,15 @@ extern "C" {
 
 int fdht_split_ids(const char *szIds, int **ppIds, int *id_count);
 
-int fdht_load_groups(IniItemInfo *items, const int nItemCount, \
-		GroupArray *pGroupArray);
+#define fdht_load_groups(items, nItemCount, pGroupArray) \
+	fdht_load_groups_ex(items, nItemCount, pGroupArray, true)
+
+int fdht_load_groups_ex(IniItemInfo *items, const int nItemCount, \
+		GroupArray *pGroupArray, const bool bLoadProxyParams);
 
 int fdht_copy_group_array(GroupArray *pDestGroupArray, \
 		GroupArray *pSrcGroupArray);
 void fdht_free_group_array(GroupArray *pGroupArray);
-
-int fdht_connect_all_servers(GroupArray *pGroupArray, const bool bNoDelay, \
-			int *success_count, int *fail_count);
-
-void fdht_disconnect_all_servers(GroupArray *pGroupArray);
 
 #ifdef __cplusplus
 }

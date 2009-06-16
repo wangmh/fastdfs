@@ -24,6 +24,8 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <sys/poll.h>
+#include <sys/select.h>
 
 #ifdef OS_SUNOS
 #include <sys/sockio.h>
@@ -44,6 +46,9 @@
 #include "logger.h"
 #include "hash.h"
 #include "sockopt.h"
+
+//#define USE_SELECT
+#define USE_POLL
 
 int tcpgets(int sock, char* s, const int size, const int timeout)
 {
@@ -102,20 +107,20 @@ int tcprecvdata_ex(int sock, void *data, const int size, \
 	int res;
 	int ret_code;
 	unsigned char* p;
+#ifdef USE_SELECT
 	fd_set read_set;
 	struct timeval t;
-
-	if (data == NULL)
-	{
-#ifdef __DEBUG__
-		fprintf(stderr,"%s,%d:tcprecvdata argument data is NULL.\n",
-			__FILE__,__LINE__);
+#else
+	struct pollfd pollfds;
 #endif
-		return EINVAL;
-	}
 
+#ifdef USE_SELECT
 	FD_ZERO(&read_set);
 	FD_SET(sock, &read_set);
+#else
+	pollfds.fd = sock;
+	pollfds.events = POLLIN;
+#endif
 
 	read_bytes = 0;
 	ret_code = 0;
@@ -123,6 +128,8 @@ int tcprecvdata_ex(int sock, void *data, const int size, \
 	left_bytes = size;
 	while (left_bytes > 0)
 	{
+
+#ifdef USE_SELECT
 		if (timeout <= 0)
 		{
 			res = select(sock+1, &read_set, NULL, NULL, NULL);
@@ -133,24 +140,10 @@ int tcprecvdata_ex(int sock, void *data, const int size, \
 			t.tv_sec = timeout;
 			res = select(sock+1, &read_set, NULL, NULL, &t);
 		}
-		
-		/*	
-		struct timespec ts;
-		sigset_t sigmask;
+#else
+		res = poll(&pollfds, 1, 1000 * timeout);
+#endif
 
-		sigemptyset(&sigmask);
-		if (timeout <= 0)
-		{
-			res = pselect(sock+1, &read_set, NULL, NULL, NULL, &sigmask);
-		}
-		else
-		{
-			ts.tv_nsec = 0;
-			ts.tv_sec = timeout;
-			res = pselect(sock+1, &read_set, NULL, NULL, &ts, &sigmask);
-		}
-		*/
-	
 		if (res < 0)
 		{
 #ifdef __DEBUG__
@@ -169,38 +162,39 @@ int tcprecvdata_ex(int sock, void *data, const int size, \
 			ret_code = ETIMEDOUT;
 			break;
 		}
-		
-		//if (FD_ISSET(sock, &read_set))
+	
+		read_bytes = recv(sock, p, left_bytes, 0);
+		if (read_bytes < 0)
 		{
-			read_bytes = read(sock, p, left_bytes);
-			if (read_bytes < 0)
-			{
 #ifdef __DEBUG__
-				fprintf(stderr,"%s,%d:tcprecvdata call read failed:%s.\n",
+			fprintf(stderr,"%s,%d:tcprecvdata call read failed:%s.\n",
 					__FILE__,__LINE__,strerror(errno));
 #endif
-				ret_code = errno != 0 ? errno : EINTR;
-				break;
-			}
-			if (read_bytes == 0)
-			{
-#ifdef __DEBUG__
-				fprintf(stderr, "%s,%d:tcprecvdata call read return 0, remote close connection? errno:%d, error info:%s.\n",
-					__FILE__, __LINE__, errno, strerror(errno));
-#endif
-				ret_code = ENOTCONN;
-				break;
-			}
-
-			left_bytes -= read_bytes;
-			p += read_bytes;
+			ret_code = errno != 0 ? errno : EINTR;
+			break;
 		}
+		if (read_bytes == 0)
+		{
+#ifdef __DEBUG__
+			fprintf(stderr, "%s,%d:tcprecvdata call read return 0,"\
+					" remote close connection? " \
+					"errno:%d, error info:%s.\n",
+					__FILE__, __LINE__, \
+					errno, strerror(errno));
+#endif
+			ret_code = ENOTCONN;
+			break;
+		}
+
+		left_bytes -= read_bytes;
+		p += read_bytes;
 	}
 
 	if (count != NULL)
 	{
 		*count = size - left_bytes;
 	}
+
 	return ret_code;
 }
 
@@ -210,25 +204,26 @@ int tcpsenddata(int sock, void* data, const int size, const int timeout)
 	int write_bytes;
 	int result;
 	unsigned char* p;
+#ifdef USE_SELECT
 	fd_set write_set;
 	struct timeval t;
-
-	if (data == NULL)
-	{
-#ifdef __DEBUG__
-		fprintf(stderr,"%s,%d:tcpsenddata argument data is NULL.\n",
-			__FILE__,__LINE__);
+#else
+	struct pollfd pollfds;
 #endif
-		return EINVAL;
-	}
 
+#ifdef USE_SELECT
 	FD_ZERO(&write_set);
 	FD_SET(sock, &write_set);
+#else
+	pollfds.fd = sock;
+	pollfds.events = POLLOUT;
+#endif
 
 	p = (unsigned char*)data;
 	left_bytes = size;
 	while (left_bytes > 0)
 	{
+#ifdef USE_SELECT
 		if (timeout <= 0)
 		{
 			result = select(sock+1, NULL, &write_set, NULL, NULL);
@@ -239,6 +234,10 @@ int tcpsenddata(int sock, void* data, const int size, const int timeout)
 			t.tv_sec = timeout;
 			result = select(sock+1, NULL, &write_set, NULL, &t);
 		}
+#else
+		result = poll(&pollfds, 1, 1000 * timeout);
+#endif
+
 		if (result < 0)
 		{
 #ifdef __DEBUG__
@@ -256,20 +255,203 @@ int tcpsenddata(int sock, void* data, const int size, const int timeout)
 			return ETIMEDOUT;
 		}
 
-		//if (FD_ISSET(sock, &write_set))
+		write_bytes = send(sock, p, left_bytes, 0);
+		if (write_bytes < 0)
 		{
-			write_bytes = write(sock, p, left_bytes);
-			if (write_bytes < 0)
-			{
 #ifdef __DEBUG__
-				fprintf(stderr,"%s,%d:tcpsenddata call write failed:%s.\n",
+			fprintf(stderr,"%s,%d:tcpsenddata call write failed:%s.\n",
 					__FILE__,__LINE__,strerror(errno));
 #endif			
-				return errno != 0 ? errno : EINTR;
-			}
+			return errno != 0 ? errno : EINTR;
+		}
 
+		left_bytes -= write_bytes;
+		p += write_bytes;
+	}
+
+	return 0;
+}
+
+int tcprecvdata_nb_ex(int sock, void *data, const int size, \
+		const int timeout, int *count)
+{
+	int left_bytes;
+	int read_bytes;
+	int res;
+	int ret_code;
+	unsigned char* p;
+#ifdef USE_SELECT
+	fd_set read_set;
+	struct timeval t;
+#else
+	struct pollfd pollfds;
+#endif
+
+#ifdef USE_SELECT
+	FD_ZERO(&read_set);
+	FD_SET(sock, &read_set);
+#else
+	pollfds.fd = sock;
+	pollfds.events = POLLIN;
+#endif
+
+	read_bytes = 0;
+	ret_code = 0;
+	p = (unsigned char*)data;
+	left_bytes = size;
+	while (left_bytes > 0)
+	{
+		read_bytes = recv(sock, p, left_bytes, 0);
+		if (read_bytes > 0)
+		{
+			left_bytes -= read_bytes;
+			p += read_bytes;
+			continue;
+		}
+
+		if (read_bytes < 0)
+		{
+
+			if (!(errno == EAGAIN || errno == EWOULDBLOCK))
+			{
+#ifdef __DEBUG__
+			fprintf(stderr,"%s,%d:tcprecvdata call read failed:%s.\n",
+					__FILE__,__LINE__,strerror(errno));
+#endif
+			ret_code = errno != 0 ? errno : EINTR;
+			break;
+			}
+		}
+		else
+		{
+#ifdef __DEBUG__
+			fprintf(stderr, "%s,%d:tcprecvdata call read return 0,"\
+					" remote close connection? " \
+					"errno:%d, error info:%s.\n",
+					__FILE__, __LINE__, \
+					errno, strerror(errno));
+#endif
+			ret_code = ENOTCONN;
+			break;
+		}
+
+#ifdef USE_SELECT
+		if (timeout <= 0)
+		{
+			res = select(sock+1, &read_set, NULL, NULL, NULL);
+		}
+		else
+		{
+			t.tv_usec = 0;
+			t.tv_sec = timeout;
+			res = select(sock+1, &read_set, NULL, NULL, &t);
+		}
+#else
+		res = poll(&pollfds, 1, 1000 * timeout);
+#endif
+
+		if (res < 0)
+		{
+#ifdef __DEBUG__
+			fprintf(stderr,"%s,%d:tcprecvdata call select failed:%s.\n",
+				__FILE__,__LINE__,strerror(errno));
+#endif
+			ret_code = errno != 0 ? errno : EINTR;
+			break;
+		}
+		else if (res == 0)
+		{
+#ifdef __DEBUG__
+			fprintf(stderr,"%s,%d:tcprecvdata call select timeout.\n",
+				__FILE__,__LINE__);
+#endif
+			ret_code = ETIMEDOUT;
+			break;
+		}
+	}
+
+	if (count != NULL)
+	{
+		*count = size - left_bytes;
+	}
+
+	return ret_code;
+}
+
+int tcpsenddata_nb(int sock, void* data, const int size, const int timeout)
+{
+	int left_bytes;
+	int write_bytes;
+	int result;
+	unsigned char* p;
+#ifdef USE_SELECT
+	fd_set write_set;
+	struct timeval t;
+#else
+	struct pollfd pollfds;
+#endif
+
+#ifdef USE_SELECT
+	FD_ZERO(&write_set);
+	FD_SET(sock, &write_set);
+#else
+	pollfds.fd = sock;
+	pollfds.events = POLLOUT;
+#endif
+
+	p = (unsigned char*)data;
+	left_bytes = size;
+	while (left_bytes > 0)
+	{
+		write_bytes = send(sock, p, left_bytes, 0);
+		if (write_bytes < 0)
+		{
+			if (!(errno == EAGAIN || errno == EWOULDBLOCK))
+			{
+#ifdef __DEBUG__
+			fprintf(stderr,"%s,%d:tcpsenddata call write failed:%s.\n",
+					__FILE__,__LINE__,strerror(errno));
+#endif			
+			return errno != 0 ? errno : EINTR;
+			}
+		}
+		else
+		{
 			left_bytes -= write_bytes;
 			p += write_bytes;
+			continue;
+		}
+
+#ifdef USE_SELECT
+		if (timeout <= 0)
+		{
+			result = select(sock+1, NULL, &write_set, NULL, NULL);
+		}
+		else
+		{
+			t.tv_usec = 0;
+			t.tv_sec = timeout;
+			result = select(sock+1, NULL, &write_set, NULL, &t);
+		}
+#else
+		result = poll(&pollfds, 1, 1000 * timeout);
+#endif
+
+		if (result < 0)
+		{
+#ifdef __DEBUG__
+			fprintf(stderr,"%s,%d:tcpsenddata call select failed:%s.\n",
+				__FILE__,__LINE__,strerror(errno));
+#endif
+			return errno != 0 ? errno : EINTR;
+		}
+		else if (result == 0)
+		{
+#ifdef __DEBUG__
+			fprintf(stderr,"%s,%d:tcpsenddata call select timeout.\n",
+				__FILE__,__LINE__);
+#endif
+			return ETIMEDOUT;
 		}
 	}
 
@@ -806,7 +988,7 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 	return 0;
 }
 
-int tcpsetnonblockopt(int fd, const int timeout)
+int tcpsetserveropt(int fd, const int timeout)
 {
 	int result;
 	int flags;
@@ -891,6 +1073,40 @@ int tcpsetnonblockopt(int fd, const int timeout)
 		return errno != 0 ? errno : EINVAL;
 	}
 
+	result = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, 
+			(char *)&flags, sizeof(flags));
+	if (result < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EINVAL;
+	}
+
+	flags = fcntl(fd, F_GETFL, 0);
+	if (flags < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"fcntl failed, errno: %d, error info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EACCES;
+	}
+
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"fcntl failed, errno: %d, error info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EACCES;
+	}
+
+	return 0;
+}
+
+int tcpsetnonblockopt(int fd)
+{
+	int flags;
+
 	flags = fcntl(fd, F_GETFL, 0);
 	if (flags < 0)
 	{
@@ -916,6 +1132,16 @@ int tcpsetnodelay(int fd)
 	int flags;
 
 	flags = 1;
+
+	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, \
+			(char *)&flags, sizeof(flags)) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s.", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EINVAL;
+	}
+
 	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, \
 			(char *)&flags, sizeof(flags)) < 0)
 	{

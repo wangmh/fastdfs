@@ -1,4 +1,8 @@
- 
+Version 1.19  2009-06-16
+ * use poll instead of select in sockopt.c
+ * hash.c use chain impl by self
+ * use FastDHT 1.09 client code
+
 Version 1.18  2009-05-24
  * restart.sh only kill the programs match the program name and all parameters
  * correct get local ip addresses

@@ -47,6 +47,8 @@ int64_t iniGetInt64Value(const char *szName, IniItemInfo *items, \
 			const int nItemCount, const int64_t nDefaultValue);
 bool iniGetBoolValue(const char *szName, IniItemInfo *items, \
 		const int nItemCount, const bool bDefaultValue);
+double iniGetDoubleValue(const char *szName, IniItemInfo *items, \
+			const int nItemCount, const double dbDefaultValue);
 
 void iniPrintItems(IniItemInfo *items, const int nItemCount);
 

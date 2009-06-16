@@ -303,6 +303,22 @@ int iniGetIntValue(const char *szName, IniItemInfo *items, \
 	}
 }
 
+double iniGetDoubleValue(const char *szName, IniItemInfo *items, \
+			const int nItemCount, const double dbDefaultValue)
+{
+	char *pValue;
+	
+	pValue = iniGetStrValue(szName, items, nItemCount);
+	if (pValue == NULL)
+	{
+		return dbDefaultValue;
+	}
+	else
+	{
+		return strtod(pValue, NULL);
+	}
+}
+
 bool iniGetBoolValue(const char *szName, IniItemInfo *items, \
 		const int nItemCount, const bool bDefaultValue)
 {

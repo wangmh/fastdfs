@@ -62,7 +62,7 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 
 int storage_sync_thread_start(const FDFSStorageBrief *pStorage);
 int kill_storage_sync_threads();
-void fdfs_binlog_sync_func(void *args);
+int fdfs_binlog_sync_func(void *args);
 
 #ifdef __cplusplus
 }

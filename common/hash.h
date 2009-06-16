@@ -9,7 +9,8 @@
 #ifndef _HASH_H_
 #define _HASH_H_
 
-#include "chain.h"
+#include <sys/types.h>
+#include "common_define.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,23 +21,66 @@ extern "C" {
 
 typedef int (*HashFunc) (const void *key, const int key_len);
 
+#ifdef HASH_MALLOC_VALUE
+    #define HASH_VALUE(hash_data)  (hash_data->key + hash_data->key_len)
+#else
+    #define HASH_VALUE(hash_data)  hash_data->value
+#endif
+
+#ifdef HASH_STORE_HASH_CODE
+#define HASH_CODE(pHash, hash_data)   hash_data->hash_code
+#else
+#define HASH_CODE(pHash, hash_data)   ((unsigned int)pHash->hash_func( \
+					hash_data->key, hash_data->key_len))
+#endif
+
+#define CALC_NODE_MALLOC_BYTES(key_len, value_size) \
+		sizeof(HashData) + key_len + value_size
+
+#define FREE_HASH_DATA(pHash, hash_data) \
+	pHash->item_count--; \
+	pHash->bytes_used -= CALC_NODE_MALLOC_BYTES(hash_data->key_len, \
+				hash_data->malloc_value_size); \
+	free(hash_data);
+
+
+typedef struct tagHashData
+{
+	int key_len;
+	int value_len;
+	int malloc_value_size;
+
+#ifdef HASH_STORE_HASH_CODE
+	unsigned int hash_code;
+#endif
+
+#ifndef HASH_MALLOC_VALUE
+	char *value;
+#endif
+	struct tagHashData *next;
+	char key[0];
+} HashData;
+
 typedef struct tagHashArray
 {
-	ChainList *items;
+	HashData **buckets;
 	HashFunc hash_func;
 	int item_count;
 	unsigned int *capacity;
 	double load_factor;
+	int64_t max_bytes;
+	int64_t bytes_used;
 	bool is_malloc_capacity;
 } HashArray;
 
-typedef struct tagHashData
+typedef struct tagHashStat
 {
-	void *key;
-	int key_len;
-	void *value;
-	unsigned int hash_code;
-} HashData;
+	unsigned int capacity;
+	int item_count;
+	int bucket_used;
+	double bucket_avg_length;
+	int bucket_max_length;
+} HashStat;
 
 /*
 hash walk function
@@ -47,15 +91,28 @@ return 0 for success, != 0 for error
 */
 typedef int (*HashWalkFunc)(const int index, const HashData *data, void *args);
 
-int hash_init(HashArray *pHash, HashFunc hash_func, \
-		const unsigned int capacity, const double load_factor);
+#define hash_init(pHash, hash_func, capacity, load_factor) \
+	hash_init_ex(pHash, hash_func, capacity, load_factor, 0)
+
+#define hash_insert(pHash, key, key_len, value) \
+	hash_insert_ex(pHash, key, key_len, value, 0)
+
+int hash_init_ex(HashArray *pHash, HashFunc hash_func, \
+		const unsigned int capacity, const double load_factor, \
+		const int64_t max_bytes);
+
 void hash_destroy(HashArray *pHash);
-int hash_insert(HashArray *pHash, const void *key, const int key_len, \
-		void *value);
+int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
+		void *value, const int value_len);
+
 void *hash_find(HashArray *pHash, const void *key, const int key_len);
+HashData *hash_find_ex(HashArray *pHash, const void *key, const int key_len);
+
 int hash_delete(HashArray *pHash, const void *key, const int key_len);
 int hash_walk(HashArray *pHash, HashWalkFunc walkFunc, void *args);
 int hash_best_op(HashArray *pHash, const int suggest_capacity);
+int hash_stat(HashArray *pHash, HashStat *pStat, \
+		int *stat_by_lens, const int stat_size);
 void hash_stat_print(HashArray *pHash);
 
 int RSHash(const void *key, const int key_len);
