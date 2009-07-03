@@ -15,6 +15,7 @@
 #include <errno.h>
 #include "shared_func.h"
 #include "logger.h"
+#include "http_func.h"
 #include "ini_file_reader.h"
 
 #define _LINE_BUFFER_SIZE	512
@@ -36,35 +37,40 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 	char old_cwd[MAX_PATH_SIZE];
 
 	memset(old_cwd, 0, sizeof(old_cwd));
-	pLast = strrchr(szFilename, '/');
-	if (pLast != NULL)
+	if (strncasecmp(szFilename, "http://", 7) != 0)
 	{
-		char path[256];
-		int len;
-
-		if (getcwd(old_cwd, sizeof(old_cwd)) == NULL)
+		pLast = strrchr(szFilename, '/');
+		if (pLast != NULL)
 		{
-			logWarning("file: "__FILE__", line: %d, " \
-				"getcwd fail, errno: %d, error info: %s", \
-				__LINE__, errno, strerror(errno));
-			*old_cwd = '\0';
-		}
+			char path[256];
+			int len;
 
-		len = pLast - szFilename;
-		if (len >= sizeof(path))
-		{
-			len = sizeof(path) - 1;
-		}
+			if (getcwd(old_cwd, sizeof(old_cwd)) == NULL)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"getcwd fail, errno: %d, " \
+					"error info: %s", \
+					__LINE__, errno, strerror(errno));
+				*old_cwd = '\0';
+			}
 
-		memcpy(path, szFilename, len);
-		*(path + len) = '\0';
-		if (chdir(path) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"chdir to the path of conf file: %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, szFilename, errno, strerror(errno));
-			return errno != 0 ? errno : ENOENT;
+			len = pLast - szFilename;
+			if (len >= sizeof(path))
+			{
+				len = sizeof(path) - 1;
+			}
+
+			memcpy(path, szFilename, len);
+			*(path + len) = '\0';
+			if (chdir(path) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"chdir to the path of conf file: " \
+					"%s fail, errno: %d, error info: %s", \
+					__LINE__, szFilename, \
+					errno, strerror(errno));
+				return errno != 0 ? errno : ENOENT;
+			}
 		}
 	}
 
@@ -111,68 +117,88 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 		int *nItemCount, int *nAllocItems)
 {
-	FILE *fp;
 	IniItemInfo *pItem;
-	char szLineBuff[_LINE_BUFFER_SIZE + 1];
+	char *content;
+	char *pLine;
+	char *pLastEnd;
 	char *pEqualChar;
 	char *pIncludeFilename;
 	int nNameLen;
 	int nValueLen;
 	int result;
+	int http_status;
+	int content_len;
+	off_t file_size;
 
-	if ((fp = fopen(szFilename, "r")) == NULL)
+	if (strncasecmp(szFilename, "http://", 7) == 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"open conf file \"%s\" fail, " \
-			"errno: %d, error info: %s",  \
-			__LINE__, szFilename, errno, strerror(errno));
-		return errno != 0 ? errno : ENOENT;
-	}
-	
-	memset(szLineBuff, 0, sizeof(szLineBuff));
-
-	result = 0;
-	pItem = *ppItems + (*nItemCount);
-	while (1)
-	{
-		if (fgets(szLineBuff, _LINE_BUFFER_SIZE, fp) == NULL)
+		if ((result=get_url_content(szFilename, 60, &http_status, \
+				&content, &content_len)) != 0)
 		{
-			break;
+			return result;
 		}
 
-		if (*szLineBuff == '#' && \
-			strncasecmp(szLineBuff+1, "include", 7) == 0 && \
-			(*(szLineBuff+8) == ' ' || *(szLineBuff+8) == '\t'))
+		if (http_status != 200)
 		{
-			pIncludeFilename = strdup(szLineBuff + 9);
+			logError("file: "__FILE__", line: %d, " \
+				"HTTP status code: %d != 200, url=%s", \
+				__LINE__, http_status, szFilename);
+			return EINVAL;
+		}
+	}
+	else
+	{
+		if ((result=getFileContent(szFilename, &content, \
+				&file_size)) != 0)
+		{
+			return result;
+		}
+	}
+
+	result = 0;
+	pLastEnd = content - 1;
+	pItem = *ppItems + (*nItemCount);
+	while (pLastEnd != NULL)
+	{
+		pLine = pLastEnd + 1;
+		pLastEnd = strchr(pLine, '\n');
+		if (pLastEnd != NULL)
+		{
+			*pLastEnd = '\0';
+		}
+
+		if (*pLine == '#' && \
+			strncasecmp(pLine+1, "include", 7) == 0 && \
+			(*(pLine+8) == ' ' || *(pLine+8) == '\t'))
+		{
+			pIncludeFilename = strdup(pLine + 9);
 			if (pIncludeFilename == NULL)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"strdup %d bytes fail", __LINE__, \
-					strlen(szLineBuff + 9) + 1);
+					strlen(pLine + 9) + 1);
 				result = errno != 0 ? errno : ENOMEM;
 				break;
 			}
 
 			trim(pIncludeFilename);
-			if (fileExists(pIncludeFilename))
-			{
-				result = iniDoLoadItems(pIncludeFilename, \
-					ppItems, nItemCount, nAllocItems);
-				if (result != 0)
-				{
-					free(pIncludeFilename);
-					break;
-				}
-			}
-			else
+			if (strncasecmp(pIncludeFilename, "http://", 7) != 0 \
+				&& !fileExists(pIncludeFilename))
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"include file \"%s\" not exists, " \
 					"line: \"%s\"", __LINE__, \
-					pIncludeFilename, szLineBuff);
+					pIncludeFilename, pLine);
 				free(pIncludeFilename);
 				result = ENOENT;
+				break;
+			}
+
+			result = iniDoLoadItems(pIncludeFilename, \
+					ppItems, nItemCount, nAllocItems);
+			if (result != 0)
+			{
+				free(pIncludeFilename);
 				break;
 			}
 
@@ -181,20 +207,20 @@ static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 			continue;
 		}
 
-		trim(szLineBuff);
-		if (szLineBuff[0] == '#' || szLineBuff[0] == '\0')
+		trim(pLine);
+		if (*pLine == '#' || *pLine == '\0')
 		{
 			continue;
 		}
 		
-		pEqualChar = strchr(szLineBuff, '=');
+		pEqualChar = strchr(pLine, '=');
 		if (pEqualChar == NULL)
 		{
 			continue;
 		}
 		
-		nNameLen = pEqualChar - szLineBuff;
-		nValueLen = strlen(szLineBuff) - (nNameLen + 1);
+		nNameLen = pEqualChar - pLine;
+		nValueLen = strlen(pLine) - (nNameLen + 1);
 		if (nNameLen > INI_ITEM_NAME_LEN)
 		{
 			nNameLen = INI_ITEM_NAME_LEN;
@@ -224,7 +250,7 @@ static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 				((*nAllocItems) - (*nItemCount)));
 		}
 
-		memcpy(pItem->name, szLineBuff, nNameLen);
+		memcpy(pItem->name, pLine, nNameLen);
 		memcpy(pItem->value, pEqualChar + 1, nValueLen);
 		
 		trim(pItem->name);
@@ -233,8 +259,6 @@ static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 		(*nItemCount)++;
 		pItem++;
 	}
-	
-	fclose(fp);
 	
 	return result;
 }

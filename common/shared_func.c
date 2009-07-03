@@ -666,6 +666,96 @@ int my_strtok(char *src, const char *delim, char **pCols, const int nMaxCols)
     return count;
 }
 
+int str_replace(const char *s, const int src_len, const char *replaced, 
+		        const char *new_str, char *dest, const int dest_size)
+{
+	const char *pStart;
+	const char *pEnd;
+	char *pDest;
+	const char *p;
+	int old_len;
+	int new_len;
+	int len;
+	int max_dest_len;
+	int remain_len;
+
+	if (dest_size <= 0)
+	{
+		return 0;
+	}
+
+	max_dest_len = dest_size - 1;
+	old_len = strlen(replaced);
+	new_len = strlen(new_str);
+	if (old_len == 0)
+	{
+		len = src_len < max_dest_len ? src_len : max_dest_len;
+		memcpy(dest, s, len);
+		dest[len] = '\0';
+		return len;
+	}
+
+	remain_len = max_dest_len;
+	pDest = dest;
+	pStart = s;
+	pEnd = s + src_len;
+	while (1)
+	{
+		p = strstr(pStart, replaced);
+		if (p == NULL)
+		{
+			break;
+		}
+
+		len = p - pStart;
+		if (len > 0)
+		{
+			if (len < remain_len)
+			{
+				memcpy(pDest, pStart, len);
+				pDest += len;
+				remain_len -= len;
+			}
+			else
+			{
+				memcpy(pDest, pStart, remain_len);
+				pDest += remain_len;
+				*pDest = '\0';
+				return pDest - dest;
+			}
+		}
+
+		if (new_len < remain_len)
+		{
+			memcpy(pDest, new_str, new_len);
+			pDest += new_len;
+			remain_len -= new_len;
+		}
+		else
+		{
+			memcpy(pDest, new_str, remain_len);
+			pDest += remain_len;
+			*pDest = '\0';
+			return pDest - dest;
+		}
+
+		pStart = p + old_len;
+	}
+
+	len = pEnd - pStart;
+	if (len > 0)
+	{
+		if (len > remain_len)
+		{
+			len = remain_len;
+		}
+		memcpy(pDest, pStart, len);
+		pDest += len;
+	}
+	*pDest = '\0';
+	return pDest - dest;
+}
+
 char int2base62(const int i)
 {
   #define _BASE62_COUNT  62
@@ -827,6 +917,10 @@ int getFileContent(const char *filename, char **buff, off_t *file_size)
 	{
 		*buff = NULL;
 		*file_size = 0;
+		logError("file: "__FILE__", line: %d, " \
+			"open file %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			filename, errno, strerror(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -835,6 +929,10 @@ int getFileContent(const char *filename, char **buff, off_t *file_size)
 		*buff = NULL;
 		*file_size = 0;
 		close(fd);
+		logError("file: "__FILE__", line: %d, " \
+			"lseek file %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			filename, errno, strerror(errno));
 		return errno != 0 ? errno : EIO;
 	}
 
@@ -855,6 +953,10 @@ int getFileContent(const char *filename, char **buff, off_t *file_size)
 		*buff = NULL;
 		*file_size = 0;
 		close(fd);
+		logError("file: "__FILE__", line: %d, " \
+			"lseek file %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			filename, errno, strerror(errno));
 		return errno != 0 ? errno : EIO;
 	}
 	if (read(fd, *buff, *file_size) != *file_size)
@@ -863,6 +965,10 @@ int getFileContent(const char *filename, char **buff, off_t *file_size)
 		*buff = NULL;
 		*file_size = 0;
 		close(fd);
+		logError("file: "__FILE__", line: %d, " \
+			"read from file %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			filename, errno, strerror(errno));
 		return errno != 0 ? errno : EIO;
 	}
 

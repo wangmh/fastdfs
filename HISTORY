@@ -1,7 +1,8 @@
-Version 1.19  2009-06-16
+Version 1.19  2009-07-03
  * use poll instead of select in sockopt.c
  * hash.c use chain impl by self
  * use FastDHT 1.09 client code
+ * ini reader support HTTP protocol, conf file can be an url
 
 Version 1.18  2009-05-24
  * restart.sh only kill the programs match the program name and all parameters

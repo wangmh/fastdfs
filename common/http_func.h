@@ -1,0 +1,41 @@
+/**
+* Copyright (C) 2008 Happy Fish / YuQing
+*
+* FastDFS may be copied only under the terms of the GNU General
+* Public License V3, which may be found in the FastDFS source kit.
+* Please visit the FastDFS Home Page http://www.csource.org/ for more detail.
+**/
+
+#ifndef _HTTP_FUNC_H
+#define _HTTP_FUNC_H
+
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <unistd.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+get content from url
+params:
+	url: the url to fetch, must start as: "http://"
+	timeout: network timeout (seconds)
+	http_status: return http status code, 200 for Ok
+	content: return the content (HTTP body only, not including HTTP header),
+		 *content should be freed by caller
+	content_len: return content length (bytes)
+**/
+int get_url_content(const char *url, const int timeout, int *http_status, \
+	char **content, int *content_len);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+
