@@ -70,7 +70,7 @@ int upload_file(const char *file_buff, const int file_size, char *file_id, char 
 
 	strcpy(storage_ip, storageServer.ip_addr);
 	result = storage_upload_by_filebuff1(pTrackerServer, &storageServer, 
-		store_path_index, file_buff, file_size, NULL, NULL, 0, file_id);
+		store_path_index, file_buff, file_size, NULL, NULL, 0, "", file_id);
 
 	fdfs_quit(pTrackerServer);
 	tracker_disconnect_server(pTrackerServer);
@@ -109,7 +109,7 @@ int download_file(const char *file_id, int *file_size, char *storage_ip)
 	}
 
 	strcpy(storage_ip, storageServer.ip_addr);
-	result = storage_download_file_ex1(pTrackerServer, &storageServer, file_id, downloadFileCallback, NULL, &file_bytes);
+	result = storage_download_file_ex1(pTrackerServer, &storageServer, file_id, 0, 0, downloadFileCallback, NULL, &file_bytes);
 	*file_size = file_bytes;
 
 	fdfs_quit(pTrackerServer);

@@ -71,7 +71,7 @@ int _hash_alloc_buckets(HashArray *pHash, const unsigned int old_capacity)
 
 int hash_init_ex(HashArray *pHash, HashFunc hash_func, \
 		const unsigned int capacity, const double load_factor, \
-		const int64_t max_bytes)
+		const int64_t max_bytes, const bool bMallocValue)
 {
 	unsigned int *pprime;
 	unsigned int *prime_end;
@@ -100,6 +100,7 @@ int hash_init_ex(HashArray *pHash, HashFunc hash_func, \
 
 	pHash->hash_func = hash_func;
 	pHash->max_bytes = max_bytes;
+	pHash->is_malloc_value = bMallocValue;
 
 	if (load_factor >= 0.10 && load_factor <= 1.00)
 	{
@@ -506,7 +507,7 @@ void *hash_find(HashArray *pHash, const void *key, const int key_len)
 	hash_data = _chain_find_entry(ppBucket, key, key_len, hash_code);
 	if (hash_data != NULL)
 	{
-		return HASH_VALUE(hash_data);
+		return hash_data->value;
 	}
 	else
 	{
@@ -544,29 +545,34 @@ int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
 
 	if (hash_data != NULL) //exists
 	{
-		#ifndef HASH_MALLOC_VALUE
-			hash_data->value_len = value_len;
-			HASH_VALUE(hash_data) = value;
-			return 0;
-		#else
-		if (hash_data->malloc_value_size >= value_len && \
-			hash_data->malloc_value_size / 2 < value_len)
+		if (!pHash->is_malloc_value)
 		{
 			hash_data->value_len = value_len;
-			memcpy(HASH_VALUE(hash_data), value, value_len);
+			hash_data->value = value;
 			return 0;
 		}
+		else
+		{
+			if (hash_data->malloc_value_size >= value_len && \
+				hash_data->malloc_value_size / 2 < value_len)
+			{
+				hash_data->value_len = value_len;
+				memcpy(hash_data->value, value, value_len);
+				return 0;
+			}
 
-		DELETE_FROM_BUCKET(pHash, ppBucket, previous, hash_data)
-
-		#endif
+			DELETE_FROM_BUCKET(pHash, ppBucket, previous, hash_data)
+		}
 	}
 
-	#ifndef HASH_MALLOC_VALUE
+	if (!pHash->is_malloc_value)
+	{
 		malloc_value_size = 0;
-	#else
+	}
+	else
+	{
 		malloc_value_size = value_len;
-	#endif
+	}
 
 	bytes = CALC_NODE_MALLOC_BYTES(key_len, malloc_value_size);
 	if (pHash->max_bytes > 0 && pHash->bytes_used+bytes > pHash->max_bytes)
@@ -592,11 +598,15 @@ int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
 #endif
 	hash_data->value_len = value_len;
 
-	#ifndef HASH_MALLOC_VALUE
-		HASH_VALUE(hash_data) = value;
-	#else
-		memcpy(HASH_VALUE(hash_data), value, value_len);
-	#endif
+	if (!pHash->is_malloc_value)
+	{
+		hash_data->value = value;
+	}
+	else
+	{
+		hash_data->value = hash_data->key + hash_data->key_len;
+		memcpy(hash_data->value, value, value_len);
+	}
 
 	ADD_TO_BUCKET(pHash, ppBucket, hash_data)
 
