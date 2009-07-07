@@ -21,12 +21,6 @@ extern "C" {
 
 typedef int (*HashFunc) (const void *key, const int key_len);
 
-#ifdef HASH_MALLOC_VALUE
-    #define HASH_VALUE(hash_data)  (hash_data->key + hash_data->key_len)
-#else
-    #define HASH_VALUE(hash_data)  hash_data->value
-#endif
-
 #ifdef HASH_STORE_HASH_CODE
 #define HASH_CODE(pHash, hash_data)   hash_data->hash_code
 #else
@@ -54,9 +48,7 @@ typedef struct tagHashData
 	unsigned int hash_code;
 #endif
 
-#ifndef HASH_MALLOC_VALUE
 	char *value;
-#endif
 	struct tagHashData *next;
 	char key[0];
 } HashData;
@@ -71,6 +63,7 @@ typedef struct tagHashArray
 	int64_t max_bytes;
 	int64_t bytes_used;
 	bool is_malloc_capacity;
+	bool is_malloc_value;
 } HashArray;
 
 typedef struct tagHashStat
@@ -92,14 +85,14 @@ return 0 for success, != 0 for error
 typedef int (*HashWalkFunc)(const int index, const HashData *data, void *args);
 
 #define hash_init(pHash, hash_func, capacity, load_factor) \
-	hash_init_ex(pHash, hash_func, capacity, load_factor, 0)
+	hash_init_ex(pHash, hash_func, capacity, load_factor, 0, false)
 
 #define hash_insert(pHash, key, key_len, value) \
 	hash_insert_ex(pHash, key, key_len, value, 0)
 
 int hash_init_ex(HashArray *pHash, HashFunc hash_func, \
 		const unsigned int capacity, const double load_factor, \
-		const int64_t max_bytes);
+		const int64_t max_bytes, const bool bMallocValue);
 
 void hash_destroy(HashArray *pHash);
 int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
