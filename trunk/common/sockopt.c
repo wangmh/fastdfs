@@ -718,6 +718,23 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 	int recv_bytes;
 	int written_bytes;
 	int result;
+	int flags;
+	tcprecvdata_exfunc recv_func;
+
+	flags = fcntl(sock, F_GETFL, 0);
+	if (flags < 0)
+	{
+		return errno != 0 ? errno : EACCES;
+	}
+
+	if (flags & O_NONBLOCK)
+	{
+		recv_func = tcprecvdata_nb_ex;
+	}
+	else
+	{
+		recv_func = tcprecvdata_ex;
+	}
 
 	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (fd < 0)
@@ -738,8 +755,8 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 			recv_bytes = remain_bytes;
 		}
 
-		if ((result=tcprecvdata(sock, buff, recv_bytes, \
-				timeout)) != 0)
+		if ((result=recv_func(sock, buff, recv_bytes, \
+				timeout, NULL)) != 0)
 		{
 			close(fd);
 			unlink(filename);
@@ -787,6 +804,23 @@ int tcprecvfile_ex(int sock, const char *filename, const int64_t file_bytes, \
 	int recv_bytes;
 	int written_bytes;
 	int result;
+	int flags;
+	tcprecvdata_exfunc recv_func;
+
+	flags = fcntl(sock, F_GETFL, 0);
+	if (flags < 0)
+	{
+		return errno != 0 ? errno : EACCES;
+	}
+
+	if (flags & O_NONBLOCK)
+	{
+		recv_func = tcprecvdata_nb_ex;
+	}
+	else
+	{
+		recv_func = tcprecvdata_ex;
+	}
 
 	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (fd < 0)
@@ -809,8 +843,8 @@ int tcprecvfile_ex(int sock, const char *filename, const int64_t file_bytes, \
 			recv_bytes = remain_bytes;
 		}
 
-		if ((result=tcprecvdata(sock, buff, recv_bytes, \
-				timeout)) != 0)
+		if ((result=recv_func(sock, buff, recv_bytes, \
+				timeout, NULL)) != 0)
 		{
 			close(fd);
 			unlink(filename);
@@ -859,7 +893,24 @@ int tcpdiscard(int sock, const int bytes, const int timeout)
 	int remain_bytes;
 	int recv_bytes;
 	int result;
+	int flags;
+	tcprecvdata_exfunc recv_func;
 
+	flags = fcntl(sock, F_GETFL, 0);
+	if (flags < 0)
+	{
+		return errno != 0 ? errno : EACCES;
+	}
+
+	if (flags & O_NONBLOCK)
+	{
+		recv_func = tcprecvdata_nb_ex;
+	}
+	else
+	{
+		recv_func = tcprecvdata_ex;
+	}
+	
 	remain_bytes = bytes;
 	while (remain_bytes > 0)
 	{
@@ -872,8 +923,8 @@ int tcpdiscard(int sock, const int bytes, const int timeout)
 			recv_bytes = remain_bytes;
 		}
 
-		if ((result=tcprecvdata(sock, buff, recv_bytes, \
-				timeout)) != 0)
+		if ((result=recv_func(sock, buff, recv_bytes, \
+				timeout, NULL)) != 0)
 		{
 			return result;
 		}
@@ -888,8 +939,10 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 		const int64_t file_bytes, const int timeout)
 {
 	int fd;
-	int send_bytes;
+	int64_t send_bytes;
+	int64_t remain_bytes;
 	int result;
+	int flags;
 #ifdef USE_SENDFILE
 	off_t offset;
 #endif
@@ -900,7 +953,22 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 		return errno != 0 ? errno : EACCES;
 	}
 
+	flags = fcntl(sock, F_GETFL, 0);
+	if (flags < 0)
+	{
+		return errno != 0 ? errno : EACCES;
+	}
+
 #ifdef USE_SENDFILE
+
+	if (flags & O_NONBLOCK)
+	{
+		if (fcntl(sock, F_SETFL, flags & ~O_NONBLOCK) == -1)
+		{
+			return errno != 0 ? errno : EACCES;
+		}
+	}
+
 #ifdef OS_LINUX
 	/*
 	result = 1;
@@ -914,31 +982,50 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 	}
 	*/
 
+	result = 0;
 	offset = file_offset;
-	send_bytes = sendfile(sock, fd, &offset, file_bytes);
-	close(fd);
-	if (send_bytes != file_bytes)
+	remain_bytes = file_bytes;
+	while (remain_bytes > 0)
 	{
-		return errno != 0 ? errno : EIO;
-	}
-	else
-	{
-		return 0;
+		send_bytes = sendfile(sock, fd, &offset, remain_bytes);
+		if (send_bytes <= 0)
+		{
+			result = errno != 0 ? errno : EIO;
+			break;
+		}
+
+		remain_bytes -= send_bytes;
 	}
 #else
 #ifdef OS_FREEBSD
 	offset = file_offset;
-	result = sendfile(fd, sock, offset, file_bytes, NULL, NULL, 0);
-	close(fd);
-	if (result != 0)
+	if (sendfile(fd, sock, offset, file_bytes, NULL, NULL, 0) != 0)
 	{
-		return errno != 0 ? errno : EIO;
+		result = errno != 0 ? errno : EIO;
 	}
 	else
 	{
-		return 0;
+		result = 0;
 	}
 #endif
+#endif
+
+	if (flags & O_NONBLOCK)  //restore
+	{
+		if (fcntl(sock, F_SETFL, flags) == -1)
+		{
+			result = errno != 0 ? errno : EACCES;
+		}
+	}
+
+#ifdef OS_LINUX
+	close(fd);
+	return result;
+#endif
+
+#ifdef OS_FREEBSD
+	close(fd);
+	return result;
 #endif
 
 #endif
@@ -946,14 +1033,25 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 	{
 	char buff[FDFS_WRITE_BUFF_SIZE];
 	int64_t remain_bytes;
+	tcpsenddatafunc send_func;
 
 	if (file_offset > 0 && lseek(fd, file_offset, SEEK_SET) < 0)
 	{
-		result = errno;
+		result = errno != 0 ? errno : EIO;
 		close(fd);
-		return result != 0 ? result : EIO;
+		return result;
 	}
 
+	if (flags & O_NONBLOCK)
+	{
+		send_func = tcpsenddata_nb;
+	}
+	else
+	{
+		send_func = tcpsenddata;
+	}
+	
+	result = 0;
 	remain_bytes = file_bytes;
 	while (remain_bytes > 0)
 	{
@@ -968,16 +1066,14 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 
 		if (read(fd, buff, send_bytes) != send_bytes)
 		{
-			result = errno;
-			close(fd);
-			return result != 0 ? result : EIO;
+			result = errno != 0 ? errno : EIO;
+			break;
 		}
 
-		if ((result=tcpsenddata(sock, buff, send_bytes, \
+		if ((result=send_func(sock, buff, send_bytes, \
 				timeout)) != 0)
 		{
-			close(fd);
-			return result;
+			break;
 		}
 
 		remain_bytes -= send_bytes;
@@ -985,7 +1081,7 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 	}
 
 	close(fd);
-	return 0;
+	return result;
 }
 
 int tcpsetserveropt(int fd, const int timeout)

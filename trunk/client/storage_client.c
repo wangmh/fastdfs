@@ -228,7 +228,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
 
-	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
 			filename_len, g_network_timeout)) != 0)
 	{
@@ -324,7 +324,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
 
-	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
 		filename_len, g_network_timeout)) != 0)
 	{
@@ -419,7 +419,7 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 	long2buff(out_bytes - sizeof(TrackerHeader), pHeader->pkg_len);
 	pHeader->cmd = STORAGE_PROTO_CMD_DOWNLOAD_FILE;
 
-	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		out_bytes, g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
@@ -480,7 +480,7 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 				recv_bytes = remain_bytes;
 			}
 
-			if ((result=tcprecvdata(pStorageServer->sock, buff, \
+			if ((result=tcprecvdata_nb(pStorageServer->sock, buff, \
 				recv_bytes, g_network_timeout)) != 0)
 			{
 				logError("recv data from storage server " \
@@ -716,7 +716,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	long2buff((p - pMetaData) + file_size, header.pkg_len);
 	header.cmd = STORAGE_PROTO_CMD_UPLOAD_FILE;
 	header.status = 0;
-	if ((result=tcpsenddata(pStorageServer->sock, &header, sizeof(header), \
+	if ((result=tcpsenddata_nb(pStorageServer->sock, &header, sizeof(header), \
 				g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
@@ -727,7 +727,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	if ((result=tcpsenddata(pStorageServer->sock, pMetaData, \
+	if ((result=tcpsenddata_nb(pStorageServer->sock, pMetaData, \
 		p - pMetaData, g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
@@ -748,7 +748,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	}
 	else
 	{
-		if ((result=tcpsenddata(pStorageServer->sock, \
+		if ((result=tcpsenddata_nb(pStorageServer->sock, \
 			(char *)file_buff, file_size, g_network_timeout)) != 0)
 		{
 			logError("send data to storage server %s:%d fail, " \
@@ -939,7 +939,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	header.status = 0;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
 
-	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 			p - out_buff, g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
@@ -951,7 +951,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	if (meta_bytes > 0 && (result=tcpsenddata(pStorageServer->sock, \
+	if (meta_bytes > 0 && (result=tcpsenddata_nb(pStorageServer->sock, \
 			meta_buff, meta_bytes, g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
@@ -1119,7 +1119,7 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	long2buff(p - out_buff - sizeof(TrackerHeader) + meta_size, \
 		pHeader->pkg_len);
 	pHeader->cmd = STORAGE_PROTO_CMD_CREATE_LINK;
-	if ((result=tcpsenddata(pStorageServer->sock, out_buff, p - out_buff, \
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, p - out_buff, \
 				g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
@@ -1130,7 +1130,7 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	if (meta_size > 0 && (result=tcpsenddata(pStorageServer->sock, \
+	if (meta_size > 0 && (result=tcpsenddata_nb(pStorageServer->sock, \
 		meta_buff, meta_size, g_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \

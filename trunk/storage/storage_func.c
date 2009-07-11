@@ -1507,7 +1507,7 @@ int recv_file_serialized(int sock, const char *filename, \
 			recv_bytes = remain_bytes;
 		}
 
-		if ((result=tcprecvdata(sock, buff, recv_bytes, \
+		if ((result=tcprecvdata_nb(sock, buff, recv_bytes, \
 				g_network_timeout)) != 0)
 		{
 			close(fd);

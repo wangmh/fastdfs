@@ -53,7 +53,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 	if (status != 0 || pClientInfo->pGroup == NULL ||
 		pClientInfo->pGroup->version == pClientInfo->pStorage->version)
 	{
-		if ((result=tcpsenddata(pClientInfo->sock, \
+		if ((result=tcpsenddata_nb(pClientInfo->sock, \
 			&resp, sizeof(resp), g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -83,7 +83,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 
 	out_len = sizeof(FDFSStorageBrief) * pClientInfo->pGroup->count;
 	long2buff(out_len, resp.pkg_len);
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -94,7 +94,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 		return result;
 	}
 
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		briefServers, out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -176,7 +176,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, briefServers, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, briefServers, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -193,7 +193,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 	}
 
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -228,7 +228,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 		break;
 	}
 
-	if ((status=tcprecvdata(pClientInfo->sock, &body, \
+	if ((status=tcprecvdata_nb(pClientInfo->sock, &body, \
 		nInPackLen, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -330,7 +330,7 @@ static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -362,7 +362,7 @@ static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
 
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -397,7 +397,7 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 		break;
 	}
 
-	if ((status=tcprecvdata(pClientInfo->sock, &body, \
+	if ((status=tcprecvdata_nb(pClientInfo->sock, &body, \
 			nInPackLen, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -479,7 +479,7 @@ static int tracker_check_logined(TrackerClientInfo *pClientInfo)
 	memset(&resp, 0, sizeof(resp));
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 	resp.status = EACCES;
-	if ((result=tcpsenddata(pClientInfo->sock, &resp, sizeof(resp), \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, &resp, sizeof(resp), \
 		g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -531,7 +531,7 @@ static int tracker_deal_server_list_group_storages( \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, group_name, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, group_name, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -612,7 +612,7 @@ static int tracker_deal_server_list_group_storages( \
 	out_len = (pDest - stats) * sizeof(TrackerStorageStat);
 	long2buff(out_len, resp.pkg_len);
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -628,7 +628,7 @@ static int tracker_deal_server_list_group_storages( \
 		return resp.status;
 	}
 
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		stats, out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -705,7 +705,7 @@ static int tracker_deal_service_query_fetch_update( \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -884,7 +884,7 @@ static int tracker_deal_service_query_fetch_update( \
 		memcpy(out_buff, &resp, sizeof(resp));
 	}
 
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		out_buff, sizeof(resp) + out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -970,7 +970,7 @@ static int tracker_deal_service_query_storage( \
 
 		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP)
 		{
-			if ((resp.status=tcprecvdata(pClientInfo->sock, \
+			if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
 					group_name, nInPackLen, \
 					g_network_timeout)) != 0)
 			{
@@ -1197,7 +1197,7 @@ static int tracker_deal_service_query_storage( \
 		memcpy(out_buff, &resp, sizeof(resp));
 	}
 
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		out_buff, sizeof(resp) + out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1265,7 +1265,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 	out_len = (pDest - groupStats) * sizeof(TrackerGroupStat);
 	long2buff(out_len, resp.pkg_len);
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1281,7 +1281,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 		return resp.status;
 	}
 
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		groupStats, out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1326,7 +1326,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((pResp->status=tcprecvdata(pClientInfo->sock, \
+		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, \
 			dest_ip_addr, nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -1371,7 +1371,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 
 	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		out_buff, out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1445,7 +1445,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 
 	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		out_buff, out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1469,7 +1469,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 		return pResp->status;
 	}
 
-	if ((result=tcprecvdata(pClientInfo->sock, pResp, \
+	if ((result=tcprecvdata_nb(pClientInfo->sock, pResp, \
 		sizeof(TrackerHeader), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1594,7 +1594,7 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((status=tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -1775,7 +1775,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 				break;
 			}
 		}
-		if ((status=tcprecvdata(pClientInfo->sock, pBuff, \
+		if ((status=tcprecvdata_nb(pClientInfo->sock, pBuff, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -1905,7 +1905,7 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((status=tcprecvdata(pClientInfo->sock, &statBuff, \
+		if ((status=tcprecvdata_nb(pClientInfo->sock, &statBuff, \
 			sizeof(FDFSStorageStatBuff), g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -2062,10 +2062,16 @@ data buff (struct)
 		}
 	}
 
+	if (tcpsetnonblockopt(client_info.sock) != 0)
+	{
+		close(client_info.sock);
+		continue;
+	}
+
 	count = 0;
 	while (g_continue_flag)
 	{
-		result = tcprecvdata_ex(client_info.sock, &header, \
+		result = tcprecvdata_nb_ex(client_info.sock, &header, \
 			sizeof(header), g_network_timeout, &recv_bytes);
 		if (result == ETIMEDOUT && count > 0)
 		{
