@@ -139,7 +139,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		memcpy(p, pRecord->filename, pRecord->filename_len);
 		p += pRecord->filename_len;
 
-		if((result=tcpsenddata(pStorageServer->sock, out_buff, \
+		if((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 			p - out_buff, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -243,7 +243,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 	header.cmd = STORAGE_PROTO_CMD_SYNC_DELETE_FILE;
 	memcpy(out_buff, &header, sizeof(TrackerHeader));
 
-	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		sizeof(TrackerHeader) + 4 + FDFS_GROUP_NAME_MAX_LEN + \
 		pRecord->filename_len, g_network_timeout)) != 0)
 	{
@@ -431,7 +431,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	long2buff(out_body_len, pHeader->pkg_len);
 	pHeader->cmd = STORAGE_PROTO_CMD_SYNC_CREATE_LINK;
 
-	if ((result=tcpsenddata(pStorageServer->sock, out_buff, \
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		sizeof(TrackerHeader) + out_body_len, g_network_timeout)) != 0)
 	{
 		logError("FILE: "__FILE__", line: %d, " \
@@ -1025,6 +1025,11 @@ static int storage_report_storage_status(const char *ip_addr, \
 			continue;
 		}
 
+		if (tcpsetnonblockopt(pTServer->sock) != 0)
+		{
+			continue;
+		}
+
 		if (tracker_report_join(pTServer) != 0)
 		{
 			close(pTServer->sock);
@@ -1114,6 +1119,11 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 		if (!g_continue_flag)
 		{
 			break;
+		}
+
+		if (tcpsetnonblockopt(pTServer->sock) != 0)
+		{
+			continue;
 		}
 
 		getSockIpaddr(pTServer->sock, \
@@ -1702,6 +1712,11 @@ static void* storage_sync_thread_entrance(void* arg)
 		if (!g_continue_flag)
 		{
 			break;
+		}
+
+		if (tcpsetnonblockopt(storage_server.sock) != 0)
+		{
+			continue;
 		}
 
 		getSockIpaddr(storage_server.sock, \

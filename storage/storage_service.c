@@ -966,7 +966,7 @@ static int storage_server_set_metadata(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -1083,7 +1083,7 @@ static int storage_server_set_metadata(StorageClientInfo *pClientInfo, \
 		free(in_buff);
 	}
 
-	if ((result=tcpsenddata(pClientInfo->sock, (void *)&resp, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, (void *)&resp, \
 		sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1145,7 +1145,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			1+2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_FILE_EXT_NAME_MAX_LEN,\
 			g_network_timeout)) != 0)
 		{
@@ -1213,7 +1213,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 				}
 			}
 
-			if ((resp.status=tcprecvdata(pClientInfo->sock, \
+			if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
 				pMetaData, meta_bytes, g_network_timeout)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
@@ -1285,7 +1285,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 		free(pMetaData);
 	}
 
-	if ((result=tcpsenddata(pClientInfo->sock, out_buff, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
 		sizeof(resp) + out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1341,7 +1341,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			2*FDFS_PROTO_PKG_LEN_SIZE+4+FDFS_GROUP_NAME_MAX_LEN, \
 			g_network_timeout)) != 0)
 		{
@@ -1409,7 +1409,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, filename, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, filename, \
 			filename_len, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -1488,7 +1488,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 	}
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1559,7 +1559,7 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -1702,7 +1702,7 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 	}
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1768,7 +1768,7 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -1825,7 +1825,7 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	long2buff(file_bytes, resp.pkg_len);
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1854,7 +1854,7 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 
 	if (file_buff != NULL)
 	{
-		result = tcpsenddata(pClientInfo->sock, \
+		result = tcpsenddata_nb(pClientInfo->sock, \
 			file_buff, file_bytes, g_network_timeout);
 		free(file_buff);
 		if(result != 0)
@@ -1928,7 +1928,7 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 				nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -2039,7 +2039,7 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 	{
 		long2buff(download_bytes, resp.pkg_len);
 	}
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -2122,7 +2122,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -2193,7 +2193,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -2268,7 +2268,7 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -2568,7 +2568,7 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 
-	if ((result=tcpsenddata(pClientInfo->sock, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -2643,7 +2643,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, in_buff, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			3*FDFS_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN+\
 			FDFS_FILE_EXT_NAME_MAX_LEN, g_network_timeout)) != 0)
 		{
@@ -2715,7 +2715,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 					FDFS_GROUP_NAME_MAX_LEN;
 		file_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN] = '\0';
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
 			src_filename, src_filename_len, g_network_timeout))!=0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -2727,7 +2727,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 		}
 		*(src_filename + src_filename_len) = '\0';
 
-		if ((resp.status=tcprecvdata(pClientInfo->sock, \
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
 			sourceFileInfo.src_file_sig, \
 			sourceFileInfo.src_file_sig_len, \
 			g_network_timeout))!=0)
@@ -2817,7 +2817,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 				}
 			}
 
-			if ((resp.status=tcprecvdata(pClientInfo->sock, \
+			if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
 				pMetaData, meta_bytes, g_network_timeout)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
@@ -2888,7 +2888,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 		free(pMetaData);
 	}
 
-	if ((result=tcpsenddata(pClientInfo->sock, out_buff, \
+	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
 		sizeof(resp) + out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -3063,6 +3063,12 @@ data buff (struct)
 			__LINE__, result, strerror(result));
 		continue;
 	}
+
+	if (tcpsetnonblockopt(client_info.sock) != 0)
+	{
+		close(client_info.sock);
+		continue;
+	}
 	
 	client_ip = getPeerIpaddr(client_info.sock, \
 				client_info.ip_addr, IP_ADDRESS_SIZE);
@@ -3084,7 +3090,7 @@ data buff (struct)
 	count = 0;
 	while (g_continue_flag)
 	{
-		result = tcprecvdata_ex(client_info.sock, &header, \
+		result = tcprecvdata_nb_ex(client_info.sock, &header, \
 			sizeof(header), g_network_timeout, &recv_bytes);
 		if (result == ETIMEDOUT)
 		{

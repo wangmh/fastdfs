@@ -28,7 +28,7 @@ int fdfs_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes)
 	TrackerHeader resp;
 	int result;
 
-	if ((result=tcprecvdata(pTrackerServer->sock, &resp, \
+	if ((result=tcprecvdata_nb(pTrackerServer->sock, &resp, \
 		sizeof(resp), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -111,7 +111,7 @@ int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
 		bMalloced = false;
 	}
 
-	if ((result=tcprecvdata(pTrackerServer->sock, *buff, \
+	if ((result=tcprecvdata_nb(pTrackerServer->sock, *buff, \
 		*in_bytes, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -139,8 +139,8 @@ int fdfs_quit(TrackerServerInfo *pTrackerServer)
 
 	memset(&header, 0, sizeof(header));
 	header.cmd = FDFS_PROTO_CMD_QUIT;
-	result = tcpsenddata(pTrackerServer->sock, &header, sizeof(header), \
-				g_network_timeout);
+	result = tcpsenddata_nb(pTrackerServer->sock, &header, \
+			sizeof(header), g_network_timeout);
 	if(result != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \

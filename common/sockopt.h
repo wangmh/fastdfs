@@ -22,6 +22,12 @@ extern "C" {
 typedef int (*getnamefunc)(int socket, struct sockaddr *address, \
 		socklen_t *address_len);
 
+typedef int (*tcpsenddatafunc)(int sock, void* data, const int size, \
+		const int timeout);
+
+typedef int (*tcprecvdata_exfunc)(int sock, void *data, const int size, \
+		const int timeout, int *count);
+
 #define getSockIpaddr(sock, buff, bufferSize) \
 	getIpaddr(getsockname, sock, buff, bufferSize)
 

@@ -75,7 +75,12 @@ int main(int argc, char *argv[])
 	{
 		return result;
 	}
-	
+
+	if ((result=tcpsetserveropt(sock, g_network_timeout)) != 0)
+	{
+		return result;
+	}
+
 	if ((result=storage_sync_init()) != 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
