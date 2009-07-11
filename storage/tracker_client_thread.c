@@ -205,6 +205,12 @@ static void* tracker_report_thread_entrance(void* arg)
 		//print_local_host_ip_addrs();
 		*/
 
+		if (tcpsetnonblockopt(pTrackerServer->sock) != 0)
+		{
+			sleep(g_heart_beat_interval);
+			continue;
+		}
+
 		if (tracker_report_join(pTrackerServer) != 0)
 		{
 			sleep(g_heart_beat_interval);
