@@ -612,7 +612,7 @@ int nbaccept(int sock, const int timeout, int *err_no)
 			return -1;
 		}
 	
-		/*	
+		/*
 		if (!FD_ISSET(sock, &read_set))
 		{
 			*err_no = EAGAIN;
@@ -1177,23 +1177,6 @@ int tcpsetserveropt(int fd, const int timeout)
 			"setsockopt failed, errno: %d, error info: %s.", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : EINVAL;
-	}
-
-	flags = fcntl(fd, F_GETFL, 0);
-	if (flags < 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"fcntl failed, errno: %d, error info: %s.", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EACCES;
-	}
-
-	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"fcntl failed, errno: %d, error info: %s.", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EACCES;
 	}
 
 	return 0;
