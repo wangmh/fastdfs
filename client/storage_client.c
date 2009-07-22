@@ -51,7 +51,7 @@
 		ppStorageServer, group_name, filename, \
 		pNewStorage, new_connection) \
 	storage_get_connection(pTrackerServer, \
-		ppStorageServer, TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH, \
+		ppStorageServer, TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE, \
 		group_name, filename, pNewStorage, new_connection)
 
 #define storage_get_update_connection(pTrackerServer, \
@@ -69,7 +69,7 @@ static int storage_get_connection(TrackerServerInfo *pTrackerServer, \
 	int result;
 	if (*ppStorageServer == NULL)
 	{
-		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH)
+		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE)
 		{
 			result = tracker_query_storage_fetch(pTrackerServer, \
 		                pNewStorage, group_name, filename);

@@ -652,7 +652,7 @@ static int tracker_deal_service_query_fetch_update( \
 		TrackerClientInfo *pClientInfo, \
 		const byte cmd, const int64_t nInPackLen)
 {
-	TrackerHeader resp;
+	TrackerHeader *pResp;
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 64];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char name_buff[64];
@@ -665,17 +665,23 @@ static int tracker_deal_service_query_fetch_update( \
 	int storage_ip;
 	struct in_addr ip_addr;
 	FDFSGroupInfo *pGroup;
-	FDFSStorageDetail *pStorageServer;
 	FDFSStorageDetail *pStoreSrcServer;
+	FDFSStorageDetail **ppServer;
+	FDFSStorageDetail **ppServerEnd;
+	FDFSStorageDetail *ppStoreServers[FDFS_MAX_SERVERS_EACH_GROUP];
 	char out_buff[sizeof(TrackerHeader) + \
-		TRACKER_QUERY_STORAGE_FETCH_BODY_LEN];
+		TRACKER_QUERY_STORAGE_FETCH_BODY_LEN + \
+		FDFS_MAX_SERVERS_EACH_GROUP * IP_ADDRESS_SIZE];
 	char szIpAddr[IP_ADDRESS_SIZE];
+	time_t current_time;
+	int server_count;
 	int result;
 
-	memset(&resp, 0, sizeof(resp));
+	memset(out_buff, 0, sizeof(out_buff));
+	pResp = (TrackerHeader *)out_buff;
 	pGroup = NULL;
-	pStorageServer = NULL;
-	while (1)
+	server_count = 0;
+	do
 	{
 		if (nInPackLen < FDFS_GROUP_NAME_MAX_LEN + 22)
 		{
@@ -684,10 +690,10 @@ static int tracker_deal_service_query_fetch_update( \
 				INT64_PRINTF_FORMAT" is not correct, " \
 				"expect length > %d", \
 				__LINE__, \
-				TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH, \
+				TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE, \
 				pClientInfo->ip_addr,  \
 				nInPackLen, FDFS_GROUP_NAME_MAX_LEN+22);
-			resp.status = EINVAL;
+			pResp->status = EINVAL;
 			break;
 		}
 
@@ -698,21 +704,21 @@ static int tracker_deal_service_query_fetch_update( \
 				INT64_PRINTF_FORMAT" is too large, " \
 				"expect length should < %d", \
 				__LINE__, \
-				TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH, \
+				TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE, \
 				pClientInfo->ip_addr, nInPackLen, \
 				sizeof(in_buff));
-			resp.status = EINVAL;
+			pResp->status = EINVAL;
 			break;
 		}
 
-		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
+		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pClientInfo->ip_addr, \
-				resp.status, strerror(resp.status));
+				pResp->status, strerror(pResp->status));
 			break;
 		}
 		in_buff[nInPackLen] = '\0';
@@ -727,13 +733,13 @@ static int tracker_deal_service_query_fetch_update( \
 				"client ip: %s, invalid group_name: %s", \
 				__LINE__, pClientInfo->ip_addr, \
 				pClientInfo->group_name);
-			resp.status = ENOENT;
+			pResp->status = ENOENT;
 			break;
 		}
 
 		if (pGroup->active_count == 0)
 		{
-			resp.status = ENOENT;
+			pResp->status = ENOENT;
 			break;
 		}
 
@@ -761,8 +767,8 @@ static int tracker_deal_service_query_fetch_update( \
 		*/
 
 		memset(szIpAddr, 0, sizeof(szIpAddr));
-		resp.status = 0;
-		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH)
+		pResp->status = 0;
+		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE)
 		{
 			if (g_groups.download_server == \
 				FDFS_DOWNLOAD_SERVER_SOURCE_FIRST)
@@ -774,28 +780,28 @@ static int tracker_deal_service_query_fetch_update( \
 					szIpAddr, sizeof(szIpAddr)));
 				if (pStoreSrcServer != NULL)
 				{
-					pStorageServer = pStoreSrcServer;
+					ppStoreServers[server_count++] = \
+							pStoreSrcServer;
 					break;
 				}
 			}
 
 			//round robin
-			pStorageServer = *(pGroup->active_servers + \
-					   pGroup->current_read_server);
+			ppStoreServers[server_count++]=*(pGroup->active_servers\
+					 + pGroup->current_read_server);
 
 			/*
 			//printf("filename=%s, pStorageServer ip=%s, " \
 				"file_timestamp=%d, " \
 				"last_synced_timestamp=%d\n", filename, \
-				pStorageServer->ip_addr, file_timestamp, \
-				(int)pStorageServer->stat.last_synced_timestamp);
+				ppStoreServers[0]->ip_addr, file_timestamp, \
+				(int)ppStoreServers[0]->stat.last_synced_timestamp);
 			*/
-
-			while (1)
+			do
 			{
-			if ((pStorageServer->stat.last_synced_timestamp > \
+			if ((ppStoreServers[0]->stat.last_synced_timestamp > \
 				file_timestamp) || \
-				(pStorageServer->stat.last_synced_timestamp + 1 >= \
+				(ppStoreServers[0]->stat.last_synced_timestamp + 1 >= \
 				  file_timestamp&&time(NULL)-file_timestamp>60)\
 				|| (storage_ip == INADDR_NONE \
 				    && g_groups.store_server != \
@@ -807,7 +813,7 @@ static int tracker_deal_service_query_fetch_update( \
 			if (storage_ip == INADDR_NONE && g_groups.store_server\
 				== FDFS_STORE_SERVER_FIRST)
 			{
-				pStorageServer = *(pGroup->active_servers);
+				ppStoreServers[0] = *(pGroup->active_servers);
 				break;
 			}
 
@@ -821,18 +827,17 @@ static int tracker_deal_service_query_fetch_update( \
 					szIpAddr, sizeof(szIpAddr)));
 			if (pStoreSrcServer != NULL)
 			{
-				pStorageServer = pStoreSrcServer;
+				ppStoreServers[0] = pStoreSrcServer;
 				break;
 			}
 			}
 
 			if (g_groups.store_server == FDFS_STORE_SERVER_FIRST)
 			{
-				pStorageServer = *(pGroup->active_servers);
+				ppStoreServers[0] = *(pGroup->active_servers);
 				break;
 			}
-			break;
-			}
+			} while (0);
 
 			pGroup->current_read_server++;
 			if (pGroup->current_read_server >= \
@@ -841,7 +846,7 @@ static int tracker_deal_service_query_fetch_update( \
 				pGroup->current_read_server = 0;
 			}
 		}
-		else //TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE
+		else if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE)
 		{
 			if (storage_ip != INADDR_NONE)
 			{
@@ -852,40 +857,100 @@ static int tracker_deal_service_query_fetch_update( \
 					szIpAddr, sizeof(szIpAddr)));
 				if (pStoreSrcServer != NULL)
 				{
-					pStorageServer = pStoreSrcServer;
+					ppStoreServers[server_count++] = \
+							pStoreSrcServer;
 					break;
 				}
 			}
 
-			pStorageServer = tracker_get_writable_storage(pGroup);
+			ppStoreServers[0] = tracker_get_writable_storage(pGroup);
+			server_count = ppStoreServers[0] != NULL ? 1 : 0;
+		}
+		else //TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ALL
+		{
+			memset(szIpAddr, 0, sizeof(szIpAddr));
+			if (storage_ip != INADDR_NONE)
+			{
+				memset(&ip_addr, 0, sizeof(ip_addr));
+				ip_addr.s_addr = storage_ip;
+				inet_ntop(AF_INET, &ip_addr, szIpAddr, \
+					sizeof(szIpAddr));
+			}
+
+			current_time = time(NULL);
+			ppServerEnd = pGroup->active_servers + \
+					pGroup->active_count;
+			for (ppServer=pGroup->active_servers; \
+				ppServer<ppServerEnd; ppServer++)
+			{
+			if (((*ppServer)->stat.last_synced_timestamp > \
+				file_timestamp) || \
+				((*ppServer)->stat.last_synced_timestamp + 1 >=\
+			        file_timestamp&&current_time-file_timestamp>60)\
+				|| (storage_ip == INADDR_NONE \
+				    && g_groups.store_server != \
+				       FDFS_STORE_SERVER_FIRST)
+				|| strcmp((*ppServer)->ip_addr, szIpAddr) == 0)
+			{
+				ppStoreServers[server_count++] = *ppServer;
+			}
+			}
+
+			if (server_count == 0)
+			{
+			if (storage_ip == INADDR_NONE && g_groups.store_server\
+				== FDFS_STORE_SERVER_FIRST)
+			{
+				ppStoreServers[server_count++] = \
+						*(pGroup->active_servers);
+			}
+			}
 		}
 
-		break;
+	} while (0);
+
+	if (server_count == 0 && pResp->status == 0)
+	{
+		pResp->status = ENOENT;
 	}
 
-	resp.cmd = TRACKER_PROTO_CMD_SERVICE_RESP;
-	if (resp.status == 0)
+	pResp->cmd = TRACKER_PROTO_CMD_SERVICE_RESP;
+	if (pResp->status == 0)
 	{
-		out_len = TRACKER_QUERY_STORAGE_FETCH_BODY_LEN;
-		long2buff(out_len, resp.pkg_len);
+		char *p;
 
-		memcpy(out_buff, &resp, sizeof(resp));
-		memcpy(out_buff + sizeof(resp), pGroup->group_name, \
-				FDFS_GROUP_NAME_MAX_LEN);
-		memcpy(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN, \
-				pStorageServer->ip_addr, IP_ADDRESS_SIZE-1);
-		long2buff(pGroup->storage_port, out_buff + sizeof(resp) + \
-			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1);
+		out_len = TRACKER_QUERY_STORAGE_FETCH_BODY_LEN + \
+				(server_count - 1) * (IP_ADDRESS_SIZE - 1);
+		long2buff(out_len, pResp->pkg_len);
+
+		p  = out_buff + sizeof(TrackerHeader);
+		memcpy(p, pGroup->group_name, FDFS_GROUP_NAME_MAX_LEN);
+		p += FDFS_GROUP_NAME_MAX_LEN;
+		memcpy(p, ppStoreServers[0]->ip_addr, IP_ADDRESS_SIZE-1);
+		p += IP_ADDRESS_SIZE - 1;
+		long2buff(pGroup->storage_port, p);
+		p += FDFS_PROTO_PKG_LEN_SIZE;
+
+		if (server_count > 1)
+		{
+			ppServerEnd = ppStoreServers + server_count;
+			for (ppServer=ppStoreServers+1; ppServer<ppServerEnd; \
+				ppServer++)
+			{
+				memcpy(p, (*ppServer)->ip_addr, \
+					IP_ADDRESS_SIZE - 1);
+				p += IP_ADDRESS_SIZE - 1;
+			}
+		}
 	}
 	else
 	{
 		out_len = 0;
-		long2buff(out_len, resp.pkg_len);
-		memcpy(out_buff, &resp, sizeof(resp));
+		long2buff(out_len, pResp->pkg_len);
 	}
 
-	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		out_buff, sizeof(resp) + out_len, g_network_timeout)) != 0)
+	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
+		sizeof(TrackerHeader) + out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -895,7 +960,7 @@ static int tracker_deal_service_query_fetch_update( \
 		return result;
 	}
 
-	return resp.status;
+	return pResp->status;
 }
 
 static FDFSStorageDetail *tracker_get_writable_storage( \
@@ -2142,11 +2207,15 @@ data buff (struct)
 			result = tracker_deal_storage_replica_chg( \
 				&client_info, nInPackLen);
 			break;
-		case TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH:
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE:
 			result = tracker_deal_service_query_fetch_update( \
 				&client_info, header.cmd, nInPackLen);
 			break;
 		case TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE:
+			result = tracker_deal_service_query_fetch_update( \
+				&client_info, header.cmd, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ALL:
 			result = tracker_deal_service_query_fetch_update( \
 				&client_info, header.cmd, nInPackLen);
 			break;
