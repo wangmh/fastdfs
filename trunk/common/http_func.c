@@ -144,7 +144,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, " \
 			"error info: %s", __LINE__, alloc_size + 1, \
-			port, result, strerror(result));
+			result, strerror(result));
 
 		return result;
 	}
@@ -164,7 +164,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 				logError("file: "__FILE__", line: %d, " \
 					"realloc %d bytes fail, errno: %d, " \
 					"error info: %s", __LINE__, \
-					alloc_size + 1, port, \
+					alloc_size + 1, \
 					result, strerror(result));
 
 				return result;

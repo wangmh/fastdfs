@@ -1176,3 +1176,13 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
+int tracker_query_storage_list1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const int nMaxServerCount, \
+		int *server_count, const char *file_id)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
+	return tracker_query_storage_list(pTrackerServer, \
+		pStorageServer, nMaxServerCount, \
+		server_count, group_name, filename);
+}
+

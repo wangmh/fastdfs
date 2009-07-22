@@ -67,8 +67,8 @@ int main(int argc, char *argv[])
 	if (argc < 3)
 	{
 		printf("Usage: %s <config_file> <operation>\n" \
-			"\toperation: upload, download, getmeta, setmeta " \
-			"and delete\n", argv[0]);
+			"\toperation: upload, download, getmeta, setmeta, " \
+			"delete and query_servers\n", argv[0]);
 		return 1;
 	}
 
@@ -175,6 +175,7 @@ int main(int argc, char *argv[])
 	else if (strcmp(operation, "download") == 0 || 
 		strcmp(operation, "getmeta") == 0 ||
 		strcmp(operation, "setmeta") == 0 ||
+		strcmp(operation, "query_servers") == 0 ||
 		strcmp(operation, "delete") == 0)
 	{
 		if (argc < 4)
@@ -187,6 +188,40 @@ int main(int argc, char *argv[])
 		}
 
 		snprintf(file_id, sizeof(file_id), "%s", argv[3]);
+		if (strcmp(operation, "query_servers") == 0)
+		{
+			TrackerServerInfo storageServers[FDFS_MAX_SERVERS_EACH_GROUP];
+			int server_count;
+
+			result = tracker_query_storage_list1(pTrackerServer, \
+                		storageServers, FDFS_MAX_SERVERS_EACH_GROUP, \
+                		&server_count, file_id);
+
+			if (result != 0)
+			{
+				printf("tracker_query_storage_list1 fail, "\
+					"group_name=%s, filename=%s, " \
+					"error no: %d, error info: %s\n", \
+					group_name, remote_filename, \
+					result, strerror(result));
+			}
+			else
+			{
+				printf("server list (%d):\n", server_count);
+				for (i=0; i<server_count; i++)
+				{
+					printf("\t%s:%d\n", \
+						storageServers[i].ip_addr, \
+						storageServers[i].port);
+				}
+				printf("\n");
+			}
+
+			fdfs_quit(pTrackerServer);
+			fdfs_client_destroy();
+			return result;
+		}
+
 		if ((result=tracker_query_storage_fetch1(pTrackerServer, \
        	       		&storageServer, file_id)) != 0)
 		{

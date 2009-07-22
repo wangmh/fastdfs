@@ -689,8 +689,7 @@ static int tracker_deal_service_query_fetch_update( \
 				"cmd=%d, client ip: %s, package size " \
 				INT64_PRINTF_FORMAT" is not correct, " \
 				"expect length > %d", \
-				__LINE__, \
-				TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE, \
+				__LINE__, cmd, \
 				pClientInfo->ip_addr,  \
 				nInPackLen, FDFS_GROUP_NAME_MAX_LEN+22);
 			pResp->status = EINVAL;
@@ -703,8 +702,7 @@ static int tracker_deal_service_query_fetch_update( \
 				"cmd=%d, client ip: %s, package size " \
 				INT64_PRINTF_FORMAT" is too large, " \
 				"expect length should < %d", \
-				__LINE__, \
-				TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE, \
+				__LINE__, cmd, \
 				pClientInfo->ip_addr, nInPackLen, \
 				sizeof(in_buff));
 			pResp->status = EINVAL;
