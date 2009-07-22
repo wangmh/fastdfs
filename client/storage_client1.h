@@ -218,6 +218,21 @@ int tracker_query_storage_update1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const char *file_id);
 
+/**
+* query storage server list to fetch file
+* params:
+*	pTrackerServer: tracker server
+*	pStorageServer: return storage server
+*       nMaxServerCount: max storage server count
+*       server_count:  return storage server count
+*       group_name: the group name of storage server
+*       filename: filename on storage server
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_query_storage_list1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const int nMaxServerCount, \
+		int *server_count, const char *file_id);
+
 #ifdef __cplusplus
 }
 #endif
