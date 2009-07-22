@@ -154,7 +154,7 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 #define tracker_query_storage_fetch(pTrackerServer, \
 		pStorageServer, group_name, filename) \
 	tracker_do_query_storage(pTrackerServer, \
-		pStorageServer, TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH,\
+		pStorageServer, TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE,\
 		group_name, filename)
 
 /**
@@ -162,7 +162,7 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 * params:
 *	pTrackerServer: tracker server
 *	pStorageServer: return storage server
-*       cmd : command, TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH or 
+*       cmd : command, TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE or 
 *             TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE
 *       group_name: the group name of storage server
 *       filename: filename on storage server
@@ -171,6 +171,21 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const byte cmd, \
 		const char *group_name, const char *filename);
+
+/**
+* query storage server list to fetch file
+* params:
+*	pTrackerServer: tracker server
+*	pStorageServer: return storage server
+*       nMaxServerCount: max storage server count
+*       server_count:  return storage server count
+*       group_name: the group name of storage server
+*       filename: filename on storage server
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const int nMaxServerCount, \
+		int *server_count, const char *group_name, const char *filename);
 
 /**
 * delete a storage server from cluster

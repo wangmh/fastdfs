@@ -406,7 +406,7 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const byte cmd, \
 		const char *group_name, const char *filename)
 {
-	TrackerHeader header;
+	TrackerHeader *pHeader;
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 64];
 	char in_buff[sizeof(TrackerHeader) + TRACKER_QUERY_STORAGE_FETCH_BODY_LEN];
 	char *pInBuff;
@@ -418,6 +418,7 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 	pStorageServer->sock = -1;
 
 	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
 	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
 			sizeof(TrackerHeader),  "%s", group_name);
 	filename_len = snprintf(out_buff + sizeof(TrackerHeader) + \
@@ -425,10 +426,8 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 			sizeof(out_buff) - sizeof(TrackerHeader) - \
 			FDFS_GROUP_NAME_MAX_LEN,  "%s", filename);
 	
-	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, header.pkg_len);
-	header.cmd = cmd;
-	header.status = 0;
-	memcpy(out_buff, &header, sizeof(TrackerHeader));
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, pHeader->pkg_len);
+	pHeader->cmd = cmd;
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
 		filename_len, g_network_timeout)) != 0)
@@ -464,6 +463,96 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 			FDFS_GROUP_NAME_MAX_LEN, IP_ADDRESS_SIZE-1);
 	pStorageServer->port = (int)buff2long(in_buff + \
 			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1);
+	return 0;
+}
+
+int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const int nMaxServerCount, \
+		int *server_count, const char *group_name, const char *filename)
+{
+	TrackerHeader *pHeader;
+	TrackerServerInfo *pServer;
+	TrackerServerInfo *pServerEnd;
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 64];
+	char in_buff[sizeof(TrackerHeader) + \
+		TRACKER_QUERY_STORAGE_FETCH_BODY_LEN + \
+		FDFS_MAX_SERVERS_EACH_GROUP * IP_ADDRESS_SIZE];
+	char *pInBuff;
+	int64_t in_bytes;
+	int result;
+	int filename_len;
+
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
+	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
+			sizeof(TrackerHeader),  "%s", group_name);
+	filename_len = snprintf(out_buff + sizeof(TrackerHeader) + \
+			FDFS_GROUP_NAME_MAX_LEN, \
+			sizeof(out_buff) - sizeof(TrackerHeader) - \
+			FDFS_GROUP_NAME_MAX_LEN,  "%s", filename);
+	
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, pHeader->pkg_len);
+	pHeader->cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ALL;
+	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
+		filename_len, g_network_timeout)) != 0)
+	{
+		logError("send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, strerror(result));
+		return result;
+	}
+
+	pInBuff = in_buff;
+	if ((result=fdfs_recv_response(pTrackerServer, \
+		&pInBuff, sizeof(in_buff), &in_bytes)) != 0)
+	{
+		return result;
+	}
+
+	if ((in_bytes - TRACKER_QUERY_STORAGE_FETCH_BODY_LEN) % \
+		(IP_ADDRESS_SIZE - 1) != 0)
+	{
+		logError("tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid.", \
+			pTrackerServer->ip_addr, \
+			pTrackerServer->port, in_bytes);
+		return EINVAL;
+	}
+
+	*server_count = 1 + (in_bytes - TRACKER_QUERY_STORAGE_FETCH_BODY_LEN) /
+			(IP_ADDRESS_SIZE - 1);
+	if (nMaxServerCount < *server_count)
+	{
+		logError("tracker server %s:%d response storage server " \
+			 "count: %d, exceeds max server count: %d!", \
+			pTrackerServer->ip_addr, pTrackerServer->port, \
+			*server_count, nMaxServerCount);
+		return ENOSPC;
+	}
+
+	memset(pStorageServer, 0, nMaxServerCount * sizeof(TrackerServerInfo));
+	pStorageServer->sock = -1;
+
+	memcpy(pStorageServer->group_name, pInBuff, \
+			FDFS_GROUP_NAME_MAX_LEN);
+	pInBuff += FDFS_GROUP_NAME_MAX_LEN;
+	memcpy(pStorageServer->ip_addr, pInBuff, IP_ADDRESS_SIZE - 1);
+	pInBuff += IP_ADDRESS_SIZE - 1;
+	pStorageServer->port = (int)buff2long(pInBuff);
+	pInBuff += FDFS_PROTO_PKG_LEN_SIZE;
+
+	pServerEnd = pStorageServer + (*server_count);
+	for (pServer=pStorageServer+1; pServer<pServerEnd; pServer++)
+	{
+		pServer->sock = -1;
+		pServer->port = pStorageServer->port;
+		memcpy(pServer->ip_addr, pInBuff, IP_ADDRESS_SIZE - 1);
+		pInBuff += IP_ADDRESS_SIZE - 1;
+	}
+
 	return 0;
 }
 
@@ -519,6 +608,7 @@ int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 				FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1);
 	*store_path_index = *(in_buff + FDFS_GROUP_NAME_MAX_LEN + \
 				IP_ADDRESS_SIZE);
+
 	return 0;
 }
 
