@@ -207,7 +207,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 		return result;
 	}
 
-	while (1)
+	do
 	{
 	/**
 	send pkg format:
@@ -255,8 +255,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 
 	file_buff[in_bytes] = '\0';
 	*meta_list = fdfs_split_metadata(file_buff, meta_count, &result);
-	break;
-	}
+	} while (0);
 
 	if (file_buff != NULL)
 	{
@@ -303,7 +302,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 		return result;
 	}
 
-	while (1)
+	do
 	{
 	/**
 	send pkg format:
@@ -343,8 +342,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	break;
-	}
+	} while (0);
 
 	if (new_connection)
 	{
@@ -393,7 +391,7 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 		return result;
 	}
 
-	while (1)
+	do
 	{
 	/**
 	send pkg format:
@@ -510,8 +508,7 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 	}
 
 	*file_size = in_bytes;
-	break;
-	}
+	} while (0);
 
 	if (new_connection)
 	{
@@ -655,7 +652,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 		pStorageServer->ip_addr, pStorageServer->port);
 	*/
 
-	while (1)
+	do
 	{
 	if (meta_count <= MAX_STATIC_META_DATA_COUNT)
 	{
@@ -784,8 +781,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	memcpy(remote_filename, in_buff + FDFS_GROUP_NAME_MAX_LEN, \
 		in_bytes - FDFS_GROUP_NAME_MAX_LEN + 1);
 
-	break;
-	}
+	} while (0);
 
 	if (new_connection)
 	{
@@ -896,7 +892,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	}
 
 	meta_buff = NULL;
-	while (1)
+	do
 	{
 	memset(out_buff, 0, sizeof(out_buff));
 	filename_len = strlen(filename);
@@ -966,8 +962,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	pBuff = in_buff;
 	result = fdfs_recv_response(pStorageServer, \
 		&pBuff, 0, &in_bytes);
-	break;
-	}
+	} while (0);
 
 	if (meta_buff != NULL)
 	{
@@ -1075,7 +1070,7 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		return result;
 	}
 
-	while (1)
+	do
 	{
 	memset(out_buff, 0, sizeof(out_buff));
 	p = out_buff + sizeof(TrackerHeader);
@@ -1164,8 +1159,7 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	memcpy(remote_filename, in_buff + FDFS_GROUP_NAME_MAX_LEN, \
 		(*filename_len) + 1);
 
-	break;
-	}
+	} while (0);
 
 	if (new_connection)
 	{
