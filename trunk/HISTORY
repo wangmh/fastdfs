@@ -1,4 +1,4 @@
-Version 1.19  2009-07-22
+Version 1.19  2009-07-23
  * use poll instead of select in sockopt.c
  * hash.c use chain impl by self
  * use FastDHT 1.09 client code
@@ -7,6 +7,7 @@ Version 1.19  2009-07-22
  * use non-block socket to increase network IO performance
  * add cmd TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ALL: query all storage servers 
    from which the file can be dowloaded
+ * while (1) ... break; changed to do ... while (0);
 
 Version 1.18  2009-05-24
  * restart.sh only kill the programs match the program name and all parameters

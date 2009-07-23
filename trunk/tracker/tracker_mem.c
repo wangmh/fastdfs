@@ -1752,7 +1752,7 @@ int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 		}
 
 		result = 0;
-		while (1)
+		do
 		{
 			if (g_groups.count >= g_groups.alloc_size)
 			{
@@ -1783,8 +1783,7 @@ int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 				g_groups.pStoreGroup = pGroup;
 			}
 
-			break;
-		}
+		} while (0);
 
 		if (pthread_mutex_unlock(&mem_thread_lock) != 0)
 		{
@@ -1939,7 +1938,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 		}
 
 		result = 0;
-		while (1)
+		do
 		{
 			if (pClientInfo->pGroup->count >= \
 				pClientInfo->pGroup->alloc_size)
@@ -1963,8 +1962,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 				pClientInfo->pGroup->count);
 			pClientInfo->pGroup->count++;
 			pClientInfo->pGroup->version++;
-			break;
-		}
+		} while (0);
 
 		if (pthread_mutex_unlock(&mem_thread_lock) != 0)
 		{
@@ -2196,7 +2194,7 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 	}
 
 	result = 0;
-	while (1)
+	do
 	{
 		if (pClientInfo->pGroup->count + server_count >= \
 			pClientInfo->pGroup->alloc_size)
@@ -2257,8 +2255,7 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 			pClientInfo->pGroup->count++;
 		}
 
-		break;
-	}
+	} while (0);
 
 	if (pthread_mutex_unlock(&mem_thread_lock) != 0)
 	{
