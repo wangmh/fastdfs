@@ -152,7 +152,7 @@ int fdfs_client_init(const char *filename)
 		return result;
 	}
 
-	while (1)
+	do
 	{
 		pBasePath = iniGetStrValue("base_path", items, nItemCount);
 		if (pBasePath == NULL)
@@ -226,8 +226,7 @@ int fdfs_client_init(const char *filename)
 			g_tracker_server_count);
 #endif
 
-		break;
-	}
+	} while (0);
 
 	iniFreeItems(items);
 
