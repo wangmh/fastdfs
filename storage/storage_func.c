@@ -859,7 +859,7 @@ int storage_func_init(const char *filename, \
 		return result;
 	}
 
-	while (1)
+	do
 	{
 		if (iniGetBoolValue("disabled", items, nItemCount, false))
 		{
@@ -1164,8 +1164,7 @@ int storage_func_init(const char *filename, \
 			g_group_array.group_count, g_group_array.server_count, \
 			g_key_namespace, g_keep_alive);
 
-		break;
-	}
+	} while (0);
 
 	/*
 	if ((result=init_pthread_lock(&fsync_thread_mutex)) != 0)
@@ -1233,7 +1232,7 @@ int storage_func_destroy()
 	char buff[3]; \
 	char *pEnd; \
  \
-	while (1) \
+	do \
 	{ \
 	if (*filename_len <= FDFS_FILE_PATH_LEN) \
 	{ \
@@ -1284,8 +1283,7 @@ int storage_func_destroy()
 	*filename_len -= 4; \
 	memcpy(true_filename, logic_filename + 4, (*filename_len) + 1); \
  \
- 	break; \
-	}
+	} while (0);
 
 
 int storage_split_filename(const char *logic_filename, \

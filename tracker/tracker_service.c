@@ -148,7 +148,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
-	while (1)
+	do
 	{
 		if ((nInPackLen <= 0) || \
 			(nInPackLen % sizeof(FDFSStorageBrief) != 0))
@@ -189,8 +189,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 
 		resp.status = tracker_mem_sync_storages(pClientInfo, \
 				briefServers, server_count);
-		break;
-	}
+	} while (0);
 
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
@@ -215,7 +214,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	int subdir_count_per_path;
 	int status;
 
-	while (1)
+	do
 	{
 	if (nInPackLen != sizeof(body))
 	{
@@ -283,8 +282,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 
 	status = tracker_mem_add_group_and_storage(pClientInfo, \
 				store_path_count, subdir_count_per_path, true);
-	break;
-	}
+	} while (0);
 
 	return tracker_check_and_sync(pClientInfo, status);
 }
@@ -300,7 +298,7 @@ static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
-	while (1)
+	do
 	{
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
@@ -357,8 +355,7 @@ static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
 		}
 
 		resp.status = tracker_mem_delete_storage(pGroup, pIpAddr);
-		break;
-	}
+	} while (0);
 
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 
@@ -384,7 +381,7 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 	char sync_src_ip_addr[IP_ADDRESS_SIZE];
 	bool bSaveStorages;
 
-	while (1)
+	do
 	{
 	if (nInPackLen != sizeof(body))
 	{
@@ -460,8 +457,7 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 		tracker_save_storages();
 	}
 	status = 0;
-	break;
-	}
+	} while (0);
 
 	return tracker_check_and_sync(pClientInfo, status);
 }
@@ -515,7 +511,7 @@ static int tracker_deal_server_list_group_storages( \
 
 	memset(&resp, 0, sizeof(resp));
 	pDest = stats;
-	while (1)
+	do
 	{
 		if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN)
 		{
@@ -606,8 +602,7 @@ static int tracker_deal_server_list_group_storages( \
 		}
 
 		resp.status = 0;
-		break;
-	}
+	} while (0);
 
 	out_len = (pDest - stats) * sizeof(TrackerStorageStat);
 	long2buff(out_len, resp.pkg_len);
@@ -878,6 +873,7 @@ static int tracker_deal_service_query_fetch_update( \
 			current_time = time(NULL);
 			ppServerEnd = pGroup->active_servers + \
 					pGroup->active_count;
+
 			for (ppServer=pGroup->active_servers; \
 				ppServer<ppServerEnd; ppServer++)
 			{
@@ -1002,7 +998,7 @@ static int tracker_deal_service_query_storage( \
 	memset(&resp, 0, sizeof(resp));
 	pStoreGroup = NULL;
 	pStorageServer = NULL;
-	while (1)
+	do
 	{
 		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP)
 		{
@@ -1231,8 +1227,7 @@ static int tracker_deal_service_query_storage( \
 		*/
 
 		resp.status = 0;
-		break;
-	}
+	} while (0);
 
 	resp.cmd = TRACKER_PROTO_CMD_SERVICE_RESP;
 	if (resp.status == 0)
@@ -1287,7 +1282,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 
 	memset(&resp, 0, sizeof(resp));
 	pDest = groupStats;
-	while (1)
+	do
 	{
 		if (nInPackLen != 0)
 		{
@@ -1322,8 +1317,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 		}
 
 		resp.status = 0;
-		break;
-	}
+	} while (0);
 
 	out_len = (pDest - groupStats) * sizeof(TrackerGroupStat);
 	long2buff(out_len, resp.pkg_len);
@@ -1373,7 +1367,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 	pResp = (TrackerHeader *)out_buff;
 	pBody = (TrackerStorageSyncReqBody *)(out_buff + sizeof(TrackerHeader));
 	out_len = sizeof(TrackerHeader);
-	while (1)
+	do
 	{
 		if (nInPackLen != IP_ADDRESS_SIZE)
 		{
@@ -1427,8 +1421,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 		}
 
 		pResp->status = 0;
-		break;
-	}
+	} while (0);
 
 	//printf("deal sync request, status=%d\n", pResp->status);
 
@@ -1465,7 +1458,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 	pBody = (TrackerStorageSyncReqBody *)(out_buff + sizeof(TrackerHeader));
 	out_len = sizeof(TrackerHeader);
 	pSrcStorage = NULL;
-	while (1)
+	do
 	{
 		if (nInPackLen != 0)
 		{
@@ -1501,8 +1494,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 		long2buff(sync_until_timestamp, pBody->until_timestamp);
 		out_len += sizeof(TrackerStorageSyncReqBody);
 		pResp->status = 0;
-		break;
-	}
+	} while (0);
 
 	//printf("deal sync request, status=%d\n", pResp->status);
 
@@ -1641,8 +1633,8 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 	int src_index;
 	int dest_index;
 	FDFSStorageDetail *pSrcStorage;
- 
-	while (1)
+
+	do 
 	{
 		if (nInPackLen <= 0 || nInPackLen > sizeof(in_buff) \
 			|| nInPackLen % (IP_ADDRESS_SIZE + 4) != 0)
@@ -1787,8 +1779,7 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 		}
 
 		//printf("storage_sync_time_chg_count=%d\n", g_storage_sync_time_chg_count);
-		break;
-	}
+	} while (0);
 
 	//printf("deal storage report, status=%d\n", status);
 	return tracker_check_and_sync(pClientInfo, status);
@@ -1808,7 +1799,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 	int64_t old_free_mb;
 
 	pBuff = in_buff;
-	while (1)
+	do
 	{
 		if (nInPackLen != sizeof(TrackerStatReportReqBody) * \
 			pClientInfo->pGroup->store_path_count)
@@ -1920,8 +1911,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 			pClientInfo->pStorage->free_mb);
 		*/
 
-		break;
-	}
+	} while (0);
 
 	if (pBuff != in_buff)
 	{
@@ -1945,8 +1935,8 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 	int status;
 	FDFSStorageStatBuff statBuff;
 	FDFSStorageStat *pStat;
- 
-	while (1)
+
+	do 
 	{
 		if (nInPackLen == 0)
 		{
@@ -2027,8 +2017,7 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 
 		//printf("g_storage_stat_chg_count=%d\n", g_storage_stat_chg_count);
 
-		break;
-	}
+	} while (0);
 
 	if (status == 0)
 	{

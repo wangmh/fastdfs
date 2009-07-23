@@ -108,7 +108,7 @@ int tracker_load_from_conf_file(const char *filename, \
 		return result;
 	}
 
-	while (1)
+	do
 	{
 		if (iniGetBoolValue("disabled", items, nItemCount, false))
 		{
@@ -298,8 +298,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_groups.store_server, g_groups.store_path, \
 			g_storage_reserved_mb, g_groups.download_server, \
 			g_allow_ip_count, g_sync_log_buff_interval);
-		break;
-	}
+	} while (0);
 
 	iniFreeItems(items);
 

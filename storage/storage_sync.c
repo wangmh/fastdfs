@@ -113,7 +113,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	}
 
 	//printf("sync create file: %s\n", pRecord->filename);
-	while (1)
+	do
 	{
 		memset(&header, 0, sizeof(header));
 		long2buff(2 * FDFS_PROTO_PKG_LEN_SIZE + \
@@ -173,8 +173,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 			break;
 		}
 
-		break;
-	}
+	} while (0);
 
 	//printf("sync create file end!\n");
 	if (result == EEXIST)
@@ -228,8 +227,6 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 		return 0;
 	}
 
-	while (1)
-	{
 	memset(out_buff, 0, sizeof(out_buff));
 	int2buff(pRecord->timestamp, out_buff + sizeof(TrackerHeader));
 	snprintf(out_buff + sizeof(TrackerHeader) + 4, sizeof(out_buff) - \
@@ -253,7 +250,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 			__LINE__, pStorageServer->ip_addr, \
 			pStorageServer->port, \
 			result, strerror(result));
-		break;
+		return result;
 	}
 
 	pBuff = in_buff;
@@ -263,9 +260,6 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 		result = 0;
 	}
 	
-	break;
-	}
-
 	return result;
 }
 
@@ -407,8 +401,6 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 			STORAGE_STORE_PATH_PREFIX_CHAR, src_path_index);
 	memcpy(pSrcFilename, out_buff, 4);
 
-	while (1)
-	{
 	pHeader = (TrackerHeader *)out_buff;
 	memset(out_buff, 0, sizeof(out_buff));
 	long2buff(pRecord->filename_len, out_buff + sizeof(TrackerHeader));
@@ -440,7 +432,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 			__LINE__, pStorageServer->ip_addr, \
 			pStorageServer->port, \
 			result, strerror(result));
-		break;
+		return result;
 	}
 
 	pBuff = in_buff;
@@ -450,9 +442,6 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 		result = 0;
 	}
 	
-	break;
-	}
-
 	return result;
 }
 

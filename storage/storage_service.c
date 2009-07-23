@@ -249,7 +249,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 		char *meta_buff, const int meta_size, \
 		char *filename, int *filename_len, int *create_flag)
 {
-#define FILE_TIMESTAMP_ADVANCED_SECS	30
+#define FILE_TIMESTAMP_ADVANCED_SECS	0
 
 	int result;
 	int i;
@@ -615,7 +615,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			*new_full_filename = '\0';
 		}
 
-		while (1)
+		do
 		{
 		if (*new_full_filename == '\0')
 		{
@@ -655,8 +655,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 
 		*filename_len = new_filename_len;
 		memcpy(filename, new_filename, new_filename_len+1);
-		break;
-		}
+		} while (0);
 	}
 	}
 
@@ -937,7 +936,7 @@ static int storage_server_set_metadata(StorageClientInfo *pClientInfo, \
 
 	memset(&resp, 0, sizeof(resp));
 	in_buff = NULL;
-	while (1)
+	do
 	{
 		if (nInPackLen <= 2 * FDFS_PROTO_PKG_LEN_SIZE + 1 + \
 					FDFS_GROUP_NAME_MAX_LEN)
@@ -1073,8 +1072,7 @@ static int storage_server_set_metadata(StorageClientInfo *pClientInfo, \
 					time(NULL), sync_flag, meta_filename);
 		}
 
-		break;
-	}
+	} while (0);
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 
@@ -1127,7 +1125,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	pMetaData = meta_buff;
 	filename[0] = '\0';
 	filename_len = 0;
-	while (1)
+	do
 	{
 		if (nInPackLen < 1 + 2 * FDFS_PROTO_PKG_LEN_SIZE + 
 				FDFS_FILE_EXT_NAME_MAX_LEN)
@@ -1258,8 +1256,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 					meta_filename);
 		}
 
-		break;
-	}
+	} while (0);
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	if (resp.status == 0)
@@ -1323,7 +1320,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
-	while (1)
+	do
 	{
 		if (nInPackLen <= 2 * FDFS_PROTO_PKG_LEN_SIZE + \
 					4 + FDFS_GROUP_NAME_MAX_LEN)
@@ -1484,8 +1481,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 				filename);
 		}
 
-		break;
-	}
+	} while (0);
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
@@ -1530,7 +1526,7 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
-	while (1)
+	do
 	{
 		if (nInPackLen <= 2 * FDFS_PROTO_PKG_LEN_SIZE + \
 					4 + FDFS_GROUP_NAME_MAX_LEN)
@@ -1698,8 +1694,7 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 			STORAGE_OP_TYPE_REPLICA_CREATE_LINK, \
 			dest_filename);
 
-		break;
-	}
+	} while (0);
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
@@ -1740,7 +1735,7 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 	memset(&resp, 0, sizeof(resp));
 	file_buff = NULL;
 	file_bytes = 0;
-	while (1)
+	do
 	{
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
@@ -1820,8 +1815,7 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 		{
 			resp.status = 0;
 		}
-		break;
-	}
+	} while (0);
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	long2buff(file_bytes, resp.pkg_len);
@@ -2092,7 +2086,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
-	while (1)
+	do
 	{
 		if (nInPackLen <= 4 + FDFS_GROUP_NAME_MAX_LEN)
 		{
@@ -2188,8 +2182,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 
 		resp.status = storage_binlog_write(*timestamp, \
 				STORAGE_OP_TYPE_REPLICA_DELETE_FILE, filename);
-		break;
-	}
+	} while (0);
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 
@@ -2238,7 +2231,7 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 
 	*delete_flag = STORAGE_DELETE_FLAG_NONE;
 	memset(&resp, 0, sizeof(resp));
-	while (1)
+	do
 	{
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
@@ -2563,8 +2556,7 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 			*delete_flag |= STORAGE_DELETE_FLAG_FILE;
 		}
 
-		break;
-	}
+	} while (0);
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 
@@ -2625,7 +2617,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 	*filename = '\0';
 	filename_len = 0;
 
-	while (1)
+	do
 	{
 		if (nInPackLen <= 3 * FDFS_PROTO_PKG_LEN_SIZE + \
 			FDFS_GROUP_NAME_MAX_LEN + FDFS_FILE_EXT_NAME_MAX_LEN)
@@ -2861,8 +2853,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 					meta_filename);
 		}
 
-		break;
-	}
+	} while (0);
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	if (resp.status == 0)
