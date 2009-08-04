@@ -64,6 +64,8 @@ bool g_check_file_duplicate = false;
 char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1] = {0};
 int g_namespace_len = 0;
 
+struct base64_context g_base64_context;
+
 int storage_cmp_by_ip_addr(const void *p1, const void *p2)
 {
 	return strcmp((*((FDFSStorageServer **)p1))->server.ip_addr,

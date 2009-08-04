@@ -53,8 +53,9 @@ int main(int argc, char *argv[])
 	char *operation;
 	char *meta_buff;
 	int store_path_index;
+	struct base64_context context;
 
-	base64_init_ex(0, '-', '_', '.');
+	base64_init_ex(&context, 0, '-', '_', '.');
 	printf("This is FastDFS client test program v%d.%d\n" \
 "\nCopyright (C) 2008, Happy Fish / YuQing\n" \
 "\nFastDFS may be copied only under the terms of the GNU General\n" \
@@ -160,7 +161,7 @@ int main(int argc, char *argv[])
 		}
 
 		memset(buff, 0, sizeof(buff));
-		base64_decode_auto(remote_filename + FDFS_FILE_PATH_LEN, \
+		base64_decode_auto(&context, remote_filename + FDFS_FILE_PATH_LEN, \
 			strlen(remote_filename) - FDFS_FILE_PATH_LEN \
 			 - (FDFS_FILE_EXT_NAME_MAX_LEN + 1), buff, &len);
 		printf("group_name=%s, remote_filename=%s\n", \

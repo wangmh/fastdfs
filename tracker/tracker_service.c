@@ -748,8 +748,9 @@ static int tracker_deal_service_query_fetch_update( \
 		{
 			base64_len = filename_len - FDFS_FILE_PATH_LEN - \
 				(FDFS_FILE_EXT_NAME_MAX_LEN + 1);
-			base64_decode_auto(filename + FDFS_FILE_PATH_LEN, \
-				base64_len, name_buff, &decoded_len);
+			base64_decode_auto(&g_base64_context, filename + \
+				FDFS_FILE_PATH_LEN, base64_len, \
+				name_buff, &decoded_len);
 			storage_ip = buff2int(name_buff);
 			file_timestamp = buff2int(name_buff+sizeof(int));
 		}

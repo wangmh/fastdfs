@@ -107,7 +107,8 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 	long2buff(file_size, buff+sizeof(int)*2);
 	int2buff(r, buff+sizeof(int)*4);
 
-	base64_encode_ex(buff, sizeof(int) * 5, encoded, filename_len, false);
+	base64_encode_ex(&g_base64_context, buff, sizeof(int) * 5, encoded, \
+			filename_len, false);
 
 	if (g_file_distribute_path_mode == FDFS_FILE_DIST_PATH_ROUND_ROBIN)
 	{

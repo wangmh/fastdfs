@@ -20,3 +20,4 @@ int g_storage_reserved_mb = 0;
 int g_allow_ip_count = 0;
 in_addr_t *g_allow_ip_addrs = NULL;
 
+struct base64_context g_base64_context;
