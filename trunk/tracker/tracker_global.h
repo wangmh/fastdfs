@@ -16,6 +16,7 @@
 #include <string.h>
 #include "fdfs_define.h"
 #include "tracker_types.h"
+#include "fdfs_base64.h"
 
 #define TRACKER_SYNC_TO_FILE_FREQ 1000
 
@@ -33,6 +34,7 @@ extern int g_sync_log_buff_interval; //sync log buff to disk every interval seco
 
 extern int g_allow_ip_count;  /* -1 means match any ip address */
 extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
+extern struct base64_context g_base64_context;
 
 #ifdef __cplusplus
 }

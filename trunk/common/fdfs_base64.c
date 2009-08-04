@@ -18,25 +18,6 @@
 #include <errno.h>
 #include "fdfs_base64.h"
 
-static char line_separator[16];
-static int line_sep_len;
-
-/**
-* max chars per line, excluding line_separator.  A multiple of 4.
-*/
-static int line_length = 72;
-
-/**
-* letter of the alphabet used to encode binary values 0..63
-*/
-static unsigned char valueToChar[64];
-
-/**
-* binary value encoded by a given letter of the alphabet 0..63
-*/
-static int charToValue[256];
-static int pad_ch;
-
 /**
 * Marker value for chars we just ignore, e.g. \n \r high ascii
 */
@@ -52,69 +33,68 @@ static int pad_ch;
 * Ignored by decode.
 * @param length 0 means no newlines inserted. Must be a multiple of 4.
 */
-void base64_set_line_length(const int length)
+void base64_set_line_length(struct base64_context *context, const int length)
 {
-    line_length = (length / 4) * 4;
+    context->line_length = (length / 4) * 4;
 }
 
 /**
     * How lines are separated.
     * Ignored by decode.
-    * @param line_separator may be "" but not null.
+    * @param context->line_separator may be "" but not null.
     * Usually contains only a combination of chars \n and \r.
     * Could be any chars not in set A-Z a-z 0-9 + /.
 */
-void base64_set_line_separator(const char *pLineSeparator)
+void base64_set_line_separator(struct base64_context *context, \
+		const char *pLineSeparator)
 {
-    line_sep_len = snprintf(line_separator, sizeof(line_separator), \
-                           "%s", pLineSeparator);
+    context->line_sep_len = snprintf(context->line_separator, \
+			sizeof(context->line_separator), "%s", pLineSeparator);
 }
 
-void base64_init_ex(const int nLineLength, const unsigned char chPlus, \
-                    const unsigned char chSplash, const unsigned char chPad)
+void base64_init_ex(struct base64_context *context, const int nLineLength, \
+		const unsigned char chPlus, const unsigned char chSplash, \
+		const unsigned char chPad)
 {
       int i;
-      line_length = nLineLength;
 
-      line_separator[0] = '\n';
-      line_separator[1] = '\0';
-      line_sep_len = 1;
+      memset(context, 0, sizeof(struct base64_context));
+
+      context->line_length = nLineLength;
+      context->line_separator[0] = '\n';
+      context->line_separator[1] = '\0';
+      context->line_sep_len = 1;
 
       // build translate valueToChar table only once.
       // 0..25 -> 'A'..'Z'
       for (i=0; i<=25; i++)
       {
-         valueToChar[i] = (char)('A'+i);
+         context->valueToChar[i] = (char)('A'+i);
       }
       // 26..51 -> 'a'..'z'
       for (i=0; i<=25; i++ )
       {
-         valueToChar[i+26] = (char)('a'+i);
+         context->valueToChar[i+26] = (char)('a'+i);
       }
       // 52..61 -> '0'..'9'
       for (i=0; i<=9; i++ )
       {
-         valueToChar[i+52] = (char)('0'+i);
+         context->valueToChar[i+52] = (char)('0'+i);
       }
-      valueToChar[62] = chPlus;
-      valueToChar[63] = chSplash;
+      context->valueToChar[62] = chPlus;
+      context->valueToChar[63] = chSplash;
 
-      // build translate charToValue table only once.
-      for (i=0; i<256; i++ )
-      {
-         charToValue[i] = IGNORE;  // default is to ignore
-      }
-
+      memset(context->charToValue, IGNORE, sizeof(context->charToValue));
       for (i=0; i<64; i++ )
       {
-         charToValue[valueToChar[i]] = i;
+         context->charToValue[context->valueToChar[i]] = i;
       }
 
-      pad_ch = chPad;
-      charToValue[chPad] = PAD;
+      context->pad_ch = chPad;
+      context->charToValue[chPad] = PAD;
 }
 
-int base64_get_encode_length(const int nSrcLen)
+int base64_get_encode_length(struct base64_context *context, const int nSrcLen)
 {
    // Each group or partial group of 3 bytes becomes four chars
    // covered quotient
@@ -123,12 +103,13 @@ int base64_get_encode_length(const int nSrcLen)
    outputLength = ((nSrcLen + 2) / 3) * 4;
 
    // account for trailing newlines, on all but the very last line
-   if ( line_length != 0 )
+   if (context->line_length != 0)
    {
-       int lines =  (outputLength + line_length - 1)/ line_length - 1;
+       int lines =  (outputLength + context->line_length - 1) / 
+			context->line_length - 1;
        if ( lines > 0 )
        {
-          outputLength += lines  * line_sep_len;
+          outputLength += lines  * context->line_sep_len;
        }
    }
 
@@ -142,8 +123,8 @@ int base64_get_encode_length(const int nSrcLen)
     * The output will always have an even multiple of data characters,
     * exclusive of \n.  It is padded out with =.
     */
-char *base64_encode_ex(char *src, const int nSrcLen, char *dest, \
-                       int *dest_len, const bool bPad)
+char *base64_encode_ex(struct base64_context *context, char *src, \
+		const int nSrcLen, char *dest, int *dest_len, const bool bPad)
 {
   int linePos;
   int leftover;
@@ -200,12 +181,12 @@ char *base64_encode_ex(char *src, const int nSrcLen, char *dest, \
          // We can't encapsulete the following code since the variable need to
          // be local to this incarnation of encode.
          linePos += 4;
-         if (linePos > line_length)
+         if (linePos > context->line_length)
          {
-            if ( line_length != 0 )
+            if (context->line_length != 0)
             {
-               memcpy(pDest, line_separator, line_sep_len);
-               pDest += line_sep_len;
+               memcpy(pDest, context->line_separator, context->line_sep_len);
+               pDest += context->line_sep_len;
             }
             linePos = 4;
          }
@@ -226,10 +207,10 @@ char *base64_encode_ex(char *src, const int nSrcLen, char *dest, \
 
          // Translate into the equivalent alpha character
          // emitting them in big-endian order.
-         *pDest++ = valueToChar[c0];
-         *pDest++ = valueToChar[c1];
-         *pDest++ = valueToChar[c2];
-         *pDest++ = valueToChar[c3];
+         *pDest++ = context->valueToChar[c0];
+         *pDest++ = context->valueToChar[c1];
+         *pDest++ = context->valueToChar[c2];
+         *pDest++ = context->valueToChar[c3];
       }
   }
 
@@ -247,8 +228,8 @@ char *base64_encode_ex(char *src, const int nSrcLen, char *dest, \
         // One leftover byte generates xx==
         if (bPad)
         {
-           *(pDest-1) = pad_ch;
-           *(pDest-2) = pad_ch;
+           *(pDest-1) = context->pad_ch;
+           *(pDest-2) = context->pad_ch;
         }
         else
         {
@@ -260,7 +241,7 @@ char *base64_encode_ex(char *src, const int nSrcLen, char *dest, \
         // Two leftover bytes generates xxx=
         if (bPad)
         {
-           *(pDest-1) = pad_ch;
+           *(pDest-1) = context->pad_ch;
         }
         else
         {
@@ -273,8 +254,8 @@ char *base64_encode_ex(char *src, const int nSrcLen, char *dest, \
   return dest;
 }
 
-char *base64_decode_auto(char *src, const int nSrcLen, \
-		char *dest, int *dest_len)
+char *base64_decode_auto(struct base64_context *context, char *src, \
+		const int nSrcLen, char *dest, int *dest_len)
 {
 	int nRemain;
 	int nPadLen;
@@ -285,7 +266,7 @@ char *base64_decode_auto(char *src, const int nSrcLen, \
 	nRemain = nSrcLen % 4;
 	if (nRemain == 0)
 	{
-		return base64_decode(src, nSrcLen, dest, dest_len);
+		return base64_decode(context, src, nSrcLen, dest, dest_len);
 	}
 
 	nPadLen = 4 - nRemain;
@@ -308,9 +289,9 @@ char *base64_decode_auto(char *src, const int nSrcLen, \
 	}
 
 	memcpy(pBuff, src, nSrcLen);
-	memset(pBuff + nSrcLen, pad_ch, nPadLen);
+	memset(pBuff + nSrcLen, context->pad_ch, nPadLen);
 
-	base64_decode(pBuff, nNewLen, dest, dest_len);
+	base64_decode(context, pBuff, nNewLen, dest, dest_len);
 
 	if (pBuff != tmpBuff)
 	{
@@ -325,8 +306,8 @@ char *base64_decode_auto(char *src, const int nSrcLen, \
 * It must have an even multiple of 4 data characters (not counting \n),
 * padded out with = as needed.
 */
-char *base64_decode(char *src, const int nSrcLen, \
-                       char *dest, int *dest_len)
+char *base64_decode(struct base64_context *context, char *src, \
+		const int nSrcLen, char *dest, int *dest_len)
 {
       // tracks where we are in a cycle of 4 input chars.
       int cycle;
@@ -348,7 +329,7 @@ char *base64_decode(char *src, const int nSrcLen, \
       pSrcEnd = (unsigned char *)src + nSrcLen;
       for (pSrc=(unsigned char *)src; pSrc<pSrcEnd; pSrc++)
       {
-         value = charToValue[*pSrc];
+         value = context->charToValue[*pSrc];
          switch (value)
          {
             case IGNORE:
@@ -399,7 +380,8 @@ char *base64_decode(char *src, const int nSrcLen, \
       {
          *dest = '\0';
          *dest_len = 0;
-         fprintf(stderr, "Input to decode not an even multiple of 4 characters; pad with %c\n", pad_ch);
+         fprintf(stderr, "Input to decode not an even multiple of " \
+		"4 characters; pad with %c\n", context->pad_ch);
          return dest;
       }
 
