@@ -140,6 +140,7 @@ static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 
 		if (http_status != 200)
 		{
+			free(content);
 			logError("file: "__FILE__", line: %d, " \
 				"HTTP status code: %d != 200, url=%s", \
 				__LINE__, http_status, szFilename);
@@ -259,7 +260,9 @@ static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 		(*nItemCount)++;
 		pItem++;
 	}
-	
+
+	free(content);
+
 	return result;
 }
 
