@@ -28,6 +28,7 @@ cat <<EOF > common/_os_bits.h
 EOF
 
 TARGET_PATH=/usr/local/bin
+WITH_HTTPD=1
 CFLAGS='-O3 -Wall -D_FILE_OFFSET_BITS=64'
 #CFLAGS='-g -Wall -D_FILE_OFFSET_BITS=64 -D__DEBUG__'
 
@@ -46,6 +47,14 @@ elif [ "$uname" = "AIX" ]; then
   export CC=gcc
 fi
 
+if [ "$WITH_HTTPD" = "1" ]; then
+  CFLAGS="$CFLAGS -DWITH_HTTPD"
+  LIBS="$LIBS -levent"
+  HTTPD_OBJS=tracker_httpd.o
+else
+  HTTPD_OBJS=''
+fi
+
 if [ -f /usr/lib/libpthread.so ] || [ -f /usr/local/lib/libpthread.so ] || [ -f /usr/lib64/libpthread.so ] || [ -f /usr/lib/libpthread.a ] || [ -f /usr/local/lib/libpthread.a ] || [ -f /usr/lib64/libpthread.a ]; then
   LIBS="$LIBS -lpthread"
 else
@@ -60,6 +69,7 @@ cp Makefile.in Makefile
 perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_PATH\)#$TARGET_PATH#g" Makefile
+perl -pi -e "s#\\\$\(HTTPD_OBJS\)#$HTTPD_OBJS#g" Makefile
 make $1 $2
 
 cd ../storage

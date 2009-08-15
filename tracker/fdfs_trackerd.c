@@ -32,6 +32,10 @@
 #include "tracker_global.h"
 #include "tracker_func.h"
 
+#ifdef WITH_HTTPD
+#include "tracker_httpd.h"
+#endif
+
 bool bTerminateFlag = false;
 
 void sigQuitHandler(int sig);
@@ -143,6 +147,14 @@ int main(int argc, char *argv[])
 			__LINE__, errno, strerror(errno));
 		return errno;
 	}
+
+
+#ifdef WITH_HTTPD
+	if ((result=tracker_httpd_start(bind_addr)) != 0)
+	{
+		return result;
+	}
+#endif
 
 	scheduleArray.entries = scheduleEntries;
 	scheduleArray.count = SCHEDULE_ENTRIES_COUNT;
