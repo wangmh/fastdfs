@@ -25,6 +25,7 @@ extern "C" {
 #endif
 
 extern int g_server_port;
+extern int g_httpd_port;
 extern FDFSGroups g_groups;
 extern int g_storage_stat_chg_count;
 extern int g_storage_sync_time_chg_count; //sync timestamp
