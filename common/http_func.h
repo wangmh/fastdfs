@@ -15,6 +15,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
+#include "common_define.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,6 +33,16 @@ params:
 **/
 int get_url_content(const char *url, const int timeout, int *http_status, \
 	char **content, int *content_len);
+
+/**
+parse url
+params:
+	url: the url to parse
+	params: params array to store param and it's value
+	max_count: max param count
+return: param count
+**/
+int http_parse_query(char *url, KeyValuePair *params, const int max_count);
 
 #ifdef __cplusplus
 }

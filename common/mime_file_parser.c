@@ -87,9 +87,15 @@ int load_mime_types_from_file(HashArray *pHash, const char *mime_filename)
 			continue;
 		}
 
-		content_type = strtok(pLine, MIME_DELIM_CHARS);
-		while ((ext_name=strtok(NULL, MIME_DELIM_CHARS)) != NULL)
+		content_type = strsep(&pLine, MIME_DELIM_CHARS);
+		while (pLine != NULL && *pLine != '\0')
 		{
+			ext_name = strsep(&pLine, MIME_DELIM_CHARS);
+			if (*ext_name == '\0')
+			{
+				continue;
+			}
+
 			if ((result=hash_insert_ex(pHash, ext_name, \
 				strlen(ext_name)+1, content_type, \
 				strlen(content_type)+1)) < 0)

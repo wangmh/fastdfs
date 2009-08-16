@@ -11,15 +11,35 @@
 #include <evhttp.h>
 #include "logger.h"
 #include "tracker_global.h"
+#include "http_func.h"
 #include "tracker_httpd.h"
 
 static struct evbuffer *ev_buf = NULL;
 
 static void generic_handler(struct evhttp_request *req, void *arg)
 {
+#define HTTPD_MAX_PARAMS   32
+	char *url;
+	KeyValuePair params[HTTPD_MAX_PARAMS];
+	int param_count;
+	KeyValuePair *pCurrent;
+	KeyValuePair *pEnd;
 	char cbuff[1 * 1024];
+	char *p;
 
-	memset(cbuff, 'a', sizeof(cbuff));
+	url = (char *)evhttp_request_uri(req);
+	param_count = http_parse_query(url, params, HTTPD_MAX_PARAMS);
+
+	memset(cbuff, ' ', sizeof(cbuff));
+
+	p = cbuff;
+	p += sprintf(p, "url=%s\n", url);
+	pEnd = params + param_count;
+	for (pCurrent=params; pCurrent<pEnd; pCurrent++)
+	{
+		p += sprintf(p, "%s=%s\n", pCurrent->key, pCurrent->value);
+	}
+	
 	evbuffer_add_printf(ev_buf, "Hello World!!!\n");
 	evbuffer_add(ev_buf, cbuff, sizeof(cbuff));
 	evhttp_send_reply(req, HTTP_OK, "OK", ev_buf);

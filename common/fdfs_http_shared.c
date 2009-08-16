@@ -115,6 +115,7 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 
 	anti_steal_library = iniGetStrValue("http.anti_steal.library", \
                                         items, nItemCount);
+	/*
 	if (anti_steal_library == NULL || *anti_steal_library == '\0')
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -122,7 +123,7 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 			"or is empty", __LINE__);
 		return EINVAL;
 	}
-	
+	*/	
 //http.anti_steal.token_check_fail=
 
 	return 0;
