@@ -30,6 +30,10 @@
 #include "tracker_func.h"
 #include "tracker_mem.h"
 
+#ifdef WITH_HTTPD
+#include "fdfs_http_shared.h"
+#endif
+
 static int tracker_load_store_lookup(const char *filename, \
 		IniItemInfo *items, const int nItemCount)
 {
@@ -280,6 +284,14 @@ int tracker_load_from_conf_file(const char *filename, \
 		{
 			g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
 		}
+
+#ifdef WITH_HTTPD
+		if ((result=fdfs_http_params_load(items, nItemCount, \
+				filename, &g_http_params)) != 0)
+		{
+			return result;
+		}
+#endif
 
 		logInfo("FastDFS v%d.%d, base_path=%s, " \
 			"network_timeout=%ds, "    \
