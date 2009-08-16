@@ -106,6 +106,12 @@ typedef struct
 	char minor;
 } Version;
 
+typedef struct
+{
+	char *key;
+	char *value;
+} KeyValuePair;
+
 typedef void (*FreeDataFunc)(void *ptr);
 typedef int (*CompareFunc)(void *p1, void *p2);
 

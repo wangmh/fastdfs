@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include "sockopt.h"
 #include "logger.h"
+#include "shared_func.h"
 
 int get_url_content(const char *url, const int timeout, int *http_status, \
 	char **content, int *content_len)
@@ -234,5 +235,48 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 	close(sock);
 
 	return 0;
+}
+
+int http_parse_query(char *url, KeyValuePair *params, const int max_count)
+{
+	KeyValuePair *pCurrent;
+	KeyValuePair *pEnd;
+	char *pParamStart;
+	char *p;
+	char *pair;
+	int value_len;
+
+	pParamStart = strchr(url, '?');
+	if (pParamStart == NULL)
+	{
+		return 0;
+	}
+
+	*pParamStart = '\0';
+
+	pEnd = params + max_count;
+	pCurrent = params;
+	p = pParamStart + 1;
+	while (p != NULL && *p != '\0')
+	{
+		if (pCurrent >= pEnd)
+		{
+			return pCurrent - params;
+		}
+
+		pair = strsep(&p, "&");
+		pCurrent->key = strsep(&pair, "=");
+		if (*pCurrent->key == '\0' || pair == NULL)
+		{
+			continue;
+		}
+
+		pCurrent->value = pair;
+		urldecode(pCurrent->value, strlen(pCurrent->value), \
+			pCurrent->value, &value_len);
+		pCurrent++;
+	}
+
+	return pCurrent - params;
 }
 
