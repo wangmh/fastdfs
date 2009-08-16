@@ -36,7 +36,7 @@ static void *httpd_entrance(void *arg)
 		bind_addr = "0.0.0.0";
 	}
 	event_init();
-	httpd = evhttp_start(bind_addr, g_httpd_port);
+	httpd = evhttp_start(bind_addr, g_http_params.server_port);
 	if (httpd == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \

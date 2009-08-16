@@ -50,7 +50,7 @@ fi
 if [ "$WITH_HTTPD" = "1" ]; then
   CFLAGS="$CFLAGS -DWITH_HTTPD"
   LIBS="$LIBS -levent"
-  HTTPD_OBJS=tracker_httpd.o
+  HTTPD_OBJS='tracker_httpd.o ../common/mime_file_parser.o ../common/fdfs_http_shared.o'
 else
   HTTPD_OBJS=''
 fi

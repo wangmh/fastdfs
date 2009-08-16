@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 	{
 		return result;
 	}
-	
+
 	daemon_init(true);
 	umask(0);
 	

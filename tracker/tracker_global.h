@@ -18,6 +18,10 @@
 #include "tracker_types.h"
 #include "fdfs_base64.h"
 
+#ifdef WITH_HTTPD
+#include "fdfs_http_shared.h"
+#endif
+
 #define TRACKER_SYNC_TO_FILE_FREQ 1000
 
 #ifdef __cplusplus
@@ -25,7 +29,6 @@ extern "C" {
 #endif
 
 extern int g_server_port;
-extern int g_httpd_port;
 extern FDFSGroups g_groups;
 extern int g_storage_stat_chg_count;
 extern int g_storage_sync_time_chg_count; //sync timestamp
@@ -36,6 +39,10 @@ extern int g_sync_log_buff_interval; //sync log buff to disk every interval seco
 extern int g_allow_ip_count;  /* -1 means match any ip address */
 extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
 extern struct base64_context g_base64_context;
+
+#ifdef WITH_HTTPD
+extern FDFSHTTPParams g_http_params;
+#endif
 
 #ifdef __cplusplus
 }
