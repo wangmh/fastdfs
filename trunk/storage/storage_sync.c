@@ -1066,7 +1066,7 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 
 	result = EINTR;
 	pTServer = pTrackerServers;
-	while (1)
+	do
 	{
 		while (g_continue_flag)
 		{
@@ -1112,6 +1112,7 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 
 		if (tcpsetnonblockopt(pTServer->sock) != 0)
 		{
+			close(pTServer->sock);
 			continue;
 		}
 
@@ -1144,8 +1145,9 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 		fdfs_quit(pTServer);
 		close(pTServer->sock);
 
-		break;
-	}
+	} while (0);
+
+	free(pTrackerServers);
 
 	/*
 	//printf("need_sync_old=%d, until_timestamp=%d\n", \
@@ -1170,7 +1172,17 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 
 	strcpy(pReader->ip_addr, pStorage->ip_addr);
 	get_mark_filename(pReader, full_filename);
-	bFileExist = fileExists(full_filename);
+
+	if (pStorage->status == FDFS_STORAGE_STATUS_WAIT_SYNC && \
+		pReader->need_sync_old)
+	{
+		bFileExist = false;
+	}
+	else
+	{
+		bFileExist = fileExists(full_filename);
+	}
+
 	if (bFileExist)
 	{
 		if ((result=iniLoadItems(full_filename, &items, &nItemCount)) \
@@ -1593,6 +1605,23 @@ static void* storage_sync_thread_entrance(void* arg)
 		pStorage->status != FDFS_STORAGE_STATUS_DELETED &&
 		pStorage->status != FDFS_STORAGE_STATUS_NONE)
 	{
+		while (g_continue_flag && \
+			(pStorage->status != FDFS_STORAGE_STATUS_ACTIVE && \
+			pStorage->status != FDFS_STORAGE_STATUS_WAIT_SYNC && \
+			pStorage->status != FDFS_STORAGE_STATUS_SYNCING && \
+			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
+			pStorage->status != FDFS_STORAGE_STATUS_NONE))
+		{
+			sleep(5);
+		}
+	
+		if (!g_continue_flag ||
+			pStorage->status == FDFS_STORAGE_STATUS_DELETED || \
+			pStorage->status == FDFS_STORAGE_STATUS_NONE)
+		{
+			break;
+		}
+
 		if (storage_reader_init(pStorage, &reader) != 0)
 		{
 			logCrit("file: "__FILE__", line: %d, " \
@@ -1602,14 +1631,15 @@ static void* storage_sync_thread_entrance(void* arg)
 			break;
 		}
 
-		while (g_continue_flag && \
+		if (!reader.need_sync_old)
+		{
+			while (g_continue_flag && \
 			(pStorage->status != FDFS_STORAGE_STATUS_ACTIVE && \
-			pStorage->status != FDFS_STORAGE_STATUS_WAIT_SYNC && \
-			pStorage->status != FDFS_STORAGE_STATUS_SYNCING && \
 			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
 			pStorage->status != FDFS_STORAGE_STATUS_NONE))
-		{
-			sleep(1);
+			{
+				sleep(5);
+			}
 		}
 
 		if (g_sync_part_time)
@@ -1698,7 +1728,9 @@ static void* storage_sync_thread_entrance(void* arg)
 				conn_result, strerror(conn_result));
 		}
 
-		if (!g_continue_flag)
+		if (!g_continue_flag ||
+			pStorage->status == FDFS_STORAGE_STATUS_DELETED || \
+			pStorage->status == FDFS_STORAGE_STATUS_NONE)
 		{
 			break;
 		}
