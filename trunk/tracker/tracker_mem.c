@@ -1991,7 +1991,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		const int store_path_count, const int subdir_count_per_path, \
-		const bool bIncRef)
+		const bool bIncRef, const bool init_flag)
 {
 	int result;
 	bool bGroupInserted;
@@ -2154,7 +2154,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		}
 	}
 
-	if (bStorageInserted)
+	if (bStorageInserted || init_flag)
 	{
 		pStorageServer->status = FDFS_STORAGE_STATUS_INIT;
 		if ((result=tracker_save_storages()) != 0)
@@ -2225,16 +2225,20 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 				tracker_mem_cmp_by_ip_addr)) != NULL)
 			{
 				if ((*ppFound)->status == \
-					FDFS_STORAGE_STATUS_OFFLINE)
+					FDFS_STORAGE_STATUS_ACTIVE)
 				{
-					if ((*ppFound)->status != \
-						pServer->status)
-					{
-						(*ppFound)->status = \
-								pServer->status;
-						pClientInfo->pGroup->version++;
-					}
+					continue;
+				}
 
+				if ((*ppFound)->status == \
+					FDFS_STORAGE_STATUS_OFFLINE && \
+					(pServer->status == \
+					FDFS_STORAGE_STATUS_WAIT_SYNC || \
+					pServer->status == \
+					FDFS_STORAGE_STATUS_SYNCING))
+				{
+					(*ppFound)->status = pServer->status;
+					pClientInfo->pGroup->version++;
 					continue;
 				}
 

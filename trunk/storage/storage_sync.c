@@ -971,6 +971,19 @@ static int storage_report_storage_status(const char *ip_addr, \
 	strcpy(briefServers[0].ip_addr, ip_addr);
 	briefServers[0].status = status;
 
+	if (!g_sync_old_done)
+	{
+		while (g_continue_flag && !g_sync_old_done)
+		{
+			sleep(1);
+		}
+
+		if (!g_continue_flag)
+		{
+			return 0;
+		}
+	}
+
 	result = 0;
 	pTServer = &trackerServer;
 	pTServerEnd = g_tracker_servers + g_tracker_server_count;
@@ -1016,10 +1029,11 @@ static int storage_report_storage_status(const char *ip_addr, \
 
 		if (tcpsetnonblockopt(pTServer->sock) != 0)
 		{
+			close(pTServer->sock);
 			continue;
 		}
 
-		if (tracker_report_join(pTServer) != 0)
+		if (tracker_report_join(pTServer, g_sync_old_done) != 0)
 		{
 			close(pTServer->sock);
 			continue;
@@ -1045,6 +1059,19 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 	char tracker_client_ip[IP_ADDRESS_SIZE];
 	int result;
 	int conn_ret;
+
+	if (!g_sync_old_done)
+	{
+		while (g_continue_flag && !g_sync_old_done)
+		{
+			sleep(1);
+		}
+
+		if (!g_continue_flag)
+		{
+			return 0;
+		}
+	}
 
 	pTrackerServers = (TrackerServerInfo *)malloc( \
 		sizeof(TrackerServerInfo) * g_tracker_server_count);
@@ -1127,7 +1154,7 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 		//print_local_host_ip_addrs();
 		*/
 
-		if (tracker_report_join(pTServer) != 0)
+		if (tracker_report_join(pTServer, g_sync_old_done) != 0)
 		{
 			close(pTServer->sock);
 			sleep(g_heart_beat_interval);

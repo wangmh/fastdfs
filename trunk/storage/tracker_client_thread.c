@@ -211,7 +211,7 @@ static void* tracker_report_thread_entrance(void* arg)
 			continue;
 		}
 
-		if (tracker_report_join(pTrackerServer) != 0)
+		if (tracker_report_join(pTrackerServer, sync_old_done) != 0)
 		{
 			sleep(g_heart_beat_interval);
 			continue;
@@ -938,7 +938,7 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 	return tracker_check_response(pTrackerServer);
 }
 
-int tracker_report_join(TrackerServerInfo *pTrackerServer)
+int tracker_report_join(TrackerServerInfo *pTrackerServer, const bool sync_old_done)
 {
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageJoinBody)];
 	TrackerHeader *pHeader;
@@ -955,6 +955,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer)
 	long2buff(g_server_port, pReqBody->storage_port);
 	long2buff(g_path_count, pReqBody->store_path_count);
 	long2buff(g_subdir_count_per_path, pReqBody->subdir_count_per_path);
+	pReqBody->init_flag = sync_old_done ? 0 : 1;
 
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 			sizeof(out_buff), g_network_timeout)) != 0)
