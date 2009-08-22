@@ -1661,6 +1661,11 @@ static void* storage_sync_thread_entrance(void* arg)
 				sleep(1);
 			}
 		}
+
+		if (pStorage->status == FDFS_STORAGE_STATUS_ACTIVE)
+		{
+			pStorage->status = FDFS_STORAGE_STATUS_OFFLINE;
+		}
  
 		previousCode = 0;
 		nContinuousFail = 0;
