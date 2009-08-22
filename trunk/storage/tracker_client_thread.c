@@ -518,6 +518,12 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 						&((*ppFound)->server), \
 						sizeof(FDFSStorageBrief));
 					}
+					else if ((*ppFound)->server.status == \
+						FDFS_STORAGE_STATUS_ACTIVE)
+					{
+						(*ppFound)->server.status = \
+						FDFS_STORAGE_STATUS_OFFLINE;
+					}
 				}
 				else if ((*ppFound)->server.status == \
 					FDFS_STORAGE_STATUS_OFFLINE)
@@ -901,8 +907,6 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 			result, strerror(result));
 		return result;
 	}
-
-	logInfo("tracker_sync_dest_req, g_sync_src_ip_addr=%s, g_sync_until_timestamp=%d", g_sync_src_ip_addr, g_sync_until_timestamp);
 
 	return 0;
 }
