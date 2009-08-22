@@ -57,6 +57,9 @@ char *trim_left(char *pStr);
 char *trim_right(char *pStr);
 char *trim(char *pStr);
 
+int buffer_strcpy(BufferInfo *pBuff, const char *str);
+int buffer_memcpy(BufferInfo *pBuff, const char *buff, const int len);
+
 char *urlencode(const char *src, const int src_len, char *dest, int *dest_len);
 char *urldecode(const char *src, const int src_len, char *dest, int *dest_len);
 

@@ -1858,3 +1858,59 @@ char *urldecode(const char *src, const int src_len, char *dest, int *dest_len)
 	return dest;
 }
 
+int buffer_strcpy(BufferInfo *pBuff, const char *str)
+{
+	pBuff->length = strlen(str);
+	if (pBuff->alloc_size <= pBuff->length)
+	{
+		if (pBuff->buff != NULL)
+		{
+			free(pBuff->buff);
+		}
+
+		pBuff->alloc_size = pBuff->length + 1;
+		pBuff->buff = (char *)malloc(pBuff->alloc_size);
+		if (pBuff->buff == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pBuff->alloc_size, \
+				errno, strerror(errno));
+			pBuff->alloc_size = 0;
+			return errno != 0 ? errno : ENOMEM;
+		}
+	}
+
+	memcpy(pBuff->buff, str, pBuff->length + 1);
+	return 0;
+}
+
+int buffer_memcpy(BufferInfo *pBuff, const char *buff, const int len)
+{
+	pBuff->length = len;
+	if (pBuff->alloc_size <= pBuff->length)
+	{
+		if (pBuff->buff != NULL)
+		{
+			free(pBuff->buff);
+		}
+
+		pBuff->alloc_size = pBuff->length;
+		pBuff->buff = (char *)malloc(pBuff->alloc_size);
+		if (pBuff->buff == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pBuff->alloc_size, \
+				errno, strerror(errno));
+			pBuff->alloc_size = 0;
+			return errno != 0 ? errno : ENOMEM;
+		}
+	}
+
+	memcpy(pBuff->buff, buff, pBuff->length);
+	return 0;
+}
+

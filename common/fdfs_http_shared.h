@@ -27,8 +27,9 @@ typedef struct
 	/* key is file ext name, value is content type */
 	HashArray content_type_hash;
 
-	//http.anti_steal.library
-	//http.anti_steal.token_check_fail
+	BufferInfo anti_steal_secret_key;
+	char token_check_fail_content_type[64];
+	BufferInfo token_check_fail_buff;
 } FDFSHTTPParams;
 
 #ifdef __cplusplus
