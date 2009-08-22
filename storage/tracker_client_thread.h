@@ -23,9 +23,10 @@ int tracker_report_destroy();
 int tracker_report_thread_start();
 int kill_tracker_report_threads();
 
-int tracker_report_join(TrackerServerInfo *pTrackerServer);
+int tracker_report_join(TrackerServerInfo *pTrackerServer, \
+		const bool sync_old_done);
 int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
-			BinLogReader *pReader);
+		BinLogReader *pReader);
 int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 		FDFSStorageBrief *briefServers, const int server_count);
 

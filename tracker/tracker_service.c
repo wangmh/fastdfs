@@ -281,7 +281,8 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	}
 
 	status = tracker_mem_add_group_and_storage(pClientInfo, \
-				store_path_count, subdir_count_per_path, true);
+			store_path_count, subdir_count_per_path, \
+			true, body.init_flag);
 	} while (0);
 
 	return tracker_check_and_sync(pClientInfo, status);

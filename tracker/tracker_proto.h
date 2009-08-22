@@ -73,6 +73,7 @@ typedef struct
 	char storage_port[FDFS_PROTO_PKG_LEN_SIZE];
 	char store_path_count[FDFS_PROTO_PKG_LEN_SIZE];
 	char subdir_count_per_path[FDFS_PROTO_PKG_LEN_SIZE];
+	char init_flag;
 } TrackerStorageJoinBody;
 
 
