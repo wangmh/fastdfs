@@ -504,7 +504,28 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		{
 			if ((*ppFound)->server.status != pServer->status)
 			{
-				if ((((pServer->status == \
+				if (pServer->status == \
+					FDFS_STORAGE_STATUS_OFFLINE)
+				{
+					if ((*ppFound)->server.status == \
+						FDFS_STORAGE_STATUS_WAIT_SYNC \
+						|| (*ppFound)->server.status ==\
+						FDFS_STORAGE_STATUS_SYNCING \
+						|| (*ppFound)->server.status ==\
+						FDFS_STORAGE_STATUS_DELETED)
+					{
+						memcpy(pDiffServer++, \
+						&((*ppFound)->server), \
+						sizeof(FDFSStorageBrief));
+					}
+				}
+				else if ((*ppFound)->server.status == \
+					FDFS_STORAGE_STATUS_OFFLINE)
+				{
+					(*ppFound)->server.status = \
+							pServer->status;
+				}
+				else if ((((pServer->status == \
 					FDFS_STORAGE_STATUS_WAIT_SYNC) || \
 					(pServer->status == \
 					FDFS_STORAGE_STATUS_SYNCING)) && \
@@ -880,6 +901,8 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 			result, strerror(result));
 		return result;
 	}
+
+	logInfo("tracker_sync_dest_req, g_sync_src_ip_addr=%s, g_sync_until_timestamp=%d", g_sync_src_ip_addr, g_sync_until_timestamp);
 
 	return 0;
 }

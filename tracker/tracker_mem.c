@@ -2224,6 +2224,20 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 				sizeof(FDFSStorageDetail *), \
 				tracker_mem_cmp_by_ip_addr)) != NULL)
 			{
+				if ((*ppFound)->status == \
+					FDFS_STORAGE_STATUS_OFFLINE)
+				{
+					if ((*ppFound)->status != \
+						pServer->status)
+					{
+						(*ppFound)->status = \
+								pServer->status;
+						pClientInfo->pGroup->version++;
+					}
+
+					continue;
+				}
+
 				if (((pServer->status > (*ppFound)->status) && \
 					(((*ppFound)->status == \
 					FDFS_STORAGE_STATUS_INIT) || \

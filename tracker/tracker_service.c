@@ -428,6 +428,8 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 		bSaveStorages = true;
 	}
 
+	logInfo("pClientInfo->pStorage->status=%d", pClientInfo->pStorage->status);
+
 	if (pClientInfo->pStorage->psync_src_server == NULL)
 	{
 		memcpy(sync_src_ip_addr, body.src_ip_addr, IP_ADDRESS_SIZE);
@@ -1563,6 +1565,8 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 	pClientInfo->pStorage->sync_until_timestamp = sync_until_timestamp;
 	pClientInfo->pStorage->status = FDFS_STORAGE_STATUS_WAIT_SYNC;
 	pClientInfo->pGroup->version++;
+
+	logInfo("ip: %s, status=%d", pClientInfo->pStorage->ip_addr, pClientInfo->pStorage->status);
 
 	tracker_save_storages();
 	return 0;
