@@ -341,8 +341,6 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	}
 	*(src_full_filename + src_filename_len) = '\0';
 
-	//logInfo("src_full_filename=%s(%d)", src_full_filename, src_filename_len);
-
 	pSrcFilename = strstr(src_full_filename, "/data/");
 	if (pSrcFilename == NULL)
 	{
@@ -1200,8 +1198,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 	strcpy(pReader->ip_addr, pStorage->ip_addr);
 	get_mark_filename(pReader, full_filename);
 
-	if (pStorage->status == FDFS_STORAGE_STATUS_WAIT_SYNC && \
-		pReader->need_sync_old)
+	if (pStorage->status == FDFS_STORAGE_STATUS_WAIT_SYNC)
 	{
 		bFileExist = false;
 	}
@@ -1746,12 +1743,9 @@ static void* storage_sync_thread_entrance(void* arg)
 			pStorage->status != FDFS_STORAGE_STATUS_WAIT_SYNC && \
 			pStorage->status != FDFS_STORAGE_STATUS_SYNCING)
 		{
-			logInfo("ip: %s, status=%d, continue", pStorage->ip_addr, pStorage->status);
 			close(storage_server.sock);
 			continue;
 		}
-
-		logInfo("ip: %s, status: %d", pStorage->ip_addr, pStorage->status);
 
 		if (storage_reader_init(pStorage, &reader) != 0)
 		{
