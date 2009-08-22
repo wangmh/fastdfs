@@ -1612,7 +1612,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
 			pStorage->status != FDFS_STORAGE_STATUS_NONE))
 		{
-			sleep(5);
+			sleep(1);
 		}
 	
 		if (!g_continue_flag ||
@@ -1620,26 +1620,6 @@ static void* storage_sync_thread_entrance(void* arg)
 			pStorage->status == FDFS_STORAGE_STATUS_NONE)
 		{
 			break;
-		}
-
-		if (storage_reader_init(pStorage, &reader) != 0)
-		{
-			logCrit("file: "__FILE__", line: %d, " \
-				"storage_reader_init fail, program exit!", \
-				__LINE__);
-			g_continue_flag = false;
-			break;
-		}
-
-		if (!reader.need_sync_old)
-		{
-			while (g_continue_flag && \
-			(pStorage->status != FDFS_STORAGE_STATUS_ACTIVE && \
-			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
-			pStorage->status != FDFS_STORAGE_STATUS_NONE))
-			{
-				sleep(5);
-			}
 		}
 
 		if (g_sync_part_time)
@@ -1735,8 +1715,48 @@ static void* storage_sync_thread_entrance(void* arg)
 			break;
 		}
 
+		if (pStorage->status != FDFS_STORAGE_STATUS_ACTIVE && \
+			pStorage->status != FDFS_STORAGE_STATUS_WAIT_SYNC && \
+			pStorage->status != FDFS_STORAGE_STATUS_SYNCING)
+		{
+			logInfo("ip: %s, status=%d, continue", pStorage->ip_addr, pStorage->status);
+			close(storage_server.sock);
+			continue;
+		}
+
+		logInfo("ip: %s, status: %d", pStorage->ip_addr, pStorage->status);
+
+		if (storage_reader_init(pStorage, &reader) != 0)
+		{
+			logCrit("file: "__FILE__", line: %d, " \
+				"storage_reader_init fail, program exit!", \
+				__LINE__);
+			g_continue_flag = false;
+			break;
+		}
+
+		if (!reader.need_sync_old)
+		{
+			while (g_continue_flag && \
+			(pStorage->status != FDFS_STORAGE_STATUS_ACTIVE && \
+			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
+			pStorage->status != FDFS_STORAGE_STATUS_NONE))
+			{
+				sleep(1);
+			}
+
+			if (pStorage->status != FDFS_STORAGE_STATUS_ACTIVE)
+			{
+				close(storage_server.sock);
+				storage_reader_destroy(&reader);
+				continue;
+			}
+		}
+
 		if (tcpsetnonblockopt(storage_server.sock) != 0)
 		{
+			close(storage_server.sock);
+			storage_reader_destroy(&reader);
 			continue;
 		}
 
@@ -1789,8 +1809,8 @@ static void* storage_sync_thread_entrance(void* arg)
 		while (g_continue_flag && (!g_sync_part_time || \
 			(current_time >= start_time && \
 			current_time <= end_time)) && \
-			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
-			pStorage->status != FDFS_STORAGE_STATUS_NONE)
+			(pStorage->status == FDFS_STORAGE_STATUS_ACTIVE || \
+			pStorage->status == FDFS_STORAGE_STATUS_SYNCING))
 		{
 			if (g_sync_part_time)
 			{
