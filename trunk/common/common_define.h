@@ -112,6 +112,13 @@ typedef struct
 	char *value;
 } KeyValuePair;
 
+typedef struct
+{
+	char *buff;
+	int alloc_size;
+	int length;
+} BufferInfo;
+
 typedef void (*FreeDataFunc)(void *ptr);
 typedef int (*CompareFunc)(void *p1, void *p2);
 

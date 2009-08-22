@@ -310,6 +310,23 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_groups.store_server, g_groups.store_path, \
 			g_storage_reserved_mb, g_groups.download_server, \
 			g_allow_ip_count, g_sync_log_buff_interval);
+#ifdef WITH_HTTPD
+		if (!g_http_params.disabled)
+		{
+			logInfo("HTTP supported: " \
+				"server_port=%d, " \
+				"anti_steal_token=%d, " \
+				"anti_steal_secret_key length=%d, "  \
+				"token_check_fail content_type=%s, " \
+				"token_check_fail buff length=%d",  \
+				g_http_params.server_port, \
+				g_http_params.anti_steal_token, \
+				g_http_params.anti_steal_secret_key.length, \
+				g_http_params.token_check_fail_content_type, \
+				g_http_params.token_check_fail_buff.length);
+		}
+#endif
+
 	} while (0);
 
 	iniFreeItems(items);

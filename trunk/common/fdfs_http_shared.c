@@ -19,6 +19,7 @@
 #include <netinet/in.h>
 #include <fcntl.h>
 #include "logger.h"
+#include "shared_func.h"
 #include "mime_file_parser.h"
 #include "fdfs_http_shared.h"
 
@@ -27,8 +28,13 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 {
 	int result;
 	char *mime_types_filename;
-	char *anti_steal_library;
 	char szMimeFilename[256];
+	char *anti_steal_secret_key;
+	char *token_check_fail_filename;
+	char *pExtName;
+	HashData *pHashData;
+	int  ext_len;
+	off_t file_size;
 
 	memset(pParams, 0, sizeof(FDFSHTTPParams));
 
@@ -106,25 +112,96 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 		return result;
 	}
 
-	pParams->anti_steal_token = iniGetBoolValue("http.anti_steal.token", \
-					items, nItemCount, false);
+	pParams->anti_steal_token = iniGetBoolValue( \
+				"http.anti_steal.check_token", \
+				items, nItemCount, false);
 	if (!pParams->anti_steal_token)
 	{
 		return 0;
 	}
 
-	anti_steal_library = iniGetStrValue("http.anti_steal.library", \
-                                        items, nItemCount);
-	/*
-	if (anti_steal_library == NULL || *anti_steal_library == '\0')
+	anti_steal_secret_key = iniGetStrValue( \
+			"http.anti_steal.secret_key", \
+			items, nItemCount);
+	if (anti_steal_secret_key == NULL || *anti_steal_secret_key == '\0')
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"param \"http.anti_steal.library\" not exist " \
+			"param \"http.anti_steal.secret_key\" not exist " \
 			"or is empty", __LINE__);
 		return EINVAL;
 	}
-	*/	
-//http.anti_steal.token_check_fail=
+
+	buffer_strcpy(&pParams->anti_steal_secret_key, anti_steal_secret_key);
+
+	token_check_fail_filename = iniGetStrValue( \
+			"http.anti_steal.token_check_fail", \
+			items, nItemCount);
+	if (token_check_fail_filename == NULL || \
+		*token_check_fail_filename == '\0')
+	{
+		return 0;
+	}
+
+	if (!fileExists(token_check_fail_filename))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"token_check_fail file: %s not exists", __LINE__, \
+			token_check_fail_filename);
+		return ENOENT;
+	}
+
+	pExtName = strrchr(token_check_fail_filename, '.');
+	if (pExtName == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"token_check_fail file: %s does not have " \
+			"extension name", __LINE__, \
+			token_check_fail_filename);
+		return ENOENT;
+	}
+
+	pExtName++;
+	ext_len = strlen(pExtName);
+	if (ext_len == 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"token_check_fail file: %s 's " \
+			"extension name is empty", __LINE__, \
+			token_check_fail_filename);
+		return EINVAL;
+	}
+
+	pHashData = hash_find_ex(&pParams->content_type_hash, \
+				pExtName, ext_len + 1);
+	if (pHashData == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"token_check_fail file: %s 's " \
+			"extension name is invalid", __LINE__, \
+			token_check_fail_filename);
+		return EINVAL;
+	}
+
+	if (pHashData->value_len >= sizeof( \
+			pParams->token_check_fail_content_type))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"token_check_fail file: %s, " \
+			"extension name 's content type is invalid", \
+			__LINE__, token_check_fail_filename);
+		return EINVAL;
+	}
+	memcpy(pParams->token_check_fail_content_type, pHashData->value, \
+			pHashData->value_len);
+
+	if ((result=getFileContent(token_check_fail_filename, \
+		&pParams->token_check_fail_buff.buff, &file_size)) != 0)
+	{
+		return result;
+	}
+
+	pParams->token_check_fail_buff.alloc_size = file_size;
+	pParams->token_check_fail_buff.length = file_size;
 
 	return 0;
 }
