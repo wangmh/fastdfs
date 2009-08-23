@@ -55,6 +55,12 @@ FDFSStorageDetail *tracker_get_group_sync_src_server(FDFSGroupInfo *pGroup, \
 
 extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 
+FDFSStorageDetail *tracker_get_writable_storage(FDFSGroupInfo *pStoreGroup);
+
+int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
+	const char *filename, const int filename_len, FDFSGroupInfo **ppGroup, \
+	FDFSStorageDetail **ppStoreServers, int *server_count);
+
 #ifdef __cplusplus
 }
 #endif

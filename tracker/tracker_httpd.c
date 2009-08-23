@@ -11,6 +11,8 @@
 #include <evhttp.h>
 #include "logger.h"
 #include "tracker_global.h"
+#include "tracker_mem.h"
+#include "tracker_proto.h"
 #include "http_func.h"
 #include "tracker_httpd.h"
 
@@ -21,38 +23,32 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 #define HTTPD_MAX_PARAMS   32
 	char *url;
 	char *file_id;
+	char uri[256];
+	char redirect_url[256+32];
+	int url_len;
+	int uri_len;
+	int domain_len;
 	KeyValuePair params[HTTPD_MAX_PARAMS];
 	int param_count;
-	KeyValuePair *pCurrent;
-	KeyValuePair *pEnd;
-	char cbuff[1 * 1024];
 	char *p;
+	char *group_name;
+	char *filename;
+	FDFSGroupInfo *pGroup;
+	FDFSStorageDetail *ppStoreServers[FDFS_MAX_SERVERS_EACH_GROUP];
+	int filename_len;
+	int server_count;
 
 	url = (char *)evhttp_request_uri(req);
-	param_count = http_parse_query(url, params, HTTPD_MAX_PARAMS);
-
-	/*
-	memset(cbuff, ' ', sizeof(cbuff));
-
-	p = cbuff;
-	p += sprintf(p, "url=%s\n", url);
-	pEnd = params + param_count;
-	for (pCurrent=params; pCurrent<pEnd; pCurrent++)
-	{
-		p += sprintf(p, "%s=%s\n", pCurrent->key, pCurrent->value);
-	}
-	*/
-
-	file_id = url;
-	if (strlen(file_id) < 16)
+	url_len = strlen(url);
+	if (url_len < 16)
 	{
 		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
 		return;
 	}
 
-	if (strncasecmp(file_id, "http://", 7) == 0)
+	if (strncasecmp(url, "http://", 7) == 0)
 	{
-		p = strchr(file_id+7, '/');
+		p = strchr(url+7, '/');
 		if (p == NULL)
 		{
 			evhttp_send_reply(req, HTTP_BADREQUEST, \
@@ -60,9 +56,40 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 			return;
 		}
 
-		file_id = p + 1;
+		uri_len = url_len - (p - url);
+		url = p;
 	}
-	else if (*file_id == '/')
+	else
+	{
+		uri_len = url_len;
+	}
+
+	if (uri_len < 64 || uri_len + 1 >= sizeof(uri))
+	{
+		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
+		return;
+	}
+
+	if (*url != '/')
+	{
+		*uri = '/';
+		memcpy(uri+1, url, uri_len+1);
+		uri_len++;
+	}
+	else
+	{
+		memcpy(uri, url, uri_len+1);
+	}
+
+	param_count = http_parse_query(url, params, HTTPD_MAX_PARAMS);
+	file_id = url;
+	if (strlen(file_id) < 22)
+	{
+		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
+		return;
+	}
+
+	if (*file_id == '/')
 	{
 		file_id++;
 	}
@@ -107,13 +134,35 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 
 			return;
 		}
-
-		evbuffer_add_printf(ev_buf, "token=%s\n", token);
-		evbuffer_add_printf(ev_buf, "ts=%s\n", ts);
 	}
-	
-	evbuffer_add_printf(ev_buf, "file_id=%s\n", file_id);
-	evhttp_send_reply(req, HTTP_OK, "OK", ev_buf);
+
+	group_name = file_id;
+	filename = strchr(file_id, '/');
+	if (filename == NULL)
+	{
+		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
+		return;
+	}
+
+	*filename = '\0';
+	filename++;  //skip '/'
+	filename_len = strlen(filename);
+	if (tracker_mem_get_storage_by_filename( \
+			TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE, \
+			group_name, filename, filename_len, &pGroup, \
+			ppStoreServers, &server_count) != 0)
+	{
+		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
+		return;
+	}
+
+	domain_len = sprintf(redirect_url, "http://%s:%d", \
+			ppStoreServers[0]->ip_addr, 80);
+	memcpy(redirect_url + domain_len, uri, uri_len);
+	*(redirect_url + domain_len + uri_len) = '\0';
+
+	evhttp_add_header(req->output_headers, "Location", redirect_url);
+	evhttp_send_reply(req, HTTP_MOVETEMP, "Found", ev_buf);
 }
 
 static void *httpd_entrance(void *arg)
