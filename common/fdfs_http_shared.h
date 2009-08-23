@@ -28,8 +28,9 @@ typedef struct
 	HashArray content_type_hash;
 
 	BufferInfo anti_steal_secret_key;
-	char token_check_fail_content_type[64];
 	BufferInfo token_check_fail_buff;
+	char token_check_fail_content_type[64];
+	int token_ttl;
 } FDFSHTTPParams;
 
 #ifdef __cplusplus
@@ -49,6 +50,42 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 		const char *conf_filename, FDFSHTTPParams *pHTTPParams);
 
 void fdfs_http_params_destroy(FDFSHTTPParams *pParams);
+
+/**
+generate anti-steal token
+params:
+	secret_key: secret key buffer
+	file_id: FastDFS file id
+	timestamp: current timestamp, unix timestamp (seconds)
+	token: return token buffer
+return: 0 for success, != 0 fail
+**/
+int fdfs_http_gen_token(const BufferInfo *secret_key, const char *file_id, \
+		const int timestamp, char *token);
+
+/**
+check anti-steal token
+params:
+	secret_key: secret key buffer
+	file_id: FastDFS file id
+	timestamp: the timestamp to generate the token, unix timestamp (seconds)
+	token: token buffer
+	ttl: token ttl, delta seconds
+return: 0 for passed, != 0 fail
+**/
+int fdfs_http_check_token(const BufferInfo *secret_key, const char *file_id, \
+		const int timestamp, const char *token, const int ttl);
+
+/**
+get parameter value
+params:
+	param_name: the parameter name to get
+	params: parameter array
+	param_count: param count
+return: param value pointer, return NULL if not exist
+**/
+char *fdfs_http_get_parameter(const char *param_name, KeyValuePair *params, \
+		const int param_count);
 
 #ifdef __cplusplus
 }
