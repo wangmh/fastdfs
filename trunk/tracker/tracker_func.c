@@ -316,11 +316,13 @@ int tracker_load_from_conf_file(const char *filename, \
 			logInfo("HTTP supported: " \
 				"server_port=%d, " \
 				"anti_steal_token=%d, " \
+				"token_ttl=%ds, " \
 				"anti_steal_secret_key length=%d, "  \
 				"token_check_fail content_type=%s, " \
 				"token_check_fail buff length=%d",  \
 				g_http_params.server_port, \
 				g_http_params.anti_steal_token, \
+				g_http_params.token_ttl, \
 				g_http_params.anti_steal_secret_key.length, \
 				g_http_params.token_check_fail_content_type, \
 				g_http_params.token_check_fail_buff.length);

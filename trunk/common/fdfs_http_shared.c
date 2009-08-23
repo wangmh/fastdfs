@@ -19,6 +19,7 @@
 #include <netinet/in.h>
 #include <fcntl.h>
 #include "logger.h"
+#include "md5.h"
 #include "shared_func.h"
 #include "mime_file_parser.h"
 #include "fdfs_http_shared.h"
@@ -120,6 +121,17 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 		return 0;
 	}
 
+	pParams->token_ttl = iniGetIntValue( \
+				"http.anti_steal.token_ttl", \
+				items, nItemCount, 600);
+	if (pParams->token_ttl <= 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"param \"http.anti_steal.token_ttl\" is invalid", \
+			__LINE__);
+		return EINVAL;
+	}
+
 	anti_steal_secret_key = iniGetStrValue( \
 			"http.anti_steal.secret_key", \
 			items, nItemCount);
@@ -209,5 +221,75 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 void fdfs_http_params_destroy(FDFSHTTPParams *pParams)
 {
 	hash_destroy(&pParams->content_type_hash);
+}
+
+int fdfs_http_gen_token(const BufferInfo *secret_key, const char *file_id, \
+		const int timestamp, char *token)
+{
+	char buff[256 + 64];
+	unsigned char digit[16];
+	int id_len;
+	int total_len;
+
+	id_len = strlen(file_id);
+	if (id_len + secret_key->length + 12 > sizeof(buff))
+	{
+		return ENOSPC;
+	}
+
+	memcpy(buff, file_id, id_len);
+	total_len = id_len;
+	memcpy(buff+total_len, secret_key->buff, secret_key->length);
+	total_len += secret_key->length;
+	total_len += sprintf(buff+total_len, "%d", timestamp);
+
+	MD5Buffer(buff, total_len, digit);
+	bin2hex(digit, 16, token);
+	return 0;
+}
+
+int fdfs_http_check_token(const BufferInfo *secret_key, const char *file_id, \
+		const int timestamp, const char *token, const int ttl)
+{
+	char true_token[33];
+	int result;
+	int token_len;
+
+	token_len = strlen(token);
+	if (token_len != 32)
+	{
+		return EINVAL;
+	}
+
+	if (time(NULL) - timestamp > ttl)
+	{
+		return ETIMEDOUT;
+	}
+
+	if ((result=fdfs_http_gen_token(secret_key, file_id, \
+			timestamp, true_token)) != 0)
+	{
+		return result;
+	}
+
+	return memcmp(token, true_token, 32);
+}
+
+char *fdfs_http_get_parameter(const char *param_name, KeyValuePair *params, \
+		const int param_count)
+{
+	KeyValuePair *pCurrent;
+	KeyValuePair *pEnd;
+
+	pEnd = params + param_count;
+	for (pCurrent=params; pCurrent<pEnd; pCurrent++)
+	{
+		if (strcmp(pCurrent->key, param_name) == 0)
+		{
+			return pCurrent->value;
+		}
+	}
+
+	return NULL;
 }
 

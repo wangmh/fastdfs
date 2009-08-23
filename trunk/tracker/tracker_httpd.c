@@ -20,6 +20,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 {
 #define HTTPD_MAX_PARAMS   32
 	char *url;
+	char *file_id;
 	KeyValuePair params[HTTPD_MAX_PARAMS];
 	int param_count;
 	KeyValuePair *pCurrent;
@@ -30,6 +31,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	url = (char *)evhttp_request_uri(req);
 	param_count = http_parse_query(url, params, HTTPD_MAX_PARAMS);
 
+	/*
 	memset(cbuff, ' ', sizeof(cbuff));
 
 	p = cbuff;
@@ -39,9 +41,78 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	{
 		p += sprintf(p, "%s=%s\n", pCurrent->key, pCurrent->value);
 	}
+	*/
+
+	file_id = url;
+	if (strlen(file_id) < 16)
+	{
+		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
+		return;
+	}
+
+	if (strncasecmp(file_id, "http://", 7) == 0)
+	{
+		p = strchr(file_id+7, '/');
+		if (p == NULL)
+		{
+			evhttp_send_reply(req, HTTP_BADREQUEST, \
+					"Bad request", ev_buf);
+			return;
+		}
+
+		file_id = p + 1;
+	}
+	else if (*file_id == '/')
+	{
+		file_id++;
+	}
+
+	if (g_http_params.anti_steal_token)
+	{
+		char *token;
+		char *ts;
+		int timestamp;
+
+		token = fdfs_http_get_parameter("token", params, param_count);
+		ts = fdfs_http_get_parameter("ts", params, param_count);
+		if (token == NULL || ts == NULL)
+		{
+			evhttp_send_reply(req, HTTP_BADREQUEST, \
+					"Bad request", ev_buf);
+			return;
+		}
+
+		timestamp = atoi(ts);
+		if (fdfs_http_check_token(&g_http_params.anti_steal_secret_key,\
+			file_id, timestamp, token, \
+			g_http_params.token_ttl) != 0)
+		{
+			if (*(g_http_params.token_check_fail_content_type))
+			{
+				evbuffer_add(ev_buf, \
+				g_http_params.token_check_fail_buff.buff, \
+				g_http_params.token_check_fail_buff.length);
+
+				evhttp_add_header(req->output_headers, \
+				"Content-Type", \
+				g_http_params.token_check_fail_content_type);
+
+				evhttp_send_reply(req, HTTP_OK, "OK", ev_buf);
+			}
+			else
+			{
+				evhttp_send_reply(req, HTTP_BADREQUEST, \
+						"Bad request", ev_buf);
+			}
+
+			return;
+		}
+
+		evbuffer_add_printf(ev_buf, "token=%s\n", token);
+		evbuffer_add_printf(ev_buf, "ts=%s\n", ts);
+	}
 	
-	evbuffer_add_printf(ev_buf, "Hello World!!!\n");
-	evbuffer_add(ev_buf, cbuff, sizeof(cbuff));
+	evbuffer_add_printf(ev_buf, "file_id=%s\n", file_id);
 	evhttp_send_reply(req, HTTP_OK, "OK", ev_buf);
 }
 
