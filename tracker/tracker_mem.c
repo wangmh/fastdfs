@@ -2549,14 +2549,14 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 				szIpAddr, sizeof(szIpAddr)));
 			if (pStoreSrcServer != NULL)
 			{
-				ppStoreServers[*server_count++] = \
+				ppStoreServers[(*server_count)++] = \
 						 pStoreSrcServer;
 				return 0;
 			}
 		}
 
 		//round robin
-		ppStoreServers[*server_count++]=*((*ppGroup)->active_servers\
+		ppStoreServers[(*server_count)++]=*((*ppGroup)->active_servers\
 				+ (*ppGroup)->current_read_server);
 
 		/*
@@ -2624,7 +2624,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 					szIpAddr, sizeof(szIpAddr)));
 			if (pStoreSrcServer != NULL)
 			{
-				ppStoreServers[*server_count++] = \
+				ppStoreServers[(*server_count)++] = \
 							 pStoreSrcServer;
 				return 0;
 			}
@@ -2659,7 +2659,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 					FDFS_STORE_SERVER_FIRST)
 				|| strcmp((*ppServer)->ip_addr, szIpAddr) == 0)
 			{
-				ppStoreServers[*server_count++] = *ppServer;
+				ppStoreServers[(*server_count)++] = *ppServer;
 			}
 		}
 
@@ -2668,7 +2668,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 			if (storage_ip == INADDR_NONE && g_groups.store_server\
 					== FDFS_STORE_SERVER_FIRST)
 			{
-				ppStoreServers[*server_count++] = \
+				ppStoreServers[(*server_count)++] = \
 					 *((*ppGroup)->active_servers);
 			}
 		}

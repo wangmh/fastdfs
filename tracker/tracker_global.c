@@ -21,6 +21,8 @@ int g_allow_ip_count = 0;
 in_addr_t *g_allow_ip_addrs = NULL;
 
 struct base64_context g_base64_context;
+char g_run_by_group[32] = {0};
+char g_run_by_user[32] = {0};
 
 #ifdef WITH_HTTPD
 FDFSHTTPParams g_http_params;

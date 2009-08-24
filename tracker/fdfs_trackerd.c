@@ -156,6 +156,11 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+	if ((result=set_run_by(g_run_by_group, g_run_by_user)) != 0)
+	{
+		return result;
+	}
+
 	scheduleArray.entries = scheduleEntries;
 	scheduleArray.count = SCHEDULE_ENTRIES_COUNT;
 
