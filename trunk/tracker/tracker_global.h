@@ -40,6 +40,9 @@ extern int g_allow_ip_count;  /* -1 means match any ip address */
 extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
 extern struct base64_context g_base64_context;
 
+extern char g_run_by_group[32];
+extern char g_run_by_user[32];
+
 #ifdef WITH_HTTPD
 extern FDFSHTTPParams g_http_params;
 #endif
