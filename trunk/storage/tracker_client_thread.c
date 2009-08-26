@@ -502,6 +502,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 			sizeof(FDFSStorageServer *), storage_cmp_by_ip_addr);
 		if (ppFound != NULL)
 		{
+			//logInfo("ip_addr=%s, local status: %d, tracker status: %d", pServer->ip_addr, (*ppFound)->server.status, pServer->status);
 			if ((*ppFound)->server.status != pServer->status)
 			{
 				if (pServer->status == \
@@ -579,6 +580,8 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		}
 		else
 		{
+			//logInfo("ip_addr=%s, tracker status: %d", pServer->ip_addr, pServer->status);
+
 			if (g_storage_count < FDFS_MAX_SERVERS_EACH_GROUP)
 			{
 				if ((result=pthread_mutex_lock( \
