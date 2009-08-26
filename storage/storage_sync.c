@@ -1638,7 +1638,7 @@ static void* storage_sync_thread_entrance(void* arg)
 		{
 			sleep(1);
 		}
-	
+
 		if (!g_continue_flag ||
 			pStorage->status == FDFS_STORAGE_STATUS_DELETED || \
 			pStorage->status == FDFS_STORAGE_STATUS_NONE)
@@ -1662,11 +1662,6 @@ static void* storage_sync_thread_entrance(void* arg)
 			}
 		}
 
-		if (pStorage->status == FDFS_STORAGE_STATUS_ACTIVE)
-		{
-			pStorage->status = FDFS_STORAGE_STATUS_OFFLINE;
-		}
- 
 		previousCode = 0;
 		nContinuousFail = 0;
 		conn_result = 0;
@@ -1721,6 +1716,11 @@ static void* storage_sync_thread_entrance(void* arg)
 				previousCode = conn_result;
 			}
 
+			if (pStorage->status == FDFS_STORAGE_STATUS_ACTIVE)
+			{
+				pStorage->status = FDFS_STORAGE_STATUS_OFFLINE;
+			}
+ 
 			nContinuousFail++;
 			close(storage_server.sock);
 			storage_server.sock = -1;
