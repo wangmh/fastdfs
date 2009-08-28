@@ -24,6 +24,7 @@
 #define FDFS_FIELD_SEPERATOR	'\x02'
 
 #define SYNC_BINLOG_BUFF_DEF_INTERVAL  60
+#define CHECK_ACTIVE_DEF_INTERVAL     100
 
 #ifdef __cplusplus
 extern "C" {

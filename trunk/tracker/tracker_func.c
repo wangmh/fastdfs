@@ -300,6 +300,14 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
 		}
 
+		g_check_active_interval = iniGetIntValue( \
+				"check_active_interval", items, nItemCount, \
+				CHECK_ACTIVE_DEF_INTERVAL);
+		if (g_check_active_interval <= 0)
+		{
+			g_check_active_interval = CHECK_ACTIVE_DEF_INTERVAL;
+		}
+
 #ifdef WITH_HTTPD
 		if ((result=fdfs_http_params_load(items, nItemCount, \
 				filename, &g_http_params)) != 0)
@@ -316,15 +324,17 @@ int tracker_load_from_conf_file(const char *filename, \
 			"store_server=%d, store_path=%d, " \
 			"reserved_storage_space=%dMB, " \
 			"download_server=%d, " \
-			"allow_ip_count=%d, sync_log_buff_interval=%ds", \
+			"allow_ip_count=%d, sync_log_buff_interval=%ds, " \
+			"check_active_interval=%ds", \
 			g_version.major, g_version.minor,  \
-			g_base_path, \
-			g_network_timeout, \
+			g_base_path, g_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_groups.store_lookup, g_groups.store_group, \
 			g_groups.store_server, g_groups.store_path, \
 			g_storage_reserved_mb, g_groups.download_server, \
-			g_allow_ip_count, g_sync_log_buff_interval);
+			g_allow_ip_count, g_sync_log_buff_interval, \
+			g_check_active_interval);
+
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)
 		{

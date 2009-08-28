@@ -11,6 +11,7 @@
 int g_server_port = FDFS_TRACKER_SERVER_DEF_PORT;
 int g_max_connections = DEFAULT_MAX_CONNECTONS;
 int g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
+int g_check_active_interval = CHECK_ACTIVE_DEF_INTERVAL;
 
 FDFSGroups g_groups;
 int g_storage_stat_chg_count = 0;

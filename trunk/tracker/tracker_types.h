@@ -117,6 +117,8 @@ typedef struct
 	*/
 	time_t last_synced_timestamp;
 
+	/* last heart beat time */
+	time_t last_heart_beat_time;
 } FDFSStorageStat;
 
 typedef struct
@@ -138,6 +140,7 @@ typedef struct
 	char sz_last_source_update[8];
 	char sz_last_sync_update[8];
 	char sz_last_synced_timestamp[8];
+	char sz_last_heart_beat_time[8];
 } FDFSStorageStatBuff;
 
 typedef struct StructFDFSStorageDetail

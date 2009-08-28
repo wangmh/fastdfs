@@ -61,6 +61,8 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 	const char *filename, const int filename_len, FDFSGroupInfo **ppGroup, \
 	FDFSStorageDetail **ppStoreServers, int *server_count);
 
+int tracker_mem_check_alive(void *arg);
+
 #ifdef __cplusplus
 }
 #endif
