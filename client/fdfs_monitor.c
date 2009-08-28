@@ -130,6 +130,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 	FDFSStorageInfo *pStorage;
 	FDFSStorageInfo *pStorageEnd;
 	FDFSStorageStat *pStorageStat;
+	char szLastHeartBeatTime[32];
 	char szSrcUpdTime[32];
 	char szSyncUpdTime[32];
 	char szSyncedTimestamp[32];
@@ -199,6 +200,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tsuccess_create_link_count = "INT64_PRINTF_FORMAT"\n"\
 			"\t\ttotal_delete_link_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tsuccess_delete_link_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tlast_heart_beat_time = %s\n" \
 			"\t\tlast_source_update = %s\n" \
 			"\t\tlast_sync_update = %s\n"   \
 			"\t\tlast_synced_timestamp= %s\n",  \
@@ -220,6 +222,9 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			pStorageStat->success_create_link_count, \
 			pStorageStat->total_delete_link_count, \
 			pStorageStat->success_delete_link_count, \
+			formatDatetime(pStorageStat->last_heart_beat_time, \
+				"%Y-%m-%d %H:%M:%S", \
+				szLastHeartBeatTime, sizeof(szLastHeartBeatTime)), \
 			formatDatetime(pStorageStat->last_source_update, \
 				"%Y-%m-%d %H:%M:%S", \
 				szSrcUpdTime, sizeof(szSrcUpdTime)), \

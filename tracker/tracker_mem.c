@@ -2677,3 +2677,50 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 	return *server_count > 0 ? 0 : ENOENT;
 }
 
+int tracker_mem_check_alive(void *arg)
+{
+	FDFSStorageDetail **ppServer;
+	FDFSStorageDetail **ppServerEnd;
+	FDFSGroupInfo *pGroup;
+	FDFSGroupInfo *pGroupEnd;
+	FDFSStorageDetail *deactiveServers[FDFS_MAX_SERVERS_EACH_GROUP];
+	int deactiveCount;
+	time_t current_time;
+
+	current_time = time(NULL);
+	pGroupEnd = g_groups.groups + g_groups.count;
+	for (pGroup=g_groups.groups; pGroup<pGroupEnd; pGroup++)
+	{
+	deactiveCount = 0;
+	ppServerEnd = pGroup->active_servers + pGroup->active_count;
+	for (ppServer=pGroup->active_servers; ppServer<ppServerEnd; ppServer++)
+	{
+		if (current_time - (*ppServer)->stat.last_heart_beat_time > \
+			g_check_active_interval)
+		{
+			deactiveServers[deactiveCount] = *ppServer;
+			deactiveCount++;
+			if (deactiveCount >= FDFS_MAX_SERVERS_EACH_GROUP)
+			{
+				break;
+			}
+		}
+	}
+
+	if (deactiveCount == 0)
+	{
+		continue;
+	}
+
+	ppServerEnd = deactiveServers + deactiveCount;
+	for (ppServer=deactiveServers; ppServer<ppServerEnd; ppServer++)
+	{
+	(*ppServer)->status = FDFS_STORAGE_STATUS_OFFLINE;
+	tracker_mem_deactive_store_server(pGroup, *ppServer);
+	logInfo("ip=%s idle too long, status change to offline!", (*ppServer)->ip_addr);
+	}
+	}
+
+	return 0;
+}
+

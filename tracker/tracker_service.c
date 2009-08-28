@@ -595,6 +595,8 @@ static int tracker_deal_server_list_group_storages( \
 				 pStatBuff->sz_total_delete_link_count);
 			long2buff(pStorageStat->success_delete_link_count, \
 				 pStatBuff->sz_success_delete_link_count);
+			long2buff(pStorageStat->last_heart_beat_time, \
+				 pStatBuff->sz_last_heart_beat_time);
 
 			pDest++;
 		}
@@ -1810,6 +1812,8 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 		tracker_check_dirty(pClientInfo);
 		tracker_mem_active_store_server(pClientInfo->pGroup, \
 				pClientInfo->pStorage);
+		pClientInfo->pStorage->stat.last_heart_beat_time = time(NULL);
+
 	}
 
 	//printf("deal heart beat, status=%d\n", status);

@@ -42,7 +42,7 @@ void sigQuitHandler(int sig);
 void sigHupHandler(int sig);
 void sigUsrHandler(int sig);
 
-#define SCHEDULE_ENTRIES_COUNT 1
+#define SCHEDULE_ENTRIES_COUNT 2
 
 int main(int argc, char *argv[])
 {
@@ -171,6 +171,13 @@ int main(int argc, char *argv[])
 	scheduleEntries[0].interval = g_sync_log_buff_interval;
 	scheduleEntries[0].task_func = log_sync_func;
 	scheduleEntries[0].func_args = NULL;
+
+	scheduleEntries[1].id = 2;
+	scheduleEntries[1].time_base.hour = TIME_NONE;
+	scheduleEntries[1].time_base.minute = TIME_NONE;
+	scheduleEntries[1].interval = g_check_active_interval;
+	scheduleEntries[1].task_func = tracker_mem_check_alive;
+	scheduleEntries[1].func_args = NULL;
 	if ((result=sched_start(&scheduleArray, &schedule_tid)) != 0)
 	{
 		return result;

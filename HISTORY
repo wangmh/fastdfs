@@ -1,10 +1,12 @@
 
-Version 1.20  2009-08-26
+Version 1.20  2009-08-28
  * base64 use context, functions changed
  * common/ini_file_reader.c: fix memory leak
  * tracker support HTTP protocol
  * fix bug: storage server rebuild, auto sync data correctly
  * fix bug: sync data fail (correct storage server status)
+ * when storage server idle time exceeds check_active_interval seconds, 
+   set it's status to offline
 
 Version 1.19  2009-07-23
  * use poll instead of select in sockopt.c

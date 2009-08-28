@@ -35,6 +35,7 @@ extern int g_storage_sync_time_chg_count; //sync timestamp
 extern int g_max_connections;
 extern int g_storage_reserved_mb;
 extern int g_sync_log_buff_interval; //sync log buff to disk every interval seconds
+extern int g_check_active_interval; //check storage server alive every interval seconds
 
 extern int g_allow_ip_count;  /* -1 means match any ip address */
 extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
