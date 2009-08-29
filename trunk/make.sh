@@ -50,9 +50,11 @@ fi
 if [ "$WITH_HTTPD" = "1" ]; then
   CFLAGS="$CFLAGS -DWITH_HTTPD"
   LIBS="$LIBS -levent"
-  HTTPD_OBJS='tracker_httpd.o ../common/mime_file_parser.o ../common/fdfs_http_shared.o'
+  TRACKER_HTTPD_OBJS='tracker_httpd.o ../common/mime_file_parser.o ../common/fdfs_http_shared.o'
+  STORAGE_HTTPD_OBJS='storage_httpd.o ../common/mime_file_parser.o ../common/fdfs_http_shared.o'
 else
-  HTTPD_OBJS=''
+  TRACKER_HTTPD_OBJS=''
+  STORAGE_HTTPD_OBJS=''
 fi
 
 if [ -f /usr/lib/libpthread.so ] || [ -f /usr/local/lib/libpthread.so ] || [ -f /usr/lib64/libpthread.so ] || [ -f /usr/lib/libpthread.a ] || [ -f /usr/local/lib/libpthread.a ] || [ -f /usr/lib64/libpthread.a ]; then
@@ -69,7 +71,7 @@ cp Makefile.in Makefile
 perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_PATH\)#$TARGET_PATH#g" Makefile
-perl -pi -e "s#\\\$\(HTTPD_OBJS\)#$HTTPD_OBJS#g" Makefile
+perl -pi -e "s#\\\$\(TRACKER_HTTPD_OBJS\)#$TRACKER_HTTPD_OBJS#g" Makefile
 make $1 $2
 
 cd ../storage
@@ -77,6 +79,7 @@ cp Makefile.in Makefile
 perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_PATH\)#$TARGET_PATH#g" Makefile
+perl -pi -e "s#\\\$\(STORAGE_HTTPD_OBJS\)#$STORAGE_HTTPD_OBJS#g" Makefile
 make $1 $2
 
 cd ../client

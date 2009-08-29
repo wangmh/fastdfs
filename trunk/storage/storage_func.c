@@ -33,6 +33,10 @@
 #include "fdht_func.h"
 #include "fdht_client.h"
 
+#ifdef WITH_HTTPD
+#include "fdfs_http_shared.h"
+#endif
+
 #define DATA_DIR_INITED_FILENAME	".data_init_flag"
 #define STORAGE_STAT_FILENAME		"storage_stat.dat"
 
@@ -1130,6 +1134,14 @@ int storage_func_init(const char *filename, \
 					items, nItemCount, false);
 		}
  
+#ifdef WITH_HTTPD
+		if ((result=fdfs_http_params_load(items, nItemCount, \
+				filename, &g_http_params)) != 0)
+		{
+			return result;
+		}
+#endif
+
 		logInfo("FastDFS v%d.%d, base_path=%s, store_path_count=%d, " \
 			"subdir_count_per_path=%d, group_name=%s, " \
 			"network_timeout=%ds, "\
@@ -1163,6 +1175,27 @@ int storage_func_init(const char *filename, \
 			g_sync_binlog_buff_interval, g_check_file_duplicate, \
 			g_group_array.group_count, g_group_array.server_count, \
 			g_key_namespace, g_keep_alive);
+
+#ifdef WITH_HTTPD
+		if (!g_http_params.disabled)
+		{
+			logInfo("HTTP supported: " \
+				"server_port=%d, " \
+				"default_content_type=%s, " \
+				"anti_steal_token=%d, " \
+				"token_ttl=%ds, " \
+				"anti_steal_secret_key length=%d, "  \
+				"token_check_fail content_type=%s, " \
+				"token_check_fail buff length=%d",  \
+				g_http_params.server_port, \
+				g_http_params.default_content_type, \
+				g_http_params.anti_steal_token, \
+				g_http_params.token_ttl, \
+				g_http_params.anti_steal_secret_key.length, \
+				g_http_params.token_check_fail_content_type, \
+				g_http_params.token_check_fail_buff.length);
+		}
+#endif
 
 	} while (0);
 
@@ -1243,7 +1276,7 @@ int storage_func_destroy()
 	} \
  \
 	if (*logic_filename != STORAGE_STORE_PATH_PREFIX_CHAR) \
-	{ /*version < V1.12 */ \
+	{ /* version < V1.12 */ \
 		store_path_index = 0; \
 		memcpy(true_filename, logic_filename, (*filename_len)+1); \
 		break; \

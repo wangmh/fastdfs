@@ -20,6 +20,10 @@
 #include "fdht_types.h"
 #include "fdfs_base64.h"
 
+#ifdef WITH_HTTPD
+#include "fdfs_http_shared.h"
+#endif
+
 #define STORAGE_BEAT_DEF_INTERVAL    30
 #define STORAGE_REPORT_DEF_INTERVAL  300
 #define STORAGE_DEF_SYNC_WAIT_MSEC   100
@@ -91,6 +95,10 @@ extern bool g_check_file_duplicate;
 extern char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1];
 extern int g_namespace_len;
 extern struct base64_context g_base64_context;
+
+#ifdef WITH_HTTPD
+extern FDFSHTTPParams g_http_params;
+#endif
 
 int storage_cmp_by_ip_addr(const void *p1, const void *p2);
 

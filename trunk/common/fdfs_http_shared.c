@@ -24,6 +24,75 @@
 #include "mime_file_parser.h"
 #include "fdfs_http_shared.h"
 
+int fdfs_http_get_content_type_by_extname(FDFSHTTPParams *pParams, \
+	const char *filename, char *content_type, const int content_type_size)
+{
+	char *pExtName;
+	HashData *pHashData;
+	int  ext_len;
+
+	do
+	{
+	pExtName = strrchr(filename, '.');
+	if (pExtName == NULL)
+	{
+		/*
+		logError("file: "__FILE__", line: %d, " \
+			"token_check_fail file: %s does not have " \
+			"extension name", __LINE__, \
+			filename);
+		return ENOENT;
+		*/
+		break;
+	}
+
+	pExtName++;
+	ext_len = strlen(pExtName);
+	if (ext_len == 0)
+	{
+		/*
+		logError("file: "__FILE__", line: %d, " \
+			"token_check_fail file: %s 's " \
+			"extension name is empty", __LINE__, \
+			filename);
+		return EINVAL;
+		*/
+		break;
+	}
+
+	pHashData = hash_find_ex(&pParams->content_type_hash, \
+				pExtName, ext_len + 1);
+	if (pHashData == NULL)
+	{
+		/*
+		logError("file: "__FILE__", line: %d, " \
+			"token_check_fail file: %s 's " \
+			"extension name is invalid", __LINE__, \
+			filename);
+		return EINVAL;
+		*/
+		break;
+	}
+
+	if (pHashData->value_len >= content_type_size)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"file: %s, extension name 's content type " \
+			"is too long", __LINE__, filename);
+		return EINVAL;
+	}
+	memcpy(content_type, pHashData->value, pHashData->value_len);
+	} while (0);
+
+	if (*content_type == '\0')
+	{
+		strcpy(content_type, pParams->default_content_type);
+	}
+
+	return 0;
+}
+
+
 int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 		const char *conf_filename, FDFSHTTPParams *pParams)
 {
@@ -32,9 +101,8 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 	char szMimeFilename[256];
 	char *anti_steal_secret_key;
 	char *token_check_fail_filename;
-	char *pExtName;
-	HashData *pHashData;
-	int  ext_len;
+	char *default_content_type;
+	int def_content_type_len;
 	off_t file_size;
 
 	memset(pParams, 0, sizeof(FDFSHTTPParams));
@@ -113,6 +181,28 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 		return result;
 	}
 
+	default_content_type = iniGetStrValue( \
+			"http.default_content_type", \
+			items, nItemCount);
+	if (default_content_type == NULL || *default_content_type == '\0')
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"param \"http.default_content_type\" not exist " \
+			"or is empty", __LINE__);
+		return EINVAL;
+	}
+
+	def_content_type_len = strlen(default_content_type);
+	if (def_content_type_len >= sizeof(pParams->default_content_type))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"default content type: %s is too long", \
+			__LINE__, default_content_type);
+		return EINVAL;
+	}
+	memcpy(pParams->default_content_type, default_content_type, \
+			def_content_type_len);
+
 	pParams->anti_steal_token = iniGetBoolValue( \
 				"http.anti_steal.check_token", \
 				items, nItemCount, false);
@@ -162,49 +252,13 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 		return ENOENT;
 	}
 
-	pExtName = strrchr(token_check_fail_filename, '.');
-	if (pExtName == NULL)
+	if ((result=fdfs_http_get_content_type_by_extname(pParams, \
+			token_check_fail_filename, \
+			pParams->token_check_fail_content_type, \
+			sizeof(pParams->token_check_fail_content_type))) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"token_check_fail file: %s does not have " \
-			"extension name", __LINE__, \
-			token_check_fail_filename);
-		return ENOENT;
+		return result;
 	}
-
-	pExtName++;
-	ext_len = strlen(pExtName);
-	if (ext_len == 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"token_check_fail file: %s 's " \
-			"extension name is empty", __LINE__, \
-			token_check_fail_filename);
-		return EINVAL;
-	}
-
-	pHashData = hash_find_ex(&pParams->content_type_hash, \
-				pExtName, ext_len + 1);
-	if (pHashData == NULL)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"token_check_fail file: %s 's " \
-			"extension name is invalid", __LINE__, \
-			token_check_fail_filename);
-		return EINVAL;
-	}
-
-	if (pHashData->value_len >= sizeof( \
-			pParams->token_check_fail_content_type))
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"token_check_fail file: %s, " \
-			"extension name 's content type is invalid", \
-			__LINE__, token_check_fail_filename);
-		return EINVAL;
-	}
-	memcpy(pParams->token_check_fail_content_type, pHashData->value, \
-			pHashData->value_len);
 
 	if ((result=getFileContent(token_check_fail_filename, \
 		&pParams->token_check_fail_buff.buff, &file_size)) != 0)

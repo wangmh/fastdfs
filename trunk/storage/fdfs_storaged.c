@@ -35,6 +35,10 @@
 #include "fdfs_base64.h"
 #include "sched_thread.h"
 
+#ifdef WITH_HTTPD
+#include "storage_httpd.h"
+#endif
+
 bool bTerminateFlag = false;
 
 static void sigQuitHandler(int sig);
@@ -191,6 +195,14 @@ int main(int argc, char *argv[])
 	{
 		return result;
 	}
+
+#ifdef WITH_HTTPD
+	if ((result=storage_httpd_start(bind_addr)) != 0)
+	{
+		return result;
+	}
+#endif
+
 
 	tids = (pthread_t *)malloc(sizeof(pthread_t) * g_max_connections);
 	if (tids == NULL)
