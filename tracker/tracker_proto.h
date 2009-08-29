@@ -71,11 +71,11 @@ typedef struct
 {
 	char group_name[FDFS_GROUP_NAME_MAX_LEN+1];
 	char storage_port[FDFS_PROTO_PKG_LEN_SIZE];
+	char storage_http_port[FDFS_PROTO_PKG_LEN_SIZE];
 	char store_path_count[FDFS_PROTO_PKG_LEN_SIZE];
 	char subdir_count_per_path[FDFS_PROTO_PKG_LEN_SIZE];
 	char init_flag;
 } TrackerStorageJoinBody;
-
 
 typedef struct
 {
@@ -83,6 +83,7 @@ typedef struct
 	char sz_free_mb[FDFS_PROTO_PKG_LEN_SIZE];  //free disk storage in MB
 	char sz_count[FDFS_PROTO_PKG_LEN_SIZE];    //server count
 	char sz_storage_port[FDFS_PROTO_PKG_LEN_SIZE];
+	char sz_storage_http_port[FDFS_PROTO_PKG_LEN_SIZE];
 	char sz_active_count[FDFS_PROTO_PKG_LEN_SIZE]; //active server count
 	char sz_current_write_server[FDFS_PROTO_PKG_LEN_SIZE];
 	char sz_store_path_count[FDFS_PROTO_PKG_LEN_SIZE];

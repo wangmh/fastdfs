@@ -203,6 +203,10 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+	if ((result=set_run_by(g_run_by_group, g_run_by_user)) != 0)
+	{
+		return result;
+	}
 
 	tids = (pthread_t *)malloc(sizeof(pthread_t) * g_max_connections);
 	if (tids == NULL)

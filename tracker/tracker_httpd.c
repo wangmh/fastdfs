@@ -157,7 +157,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	}
 
 	domain_len = sprintf(redirect_url, "http://%s:%d", \
-			ppStoreServers[0]->ip_addr, 80);
+			ppStoreServers[0]->ip_addr, pGroup->storage_http_port);
 	memcpy(redirect_url + domain_len, uri, uri_len);
 	*(redirect_url + domain_len + uri_len) = '\0';
 

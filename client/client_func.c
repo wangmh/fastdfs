@@ -218,12 +218,47 @@ int fdfs_client_init(const char *filename)
 			break;
 		}
 
+		g_anti_steal_token = iniGetBoolValue( \
+				"http.anti_steal.check_token", \
+				items, nItemCount, false);
+		if (g_anti_steal_token)
+		{
+			char *anti_steal_secret_key;
+
+			anti_steal_secret_key = iniGetStrValue( \
+					"http.anti_steal.secret_key", \
+					items, nItemCount);
+			if (anti_steal_secret_key == NULL || \
+				*anti_steal_secret_key == '\0')
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"param \"http.anti_steal.secret_key\""\
+					" not exist or is empty", __LINE__);
+				result = EINVAL;
+				break;
+			}
+
+			buffer_strcpy(&g_anti_steal_secret_key, \
+				anti_steal_secret_key);
+		}
+
+		g_tracker_server_http_port = iniGetIntValue( \
+				"http.tracker_server_port", \
+				items, nItemCount, 80);
+		if (g_tracker_server_http_port <= 0)
+		{
+			g_tracker_server_http_port = 80;
+		}
+
 #ifdef __DEBUG__
 		fprintf(stderr, "base_path=%s, " \
 			"network_timeout=%d, "\
-			"tracker_server_count=%d\n", \
+			"tracker_server_count=%d, " \
+			"anti_steal_token=%d, ", \
+			"anti_steal_secret_key length=%d\n", \
 			g_base_path, g_network_timeout, \
-			g_tracker_server_count);
+			g_tracker_server_count, g_anti_steal_token, \
+			g_anti_steal_secret_key.length);
 #endif
 
 	} while (0);

@@ -257,6 +257,17 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 		break;
 	}
 
+	pClientInfo->storage_http_port = (int)buff2long(body.storage_http_port);
+	if (pClientInfo->storage_http_port <= 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid http port: %d", \
+			__LINE__, pClientInfo->ip_addr, \
+			pClientInfo->storage_http_port);
+		status = EINVAL;
+		break;
+	}
+
 	store_path_count = (int)buff2long(body.store_path_count);
 	if (store_path_count <= 0 || store_path_count > 256)
 	{
@@ -1093,6 +1104,8 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 			long2buff((*ppGroup)->count, pDest->sz_count);
 			long2buff((*ppGroup)->storage_port, \
 				pDest->sz_storage_port);
+			long2buff((*ppGroup)->storage_http_port, \
+				pDest->sz_storage_http_port);
 			long2buff((*ppGroup)->active_count, \
 				pDest->sz_active_count);
 			long2buff((*ppGroup)->current_write_server, \

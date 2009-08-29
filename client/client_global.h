@@ -11,6 +11,7 @@
 #ifndef _CLIENT_GLOBAL_H
 #define _CLIENT_GLOBAL_H
 
+#include "common_define.h"
 #include "tracker_types.h"
 
 #ifdef __cplusplus
@@ -19,7 +20,11 @@ extern "C" {
 
 extern int g_tracker_server_count;
 extern int g_tracker_server_index;  //server index for roundrobin
+extern int g_tracker_server_http_port;
 extern TrackerServerInfo *g_tracker_servers;
+
+extern bool g_anti_steal_token;
+extern BufferInfo g_anti_steal_secret_key;
 
 #ifdef __cplusplus
 }

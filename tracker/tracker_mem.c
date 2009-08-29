@@ -2039,6 +2039,27 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		}
 	}
 
+	if (pClientInfo->pGroup->storage_http_port == 0)
+	{
+		pClientInfo->pGroup->storage_http_port = \
+			pClientInfo->storage_http_port;
+	}
+	else
+	{
+		if (pClientInfo->pGroup->storage_http_port !=  \
+			pClientInfo->storage_http_port)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, http port %d is not same " \
+				"in the group \"%s\", group http port is %d", \
+				__LINE__, pClientInfo->ip_addr, \
+				pClientInfo->storage_http_port, \
+				pClientInfo->group_name, \
+				pClientInfo->pGroup->storage_http_port);
+			return EINVAL;
+		}
+	}
+	
 	if ((result=tracker_mem_add_storage(pClientInfo, bIncRef, \
 			&bStorageInserted)) != 0)
 	{
