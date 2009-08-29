@@ -29,6 +29,7 @@ typedef struct
 
 	BufferInfo anti_steal_secret_key;
 	BufferInfo token_check_fail_buff;
+	char default_content_type[64];
 	char token_check_fail_content_type[64];
 	int token_ttl;
 } FDFSHTTPParams;
@@ -43,7 +44,7 @@ params:
 	items: the ini file items, return by iniLoadItems
 	nItemCount: item count, return by iniLoadItems
 	conf_filename: config filename
-	pHTTPParams: return the params
+	pHTTPParams: the HTTP params
 return: 0 for success, != 0 fail
 **/
 int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
@@ -86,6 +87,18 @@ return: param value pointer, return NULL if not exist
 **/
 char *fdfs_http_get_parameter(const char *param_name, KeyValuePair *params, \
 		const int param_count);
+
+/**
+get content type by file extension name
+params:
+	pHTTPParams: the HTTP params
+	filename: the filename
+	content_type: return content type
+	content_type_size: content type buffer size
+return: 0 for success, != 0 fail
+**/
+int fdfs_http_get_content_type_by_extname(FDFSHTTPParams *pParams, \
+	const char *filename, char *content_type, const int content_type_size);
 
 #ifdef __cplusplus
 }

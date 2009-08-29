@@ -66,6 +66,10 @@ int g_namespace_len = 0;
 
 struct base64_context g_base64_context;
 
+#ifdef WITH_HTTPD
+FDFSHTTPParams g_http_params;
+#endif
+
 int storage_cmp_by_ip_addr(const void *p1, const void *p2)
 {
 	return strcmp((*((FDFSStorageServer **)p1))->server.ip_addr,

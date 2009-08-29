@@ -1,8 +1,9 @@
 
-Version 1.20  2009-08-28
+Version 1.20  2009-08-29
  * base64 use context, functions changed
  * common/ini_file_reader.c: fix memory leak
- * tracker support HTTP protocol
+ * tracker server support HTTP protocol
+ * storage server support HTTP protocol
  * fix bug: storage server rebuild, auto sync data correctly
  * fix bug: sync data fail (correct storage server status)
  * when storage server idle time exceeds check_active_interval seconds, 

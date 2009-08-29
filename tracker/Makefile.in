@@ -10,7 +10,7 @@ SHARED_OBJS = ../common/hash.o ../common/chain.o ../common/fdfs_base64.o \
               ../common/logger.o ../common/sockopt.o ../common/fdfs_global.o \
               ../common/sched_thread.o ../common/http_func.o \
               ../common/md5.o tracker_proto.o tracker_mem.o tracker_service.o \
-              tracker_global.o tracker_func.o $(HTTPD_OBJS)
+              tracker_global.o tracker_func.o $(TRACKER_HTTPD_OBJS)
 
 ALL_OBJS = $(SHARED_OBJS)
 
