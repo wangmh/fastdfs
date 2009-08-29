@@ -96,6 +96,9 @@ extern char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1];
 extern int g_namespace_len;
 extern struct base64_context g_base64_context;
 
+extern char g_run_by_group[32];
+extern char g_run_by_user[32];
+
 #ifdef WITH_HTTPD
 extern FDFSHTTPParams g_http_params;
 #endif

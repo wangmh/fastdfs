@@ -342,7 +342,7 @@ char *bin2hex(const char *s, const int len, char *szHexBuff)
 	pEnd = (unsigned char *)s + len;
 	for (p=(unsigned char *)s; p<pEnd; p++)
 	{
-		nLen += sprintf(szHexBuff + nLen, "%02X", *p);
+		nLen += sprintf(szHexBuff + nLen, "%02x", *p);
 	}
 	
 	szHexBuff[nLen] = '\0';

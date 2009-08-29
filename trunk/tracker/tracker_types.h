@@ -76,6 +76,7 @@ typedef struct
 	int64_t free_mb;  //free disk storage in MB
 	int count;        //server count
 	int storage_port; //storage server port
+	int storage_http_port; //storage server http port
 	int active_count; //active server count
 	int current_write_server; //current server index to upload file
 	int store_path_count;  //store base path count of each storage server
@@ -176,6 +177,7 @@ typedef struct
 	int alloc_size;
 	int count;    //server count
 	int storage_port;
+	int storage_http_port; //storage http server port
 	FDFSStorageDetail *all_servers;
 	FDFSStorageDetail **sorted_servers;  //order by addr
 	int active_count;
@@ -226,6 +228,7 @@ typedef struct
 {
 	int sock;
 	int storage_port;
+	int storage_http_port;
 	char ip_addr[IP_ADDRESS_SIZE];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	FDFSGroupInfo *pGroup;

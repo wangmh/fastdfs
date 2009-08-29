@@ -390,6 +390,7 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 		pDest->free_mb = buff2long(pSrc->sz_free_mb);
 		pDest->count= buff2long(pSrc->sz_count);
 		pDest->storage_port= buff2long(pSrc->sz_storage_port);
+		pDest->storage_http_port= buff2long(pSrc->sz_storage_http_port);
 		pDest->active_count = buff2long(pSrc->sz_active_count);
 		pDest->current_write_server = buff2long( \
 				pSrc->sz_current_write_server);

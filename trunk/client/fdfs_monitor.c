@@ -143,6 +143,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 		"storage server count = %d\n" \
 		"active server count = %d\n" \
 		"storage_port = %d\n" \
+		"storage_http_port = %d\n" \
 		"store path count = %d\n" \
 		"subdir count per path= %d\n" \
 		"current write server index = %d\n\n", \
@@ -151,6 +152,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 		pGroupStat->count, \
 		pGroupStat->active_count, \
 		pGroupStat->storage_port, \
+		pGroupStat->storage_http_port, \
 		pGroupStat->store_path_count, \
 		pGroupStat->subdir_count_per_path, \
 		pGroupStat->current_write_server

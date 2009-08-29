@@ -146,16 +146,19 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 		return;
 	}
 
+	*filename = '\0';
+	filename++;  //skip '/'
+
 	if (strcmp(group_name, g_group_name) != 0)
 	{
+		logError("file: "__FILE__", line: %d, " \
+			"group_name: %s is not my group!", \
+			__LINE__, group_name);
 		evhttp_send_reply(req, HTTP_NOTFOUND, "Not found", ev_buf);
 		return;
 	}
 
-	*filename = '\0';
-	filename++;  //skip '/'
 	filename_len = strlen(filename);
-
 	if (storage_split_filename(filename, &filename_len, \
 		true_filename, &pStorePath) != 0)
 	{
@@ -169,7 +172,8 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 		return;
 	}
 
-	snprintf(full_filename, sizeof(full_filename), "%s/%s", pStorePath, true_filename);
+	snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
+		pStorePath, true_filename);
 	if (!fileExists(full_filename))
 	{
 		logError("file: "__FILE__", line: %d, " \

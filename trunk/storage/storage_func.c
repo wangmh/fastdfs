@@ -1044,13 +1044,26 @@ int storage_func_init(const char *filename, \
 			break;
 		}
 	
-		pRunByGroup = iniGetStrValue("run_by_group", \
-						items, nItemCount);
-		pRunByUser = iniGetStrValue("run_by_user", \
-						items, nItemCount);
-		if ((result=set_run_by(pRunByGroup, pRunByUser)) != 0)
+		pRunByGroup = iniGetStrValue("run_by_group", items, nItemCount);
+		pRunByUser = iniGetStrValue("run_by_user", items, nItemCount);
+		if (pRunByGroup == NULL)
 		{
-			return result;
+			*g_run_by_group = '\0';
+		}
+		else
+		{
+			snprintf(g_run_by_group, sizeof(g_run_by_group), \
+				"%s", pRunByGroup);
+		}
+
+		if (pRunByUser == NULL)
+		{
+			*g_run_by_user = '\0';
+		}
+		else
+		{
+			snprintf(g_run_by_user, sizeof(g_run_by_user), \
+				"%s", pRunByUser);
 		}
 
 		if ((result=load_allow_hosts(items, nItemCount, \

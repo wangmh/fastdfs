@@ -960,6 +960,11 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, const bool sync_old_d
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_JOIN;
 	strcpy(pReqBody->group_name, g_group_name);
 	long2buff(g_server_port, pReqBody->storage_port);
+
+#ifdef WITH_HTTPD
+	long2buff(g_http_params.server_port, pReqBody->storage_http_port);
+#endif
+
 	long2buff(g_path_count, pReqBody->store_path_count);
 	long2buff(g_subdir_count_per_path, pReqBody->subdir_count_per_path);
 	pReqBody->init_flag = sync_old_done ? 0 : 1;

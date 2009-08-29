@@ -16,6 +16,7 @@
 #include "fdfs_client.h"
 #include "fdfs_global.h"
 #include "fdfs_base64.h"
+#include "fdfs_http_shared.h"
 
 int writeToFileCallback(void *arg, const int64_t file_size, const char *data, \
                 const int current_size)
@@ -47,7 +48,12 @@ int main(int argc, char *argv[])
 	int i;
 	FDFSMetaData *pMetaList;
 	char buff[32];
+	char token[32 + 1];
+	char file_id[128];
+	char file_url[256];
 	int len;
+	int url_len;
+	time_t ts;
         char *file_buff;
 	int64_t file_size;
 	char *operation;
@@ -160,6 +166,19 @@ int main(int argc, char *argv[])
 			return result;
 		}
 
+		sprintf(file_id, "%s/%s", group_name, remote_filename);
+		url_len = sprintf(file_url, "http://%s:%d/%s", \
+				pTrackerServer->ip_addr, \
+				g_tracker_server_http_port, file_id);
+		if (g_anti_steal_token)
+		{
+			ts = time(NULL);
+			fdfs_http_gen_token(&g_anti_steal_secret_key, file_id, \
+                		ts, token);
+			sprintf(file_url + url_len, "?token=%s&ts=%d", \
+				token, (int)ts);
+		}
+
 		memset(buff, 0, sizeof(buff));
 		base64_decode_auto(&context, remote_filename + FDFS_FILE_PATH_LEN, \
 			strlen(remote_filename) - FDFS_FILE_PATH_LEN \
@@ -169,6 +188,7 @@ int main(int argc, char *argv[])
 		printf("file timestamp=%d\n", buff2int(buff+sizeof(int)));
 		printf("file size="INT64_PRINTF_FORMAT"\n", \
 			buff2long(buff+sizeof(int)*2));
+		printf("file url: %s\n", file_url);
 	}
 	else if (strcmp(operation, "download") == 0 || 
 		strcmp(operation, "getmeta") == 0 ||
