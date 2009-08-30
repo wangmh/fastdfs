@@ -64,7 +64,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 		uri_len = url_len;
 	}
 
-	if (uri_len < 64 || uri_len + 1 >= sizeof(uri))
+	if (uri_len + 1 >= sizeof(uri))
 	{
 		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
 		return;
@@ -180,8 +180,10 @@ static void *httpd_entrance(void *arg)
 	if (httpd == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"evhttp_start fail, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			"evhttp_start fail, server port=%d, " \
+			"errno: %d, error info: %s", \
+			__LINE__, g_http_params.server_port, \
+			errno, strerror(errno));
 		return NULL;
 	}
 

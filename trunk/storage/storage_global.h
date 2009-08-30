@@ -101,6 +101,7 @@ extern char g_run_by_user[32];
 
 #ifdef WITH_HTTPD
 extern FDFSHTTPParams g_http_params;
+extern int g_http_trunk_size;
 #endif
 
 int storage_cmp_by_ip_addr(const void *p1, const void *p2);

@@ -148,7 +148,6 @@ int main(int argc, char *argv[])
 		return errno;
 	}
 
-
 #ifdef WITH_HTTPD
 	if ((result=tracker_httpd_start(bind_addr)) != 0)
 	{

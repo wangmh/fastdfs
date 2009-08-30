@@ -1148,10 +1148,29 @@ int storage_func_init(const char *filename, \
 		}
  
 #ifdef WITH_HTTPD
+		{
+		char *pHttpTrunkSize;
+		int64_t http_trunk_size;
+
 		if ((result=fdfs_http_params_load(items, nItemCount, \
 				filename, &g_http_params)) != 0)
 		{
 			return result;
+		}
+
+		pHttpTrunkSize = iniGetStrValue( \
+			"http.trunk_size", items, nItemCount);
+		if (pHttpTrunkSize == NULL)
+		{
+			http_trunk_size = 64 * 1024;
+		}
+		else if ((result=parse_bytes(pHttpTrunkSize, 1, \
+				&http_trunk_size)) != 0)
+		{
+			return result;
+		}
+
+		g_http_trunk_size = (int)http_trunk_size;
 		}
 #endif
 
@@ -1194,6 +1213,7 @@ int storage_func_init(const char *filename, \
 		{
 			logInfo("HTTP supported: " \
 				"server_port=%d, " \
+				"http_trunk_size=%d, " \
 				"default_content_type=%s, " \
 				"anti_steal_token=%d, " \
 				"token_ttl=%ds, " \
@@ -1201,6 +1221,7 @@ int storage_func_init(const char *filename, \
 				"token_check_fail content_type=%s, " \
 				"token_check_fail buff length=%d",  \
 				g_http_params.server_port, \
+				g_http_trunk_size, \
 				g_http_params.default_content_type, \
 				g_http_params.anti_steal_token, \
 				g_http_params.token_ttl, \
