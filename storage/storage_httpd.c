@@ -1,10 +1,11 @@
 #include <sys/types.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <pthread.h>
 #include <event.h>
@@ -17,6 +18,7 @@
 #include "storage_httpd.h"
 
 static struct evbuffer *ev_buf = NULL;
+static char *file_trunk_buff = NULL;
 
 static void generic_handler(struct evhttp_request *req, void *arg)
 {
@@ -31,20 +33,22 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	char *p;
 	char *group_name;
 	char *filename;
-	int filename_len;
 	char *pStorePath;
-	char *file_content;
 	char true_filename[64];
 	char full_filename[MAX_PATH_SIZE + 64 + sizeof(STORAGE_META_FILE_EXT)];
 	char content_type[64];
 	char szContentLength[16];
-	off_t file_size;
+	struct stat file_stat;
+	int filename_len;
+	int fd;
+	int read_bytes;
+	off_t remain_bytes;
 
 	url = (char *)evhttp_request_uri(req);
 	url_len = strlen(url);
 	if (url_len < 16)
 	{
-		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
+		evhttp_send_error(req, HTTP_BADREQUEST, "Bad request");
 		return;
 	}
 
@@ -53,8 +57,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 		p = strchr(url+7, '/');
 		if (p == NULL)
 		{
-			evhttp_send_reply(req, HTTP_BADREQUEST, \
-					"Bad request", ev_buf);
+			evhttp_send_error(req, HTTP_BADREQUEST, "Bad request");
 			return;
 		}
 
@@ -66,9 +69,9 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 		uri_len = url_len;
 	}
 
-	if (uri_len < 64 || uri_len + 1 >= sizeof(uri))
+	if (uri_len + 1 >= sizeof(uri))
 	{
-		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
+		evhttp_send_error(req, HTTP_BADREQUEST, "Bad request");
 		return;
 	}
 
@@ -87,7 +90,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	file_id = url;
 	if (strlen(file_id) < 22)
 	{
-		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
+		evhttp_send_error(req, HTTP_BADREQUEST, "Bad request");
 		return;
 	}
 
@@ -106,8 +109,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 		ts = fdfs_http_get_parameter("ts", params, param_count);
 		if (token == NULL || ts == NULL)
 		{
-			evhttp_send_reply(req, HTTP_BADREQUEST, \
-					"Bad request", ev_buf);
+			evhttp_send_error(req, HTTP_BADREQUEST, "Bad request");
 			return;
 		}
 
@@ -130,8 +132,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 			}
 			else
 			{
-				evhttp_send_reply(req, HTTP_BADREQUEST, \
-						"Bad request", ev_buf);
+				evhttp_send_error(req, HTTP_BADREQUEST, "Bad request");
 			}
 
 			return;
@@ -142,7 +143,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	filename = strchr(file_id, '/');
 	if (filename == NULL)
 	{
-		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
+		evhttp_send_error(req, HTTP_BADREQUEST, "Bad request");
 		return;
 	}
 
@@ -154,7 +155,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 		logError("file: "__FILE__", line: %d, " \
 			"group_name: %s is not my group!", \
 			__LINE__, group_name);
-		evhttp_send_reply(req, HTTP_NOTFOUND, "Not found", ev_buf);
+		evhttp_send_error(req, HTTP_NOTFOUND, "Not found");
 		return;
 	}
 
@@ -162,47 +163,74 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	if (storage_split_filename(filename, &filename_len, \
 		true_filename, &pStorePath) != 0)
 	{
-		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
+		evhttp_send_error(req, HTTP_BADREQUEST, "Bad request");
 		return;
 	}
 
 	if (fdfs_check_data_filename(true_filename, filename_len) != 0)
 	{
-		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);
+		evhttp_send_error(req, HTTP_BADREQUEST, "Bad request");
 		return;
 	}
 
 	snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
 		pStorePath, true_filename);
-	if (!fileExists(full_filename))
+	if (stat(full_filename, &file_stat) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"file: %s not exists", __LINE__, \
-			full_filename);
-		evhttp_send_reply(req, HTTP_NOTFOUND, "Not found", ev_buf);
+			"stat file: %s fail, errno: %d, error info: %s", \
+			__LINE__, full_filename, errno, strerror(errno));
+		evhttp_send_error(req, HTTP_NOTFOUND, "Not found");
 		return;
 	}
 
 	if (fdfs_http_get_content_type_by_extname(&g_http_params, \
 		true_filename, content_type, sizeof(content_type)) != 0)
         {
-		evhttp_send_reply(req, HTTP_SERVUNAVAIL, "Service unavail", ev_buf);
+		evhttp_send_error(req, HTTP_SERVUNAVAIL, "Service unavail");
 		return;
         }
 
-	if (getFileContent(full_filename, &file_content, &file_size) != 0)
+	fd = open(full_filename, O_RDONLY);
+	if (fd < 0)
 	{
-		evhttp_send_reply(req, HTTP_SERVUNAVAIL, "Service unavail", ev_buf);
+		logError("file: "__FILE__", line: %d, " \
+			"open file %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			full_filename, errno, strerror(errno));
+		evhttp_send_error(req, HTTP_SERVUNAVAIL, "Service unavail");
 		return;
 	}
 
-	evbuffer_add(ev_buf, file_content, file_size);
-	free(file_content);
-
-	sprintf(szContentLength, INT64_PRINTF_FORMAT, file_size);
+	sprintf(szContentLength, INT64_PRINTF_FORMAT, file_stat.st_size);
 	evhttp_add_header(req->output_headers, "Content-Type", content_type);
 	evhttp_add_header(req->output_headers, "Content-Length", szContentLength);
-	evhttp_send_reply(req, HTTP_OK, "OK", ev_buf);
+	evhttp_send_reply_start(req, HTTP_OK, "OK");
+
+	remain_bytes = file_stat.st_size;
+	while (remain_bytes > 0)
+	{
+		read_bytes = remain_bytes <= g_http_trunk_size ? \
+			     remain_bytes : g_http_trunk_size;
+		if (read(fd, file_trunk_buff, read_bytes) != read_bytes)
+		{
+			close(fd);
+			logError("file: "__FILE__", line: %d, " \
+				"read from file %s fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				full_filename, errno, strerror(errno));
+			evhttp_send_error(req, HTTP_SERVUNAVAIL, "Service unavail");
+			return;
+		}
+
+		evbuffer_add(ev_buf, file_trunk_buff, read_bytes);
+		evhttp_send_reply_chunk(req, ev_buf);
+
+		remain_bytes -= read_bytes;
+	}
+
+	close(fd);
+	evhttp_send_reply_end(req);
 }
 
 static void *httpd_entrance(void *arg)
@@ -236,6 +264,16 @@ int storage_httpd_start(const char *bind_addr)
 {
 	int result;
 	pthread_t tid;
+
+	file_trunk_buff = (char *)malloc(g_http_trunk_size);
+	if (file_trunk_buff == NULL)
+	{
+		result = errno != 0 ? errno : ENOMEM;
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, g_http_trunk_size, result, strerror(result));
+		return result;
+	}
 
 	ev_buf = evbuffer_new();
 	if (ev_buf == NULL)

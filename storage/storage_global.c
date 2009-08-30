@@ -71,6 +71,7 @@ char g_run_by_user[32] = {0};
 
 #ifdef WITH_HTTPD
 FDFSHTTPParams g_http_params;
+int g_http_trunk_size = 64 * 1024;
 #endif
 
 int storage_cmp_by_ip_addr(const void *p1, const void *p2)

@@ -7,15 +7,17 @@ English language: http://english.csource.org/
 Chinese language: http://www.csource.org/
 
 
-#step 1. download FastDFS source package and unpack it
+#step 1. download FastDFS source package and unpack it, 
+# if you use HTTP to download file, please download libevent 1.4.x and install it
 tar xzf FastDFS_v1.x.tar.gz
 #for example:
-tar xzf FastDFS_v1.14.tar.gz
+tar xzf FastDFS_v1.20.tar.gz
 
 #step 2. enter the FastDFS dir
 cd FastDFS
 
-#step 3. make all
+#step 3. if HTTP supported, modify make.sh, uncomment the line:
+# WITH_HTTPD=1, then execute:
 ./make.sh
 
 #step 4. make install

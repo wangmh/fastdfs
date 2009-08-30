@@ -258,7 +258,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	}
 
 	pClientInfo->storage_http_port = (int)buff2long(body.storage_http_port);
-	if (pClientInfo->storage_http_port <= 0)
+	if (pClientInfo->storage_http_port < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, invalid http port: %d", \
