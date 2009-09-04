@@ -2487,16 +2487,21 @@ int tracker_mem_pthread_unlock()
 
 FDFSStorageDetail *tracker_get_writable_storage(FDFSGroupInfo *pStoreGroup)
 {
+	int write_server_index;
 	if (g_groups.store_server == FDFS_STORE_SERVER_ROUND_ROBIN)
 	{
+		write_server_index = pStoreGroup->current_write_server++;
 		if (pStoreGroup->current_write_server >= \
 				pStoreGroup->active_count)
 		{
 			pStoreGroup->current_write_server = 0;
 		}
 
-		return  *(pStoreGroup->active_servers + \
-				   pStoreGroup->current_write_server++);
+		if (write_server_index >= pStoreGroup->active_count)
+		{
+			write_server_index = 0;
+		}
+		return  *(pStoreGroup->active_servers + write_server_index);
 	}
 	else //use the first server
 	{
@@ -2517,6 +2522,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 	int base64_len;
 	int decoded_len;
 	int storage_ip;
+	int read_server_index;
 	struct in_addr ip_addr;
 	time_t current_time;
 
@@ -2577,8 +2583,14 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 		}
 
 		//round robin
-		ppStoreServers[(*server_count)++]=*((*ppGroup)->active_servers\
-				+ (*ppGroup)->current_read_server);
+		read_server_index = (*ppGroup)->current_read_server;
+		if (read_server_index >= (*ppGroup)->active_count)
+		{
+			read_server_index = 0;
+		}
+
+		ppStoreServers[(*server_count)++]=*((*ppGroup)->active_servers \
+				+ read_server_index);
 
 		/*
 		//printf("filename=%s, pStorageServer ip=%s, " \
