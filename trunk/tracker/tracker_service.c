@@ -793,10 +793,12 @@ static int tracker_deal_service_query_storage( \
 		TRACKER_QUERY_STORAGE_STORE_BODY_LEN];
 	bool bHaveActiveServer;
 	int result;
+	int write_path_index;
 
 	memset(&resp, 0, sizeof(resp));
 	pStoreGroup = NULL;
 	pStorageServer = NULL;
+	write_path_index = 0;
 	do
 	{
 		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP)
@@ -866,9 +868,15 @@ static int tracker_deal_service_query_storage( \
 		else if (g_groups.store_lookup == FDFS_STORE_LOOKUP_ROUND_ROBIN
 			||g_groups.store_lookup==FDFS_STORE_LOOKUP_LOAD_BALANCE)
 		{
+			int write_group_index;
+
 			bHaveActiveServer = false;
-			ppFoundGroup = g_groups.sorted_groups + \
-					g_groups.current_write_group;
+			write_group_index = g_groups.current_write_group;
+			if (write_group_index >= g_groups.count)
+			{
+				write_group_index = 0;
+			}
+			ppFoundGroup = g_groups.sorted_groups + write_group_index;
 			if ((*ppFoundGroup)->active_count > 0)
 			{
 				bHaveActiveServer = true;
@@ -987,8 +995,14 @@ static int tracker_deal_service_query_storage( \
 		}
 
 		pStorageServer = tracker_get_writable_storage(pStoreGroup);
-		if (pStorageServer->path_free_mbs[pStorageServer-> \
-				current_write_path] <= g_storage_reserved_mb)
+		write_path_index = pStorageServer->current_write_path;
+		if (write_path_index >= pStoreGroup->store_path_count)
+		{
+			write_path_index = 0;
+		}
+
+		if (pStorageServer->path_free_mbs[write_path_index] <= \
+				g_storage_reserved_mb)
 		{
 			int i;
 			for (i=0; i<pStoreGroup->store_path_count; i++)
@@ -997,6 +1011,7 @@ static int tracker_deal_service_query_storage( \
 				 	> g_storage_reserved_mb)
 				{
 					pStorageServer->current_write_path = i;
+					write_path_index = i;
 					break;
 				}
 			}
@@ -1045,7 +1060,7 @@ static int tracker_deal_service_query_storage( \
 
 		*(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN + \
 		    IP_ADDRESS_SIZE - 1 + FDFS_PROTO_PKG_LEN_SIZE) = \
-				(char)pStorageServer->current_write_path;
+				(char)write_path_index;
 	}
 	else
 	{
