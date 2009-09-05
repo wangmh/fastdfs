@@ -1729,7 +1729,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 
 	} while (0);
 
-	if (pBuff != in_buff)
+	if (pBuff != in_buff && pBuff != NULL)
 	{
 		free(pBuff);
 	}
