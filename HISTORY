@@ -1,4 +1,8 @@
 
+Version 1.21  2009-09-11
+ * bug fixed: when source storage server synced file to new storage server done,
+   it's status changed to ONLINE (should keep as ACTIVE)
+
 Version 1.20  2009-09-05
  * base64 use context, functions changed
  * common/ini_file_reader.c: fix memory leak

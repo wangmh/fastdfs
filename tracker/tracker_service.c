@@ -1482,6 +1482,11 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 
 		dest_index = pClientInfo->pStorage - \
 				pClientInfo->pGroup->all_servers;
+		if (dest_index < 0 || dest_index >= pClientInfo->pGroup->count)
+		{
+			status = 0;
+			break;
+		}
 
 		if (g_groups.store_server == FDFS_STORE_SERVER_FIRST)
 		{
@@ -1513,7 +1518,8 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 
 				src_index = pSrcStorage - 
 						pClientInfo->pGroup->all_servers;
-				if (src_index == dest_index)
+				if (src_index == dest_index || src_index < 0 || \
+					src_index >= pClientInfo->pGroup->count)
 				{
 					continue;
 				}
@@ -1559,7 +1565,8 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 
 				src_index = pSrcStorage - 
 						pClientInfo->pGroup->all_servers;
-				if (src_index == dest_index)
+				if (src_index == dest_index || src_index < 0 || \
+					src_index >= pClientInfo->pGroup->count)
 				{
 					continue;
 				}
