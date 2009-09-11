@@ -2187,7 +2187,8 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	else if (!((pStorageServer->status == FDFS_STORAGE_STATUS_WAIT_SYNC)||\
 		(pStorageServer->status == FDFS_STORAGE_STATUS_SYNCING) || \
 		(pStorageServer->status == FDFS_STORAGE_STATUS_INIT) || \
-		(pStorageServer->status == FDFS_STORAGE_STATUS_DELETED)))
+		(pStorageServer->status == FDFS_STORAGE_STATUS_DELETED) || \
+		(pStorageServer->status == FDFS_STORAGE_STATUS_ACTIVE)))
 	{
 		pStorageServer->status = FDFS_STORAGE_STATUS_ONLINE;
 	}
@@ -2558,10 +2559,8 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 		file_timestamp = buff2int(name_buff+sizeof(int));
 	}
 
-	/*
-	//printf("storage_ip=%d, file_timestamp=%d\n", \
+	logInfo("storage_ip=%d, file_timestamp=%d\n", 
 	storage_ip, file_timestamp);
-	 */
 
 	memset(szIpAddr, 0, sizeof(szIpAddr));
 	if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE)
@@ -2588,12 +2587,11 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 		{
 			read_server_index = 0;
 		}
-
 		ppStoreServers[(*server_count)++]=*((*ppGroup)->active_servers \
 				+ read_server_index);
 
 		/*
-		//printf("filename=%s, pStorageServer ip=%s, " \
+		//logInfo("filename=%s, pStorageServer ip=%s, " \
 		"file_timestamp=%d, " \
 		"last_synced_timestamp=%d\n", filename, \
 		ppStoreServers[0]->ip_addr, file_timestamp, \
@@ -2603,7 +2601,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 		{
 			if ((ppStoreServers[0]->stat.last_synced_timestamp > \
 				file_timestamp) || \
-			(ppStoreServers[0]->stat.last_synced_timestamp + 1 >= \
+			(ppStoreServers[0]->stat.last_synced_timestamp + 1 == \
 			 file_timestamp&&time(NULL)-file_timestamp>60)\
 			|| (storage_ip == INADDR_NONE \
 			&& g_groups.store_server != FDFS_STORE_SERVER_FIRST))
@@ -2685,7 +2683,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 		{
 			if (((*ppServer)->stat.last_synced_timestamp > \
 				file_timestamp) || \
-			((*ppServer)->stat.last_synced_timestamp + 1 >=\
+			((*ppServer)->stat.last_synced_timestamp + 1 ==\
 			 file_timestamp&&current_time-file_timestamp>60)\
 				|| (storage_ip == INADDR_NONE \
 					&& g_groups.store_server != \
