@@ -860,9 +860,10 @@ int init_pthread_lock(pthread_mutex_t *pthread_lock)
 	return 0;
 }
 
-int init_pthread_attr(pthread_attr_t *pattr)
+int init_pthread_attr(pthread_attr_t *pattr, const int stack_size)
 {
-	size_t stack_size;
+	size_t old_stack_size;
+	size_t new_stack_size;
 	int result;
 
 	if ((result=pthread_attr_init(pattr)) != 0)
@@ -874,7 +875,7 @@ int init_pthread_attr(pthread_attr_t *pattr)
 		return result;
 	}
 
-	if ((result=pthread_attr_getstacksize(pattr, &stack_size)) != 0)
+	if ((result=pthread_attr_getstacksize(pattr, &old_stack_size)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_attr_getstacksize fail, " \
@@ -883,9 +884,30 @@ int init_pthread_attr(pthread_attr_t *pattr)
 		return result;
 	}
 
-	if (stack_size < 2 * 1024 * 1024)
+	if (stack_size > 0)
 	{
-		if ((result=pthread_attr_setstacksize(pattr, 2*1024*1024)) != 0)
+		if (old_stack_size != stack_size)
+		{
+			new_stack_size = stack_size;
+		}
+		else
+		{
+			new_stack_size = 0;
+		}
+	}
+	else if (old_stack_size < 2 * 1024 * 1024)
+	{
+		new_stack_size = 2 * 1024 * 1024;
+	}
+	else
+	{
+		new_stack_size = 0;
+	}
+
+	if (new_stack_size > 0)
+	{
+		if ((result=pthread_attr_setstacksize(pattr, \
+				new_stack_size)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"call pthread_attr_setstacksize fail, " \
@@ -1609,14 +1631,14 @@ int cmp_by_ip_addr_t(const void *p1, const void *p2)
 }
 
 int create_work_threads(int *count, void *(*start_func)(void *), \
-		void *arg, pthread_t *tids)
+		void *arg, pthread_t *tids, const int stack_size)
 {
 	int result;
 	pthread_attr_t thread_attr;
 	pthread_t *ptid;
 	pthread_t *ptid_end;
 
-	if ((result=init_pthread_attr(&thread_attr)) != 0)
+	if ((result=init_pthread_attr(&thread_attr, stack_size)) != 0)
 	{
 		return result;
 	}

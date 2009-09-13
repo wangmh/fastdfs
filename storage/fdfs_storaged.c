@@ -197,9 +197,12 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef WITH_HTTPD
-	if ((result=storage_httpd_start(bind_addr)) != 0)
+	if (!g_http_params.disabled)
 	{
-		return result;
+		if ((result=storage_httpd_start(bind_addr)) != 0)
+		{
+			return result;
+		}
 	}
 #endif
 
@@ -220,7 +223,8 @@ int main(int argc, char *argv[])
 
 	g_storage_thread_count = g_max_connections;
 	if ((result=create_work_threads(&g_storage_thread_count, \
-		storage_thread_entrance, (void *)sock, tids)) != 0)
+		storage_thread_entrance, (void *)sock, tids, \
+		g_thread_stack_size)) != 0)
 	{
 		free(tids);
 		return result;

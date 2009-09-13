@@ -97,12 +97,14 @@ int tracker_load_from_conf_file(const char *filename, \
 	char *pBasePath;
 	char *pBindAddr;
 	char *pStorageReserved;
-	int64_t storage_reserved;
 	char *pRunByGroup;
 	char *pRunByUser;
+	char *pThreadStackSize;
 	IniItemInfo *items;
 	int nItemCount;
 	int result;
+	int64_t storage_reserved;
+	int64_t thread_stack_size;
 
 	if ((result=iniLoadItems(filename, &items, &nItemCount)) != 0)
 	{
@@ -308,6 +310,19 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_check_active_interval = CHECK_ACTIVE_DEF_INTERVAL;
 		}
 
+		pThreadStackSize = iniGetStrValue( \
+			"thread_stack_size", items, nItemCount);
+		if (pThreadStackSize == NULL)
+		{
+			g_thread_stack_size = 1 * 1024 * 1024;
+		}
+		else if ((result=parse_bytes(pThreadStackSize, 1, \
+				&thread_stack_size)) != 0)
+		{
+			return result;
+		}
+		g_thread_stack_size = (int)thread_stack_size;
+
 #ifdef WITH_HTTPD
 		if ((result=fdfs_http_params_load(items, nItemCount, \
 				filename, &g_http_params)) != 0)
@@ -325,7 +340,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			"reserved_storage_space=%dMB, " \
 			"download_server=%d, " \
 			"allow_ip_count=%d, sync_log_buff_interval=%ds, " \
-			"check_active_interval=%ds", \
+			"check_active_interval=%ds, " \
+			"thread_stack_size=%d KB",  \
 			g_version.major, g_version.minor,  \
 			g_base_path, g_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
@@ -333,7 +349,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_groups.store_server, g_groups.store_path, \
 			g_storage_reserved_mb, g_groups.download_server, \
 			g_allow_ip_count, g_sync_log_buff_interval, \
-			g_check_active_interval);
+			g_check_active_interval, g_thread_stack_size / 1024);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)

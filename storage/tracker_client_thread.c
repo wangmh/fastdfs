@@ -1124,6 +1124,7 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 	int body_len;
 	int result;
 
+	memset(out_buff, 0, sizeof(out_buff));
 	pHeader = (TrackerHeader *)out_buff;
 	if (*pstat_chg_sync_count != g_stat_change_count)
 	{
@@ -1197,7 +1198,7 @@ int tracker_report_thread_start()
 	pthread_t tid;
 	int result;
 
-	if ((result=init_pthread_attr(&pattr)) != 0)
+	if ((result=init_pthread_attr(&pattr, g_thread_stack_size)) != 0)
 	{
 		return result;
 	}
