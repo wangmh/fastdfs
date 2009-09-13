@@ -191,7 +191,8 @@ int main(int argc, char *argv[])
 	scheduleEntries[1].interval = g_sync_binlog_buff_interval;
 	scheduleEntries[1].task_func = fdfs_binlog_sync_func;
 	scheduleEntries[1].func_args = NULL;
-	if ((result=sched_start(&scheduleArray, &schedule_tid)) != 0)
+	if ((result=sched_start(&scheduleArray, &schedule_tid, \
+			g_thread_stack_size)) != 0)
 	{
 		return result;
 	}
