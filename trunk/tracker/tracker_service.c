@@ -1945,6 +1945,12 @@ data buff (struct)
 		continue;
 	}
 
+	if (tcpsetkeepalive(client_info.sock, g_network_timeout) != 0)
+	{
+		close(client_info.sock);
+		continue;
+	}
+
 	count = 0;
 	while (g_continue_flag)
 	{
