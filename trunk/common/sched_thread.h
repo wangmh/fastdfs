@@ -38,7 +38,8 @@ extern "C" {
 extern bool g_continue_flag;
 extern bool g_schedule_flag;
 
-int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid);
+int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid, \
+		const int stack_size);
 
 #ifdef __cplusplus
 }

@@ -221,12 +221,13 @@ static void *sched_thread_entrance(void *args)
 	return NULL;
 }
 
-int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid)
+int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid, \
+		const int stack_size)
 {
 	int result;
 	pthread_attr_t thread_attr;
 
-	if ((result=init_pthread_attr(&thread_attr, 0)) != 0)
+	if ((result=init_pthread_attr(&thread_attr, stack_size)) != 0)
 	{
 		return result;
 	}

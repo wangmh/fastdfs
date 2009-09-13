@@ -895,9 +895,9 @@ int init_pthread_attr(pthread_attr_t *pattr, const int stack_size)
 			new_stack_size = 0;
 		}
 	}
-	else if (old_stack_size < 2 * 1024 * 1024)
+	else if (old_stack_size < 1 * 1024 * 1024)
 	{
-		new_stack_size = 2 * 1024 * 1024;
+		new_stack_size = 1 * 1024 * 1024;
 	}
 	else
 	{
