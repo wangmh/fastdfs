@@ -2559,8 +2559,9 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 		file_timestamp = buff2int(name_buff+sizeof(int));
 	}
 
-	logInfo("storage_ip=%d, file_timestamp=%d\n", 
-	storage_ip, file_timestamp);
+	/*
+	logInfo("storage_ip=%d, file_timestamp=%d\n",storage_ip,file_timestamp);
+	*/
 
 	memset(szIpAddr, 0, sizeof(szIpAddr));
 	if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE)

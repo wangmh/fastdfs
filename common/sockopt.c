@@ -142,6 +142,11 @@ int tcprecvdata_ex(int sock, void *data, const int size, \
 		}
 #else
 		res = poll(&pollfds, 1, 1000 * timeout);
+		if (pollfds.revents & POLLHUP)
+		{
+			ret_code = ENOTCONN;
+			break;
+		}
 #endif
 
 		if (res < 0)
@@ -236,6 +241,11 @@ int tcpsenddata(int sock, void* data, const int size, const int timeout)
 		}
 #else
 		result = poll(&pollfds, 1, 1000 * timeout);
+		if (pollfds.revents & POLLHUP)
+		{
+			return ENOTCONN;
+			break;
+		}
 #endif
 
 		if (result < 0)
@@ -348,6 +358,11 @@ int tcprecvdata_nb_ex(int sock, void *data, const int size, \
 		}
 #else
 		res = poll(&pollfds, 1, 1000 * timeout);
+		if (pollfds.revents & POLLHUP)
+		{
+			ret_code = ENOTCONN;
+			break;
+		}
 #endif
 
 		if (res < 0)
@@ -435,6 +450,10 @@ int tcpsenddata_nb(int sock, void* data, const int size, const int timeout)
 		}
 #else
 		result = poll(&pollfds, 1, 1000 * timeout);
+		if (pollfds.revents & POLLHUP)
+		{
+			return ENOTCONN;
+		}
 #endif
 
 		if (result < 0)
@@ -1086,7 +1105,6 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 
 int tcpsetserveropt(int fd, const int timeout)
 {
-	int result;
 	int flags;
 
 	struct linger linger;
@@ -1094,12 +1112,11 @@ int tcpsetserveropt(int fd, const int timeout)
 
 	linger.l_onoff = 1;
 	linger.l_linger = timeout * 100;
-	result = setsockopt(fd, SOL_SOCKET, SO_LINGER, \
-                      &linger, (socklen_t)sizeof(struct linger));
-	if (result < 0)
+	if (setsockopt(fd, SOL_SOCKET, SO_LINGER, \
+                &linger, (socklen_t)sizeof(struct linger)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"setsockopt failed, errno: %d, error info: %s.", \
+			"setsockopt failed, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -1107,22 +1124,20 @@ int tcpsetserveropt(int fd, const int timeout)
 	waittime.tv_sec = timeout;
 	waittime.tv_usec = 0;
 
-	result = setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
-                      &waittime, (socklen_t)sizeof(struct timeval));
-	if (result < 0)
+	if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
+               &waittime, (socklen_t)sizeof(struct timeval)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"setsockopt failed, errno: %d, error info: %s.", \
+			"setsockopt failed, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
-	result = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
-                      &waittime, (socklen_t)sizeof(struct timeval));
-	if (result < 0)
+	if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
+               &waittime, (socklen_t)sizeof(struct timeval)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"setsockopt failed, errno: %d, error info: %s.", \
+			"setsockopt failed, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -1134,23 +1149,21 @@ int tcpsetserveropt(int fd, const int timeout)
 
 	bytes = 0;
 	size = sizeof(int);
-	result = getsockopt(fd, SOL_SOCKET, SO_SNDBUF,
-			&bytes, (socklen_t *)&size);
-	if (result < 0)
+	if (getsockopt(fd, SOL_SOCKET, SO_SNDBUF,
+		&bytes, (socklen_t *)&size) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"getsockopt failed, errno: %d, error info: %s.", \
+			"getsockopt failed, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 	printf("send buff size: %d\n", bytes);
 
-	result = getsockopt(fd, SOL_SOCKET, SO_RCVBUF,
-			&bytes, (socklen_t *)&size);
-	if (result < 0)
+	if (getsockopt(fd, SOL_SOCKET, SO_RCVBUF,
+		&bytes, (socklen_t *)&size) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"getsockopt failed, errno: %d, error info: %s.", \
+			"getsockopt failed, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -1159,22 +1172,61 @@ int tcpsetserveropt(int fd, const int timeout)
 	*/
 
 	flags = 1;
-	result = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, \
-			(char *)&flags, sizeof(flags));
-	if (result < 0)
+	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, \
+		(char *)&flags, sizeof(flags)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"setsockopt failed, errno: %d, error info: %s.", \
+			"setsockopt failed, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
 
-	result = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, 
-			(char *)&flags, sizeof(flags));
-	if (result < 0)
+	return 0;
+}
+
+int tcpsetkeepalive(int fd, const int idleSeconds)
+{
+	int keepAlive;
+	int keepIdle;
+	int keepInterval;
+	int keepCount;
+
+	keepAlive = 1;
+	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, \
+		(char *)&keepAlive, sizeof(keepAlive)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"setsockopt failed, errno: %d, error info: %s.", \
+			"setsockopt failed, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EINVAL;
+	}
+
+	keepIdle = idleSeconds;
+	if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, (char *)&keepIdle, \
+		sizeof(keepIdle)) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EINVAL;
+	}
+
+	keepInterval = 5;
+	if (setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, (char *)&keepInterval, \
+		sizeof(keepInterval)) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EINVAL;
+	}
+
+	keepCount = 3;
+	if (setsockopt(fd, SOL_TCP, TCP_KEEPCNT, (char *)&keepCount, \
+		sizeof(keepCount)) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : EINVAL;
 	}

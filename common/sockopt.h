@@ -46,6 +46,7 @@ int nbaccept(int sock, const int timeout, int *err_no);
 int tcpsetserveropt(int fd, const int timeout);
 int tcpsetnonblockopt(int fd);
 int tcpsetnodelay(int fd);
+int tcpsetkeepalive(int fd, const int idleSeconds);
 
 in_addr_t getIpaddr(getnamefunc getname, int sock, \
 		char *buff, const int bufferSize);
