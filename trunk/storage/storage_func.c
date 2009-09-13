@@ -842,11 +842,13 @@ int storage_func_init(const char *filename, \
 	char *pRunByGroup;
 	char *pRunByUser;
 	char *pFsyncAfterWrittenBytes;
+	char *pThreadStackSize;
 	char *ppTrackerServers[FDFS_MAX_TRACKERS];
 	IniItemInfo *items;
 	int nItemCount;
 	int result;
 	int64_t fsync_after_written_bytes;
+	int64_t thread_stack_size;
 
 	/*
 	while (nThreadCount > 0)
@@ -1113,6 +1115,19 @@ int storage_func_init(const char *filename, \
 			g_sync_binlog_buff_interval=SYNC_BINLOG_BUFF_DEF_INTERVAL;
 		}
 
+		pThreadStackSize = iniGetStrValue( \
+			"thread_stack_size", items, nItemCount);
+		if (pThreadStackSize == NULL)
+		{
+			g_thread_stack_size = 1 * 1024 * 1024;
+		}
+		else if ((result=parse_bytes(pThreadStackSize, 1, \
+				&thread_stack_size)) != 0)
+		{
+			return result;
+		}
+		g_thread_stack_size = (int)thread_stack_size;
+
 		g_check_file_duplicate = iniGetBoolValue("check_file_duplicate",
 					items, nItemCount, false);
 		if (g_check_file_duplicate)
@@ -1189,6 +1204,7 @@ int storage_func_init(const char *filename, \
 			"fsync_after_written_bytes=%d, " \
 			"sync_log_buff_interval=%ds, " \
 			"sync_binlog_buff_interval=%ds, " \
+			"thread_stack_size=%d KB, " \
 			"check_file_duplicate=%d, FDHT group count=%d, " \
 			"FDHT server count=%d, FDHT key_namespace=%s, " \
 			"FDHT keep_alive=%d", \
@@ -1204,7 +1220,8 @@ int storage_func_init(const char *filename, \
 			g_allow_ip_count, g_file_distribute_path_mode, \
 			g_file_distribute_rotate_count, \
 			g_fsync_after_written_bytes, g_sync_log_buff_interval, \
-			g_sync_binlog_buff_interval, g_check_file_duplicate, \
+			g_sync_binlog_buff_interval, g_thread_stack_size/1024, \
+			g_check_file_duplicate, \
 			g_group_array.group_count, g_group_array.server_count, \
 			g_key_namespace, g_keep_alive);
 

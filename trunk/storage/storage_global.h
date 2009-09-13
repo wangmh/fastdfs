@@ -99,6 +99,8 @@ extern struct base64_context g_base64_context;
 extern char g_run_by_group[32];
 extern char g_run_by_user[32];
 
+extern int g_thread_stack_size;
+
 #ifdef WITH_HTTPD
 extern FDFSHTTPParams g_http_params;
 extern int g_http_trunk_size;

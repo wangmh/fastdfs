@@ -226,7 +226,7 @@ int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid)
 	int result;
 	pthread_attr_t thread_attr;
 
-	if ((result=init_pthread_attr(&thread_attr)) != 0)
+	if ((result=init_pthread_attr(&thread_attr, 0)) != 0)
 	{
 		return result;
 	}
