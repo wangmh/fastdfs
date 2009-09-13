@@ -1945,7 +1945,7 @@ data buff (struct)
 		continue;
 	}
 
-	if (tcpsetkeepalive(client_info.sock, g_network_timeout) != 0)
+	if (tcpsetkeepalive(client_info.sock, 2 * g_network_timeout + 1) != 0)
 	{
 		close(client_info.sock);
 		continue;

@@ -203,6 +203,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	}
 
 	sprintf(szContentLength, INT64_PRINTF_FORMAT, file_stat.st_size);
+	evhttp_add_header(req->output_headers, "Connection", "close");
 	evhttp_add_header(req->output_headers, "Content-Type", content_type);
 	evhttp_add_header(req->output_headers, "Content-Length", szContentLength);
 	evhttp_send_reply_start(req, HTTP_OK, "OK");

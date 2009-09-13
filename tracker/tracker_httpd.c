@@ -161,6 +161,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	memcpy(redirect_url + domain_len, uri, uri_len);
 	*(redirect_url + domain_len + uri_len) = '\0';
 
+	evhttp_add_header(req->output_headers, "Connection", "close");
 	evhttp_add_header(req->output_headers, "Location", redirect_url);
 	evhttp_send_reply(req, HTTP_MOVETEMP, "Found", ev_buf);
 }
