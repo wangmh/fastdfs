@@ -45,8 +45,9 @@ int connectserverbyip(int sock, char* ip, short port);
 int nbaccept(int sock, const int timeout, int *err_no);
 int tcpsetserveropt(int fd, const int timeout);
 int tcpsetnonblockopt(int fd);
-int tcpsetnodelay(int fd);
+int tcpsetnodelay(int fd, const int timeout);
 int tcpsetkeepalive(int fd, const int idleSeconds);
+int tcpprintkeepalive(int fd);
 
 in_addr_t getIpaddr(getnamefunc getname, int sock, \
 		char *buff, const int bufferSize);

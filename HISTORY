@@ -6,6 +6,8 @@ Version 1.21  2009-09-15
  * tracker and storage server use setsockopt to keep alive
  * bug fixed: storage server with multi-path, upload file fail when the free 
    space of each path <= reserved space (the total free space > reserved space)
+ * storage_sync.c: when connect fail, do not change the dest storage server '
+   status to offline
 
 Version 1.20  2009-09-05
  * base64 use context, functions changed

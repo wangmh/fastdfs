@@ -214,7 +214,7 @@ static FDHTServerInfo *get_connection(ServerArray *pServerArray, \
 		{
 			if (bKeepAlive)
 			{
-				tcpsetnodelay((*ppServer)->sock);
+				tcpsetnodelay((*ppServer)->sock, g_network_timeout);
 			}
 			return *ppServer;
 		}
@@ -232,7 +232,7 @@ static FDHTServerInfo *get_connection(ServerArray *pServerArray, \
 		{
 			if (bKeepAlive)
 			{
-				tcpsetnodelay((*ppServer)->sock);
+				tcpsetnodelay((*ppServer)->sock, g_network_timeout);
 			}
 			return *ppServer;
 		}
@@ -1324,7 +1324,7 @@ int fdht_connect_all_servers(GroupArray *pGroupArray, const bool bKeepAlive, \
 			(*success_count)++;
 			if (bKeepAlive || pGroupArray->use_proxy)
 			{
-				tcpsetnodelay(pServerInfo->sock);
+				tcpsetnodelay(pServerInfo->sock, g_network_timeout);
 			}
 		}
 	}
@@ -1389,7 +1389,7 @@ int fdht_stat_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 
 	if (bKeepAlive)
 	{
-		tcpsetnodelay(pServer->sock);
+		tcpsetnodelay(pServer->sock, g_network_timeout);
 	}
 
 	memset(&header, 0, sizeof(header));
