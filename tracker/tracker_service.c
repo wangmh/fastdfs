@@ -794,6 +794,7 @@ static int tracker_deal_service_query_storage( \
 	bool bHaveActiveServer;
 	int result;
 	int write_path_index;
+	int avg_reserved_mb;
 
 	memset(&resp, 0, sizeof(resp));
 	pStoreGroup = NULL;
@@ -1001,14 +1002,16 @@ static int tracker_deal_service_query_storage( \
 			write_path_index = 0;
 		}
 
+		avg_reserved_mb = g_storage_reserved_mb / \
+				pStoreGroup->store_path_count;
 		if (pStorageServer->path_free_mbs[write_path_index] <= \
-				g_storage_reserved_mb)
+				avg_reserved_mb)
 		{
 			int i;
 			for (i=0; i<pStoreGroup->store_path_count; i++)
 			{
 				if (pStorageServer->path_free_mbs[i]
-				 	> g_storage_reserved_mb)
+				 	> avg_reserved_mb)
 				{
 					pStorageServer->current_write_path = i;
 					write_path_index = i;
