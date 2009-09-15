@@ -1106,6 +1106,7 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 int tcpsetserveropt(int fd, const int timeout)
 {
 	int flags;
+	int result;
 
 	struct linger linger;
 	struct timeval waittime;
@@ -1181,6 +1182,11 @@ int tcpsetserveropt(int fd, const int timeout)
 		return errno != 0 ? errno : EINVAL;
 	}
 
+	if ((result=tcpsetkeepalive(fd, 2 * timeout + 1)) != 0)
+	{
+		return result;
+	}
+
 	return 0;
 }
 
@@ -1211,7 +1217,7 @@ int tcpsetkeepalive(int fd, const int idleSeconds)
 		return errno != 0 ? errno : EINVAL;
 	}
 
-	keepInterval = 5;
+	keepInterval = 10;
 	if (setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, (char *)&keepInterval, \
 		sizeof(keepInterval)) < 0)
 	{
@@ -1230,6 +1236,60 @@ int tcpsetkeepalive(int fd, const int idleSeconds)
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
+
+	return 0;
+}
+
+int tcpprintkeepalive(int fd)
+{
+	int keepAlive;
+	int keepIdle;
+	int keepInterval;
+	int keepCount;
+	int len;
+
+	len = sizeof(keepAlive);
+	if (getsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, \
+		(char *)&keepAlive, &len) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EINVAL;
+	}
+
+	len = sizeof(keepIdle);
+	if (getsockopt(fd, SOL_TCP, TCP_KEEPIDLE, (char *)&keepIdle, \
+		&len) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EINVAL;
+	}
+
+	len = sizeof(keepInterval);
+	if (getsockopt(fd, SOL_TCP, TCP_KEEPINTVL, (char *)&keepInterval, \
+		&len) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EINVAL;
+	}
+
+	len = sizeof(keepCount);
+	if (getsockopt(fd, SOL_TCP, TCP_KEEPCNT, (char *)&keepCount, \
+		&len) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EINVAL;
+	}
+
+	logInfo("keepAlive=%d, keepIdle=%d, keepInterval=%d, keepCount=%d", 
+		keepAlive, keepIdle, keepInterval, keepCount);
 
 	return 0;
 }
@@ -1258,21 +1318,17 @@ int tcpsetnonblockopt(int fd)
 	return 0;
 }
 
-int tcpsetnodelay(int fd)
+int tcpsetnodelay(int fd, const int timeout)
 {
 	int flags;
+	int result;
 
-	flags = 1;
-
-	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, \
-			(char *)&flags, sizeof(flags)) < 0)
+	if ((result=tcpsetkeepalive(fd, 2 * timeout + 1)) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"setsockopt failed, errno: %d, error info: %s.", \
-			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : EINVAL;
+		return result;
 	}
 
+	flags = 1;
 	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, \
 			(char *)&flags, sizeof(flags)) < 0)
 	{

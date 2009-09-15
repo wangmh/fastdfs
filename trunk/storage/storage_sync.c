@@ -1716,11 +1716,6 @@ static void* storage_sync_thread_entrance(void* arg)
 				previousCode = conn_result;
 			}
 
-			if (pStorage->status == FDFS_STORAGE_STATUS_ACTIVE)
-			{
-				pStorage->status = FDFS_STORAGE_STATUS_OFFLINE;
-			}
- 
 			nContinuousFail++;
 			close(storage_server.sock);
 			storage_server.sock = -1;
@@ -1838,6 +1833,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			(pStorage->status == FDFS_STORAGE_STATUS_ACTIVE || \
 			pStorage->status == FDFS_STORAGE_STATUS_SYNCING))
 		{
+
 			if (g_sync_part_time)
 			{
 				current_time = time(NULL);

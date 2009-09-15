@@ -1858,6 +1858,7 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 	return tracker_check_and_sync(pClientInfo, status);
 }
 
+
 void* tracker_thread_entrance(void* arg)
 {
 /*
@@ -1943,12 +1944,6 @@ data buff (struct)
 	}
 
 	if (tcpsetnonblockopt(client_info.sock) != 0)
-	{
-		close(client_info.sock);
-		continue;
-	}
-
-	if (tcpsetkeepalive(client_info.sock, 2 * g_network_timeout + 1) != 0)
 	{
 		close(client_info.sock);
 		continue;

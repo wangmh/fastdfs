@@ -3061,12 +3061,6 @@ data buff (struct)
 		close(client_info.sock);
 		continue;
 	}
-	
-	if (tcpsetkeepalive(client_info.sock, 2 * g_network_timeout + 1) != 0)
-	{
-		close(client_info.sock);
-		continue;
-	}
 
 	client_ip = getPeerIpaddr(client_info.sock, \
 				client_info.ip_addr, IP_ADDRESS_SIZE);
