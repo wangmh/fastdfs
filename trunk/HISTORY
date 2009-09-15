@@ -1,9 +1,11 @@
 
-Version 1.21  2009-09-13
+Version 1.21  2009-09-15
  * bug fixed: when source storage server synced file to new storage server done,
    it's status changed to ONLINE (should keep as ACTIVE)
  * add thread_stack_size in config file, default value is 1MB
  * tracker and storage server use setsockopt to keep alive
+ * bug fixed: storage server with multi-path, upload file fail when the free 
+   space of each path <= reserved space (the total free space > reserved space)
 
 Version 1.20  2009-09-05
  * base64 use context, functions changed
