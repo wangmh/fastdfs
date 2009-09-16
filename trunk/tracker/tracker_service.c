@@ -1963,7 +1963,7 @@ data buff (struct)
 		{
 			if (result == ENOTCONN && recv_bytes == 0)
 			{
-				log_level = LOG_WARNING;
+				log_level = LOG_DEBUG;
 			}
 			else
 			{
