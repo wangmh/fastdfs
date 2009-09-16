@@ -610,7 +610,7 @@ int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 	pStorageServer->port = (int)buff2long(in_buff + \
 				FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1);
 	*store_path_index = *(in_buff + FDFS_GROUP_NAME_MAX_LEN + \
-				IP_ADDRESS_SIZE);
+			 IP_ADDRESS_SIZE - 1 + FDFS_PROTO_PKG_LEN_SIZE);
 
 	return 0;
 }
@@ -673,7 +673,8 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 	pStorageServer->port = (int)buff2long(in_buff + \
 				FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1);
 	*store_path_index = *(in_buff + FDFS_GROUP_NAME_MAX_LEN + \
-				IP_ADDRESS_SIZE);
+			 IP_ADDRESS_SIZE - 1 + FDFS_PROTO_PKG_LEN_SIZE);
+
 	return 0;
 }
 

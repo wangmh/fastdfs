@@ -8,6 +8,9 @@ Version 1.21  2009-09-15
    space of each path <= reserved space (the total free space > reserved space)
  * storage_sync.c: when connect fail, do not change the dest storage server '
    status to offline
+ * tracker_service.c and storage_service.c change log level from WARNING to DEBUG 
+   when client connection disconnected
+ * bug fixed: tracker_client.c correct store_path_index return by tracker server
 
 Version 1.20  2009-09-05
  * base64 use context, functions changed
