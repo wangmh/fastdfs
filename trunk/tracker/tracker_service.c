@@ -29,8 +29,34 @@
 #include "tracker_proto.h"
 #include "tracker_service.h"
 
-pthread_mutex_t g_tracker_thread_lock;
+static pthread_mutex_t tracker_thread_lock;
+static pthread_mutex_t lb_thread_lock;
+
 int g_tracker_thread_count = 0;
+
+int tracker_service_init()
+{
+	int result;
+	if ((result=init_pthread_lock(&tracker_thread_lock)) != 0)
+	{
+		return result;
+	}
+
+	if ((result=init_pthread_lock(&lb_thread_lock)) != 0)
+	{
+		return result;
+	}
+
+	return 0;
+}
+
+int tracker_service_destroy()
+{
+	pthread_mutex_destroy(&tracker_thread_lock);
+	pthread_mutex_destroy(&lb_thread_lock);
+
+	return 0;
+}
 
 static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 			const int status)
@@ -1708,8 +1734,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 		if (g_groups.store_lookup == \
 			FDFS_STORE_LOOKUP_LOAD_BALANCE)
 		{
-			if ((result=pthread_mutex_lock( \
-				&g_tracker_thread_lock)) != 0)
+			if ((result=pthread_mutex_lock(&lb_thread_lock)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 				"call pthread_mutex_lock fail, " \
@@ -1717,8 +1742,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 				__LINE__, result, strerror(result));
 			}
 			tracker_find_max_free_space_group();
-			if ((result=pthread_mutex_unlock( \
-				&g_tracker_thread_lock)) != 0)
+			if ((result=pthread_mutex_unlock(&lb_thread_lock)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_unlock fail, " \
@@ -1730,7 +1754,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 		status = 0;
 
 		/*
-		//printf("storage: %s:%d, total_mb=%dMB, free_mb=%dMB\n", \
+		//logInfo("storage: %s:%d, total_mb=%dMB, free_mb=%dMB\n", \
 			pClientInfo->pStorage->ip_addr, \
 			pClientInfo->pGroup->storage_port, \
 			pClientInfo->pStorage->total_mb, \
@@ -1751,7 +1775,6 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 				pClientInfo->pStorage);
 	}
 
-	//printf("deal storage report, status=%d\n", status);
 	return tracker_check_and_sync(pClientInfo, status);
 }
 
@@ -1882,7 +1905,7 @@ data buff (struct)
 
 	while (g_continue_flag)
 	{
-	if ((result=pthread_mutex_lock(&g_tracker_thread_lock)) != 0)
+	if ((result=pthread_mutex_lock(&tracker_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -1892,13 +1915,13 @@ data buff (struct)
 
 	if (!g_continue_flag)
 	{
-		pthread_mutex_unlock(&g_tracker_thread_lock);
+		pthread_mutex_unlock(&tracker_thread_lock);
 		break;
 	}
 
 	memset(&client_info, 0, sizeof(client_info));
 	client_info.sock = nbaccept(server_sock, 1 * 60, &result);
-	if (pthread_mutex_unlock(&g_tracker_thread_lock) != 0)
+	if (pthread_mutex_unlock(&tracker_thread_lock) != 0)
 	{
 		logError("file: "__FILE__", line: %d, "   \
 			"call pthread_mutex_unlock fail", \
@@ -2106,7 +2129,7 @@ data buff (struct)
 	close(client_info.sock);
 	}
 
-	if ((result=pthread_mutex_lock(&g_tracker_thread_lock)) != 0)
+	if ((result=pthread_mutex_lock(&tracker_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -2114,7 +2137,7 @@ data buff (struct)
 			__LINE__, result, strerror(result));
 	}
 	g_tracker_thread_count--;
-	if ((result=pthread_mutex_unlock(&g_tracker_thread_lock)) != 0)
+	if ((result=pthread_mutex_unlock(&tracker_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
