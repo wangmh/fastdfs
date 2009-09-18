@@ -70,10 +70,12 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 
 #define IP_ADDRESS_SIZE	16
 
+#ifndef __cplusplus
 #ifndef true
 typedef char  bool;
 #define true  1
 #define false 0
+#endif
 #endif
 
 #ifndef byte
