@@ -15,8 +15,10 @@
 extern "C" {
 #endif
 
-extern pthread_mutex_t g_tracker_thread_lock;
 extern int g_tracker_thread_count;
+
+int tracker_service_init();
+int tracker_service_destroy();
 
 void* tracker_thread_entrance(void* arg);
 

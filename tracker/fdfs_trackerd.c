@@ -97,8 +97,7 @@ int main(int argc, char *argv[])
 	daemon_init(true);
 	umask(0);
 	
-	if ((result=init_pthread_lock( \
-			&g_tracker_thread_lock)) != 0)
+	if ((result=tracker_service_init()) != 0)
 	{
 		return result;
 	}
@@ -227,8 +226,7 @@ int main(int argc, char *argv[])
 	}
 	
 	tracker_mem_destroy();
-
-	pthread_mutex_destroy(&g_tracker_thread_lock);
+	tracker_service_destroy();
 	
 	free(tids);
 
