@@ -98,6 +98,17 @@ cd ..
 
 if [ "$1" = "install" ]; then
   cd ..
-  cp restart.sh  /usr/local/bin/
+  cp -f restart.sh $TARGET_PATH
+  cp -f stop.sh $TARGET_PATH
+
+  if [ "$uname" = "Linux" ]; then
+    mkdir /etc/fdfs
+    cp -f conf/tracker.conf /etc/fdfs/
+    cp -f conf/storage.conf /etc/fdfs/
+    cp -f init.d/fdfs_trackerd /etc/rc.d/init.d/
+    cp -f init.d/fdfs_storaged /etc/rc.d/init.d/
+    /sbin/chkconfig --add fdfs_trackerd 
+    /sbin/chkconfig --add fdfs_storaged
+  fi
 fi
 

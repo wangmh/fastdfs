@@ -1,5 +1,5 @@
 
-Version 1.21  2009-09-15
+Version 1.21  2009-09-18
  * bug fixed: when source storage server synced file to new storage server done,
    it's status changed to ONLINE (should keep as ACTIVE)
  * add thread_stack_size in config file, default value is 1MB
@@ -11,6 +11,8 @@ Version 1.21  2009-09-15
  * tracker_service.c and storage_service.c change log level from WARNING to DEBUG 
    when client connection disconnected
  * bug fixed: tracker_client.c correct store_path_index return by tracker server
+ * add service shell scripts in directory: init.d 
+   (services will auto installed on Linux)
 
 Version 1.20  2009-09-05
  * base64 use context, functions changed
