@@ -11,7 +11,7 @@ Chinese language: http://www.csource.org/
 # if you use HTTP to download file, please download libevent 1.4.x and install it
 tar xzf FastDFS_v1.x.tar.gz
 #for example:
-tar xzf FastDFS_v1.20.tar.gz
+tar xzf FastDFS_v1.21.tar.gz
 
 #step 2. enter the FastDFS dir
 cd FastDFS
@@ -27,20 +27,25 @@ cd FastDFS
 
 #step 6. run server programs
 #start the tracker server:
-/usr/local/bin/fdfs_trackerd <tracker_conf_filename>
+/usr/local/bin/fdfs_trackerd /etc/fdfs/tracker.conf
+#in Linux, you can start fdfs_trackerd as a service:
+/sbin/service fdfs_trackerd start
 
 #start the storage server:
-/usr/local/bin/fdfs_storaged <storage_conf_filename>
+/usr/local/bin/fdfs_storaged /etc/fdfs/storage.conf
+#in Linux, you can start fdfs_storaged as a service:
+/sbin/service fdfs_storaged start
 
 #step 7. run test program
 #run the client test program:
-/usr/local/bin/fdfs_test <storage_conf_filename> <operation>
+/usr/local/bin/fdfs_test <client_conf_filename> <operation>
+/usr/local/bin/fdfs_test1 <client_conf_filename> <operation>
 #for example, upload a file:
 /usr/local/bin/fdfs_test conf/client.conf upload /usr/include/stdlib.h
 
 #step 8. run monitor program
 #run the monitor program:
-/usr/local/bin/fdfs_monitor <storage_conf_filename>
+/usr/local/bin/fdfs_monitor <client_conf_filename>
 
 
 tracker server config file sample:
