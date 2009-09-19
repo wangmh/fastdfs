@@ -1,20 +1,24 @@
 
-Version 1.21  2009-09-18
+Version 1.21  2009-09-19
  * bug fixed: when source storage server synced file to new storage server done,
-   it's status changed to ONLINE (should keep as ACTIVE)
- * add thread_stack_size in config file, default value is 1MB
- * tracker and storage server use setsockopt to keep alive
+   it's status changed to ONLINE (should keep as ACTIVE, report by zhouzezhong)
+ * add thread_stack_size in config file, default value is 1MB (report by chhxo)
+ * tracker and storage server use setsockopt to keep alive 
+   (report by zhouzezhong)
  * bug fixed: storage server with multi-path, upload file fail when the free 
-   space of each path <= reserved space (the total free space > reserved space)
+   space of each path <= reserved space (the total free space > reserved space,
+   report by zhouzezhong)
  * storage_sync.c: when connect fail, do not change the dest storage server '
    status to offline
  * tracker_service.c and storage_service.c change log level from WARNING to DEBUG 
-   when client connection disconnected
+   when client connection disconnected (report by Jney402)
  * bug fixed: tracker_client.c correct store_path_index return by tracker server
+   (report by happy_fastdfs)
  * bug fixed: tracker_service.c when store_lookup set to 2 (load balance), use 
    another pthread lock to avoid long time lock waiting
+   (report by happy_fastdfs)
  * add service shell scripts in directory: init.d 
-   (services will auto installed on Linux)
+   (services will auto installed on Linux, report by hugwww)
 
 Version 1.20  2009-09-05
  * base64 use context, functions changed
