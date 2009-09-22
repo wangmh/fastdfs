@@ -1,4 +1,7 @@
 
+Version 1.22  2009-09-22
+ * bug fixed: common/shared_func.c allow_hosts array maybe overflow in some case
+
 Version 1.21  2009-09-19
  * bug fixed: when source storage server synced file to new storage server done,
    it's status changed to ONLINE (should keep as ACTIVE, report by zhouzezhong)

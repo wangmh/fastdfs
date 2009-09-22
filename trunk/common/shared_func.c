@@ -1418,6 +1418,26 @@ int load_allow_hosts(IniItemInfo *items, const int nItemCount, \
 			}
 			else
 			{
+				if (alloc_count < (*allow_ip_count) + 1)
+				{
+					alloc_count = (*allow_ip_count) + \
+							(pItemEnd - pItem);
+					*allow_ip_addrs = (in_addr_t *)realloc(
+						*allow_ip_addrs, 
+						sizeof(in_addr_t)*alloc_count);
+					if (*allow_ip_addrs == NULL)
+					{
+					logError("file: "__FILE__", line: %d, "\
+						"malloc %d bytes fail, " \
+						"errno: %d, error info: %s", \
+						__LINE__, \
+						sizeof(in_addr_t)*alloc_count,\
+						errno, strerror(errno));
+
+					return errno != 0 ? errno : ENOMEM;
+					}
+				}
+
 				(*allow_ip_addrs)[*allow_ip_count] = addr;
 				(*allow_ip_count)++;
 			}
@@ -1555,7 +1575,8 @@ int load_allow_hosts(IniItemInfo *items, const int nItemCount, \
 
 			if (alloc_count < *allow_ip_count+(nEnd - nStart + 1))
 			{
-				alloc_count += nEnd - nStart + 1;
+				alloc_count = *allow_ip_count + (nEnd - nStart)
+						 + (pItemEnd - pItem);
 				*allow_ip_addrs = (in_addr_t *)realloc(
 					*allow_ip_addrs, 
 					sizeof(in_addr_t)*alloc_count);
