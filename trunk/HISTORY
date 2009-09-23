@@ -1,6 +1,9 @@
 
-Version 1.22  2009-09-22
+Version 1.22  2009-09-23
  * bug fixed: common/shared_func.c allow_hosts array maybe overflow in some case
+ * tracker/tracker_mem.c: protocol TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ALL, 
+   return at least a storage server when active storage 
+   server count of the group > 0
 
 Version 1.21  2009-09-19
  * bug fixed: when source storage server synced file to new storage server done,
