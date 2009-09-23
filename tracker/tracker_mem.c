@@ -2697,12 +2697,8 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 
 		if (*server_count == 0)
 		{
-			if (storage_ip == INADDR_NONE && g_groups.store_server\
-					== FDFS_STORE_SERVER_FIRST)
-			{
-				ppStoreServers[(*server_count)++] = \
-					 *((*ppGroup)->active_servers);
-			}
+			ppStoreServers[(*server_count)++] = \
+				 *((*ppGroup)->active_servers);
 		}
 	}
 
