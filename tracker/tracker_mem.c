@@ -2617,14 +2617,20 @@ int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
 				break;
 			}
 
+			memset(&ip_addr, 0, sizeof(ip_addr));
+			ip_addr.s_addr = storage_ip;
+			inet_ntop(AF_INET, &ip_addr, \
+				szIpAddr, sizeof(szIpAddr));
+			if (strcmp(szIpAddr, ppStoreServers[0]->ip_addr) == 0)
+			{
+				break;
+			}
+
 			if (g_groups.download_server == \
 					FDFS_DOWNLOAD_SERVER_ROUND_ROBIN)
 			{  //avoid search again
-				memset(&ip_addr, 0, sizeof(ip_addr));
-				ip_addr.s_addr = storage_ip;
 				pStoreSrcServer=tracker_mem_get_active_storage(
-					*ppGroup, inet_ntop(AF_INET, &ip_addr, \
-					szIpAddr, sizeof(szIpAddr)));
+					*ppGroup, szIpAddr);
 				if (pStoreSrcServer != NULL)
 				{
 					ppStoreServers[0] = pStoreSrcServer;
