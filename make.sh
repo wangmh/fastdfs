@@ -28,7 +28,10 @@ cat <<EOF > common/_os_bits.h
 EOF
 
 TARGET_PATH=/usr/local/bin
+
 #WITH_HTTPD=1
+#WITH_LINUX_SERVICE=1
+
 CFLAGS='-O3 -Wall -D_FILE_OFFSET_BITS=64'
 #CFLAGS='-g -Wall -D_FILE_OFFSET_BITS=64 -D__DEBUG__'
 
@@ -102,13 +105,15 @@ if [ "$1" = "install" ]; then
   cp -f stop.sh $TARGET_PATH
 
   if [ "$uname" = "Linux" ]; then
-    mkdir /etc/fdfs
-    cp -f conf/tracker.conf /etc/fdfs/
-    cp -f conf/storage.conf /etc/fdfs/
-    cp -f init.d/fdfs_trackerd /etc/rc.d/init.d/
-    cp -f init.d/fdfs_storaged /etc/rc.d/init.d/
-    /sbin/chkconfig --add fdfs_trackerd 
-    /sbin/chkconfig --add fdfs_storaged
+    if [ "$WITH_LINUX_SERVICE" = "1" ]; then
+      mkdir -p /etc/fdfs
+      cp -f conf/tracker.conf /etc/fdfs/
+      cp -f conf/storage.conf /etc/fdfs/
+      cp -f init.d/fdfs_trackerd /etc/rc.d/init.d/
+      cp -f init.d/fdfs_storaged /etc/rc.d/init.d/
+      /sbin/chkconfig --add fdfs_trackerd 
+      /sbin/chkconfig --add fdfs_storaged
+    fi
   fi
 fi
 
