@@ -1193,9 +1193,12 @@ int tcpsetserveropt(int fd, const int timeout)
 int tcpsetkeepalive(int fd, const int idleSeconds)
 {
 	int keepAlive;
+
+#ifdef OS_LINUX
 	int keepIdle;
 	int keepInterval;
 	int keepCount;
+#endif
 
 	keepAlive = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, \
@@ -1207,6 +1210,7 @@ int tcpsetkeepalive(int fd, const int idleSeconds)
 		return errno != 0 ? errno : EINVAL;
 	}
 
+#ifdef OS_LINUX
 	keepIdle = idleSeconds;
 	if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, (char *)&keepIdle, \
 		sizeof(keepIdle)) < 0)
@@ -1236,6 +1240,7 @@ int tcpsetkeepalive(int fd, const int idleSeconds)
 			__LINE__, errno, strerror(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
+#endif
 
 	return 0;
 }
@@ -1243,10 +1248,13 @@ int tcpsetkeepalive(int fd, const int idleSeconds)
 int tcpprintkeepalive(int fd)
 {
 	int keepAlive;
+	int len;
+
+#ifdef OS_LINUX
 	int keepIdle;
 	int keepInterval;
 	int keepCount;
-	int len;
+#endif
 
 	len = sizeof(keepAlive);
 	if (getsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, \
@@ -1258,6 +1266,7 @@ int tcpprintkeepalive(int fd)
 		return errno != 0 ? errno : EINVAL;
 	}
 
+#ifdef OS_LINUX
 	len = sizeof(keepIdle);
 	if (getsockopt(fd, SOL_TCP, TCP_KEEPIDLE, (char *)&keepIdle, \
 		&len) < 0)
@@ -1290,6 +1299,9 @@ int tcpprintkeepalive(int fd)
 
 	logInfo("keepAlive=%d, keepIdle=%d, keepInterval=%d, keepCount=%d", 
 		keepAlive, keepIdle, keepInterval, keepCount);
+#else
+        logInfo("keepAlive=%d", keepAlive);
+#endif
 
 	return 0;
 }
