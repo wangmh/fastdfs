@@ -33,6 +33,7 @@ int load_mime_types_from_file(HashArray *pHash, const char *mime_filename)
 	char *pLastEnd;
 	char *content_type;
 	char *ext_name;
+	char *lasts;
 	int http_status;
 	int content_len;
 	off_t file_size;
@@ -87,10 +88,16 @@ int load_mime_types_from_file(HashArray *pHash, const char *mime_filename)
 			continue;
 		}
 
-		content_type = strsep(&pLine, MIME_DELIM_CHARS);
-		while (pLine != NULL && *pLine != '\0')
+		lasts = NULL;
+		content_type = strtok_r(pLine, MIME_DELIM_CHARS, &lasts);
+		while (1)
 		{
-			ext_name = strsep(&pLine, MIME_DELIM_CHARS);
+			ext_name = strtok_r(NULL, MIME_DELIM_CHARS, &lasts);
+			if (ext_name == NULL)
+			{
+				break;
+			}
+
 			if (*ext_name == '\0')
 			{
 				continue;
