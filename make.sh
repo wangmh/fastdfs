@@ -109,6 +109,9 @@ if [ "$1" = "install" ]; then
       mkdir -p /etc/fdfs
       cp -f conf/tracker.conf /etc/fdfs/
       cp -f conf/storage.conf /etc/fdfs/
+      cp -f conf/client.conf /etc/fdfs/
+      cp -f conf/http.conf /etc/fdfs/
+      cp -f conf/mime.types /etc/fdfs/
       cp -f init.d/fdfs_trackerd /etc/rc.d/init.d/
       cp -f init.d/fdfs_storaged /etc/rc.d/init.d/
       /sbin/chkconfig --add fdfs_trackerd 
