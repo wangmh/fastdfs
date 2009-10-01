@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 	struct sigaction act;
 	ScheduleEntry scheduleEntries[SCHEDULE_ENTRIES_COUNT];
 	ScheduleArray scheduleArray;
-	
+
 	if (argc < 2)
 	{
 		printf("Usage: %s <config_file>\n", argv[0]);
