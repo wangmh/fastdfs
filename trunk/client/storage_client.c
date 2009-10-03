@@ -573,8 +573,8 @@ int storage_upload_by_filename1(TrackerServerInfo *pTrackerServer, \
 
 int storage_do_upload_file1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
-		const int store_path_index, const bool bFilename, \
-		const char *file_buff, const int64_t file_size, \
+		const int store_path_index, const int upload_type, \
+		const char *file_buff, void *arg, const int64_t file_size, \
 		const char *file_ext_name, const FDFSMetaData *meta_list, \
 		const int meta_count, const char *group_name, char *file_id)
 {
@@ -584,8 +584,8 @@ int storage_do_upload_file1(TrackerServerInfo *pTrackerServer, \
 
 	snprintf(new_group_name, sizeof(new_group_name), "%s", group_name);
 	result = storage_do_upload_file(pTrackerServer, \
-			pStorageServer, store_path_index, bFilename, \
-			file_buff, file_size, file_ext_name, \
+			pStorageServer, store_path_index, upload_type, \
+			file_buff, arg, file_size, file_ext_name, \
 			meta_list, meta_count, \
 			new_group_name, remote_filename);
 	if (result == 0)
@@ -611,13 +611,11 @@ meta data bytes: each meta data seperated by \x01,
 file size bytes: file content
 **/
 int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
-		const int store_path_index, const bool bFilename, \
-		const char *file_buff, const int64_t file_size, \
-		const char *file_ext_name, const FDFSMetaData *meta_list, \
-		const int meta_count, \
-		char *group_name, \
-		char *remote_filename)
+		TrackerServerInfo *pStorageServer, const int store_path_index, \
+		const int upload_type, const char *file_buff, void *arg, \
+		const int64_t file_size, const char *file_ext_name, \
+		const FDFSMetaData *meta_list, const int meta_count, \
+		char *group_name, char *remote_filename)
 {
 #define MAX_STATIC_META_DATA_COUNT 32
 	TrackerHeader header;
@@ -735,7 +733,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	if (bFilename)
+	if (upload_type == FDFS_UPLOAD_BY_FILE)
 	{
 		if ((result=tcpsendfile(pStorageServer->sock, file_buff, \
 			file_size, g_network_timeout)) != 0)
@@ -743,7 +741,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 			break;
 		}
 	}
-	else
+	else if (upload_type == FDFS_UPLOAD_BY_BUFF)
 	{
 		if ((result=tcpsenddata_nb(pStorageServer->sock, \
 			(char *)file_buff, file_size, g_network_timeout)) != 0)
@@ -753,6 +751,15 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 				pStorageServer->ip_addr, \
 				pStorageServer->port, \
 				result, strerror(result));
+			break;
+		}
+	}
+	else //FDFS_UPLOAD_BY_CALLBACK
+	{
+		UploadCallback callback;
+		callback = (UploadCallback)file_buff;
+		if ((result=callback(arg, file_size, pStorageServer->sock))!=0)
+		{
 			break;
 		}
 	}
@@ -796,6 +803,59 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
+int storage_upload_by_callback(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const int store_path_index, \
+		UploadCallback callback, void *arg, \
+		const int64_t file_size, const char *file_ext_name, \
+		const FDFSMetaData *meta_list, const int meta_count, \
+		char *group_name, char *remote_filename)
+{
+	return storage_do_upload_file(pTrackerServer, pStorageServer, \
+			store_path_index, FDFS_UPLOAD_BY_CALLBACK, \
+			(char *)callback, arg, file_size, file_ext_name, \
+			meta_list, meta_count, group_name, remote_filename);
+}
+
+int storage_upload_by_callback1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const int store_path_index, \
+		UploadCallback callback, void *arg, \
+		const int64_t file_size, const char *file_ext_name, \
+		const FDFSMetaData *meta_list, const int meta_count, \
+		const char *group_name, char *file_id)
+{
+	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char remote_filename[64];
+	int result;
+
+	if (group_name == NULL)
+	{
+		*new_group_name = '\0';
+	}
+	else
+	{
+		snprintf(new_group_name, sizeof(new_group_name), \
+				"%s", group_name);
+	}
+
+	result = storage_do_upload_file(pTrackerServer, \
+			pStorageServer, store_path_index, \
+			FDFS_UPLOAD_BY_CALLBACK, (char *)callback, arg, \
+			file_size, file_ext_name, \
+			meta_list, meta_count, \
+			new_group_name, remote_filename);
+	if (result == 0)
+	{
+		sprintf(file_id, "%s%c%s", new_group_name, \
+			FDFS_FILE_ID_SEPERATOR, remote_filename);
+	}
+	else
+	{
+		file_id[0] = '\0';
+	}
+
+	return result;
+}
+
 int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		const int store_path_index, \
@@ -834,9 +894,9 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 	}
 
 	return storage_do_upload_file(pTrackerServer, pStorageServer, \
-			store_path_index, true, local_filename, \
-			stat_buf.st_size, file_ext_name, meta_list, meta_count,\
-			group_name, remote_filename);
+			store_path_index, FDFS_UPLOAD_BY_FILE, local_filename, \
+			NULL, stat_buf.st_size, file_ext_name, \
+			meta_list, meta_count, group_name, remote_filename);
 }
 
 int storage_set_metadata1(TrackerServerInfo *pTrackerServer, \
