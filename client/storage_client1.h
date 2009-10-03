@@ -56,14 +56,38 @@ int storage_upload_by_filename1(TrackerServerInfo *pTrackerServer, \
 		store_path_index, file_buff, file_size, file_ext_name, \
 		meta_list, meta_count, group_name, file_id) \
 	storage_do_upload_file1(pTrackerServer, pStorageServer, \
-		store_path_index, false, file_buff, file_size, \
-		file_ext_name, meta_list, meta_count, group_name, file_id)
+		store_path_index, FDFS_UPLOAD_BY_BUFF, file_buff, NULL, \
+		file_size, file_ext_name, meta_list, meta_count, \
+		group_name, file_id)
 int storage_do_upload_file1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
-		const int store_path_index, const bool bFilename, \
-		const char *file_buff, const int64_t file_size, \
+		const int store_path_index, const int upload_type, \
+		const char *file_buff, void *arg, const int64_t file_size, \
 		const char *file_ext_name, const FDFSMetaData *meta_list, \
 		const int meta_count, const char *group_name, char *file_id);
+
+/**
+* upload file to storage server (by callback)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       store_path_index: the index of path on the storage server
+*       file_size: the file size
+*       file_ext_name: file ext name, not include dot(.), can be NULL
+*       callback: callback function to send file content to storage server
+*       arg: callback extra arguement
+*	meta_list: meta info array
+*       meta_count: meta item count
+*       group_name: specify the group name to upload file to, can be emtpy
+*	file_id: return the new created file id (including group name and filename)
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_upload_by_callback1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const int store_path_index, \
+		UploadCallback callback, void *arg, \
+		const int64_t file_size, const char *file_ext_name, \
+		const FDFSMetaData *meta_list, const int meta_count, \
+		const char *group_name, char *file_id);
 
 /**
 * delete file from storage server

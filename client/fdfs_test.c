@@ -13,9 +13,11 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include "fdfs_client.h"
 #include "fdfs_global.h"
 #include "fdfs_base64.h"
+#include "sockopt.h"
 #include "fdfs_http_shared.h"
 
 int writeToFileCallback(void *arg, const int64_t file_size, const char *data, \
@@ -32,6 +34,18 @@ int writeToFileCallback(void *arg, const int64_t file_size, const char *data, \
 	}
 
 	return 0;
+}
+
+int uploadFileCallback(void *arg, const int64_t file_size, int sock)
+{
+	char *filename;
+	if (arg == NULL)
+	{
+		return EINVAL;
+	}
+
+	filename = (char *)arg;
+	return tcpsendfile(sock, filename, file_size, g_network_timeout);
 }
 
 int main(int argc, char *argv[])
@@ -95,15 +109,39 @@ int main(int argc, char *argv[])
 	local_filename = NULL;
 	if (strcmp(operation, "upload") == 0)
 	{
+		int upload_type;
+		char *file_ext_name;
+
 		if (argc < 4)
 		{
 			printf("Usage: %s <config_file> upload " \
-				"<local_filename>\n", argv[0]);
+				"<local_filename> [FILE | BUFF | CALLBACK] \n",\
+				argv[0]);
 			fdfs_client_destroy();
 			return EINVAL;
 		}
 
 		local_filename = argv[3];
+		if (argc == 4)
+		{
+			upload_type = FDFS_UPLOAD_BY_FILE;
+		}
+		else
+		{
+			if (strcmp(argv[4], "BUFF") == 0)
+			{
+				upload_type = FDFS_UPLOAD_BY_BUFF;
+			}
+			else if (strcmp(argv[4], "CALLBACK") == 0)
+			{
+				upload_type = FDFS_UPLOAD_BY_CALLBACK;
+			}
+			else
+			{
+				upload_type = FDFS_UPLOAD_BY_FILE;
+			}
+		}
+
 		store_path_index = 0;
 		if ((result=tracker_query_storage_store(pTrackerServer, \
 		                &storageServer, &store_path_index)) != 0)
@@ -141,23 +179,61 @@ int main(int argc, char *argv[])
 		strcpy(meta_list[meta_count].value, "115120");
 		meta_count++;
 
+		file_ext_name = strrchr(local_filename, '.');
+		if (file_ext_name != NULL)
+		{
+			file_ext_name++;
+		}
 		strcpy(group_name, "");
-		result = storage_upload_by_filename(pTrackerServer, \
+
+		if (upload_type == FDFS_UPLOAD_BY_FILE)
+		{
+			result = storage_upload_by_filename(pTrackerServer, \
 				&storageServer, store_path_index, \
-				local_filename, NULL, \
+				local_filename, file_ext_name, \
 				meta_list, meta_count, \
 				group_name, remote_filename);
-		/*
-		strcpy(group_name, "group1");
-		result = storage_upload_by_filename(pTrackerServer, \
-				NULL, store_path_index, \
-				local_filename, NULL, \
+
+			printf("storage_upload_by_filename\n");
+		}
+		else if (upload_type == FDFS_UPLOAD_BY_BUFF)
+		{
+			char *file_content;
+			if ((result=getFileContent(local_filename, \
+					&file_content, &file_size)) == 0)
+			{
+			result = storage_upload_by_filebuff(pTrackerServer, \
+				&storageServer, store_path_index, \
+				file_content, file_size, file_ext_name, \
 				meta_list, meta_count, \
 				group_name, remote_filename);
-		*/
+			free(file_content);
+			}
+
+			printf("storage_upload_by_filebuff\n");
+		}
+		else
+		{
+			struct stat stat_buf;
+
+			if (stat(local_filename, &stat_buf) == 0 && \
+				S_ISREG(stat_buf.st_mode))
+			{
+			file_size = stat_buf.st_size;
+			result = storage_upload_by_callback(pTrackerServer, \
+				&storageServer, store_path_index, \
+				uploadFileCallback, local_filename, \
+				file_size, file_ext_name, \
+				meta_list, meta_count, \
+				group_name, remote_filename);
+			}
+
+			printf("storage_upload_by_callback\n");
+		}
+
 		if (result != 0)
 		{
-			printf("storage_upload_by_filename fail, " \
+			printf("upload file fail, " \
 				"error no: %d, error info: %s\n", \
 				result, strerror(result));
 			fdfs_quit(&storageServer);
