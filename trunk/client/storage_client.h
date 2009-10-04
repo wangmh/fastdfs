@@ -126,28 +126,6 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 			const char *group_name, const char *filename);
 
 /**
-* set metadata items to storage server
-* params:
-*       pTrackerServer: tracker server
-*       pStorageServer: storage server
-*	group_name: the group name of storage server
-*	filename: filename on storage server
-*	meta_list: meta item array
-*       meta_count: meta item count
-*       op_flag:
-*            # STORAGE_SET_METADATA_FLAG_OVERWRITE('O'): overwrite all old 
-*				metadata items
-*            # STORAGE_SET_METADATA_FLAG_MERGE ('M'): merge, insert when
-*				the metadata item not exist, otherwise update it
-* return: 0 success, !=0 fail, return the error code
-**/
-int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
-			const char *group_name, const char *filename, \
-			FDFSMetaData *meta_list, const int meta_count, \
-			const char op_flag);
-
-/**
 * download file from storage server
 * params:
 *       pTrackerServer: tracker server
@@ -218,24 +196,6 @@ int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
 		const char *local_filename, int64_t *file_size);
 
 /**
-* get all metadata items from storage server
-* params:
-*       pTrackerServer: tracker server
-*       pStorageServer: storage server
-*	group_name: the group name of storage server
-*	filename: filename on storage server
-*	meta_list: return meta info array, must be freed
-*       meta_count: return meta item count
-* return: 0 success, !=0 fail, return the error code
-**/
-int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer,  \
-			const char *group_name, const char *filename, \
-			FDFSMetaData **meta_list, \
-			int *meta_count);
-
-
-/**
 * Download file callback function prototype
 * params:
 *	arg: callback extra arguement
@@ -266,6 +226,45 @@ int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
 		const char *group_name, const char *remote_filename, \
 		const int64_t file_offset, const int64_t download_bytes, \
 		DownloadCallback callback, void *arg, int64_t *file_size);
+
+/**
+* set metadata items to storage server
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*	group_name: the group name of storage server
+*	filename: filename on storage server
+*	meta_list: meta item array
+*       meta_count: meta item count
+*       op_flag:
+*            # STORAGE_SET_METADATA_FLAG_OVERWRITE('O'): overwrite all old 
+*				metadata items
+*            # STORAGE_SET_METADATA_FLAG_MERGE ('M'): merge, insert when
+*				the metadata item not exist, otherwise update it
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer, \
+			const char *group_name, const char *filename, \
+			FDFSMetaData *meta_list, const int meta_count, \
+			const char op_flag);
+
+/**
+* get all metadata items from storage server
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*	group_name: the group name of storage server
+*	filename: filename on storage server
+*	meta_list: return meta info array, must be freed
+*       meta_count: return meta item count
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer,  \
+			const char *group_name, const char *filename, \
+			FDFSMetaData **meta_list, \
+			int *meta_count);
 
 #ifdef __cplusplus
 }
