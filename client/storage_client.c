@@ -553,11 +553,21 @@ int storage_upload_by_filename1(TrackerServerInfo *pTrackerServer, \
 	char remote_filename[64];
 	int result;
 
-	snprintf(new_group_name, sizeof(new_group_name), "%s", group_name);
+	if (group_name == NULL)
+	{
+		*new_group_name = '\0';
+	}
+	else
+	{
+		snprintf(new_group_name, sizeof(new_group_name), \
+			"%s", group_name);
+	}
+
 	result = storage_upload_by_filename(pTrackerServer, \
 			pStorageServer, store_path_index, \
 			local_filename, file_ext_name, \
-			meta_list, meta_count, new_group_name, remote_filename);
+			meta_list, meta_count, \
+			new_group_name, remote_filename);
 	if (result == 0)
 	{
 		sprintf(file_id, "%s%c%s", new_group_name, \
@@ -582,7 +592,16 @@ int storage_do_upload_file1(TrackerServerInfo *pTrackerServer, \
 	char remote_filename[64];
 	int result;
 
-	snprintf(new_group_name, sizeof(new_group_name), "%s", group_name);
+	if (group_name == NULL)
+	{
+		*new_group_name = '\0';
+	}
+	else
+	{
+		snprintf(new_group_name, sizeof(new_group_name), \
+			"%s", group_name);
+	}
+
 	result = storage_do_upload_file(pTrackerServer, \
 			pStorageServer, store_path_index, upload_type, \
 			file_buff, arg, file_size, file_ext_name, \

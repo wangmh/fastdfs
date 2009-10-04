@@ -27,7 +27,7 @@ extern "C" {
 *                      if be NULL will abstract ext name from the local filename
 *	meta_list: meta info array
 *       meta_count: meta item count
-*       group_name: specify the group name to upload file to, can be emtpy
+*       group_name: specify the group name to upload file to, can be NULL or emtpy
 *	file_id: return the new created file id (including group name and filename)
 * return: 0 success, !=0 fail, return the error code
 **/
@@ -48,7 +48,7 @@ int storage_upload_by_filename1(TrackerServerInfo *pTrackerServer, \
 *       file_ext_name: file ext name, not include dot(.), can be NULL
 *	meta_list: meta info array
 *       meta_count: meta item count
-*       group_name: specify the group name to upload file to, can be emtpy
+*       group_name: specify the group name to upload file to, can be NULL or emtpy
 *	file_id: return the new created file id (including group name and filename)
 * return: 0 success, !=0 fail, return the error code
 **/
@@ -78,7 +78,7 @@ int storage_do_upload_file1(TrackerServerInfo *pTrackerServer, \
 *       arg: callback extra arguement
 *	meta_list: meta info array
 *       meta_count: meta item count
-*       group_name: specify the group name to upload file to, can be emtpy
+*       group_name: specify the group name to upload file to, can be NULL or emtpy
 *	file_id: return the new created file id (including group name and filename)
 * return: 0 success, !=0 fail, return the error code
 **/
