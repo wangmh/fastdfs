@@ -10,6 +10,7 @@
 #define TRACKER_CLIENT_H
 
 #include "tracker_types.h"
+#include "client_global.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,13 +25,20 @@ typedef struct
         FDFSStorageStat stat;
 } FDFSStorageInfo;
 
+
+#define tracker_get_connection() \
+	tracker_get_connection_ex((&g_tracker_group))
+
 /**
 * get a connection to tracker server
 * params:
 * return: != NULL for success, NULL for fail
 **/
-TrackerServerInfo *tracker_get_connection();
+TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup);
 
+
+#define tracker_get_connection_r(pTrackerServer) \
+	tracker_get_connection_r_ex((&g_tracker_group), pTrackerServer)
 
 /**
 * get a connection to tracker server
@@ -38,7 +46,8 @@ TrackerServerInfo *tracker_get_connection();
 *       pTrackerServer: tracker server
 * return: 0 success, !=0 fail
 **/
-int tracker_get_connection_ex(TrackerServerInfo *pTrackerServer);
+int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
+		TrackerServerInfo *pTrackerServer);
 
 /**
 * connect to the tracker server
@@ -56,20 +65,25 @@ int tracker_connect_server(TrackerServerInfo *pTrackerServer);
 **/
 void tracker_disconnect_server(TrackerServerInfo *pTrackerServer);
 
+#define tracker_get_all_connections() \
+	tracker_get_all_connections_ex((&g_tracker_group))
 
 /**
 * connect to all tracker servers
 * params:
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_get_all_connections();
+int tracker_get_all_connections_ex(TrackerServerGroup *pTrackerGroup);
+
+#define tracker_close_all_connections() \
+	tracker_close_all_connections_ex((&g_tracker_group))
 
 /**
 * close all connections to tracker servers
 * params:
 * return:
 **/
-void tracker_close_all_connections();
+void tracker_close_all_connections_ex(TrackerServerGroup *pTrackerGroup);
 
 /**
 * list all groups

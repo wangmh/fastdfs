@@ -73,15 +73,15 @@ int tracker_connect_server(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
-int tracker_get_all_connections()
+int tracker_get_all_connections_ex(TrackerServerGroup *pTrackerGroup)
 {
 	TrackerServerInfo *pServer;
 	TrackerServerInfo *pEnd;
 	int success_count;
 
 	success_count = 0;
-	pEnd = g_tracker_servers + g_tracker_server_count;
-	for (pServer=g_tracker_servers; pServer<pEnd; pServer++)
+	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
+	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
 	{
 		if (pServer->sock > 0 || tracker_connect_server(pServer) == 0)
 		{
@@ -92,37 +92,37 @@ int tracker_get_all_connections()
 	return success_count > 0 ? 0 : ENOTCONN;
 }
 
-void tracker_close_all_connections()
+void tracker_close_all_connections_ex(TrackerServerGroup *pTrackerGroup)
 {
 	TrackerServerInfo *pServer;
 	TrackerServerInfo *pEnd;
 
-	pEnd = g_tracker_servers + g_tracker_server_count;
-	for (pServer=g_tracker_servers; pServer<pEnd; pServer++)
+	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
+	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
 	{
 		tracker_disconnect_server(pServer);
 	}
 }
 
-TrackerServerInfo *tracker_get_connection()
+TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
 {
 	TrackerServerInfo *pCurrentServer;
 	TrackerServerInfo *pServer;
 	TrackerServerInfo *pEnd;
 
-	pCurrentServer = g_tracker_servers + g_tracker_server_index;
+	pCurrentServer = pTrackerGroup->servers + pTrackerGroup->server_index;
 	if (pCurrentServer->sock > 0 ||
 		tracker_connect_server(pCurrentServer) == 0)
 	{
-		g_tracker_server_index++;
-		if (g_tracker_server_index >= g_tracker_server_count)
+		pTrackerGroup->server_index++;
+		if (pTrackerGroup->server_index >= pTrackerGroup->server_count)
 		{
-			g_tracker_server_index = 0;
+			pTrackerGroup->server_index = 0;
 		}
 		return pCurrentServer;
 	}
 
-	pEnd = g_tracker_servers + g_tracker_server_count;
+	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pCurrentServer+1; pServer<pEnd; pServer++)
 	{
 		if (tracker_connect_server(pServer) == 0)
@@ -131,7 +131,7 @@ TrackerServerInfo *tracker_get_connection()
 		}
 	}
 
-	for (pServer=g_tracker_servers; pServer<pCurrentServer; pServer++)
+	for (pServer=pTrackerGroup->servers; pServer<pCurrentServer; pServer++)
 	{
 		if (tracker_connect_server(pServer) == 0)
 		{
@@ -142,26 +142,27 @@ TrackerServerInfo *tracker_get_connection()
 	return NULL;
 }
 
-int tracker_get_connection_ex(TrackerServerInfo *pTrackerServer)
+int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
+		TrackerServerInfo *pTrackerServer)
 {
 	TrackerServerInfo *pCurrentServer;
 	TrackerServerInfo *pServer;
 	TrackerServerInfo *pEnd;
 
-	pCurrentServer = g_tracker_servers + g_tracker_server_index;
+	pCurrentServer = pTrackerGroup->servers + pTrackerGroup->server_index;
 	memcpy(pTrackerServer, pCurrentServer, sizeof(TrackerServerInfo));
 	pTrackerServer->sock = -1;
 	if (tracker_connect_server(pTrackerServer) == 0)
 	{
-		g_tracker_server_index++;
-		if (g_tracker_server_index >= g_tracker_server_count)
+		pTrackerGroup->server_index++;
+		if (pTrackerGroup->server_index >= pTrackerGroup->server_count)
 		{
-			g_tracker_server_index = 0;
+			pTrackerGroup->server_index = 0;
 		}
 		return 0;
 	}
 
-	pEnd = g_tracker_servers + g_tracker_server_count;
+	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pCurrentServer+1; pServer<pEnd; pServer++)
 	{
 		memcpy(pTrackerServer, pServer, sizeof(TrackerServerInfo));
@@ -172,7 +173,7 @@ int tracker_get_connection_ex(TrackerServerInfo *pTrackerServer)
 		}
 	}
 
-	for (pServer=g_tracker_servers; pServer<pCurrentServer; pServer++)
+	for (pServer=pTrackerGroup->servers; pServer<pCurrentServer; pServer++)
 	{
 		memcpy(pTrackerServer, pServer, sizeof(TrackerServerInfo));
 		pTrackerServer->sock = -1;

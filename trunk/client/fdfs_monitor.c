@@ -89,8 +89,8 @@ int main(int argc, char *argv[])
 			return result;
 		}
 
-		pEnd = g_tracker_servers + g_tracker_server_count;
-		for (pServer=g_tracker_servers; pServer<pEnd; pServer++)
+		pEnd = g_tracker_group.servers + g_tracker_group.server_count;
+		for (pServer=g_tracker_group.servers; pServer<pEnd; pServer++)
 		{
 			if (pServer->sock <= 0)
 			{
