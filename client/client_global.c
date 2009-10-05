@@ -8,10 +8,9 @@
 
 #include "client_global.h"
 
-int g_tracker_server_count = 0;
-int g_tracker_server_index = 0;
 int g_tracker_server_http_port = 80;
-TrackerServerInfo *g_tracker_servers = NULL;
+TrackerServerGroup g_tracker_group = {0, 0, NULL};
 
 bool g_anti_steal_token = false;
 BufferInfo g_anti_steal_secret_key = {0};
+

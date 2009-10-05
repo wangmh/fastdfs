@@ -80,7 +80,7 @@ int kill_tracker_report_threads()
 	if (report_tids != NULL)
 	{
 		result = kill_work_threads(report_tids, \
-				g_tracker_server_count);
+				g_tracker_group.server_count);
 
 		free(report_tids);
 		report_tids = NULL;
@@ -117,7 +117,7 @@ static void* tracker_report_thread_entrance(void* arg)
 
 	sync_old_done = g_sync_old_done;
 	while (g_continue_flag &&  \
-		g_tracker_reporter_count < g_tracker_server_count)
+		g_tracker_reporter_count < g_tracker_group.server_count)
 	{
 		sleep(1); //waiting for all thread started
 	}
@@ -1204,22 +1204,22 @@ int tracker_report_thread_start()
 	}
 
 	report_tids = (pthread_t *)malloc(sizeof(pthread_t) * \
-					g_tracker_server_count);
+					g_tracker_group.server_count);
 	if (report_tids == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, sizeof(pthread_t) * \
-			g_tracker_server_count, \
+			g_tracker_group.server_count, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
-	memset(report_tids, 0, sizeof(pthread_t) * g_tracker_server_count);
+	memset(report_tids, 0, sizeof(pthread_t) * g_tracker_group.server_count);
 
 	g_tracker_reporter_count = 0;
-	pServerEnd = g_tracker_servers + g_tracker_server_count;
-	for (pTrackerServer=g_tracker_servers; pTrackerServer<pServerEnd; \
+	pServerEnd = g_tracker_group.servers + g_tracker_group.server_count;
+	for (pTrackerServer=g_tracker_group.servers; pTrackerServer<pServerEnd; \
 		pTrackerServer++)
 	{
 		if((result=pthread_create(&tid, &pattr, \

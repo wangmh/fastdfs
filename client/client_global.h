@@ -18,10 +18,15 @@
 extern "C" {
 #endif
 
-extern int g_tracker_server_count;
-extern int g_tracker_server_index;  //server index for roundrobin
+typedef struct
+{
+	int server_count;
+	int server_index;  //server index for roundrobin
+	TrackerServerInfo *servers;
+} TrackerServerGroup;
+
 extern int g_tracker_server_http_port;
-extern TrackerServerInfo *g_tracker_servers;
+extern TrackerServerGroup g_tracker_group;
 
 extern bool g_anti_steal_token;
 extern BufferInfo g_anti_steal_secret_key;

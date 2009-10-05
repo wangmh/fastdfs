@@ -44,11 +44,12 @@ static int storage_cmp_by_ip_and_port(const void *p1, const void *p2)
 			((TrackerServerInfo *)p2)->port;
 }
 
-static void insert_into_sorted_servers(TrackerServerInfo *pInsertedServer)
+static void insert_into_sorted_servers(TrackerServerGroup *pTrackerGroup, \
+		TrackerServerInfo *pInsertedServer)
 {
 	TrackerServerInfo *pDestServer;
-	for (pDestServer=g_tracker_servers+g_tracker_server_count; \
-		pDestServer>g_tracker_servers; pDestServer--)
+	for (pDestServer=pTrackerGroup->servers+pTrackerGroup->server_count; \
+		pDestServer>pTrackerGroup->servers; pDestServer--)
 	{
 		if (storage_cmp_by_ip_and_port(pInsertedServer, \
 			pDestServer-1) > 0)
@@ -64,7 +65,8 @@ static void insert_into_sorted_servers(TrackerServerInfo *pInsertedServer)
 	memcpy(pDestServer, pInsertedServer, sizeof(TrackerServerInfo));
 }
 
-static int copy_tracker_servers(const char *filename, char **ppTrackerServers)
+static int copy_tracker_servers(TrackerServerGroup *pTrackerGroup, \
+		const char *filename, char **ppTrackerServers)
 {
 	char **ppSrc;
 	char **ppEnd;
@@ -74,9 +76,9 @@ static int copy_tracker_servers(const char *filename, char **ppTrackerServers)
 	int nHostLen;
 
 	memset(&destServer, 0, sizeof(TrackerServerInfo));
-	ppEnd = ppTrackerServers + g_tracker_server_count;
+	ppEnd = ppTrackerServers + pTrackerGroup->server_count;
 
-	g_tracker_server_count = 0;
+	pTrackerGroup->server_count = 0;
 	for (ppSrc=ppTrackerServers; ppSrc<ppEnd; ppSrc++)
 	{
 		if ((pSeperator=strchr(*ppSrc, ':')) == NULL)
@@ -112,21 +114,21 @@ static int copy_tracker_servers(const char *filename, char **ppTrackerServers)
 			destServer.port = FDFS_TRACKER_SERVER_DEF_PORT;
 		}
 
-		if (bsearch(&destServer, g_tracker_servers, \
-			g_tracker_server_count, \
+		if (bsearch(&destServer, pTrackerGroup->servers, \
+			pTrackerGroup->server_count, \
 			sizeof(TrackerServerInfo), \
 			storage_cmp_by_ip_and_port) == NULL)
 		{
-			insert_into_sorted_servers(&destServer);
-			g_tracker_server_count++;
+			insert_into_sorted_servers(pTrackerGroup, &destServer);
+			pTrackerGroup->server_count++;
 		}
 	}
 
 	/*
 	{
 	TrackerServerInfo *pServer;
-	for (pServer=g_tracker_servers; pServer<g_tracker_servers+ \
-		g_tracker_server_count;	pServer++)
+	for (pServer=pTrackerGroup->servers; pServer<pTrackerGroup->servers+ \
+		pTrackerGroup->server_count;	pServer++)
 	{
 		//printf("server=%s:%d\n", \
 			pServer->ip_addr, pServer->port);
@@ -137,18 +139,79 @@ static int copy_tracker_servers(const char *filename, char **ppTrackerServers)
 	return 0;
 }
 
-int fdfs_client_init(const char *filename)
+int fdfs_load_tracker_group_ex(TrackerServerGroup *pTrackerGroup, \
+		const char *conf_filename, \
+		IniItemInfo *items, const int nItemCount)
 {
-	char *pBasePath;
+	int result;
 	char *ppTrackerServers[FDFS_MAX_TRACKERS];
+
+	if ((pTrackerGroup->server_count=iniGetValues("tracker_server", \
+		items, nItemCount, ppTrackerServers, \
+		FDFS_MAX_TRACKERS)) <= 0)
+	{
+		logError("conf file \"%s\", " \
+			"get item \"tracker_server\" fail", conf_filename);
+		return ENOENT;
+	}
+
+	pTrackerGroup->servers = (TrackerServerInfo *)malloc( \
+		sizeof(TrackerServerInfo) * pTrackerGroup->server_count);
+	if (pTrackerGroup->servers == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, \
+			sizeof(TrackerServerInfo)*pTrackerGroup->server_count);
+		pTrackerGroup->server_count = 0;
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	memset(pTrackerGroup->servers, 0, \
+		sizeof(TrackerServerInfo) * pTrackerGroup->server_count);
+	if ((result=copy_tracker_servers(pTrackerGroup, conf_filename, \
+			ppTrackerServers)) != 0)
+	{
+		pTrackerGroup->server_count = 0;
+		free(pTrackerGroup->servers);
+		pTrackerGroup->servers = NULL;
+		return result;
+	}
+
+	return 0;
+}
+
+int fdfs_load_tracker_group(TrackerServerGroup *pTrackerGroup, \
+		const char *conf_filename)
+{
 	IniItemInfo *items;
 	int nItemCount;
 	int result;
 
-	if ((result=iniLoadItems(filename, &items, &nItemCount)) != 0)
+	if ((result=iniLoadItems(conf_filename, &items, &nItemCount)) != 0)
 	{
 		logError("load conf file \"%s\" fail, ret code: %d", \
-			filename, result);
+			conf_filename, result);
+		return result;
+	}
+
+	result = fdfs_load_tracker_group_ex(pTrackerGroup, conf_filename, \
+			items, nItemCount);
+	iniFreeItems(items);
+	return result;
+}
+
+int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
+		const char *conf_filename)
+{
+	char *pBasePath;
+	IniItemInfo *items;
+	int nItemCount;
+	int result;
+
+	if ((result=iniLoadItems(conf_filename, &items, &nItemCount)) != 0)
+	{
+		logError("load conf file \"%s\" fail, ret code: %d", \
+			conf_filename, result);
 		return result;
 	}
 
@@ -158,7 +221,7 @@ int fdfs_client_init(const char *filename)
 		if (pBasePath == NULL)
 		{
 			logError("conf file \"%s\" must have item " \
-				"\"base_path\"!", filename);
+				"\"base_path\"!", conf_filename);
 			result = ENOENT;
 			break;
 		}
@@ -186,35 +249,10 @@ int fdfs_client_init(const char *filename)
 			g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 		}
 
-		if ((g_tracker_server_count=iniGetValues("tracker_server", \
-			items, nItemCount, ppTrackerServers, \
-			FDFS_MAX_TRACKERS)) <= 0)
+		result = fdfs_load_tracker_group_ex(pTrackerGroup, \
+			conf_filename, items, nItemCount);
+		if (result != 0)
 		{
-			logError("conf file \"%s\", " \
-				"get item \"tracker_server\" fail", \
-				filename);
-			result = ENOENT;
-			break;
-		}
-
-		g_tracker_servers = (TrackerServerInfo *)malloc( \
-			sizeof(TrackerServerInfo) * g_tracker_server_count);
-		if (g_tracker_servers == NULL)
-		{
-			result = errno != 0 ? errno : ENOMEM;
-			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail", __LINE__, \
-				sizeof(TrackerServerInfo)*g_tracker_server_count);
-			break;
-		}
-
-		memset(g_tracker_servers, 0, \
-			sizeof(TrackerServerInfo) * g_tracker_server_count); 
-		if ((result=copy_tracker_servers(filename, \
-				ppTrackerServers)) != 0)
-		{
-			free(g_tracker_servers);
-			g_tracker_servers = NULL;
 			break;
 		}
 
@@ -257,7 +295,7 @@ int fdfs_client_init(const char *filename)
 			"anti_steal_token=%d, ", \
 			"anti_steal_secret_key length=%d\n", \
 			g_base_path, g_network_timeout, \
-			g_tracker_server_count, g_anti_steal_token, \
+			pTrackerGroup->server_count, g_anti_steal_token, \
 			g_anti_steal_secret_key.length);
 #endif
 
@@ -268,12 +306,15 @@ int fdfs_client_init(const char *filename)
 	return result;
 }
 
-void fdfs_client_destroy()
+void fdfs_client_destroy_ex(TrackerServerGroup *pTrackerGroup)
 {
-	if (g_tracker_servers != NULL)
+	if (pTrackerGroup->servers != NULL)
 	{
-		free(g_tracker_servers);
-		g_tracker_servers = NULL;
+		free(pTrackerGroup->servers);
+		pTrackerGroup->servers = NULL;
+
+		pTrackerGroup->server_count = 0;
+		pTrackerGroup->server_index = 0;
 	}
 }
 

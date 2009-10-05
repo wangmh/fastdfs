@@ -397,7 +397,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 					return EINVAL;
 				}
 
-				if ((result=tracker_get_connection_ex( \
+				if ((result=tracker_get_connection_r( \
 						&trackerServer)) != 0)
 				{
 					*filename = '\0';
@@ -471,7 +471,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 					return result;
 				}
 
-				if ((result=tracker_get_connection_ex( \
+				if ((result=tracker_get_connection_r( \
 						&trackerServer)) != 0)
 				{
 					unlink(full_filename);

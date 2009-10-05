@@ -984,8 +984,8 @@ static int storage_report_storage_status(const char *ip_addr, \
 
 	result = 0;
 	pTServer = &trackerServer;
-	pTServerEnd = g_tracker_servers + g_tracker_server_count;
-	for (pGlobalServer=g_tracker_servers; pGlobalServer < pTServerEnd; \
+	pTServerEnd = g_tracker_group.servers + g_tracker_group.server_count;
+	for (pGlobalServer=g_tracker_group.servers; pGlobalServer < pTServerEnd; \
 			pGlobalServer++)
 	{
 		memcpy(pTServer, pGlobalServer, sizeof(TrackerServerInfo));
@@ -1072,18 +1072,18 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 	}
 
 	pTrackerServers = (TrackerServerInfo *)malloc( \
-		sizeof(TrackerServerInfo) * g_tracker_server_count);
+		sizeof(TrackerServerInfo) * g_tracker_group.server_count);
 	if (pTrackerServers == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
-			sizeof(TrackerServerInfo) * g_tracker_server_count);
+			sizeof(TrackerServerInfo) * g_tracker_group.server_count);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
-	memcpy(pTrackerServers, g_tracker_servers, \
-		sizeof(TrackerServerInfo) * g_tracker_server_count);
-	pTServerEnd = pTrackerServers + g_tracker_server_count;
+	memcpy(pTrackerServers, g_tracker_group.servers, \
+		sizeof(TrackerServerInfo) * g_tracker_group.server_count);
+	pTServerEnd = pTrackerServers + g_tracker_group.server_count;
 	for (pTServer=pTrackerServers; pTServer<pTServerEnd; pTServer++)
 	{
 		pTServer->sock = -1;

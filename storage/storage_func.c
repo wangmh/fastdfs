@@ -32,6 +32,7 @@
 #include "storage_func.h"
 #include "fdht_func.h"
 #include "fdht_client.h"
+#include "client_func.h"
 
 #ifdef WITH_HTTPD
 #include "fdfs_http_shared.h"
@@ -580,124 +581,6 @@ static int storage_make_data_dirs(const char *pBasePath)
 	return 0;
 }
 
-static int storage_cmp_by_ip_and_port(const void *p1, const void *p2)
-{
-	int res;
-
-	res = strcmp(((TrackerServerInfo *)p1)->ip_addr, \
-			((TrackerServerInfo *)p2)->ip_addr);
-	if (res != 0)
-	{
-		return res;
-	}
-
-	return ((TrackerServerInfo *)p1)->port - \
-			((TrackerServerInfo *)p2)->port;
-}
-
-static void insert_into_sorted_servers(TrackerServerInfo *pInsertedServer)
-{
-	TrackerServerInfo *pDestServer;
-	for (pDestServer=g_tracker_servers+g_tracker_server_count; \
-		pDestServer>g_tracker_servers; pDestServer--)
-	{
-		if (storage_cmp_by_ip_and_port(pInsertedServer, \
-			pDestServer-1) > 0)
-		{
-			memcpy(pDestServer, pInsertedServer, \
-				sizeof(TrackerServerInfo));
-			return;
-		}
-
-		memcpy(pDestServer, pDestServer-1, sizeof(TrackerServerInfo));
-	}
-
-	memcpy(pDestServer, pInsertedServer, sizeof(TrackerServerInfo));
-}
-
-static int copy_tracker_servers(const char *filename, char **ppTrackerServers)
-{
-	char **ppSrc;
-	char **ppEnd;
-	TrackerServerInfo destServer;
-	char *pSeperator;
-	char szHost[128];
-	int nHostLen;
-
-	memset(&destServer, 0, sizeof(TrackerServerInfo));
-	ppEnd = ppTrackerServers + g_tracker_server_count;
-
-	g_tracker_server_count = 0;
-	for (ppSrc=ppTrackerServers; ppSrc<ppEnd; ppSrc++)
-	{
-		if ((pSeperator=strchr(*ppSrc, ':')) == NULL)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"conf file \"%s\", " \
-				"tracker_server \"%s\" is invalid, " \
-				"correct format is host:port", \
-				__LINE__, filename, *ppSrc);
-			return EINVAL;
-		}
-
-		nHostLen = pSeperator - (*ppSrc);
-		if (nHostLen >= sizeof(szHost))
-		{
-			nHostLen = sizeof(szHost) - 1;
-		}
-		memcpy(szHost, *ppSrc, nHostLen);
-		szHost[nHostLen] = '\0';
-
-		if (getIpaddrByName(szHost, destServer.ip_addr, \
-			sizeof(destServer.ip_addr)) == INADDR_NONE)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"conf file \"%s\", " \
-				"host \"%s\" is invalid", \
-				__LINE__, filename, szHost);
-			return EINVAL;
-		}
-		if (strcmp(destServer.ip_addr, "127.0.0.1") == 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"conf file \"%s\", " \
-				"host \"%s\" is invalid, " \
-				"ip addr can't be 127.0.0.1", \
-				__LINE__, filename, szHost);
-			return EINVAL;
-		}
-
-		destServer.port = atoi(pSeperator+1);
-		if (destServer.port <= 0)
-		{
-			destServer.port = FDFS_TRACKER_SERVER_DEF_PORT;
-		}
-
-		if (bsearch(&destServer, g_tracker_servers, \
-			g_tracker_server_count, \
-			sizeof(TrackerServerInfo), \
-			storage_cmp_by_ip_and_port) == NULL)
-		{
-			insert_into_sorted_servers(&destServer);
-			g_tracker_server_count++;
-		}
-	}
-
-	/*
-	{
-	TrackerServerInfo *pServer;
-	for (pServer=g_tracker_servers; pServer<g_tracker_servers+ \
-		g_tracker_server_count;	pServer++)
-	{
-		//printf("server=%s:%d\n", \
-			pServer->ip_addr, pServer->port);
-	}
-	}
-	*/
-
-	return 0;
-}
-
 /*
 static int init_fsync_pthread_cond()
 {
@@ -843,7 +726,6 @@ int storage_func_init(const char *filename, \
 	char *pRunByUser;
 	char *pFsyncAfterWrittenBytes;
 	char *pThreadStackSize;
-	char *ppTrackerServers[FDFS_MAX_TRACKERS];
 	IniItemInfo *items;
 	int nItemCount;
 	int result;
@@ -969,37 +851,10 @@ int storage_func_init(const char *filename, \
 			break;
 		}
 
-		if ((g_tracker_server_count=iniGetValues("tracker_server", \
-			items, nItemCount, ppTrackerServers, \
-			FDFS_MAX_TRACKERS)) <= 0)
+		result = fdfs_load_tracker_group_ex(&g_tracker_group, \
+				filename, items, nItemCount);
+		if (result != 0)
 		{
-			logError("file: "__FILE__", line: %d, " \
-				"conf file \"%s\", " \
-				"get item \"tracker_server\" fail", \
-				__LINE__, filename);
-			result = ENOENT;
-			break;
-		}
-
-		g_tracker_servers = (TrackerServerInfo *)malloc( \
-			sizeof(TrackerServerInfo) * g_tracker_server_count);
-		if (g_tracker_servers == NULL)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail", __LINE__, \
-				sizeof(TrackerServerInfo)*g_tracker_server_count);
-
-			result = errno != 0 ? errno : ENOMEM;
-			break;
-		}
-
-		memset(g_tracker_servers, 0, \
-			sizeof(TrackerServerInfo) * g_tracker_server_count); 
-		if ((result=copy_tracker_servers(filename, \
-				ppTrackerServers)) != 0)
-		{
-			free(g_tracker_servers);
-			g_tracker_servers = NULL;
 			break;
 		}
 
@@ -1213,7 +1068,7 @@ int storage_func_init(const char *filename, \
 			g_group_name, g_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_heart_beat_interval, g_stat_report_interval, \
-			g_tracker_server_count, g_sync_wait_usec / 1000, \
+			g_tracker_group.server_count, g_sync_wait_usec / 1000, \
 			g_sync_interval / 1000, \
 			g_sync_start_time.hour, g_sync_start_time.minute, \
 			g_sync_end_time.hour, g_sync_end_time.minute, \
@@ -1302,10 +1157,12 @@ int storage_func_destroy()
 		g_store_paths = NULL;
 	}
 
-	if (g_tracker_servers != NULL)
+	if (g_tracker_group.servers != NULL)
 	{
-		free(g_tracker_servers);
-		g_tracker_servers = NULL;
+		free(g_tracker_group.servers);
+		g_tracker_group.servers = NULL;
+		g_tracker_group.server_count = 0;
+		g_tracker_group.server_index = 0;
 	}
 
 	return storage_close_storage_stat();
