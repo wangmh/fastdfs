@@ -273,7 +273,11 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		TrackerServerGroup *pTrackerGroup)
 {
 	int argc;
+	char *group_name;
+	int name_len;
 	zval *server_info;
+	zval *group_info_array;
+	zval *server_info_array;
 	HashTable *server_hash;
 	TrackerServerInfo tracker_server;
 	TrackerServerInfo *pTrackerServer;
@@ -282,9 +286,14 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	FDFSGroupStat *pGroupEnd;
 	int group_count;
 	int result;
+        int storage_count;
+	FDFSStorageInfo storage_infos[FDFS_MAX_SERVERS_EACH_GROUP];
+	FDFSStorageInfo *pStorage;
+	FDFSStorageInfo *pStorageEnd;
+	FDFSStorageStat *pStorageStat;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc > 1)
+	if (argc > 2)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"fastdfs_tracker_list_groups parameters count: %d > 1", 
@@ -292,6 +301,8 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		RETURN_BOOL(false);
 	}
 
+	group_name = NULL;
+	name_len = 0;
 	if (argc == 0)
 	{
 		pTrackerServer = tracker_get_connection_ex(pTrackerGroup);
@@ -302,8 +313,8 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	}
 	else
 	{
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a", \
-					&server_info) == FAILURE)
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a|s", \
+			&server_info, &group_name, &name_len) == FAILURE)
 		{
 			logError("file: "__FILE__", line: %d, " \
 					"zend_parse_parameters fail!", __LINE__);
@@ -326,17 +337,163 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	}
 
 	array_init(return_value);
+
 	pGroupEnd = group_stats + group_count;
 	for (pGroupStat=group_stats; pGroupStat<pGroupEnd; pGroupStat++)
 	{
-	}
+		if (group_name != NULL && strcmp(pGroupStat->group_name, \
+			group_name) != 0)
+		{
+			continue;
+		}
 
-	add_assoc_stringl_ex(return_value, "ip_addr", sizeof("ip_addr"), \
-		pTrackerServer->ip_addr, strlen(pTrackerServer->ip_addr), 1);
-	add_assoc_long_ex(return_value, "port", sizeof("port"), \
-		pTrackerServer->port);
-	add_assoc_long_ex(return_value, "sock", sizeof("sock"), \
-		pTrackerServer->sock);
+		ALLOC_INIT_ZVAL(group_info_array);
+		array_init(group_info_array);
+
+		add_assoc_zval_ex(return_value, pGroupStat->group_name, \
+			strlen(pGroupStat->group_name) + 1, group_info_array);
+
+		add_assoc_long_ex(group_info_array, "free_space", \
+			sizeof("free_space"), pGroupStat->free_mb);
+		add_assoc_long_ex(group_info_array, "server_count", \
+			sizeof("server_count"), pGroupStat->count);
+		add_assoc_long_ex(group_info_array, "active_count", \
+			sizeof("active_count"), pGroupStat->active_count);
+		add_assoc_long_ex(group_info_array, "storage_port", \
+			sizeof("storage_port"), pGroupStat->storage_port);
+		add_assoc_long_ex(group_info_array, "storage_http_port", \
+			sizeof("storage_http_port"), \
+			pGroupStat->storage_http_port);
+		add_assoc_long_ex(group_info_array, "store_path_count", \
+			sizeof("store_path_count"), \
+			pGroupStat->store_path_count);
+		add_assoc_long_ex(group_info_array, "subdir_count_per_path", \
+			sizeof("subdir_count_per_path"), \
+			pGroupStat->subdir_count_per_path);
+		add_assoc_long_ex(group_info_array, "current_write_server", \
+			sizeof("current_write_server"), \
+			pGroupStat->current_write_server);
+
+		       
+		result = tracker_list_servers(pTrackerServer, \
+				pGroupStat->group_name, \
+				storage_infos, FDFS_MAX_SERVERS_EACH_GROUP, \
+				&storage_count);
+		if (result != 0)
+		{       
+			RETURN_BOOL(false);
+		}
+
+		pStorageEnd = storage_infos + storage_count;
+		for (pStorage=storage_infos; pStorage<pStorageEnd; \
+				pStorage++)
+		{
+			ALLOC_INIT_ZVAL(server_info_array);
+			array_init(server_info_array);
+
+			add_assoc_zval_ex(group_info_array, pStorage->ip_addr, \
+				strlen(pStorage->ip_addr)+1, server_info_array);
+
+			pStorageStat = &(pStorage->stat);
+
+			add_assoc_long_ex(server_info_array, "status", \
+				sizeof("status"), pStorage->status);
+			add_assoc_long_ex(server_info_array, "total_space", \
+				sizeof("total_space"), pStorage->total_mb);
+			add_assoc_long_ex(server_info_array, "free_space", \
+				sizeof("free_space"), pStorage->free_mb);
+
+			add_assoc_long_ex(server_info_array, \
+				"total_upload_count", \
+				sizeof("total_upload_count"), \
+				pStorageStat->total_upload_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"success_upload_count", \
+				sizeof("success_upload_count"), \
+				pStorageStat->success_upload_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"total_set_meta_count", \
+				sizeof("total_set_meta_count"), \
+				pStorageStat->total_set_meta_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"success_set_meta_count", \
+				sizeof("success_set_meta_count"), \
+				pStorageStat->success_set_meta_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"total_delete_count", \
+				sizeof("total_delete_count"), \
+				pStorageStat->total_delete_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"success_delete_count", \
+				sizeof("success_delete_count"), \
+				pStorageStat->success_delete_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"total_download_count", \
+				sizeof("total_download_count"), \
+				pStorageStat->total_download_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"success_download_count", \
+				sizeof("success_download_count"), \
+				pStorageStat->success_download_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"total_get_meta_count", \
+				sizeof("total_get_meta_count"), \
+				pStorageStat->total_get_meta_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"success_get_meta_count", \
+				sizeof("success_get_meta_count"), \
+				pStorageStat->success_get_meta_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"total_create_link_count", \
+				sizeof("total_create_link_count"), \
+				pStorageStat->total_create_link_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"success_create_link_count", \
+				sizeof("success_create_link_count"), \
+				pStorageStat->success_create_link_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"total_delete_link_count", \
+				sizeof("total_delete_link_count"), \
+				pStorageStat->total_delete_link_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"success_delete_link_count", \
+				sizeof("success_delete_link_count"), \
+				pStorageStat->success_delete_link_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"last_heart_beat_time", \
+				sizeof("last_heart_beat_time"), \
+				pStorageStat->last_heart_beat_time);
+
+			add_assoc_long_ex(server_info_array, \
+				"last_source_update", \
+				sizeof("last_source_update"), \
+				pStorageStat->last_source_update);
+
+			add_assoc_long_ex(server_info_array, \
+				"last_sync_update", \
+				sizeof("last_sync_update"), \
+				pStorageStat->last_sync_update);
+
+			add_assoc_long_ex(server_info_array, \
+				"last_synced_timestamp", \
+				sizeof("last_synced_timestamp"), \
+				pStorageStat->last_synced_timestamp);
+		}
+	}
 }
 
 /*
@@ -368,7 +525,7 @@ ZEND_FUNCTION(fastdfs_disconnect_server)
 }
 
 /*
-array fastdfs_tracker_list_groups([array tracker_server])
+array fastdfs_tracker_list_groups([array tracker_server, string group_name])
 return array for success, false for error
 */
 ZEND_FUNCTION(fastdfs_tracker_list_groups)
