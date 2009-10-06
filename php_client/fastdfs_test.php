@@ -6,7 +6,7 @@
  var_dump($server);
  var_dump(fastdfs_disconnect_server($server));
 
- var_dump(fastdfs_tracker_list_groups($tracker));
+ var_dump(fastdfs_tracker_list_groups());
 
  $fdfs = new FastDFS();
  $tracker = $fdfs->tracker_get_connection();
