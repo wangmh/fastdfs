@@ -57,11 +57,10 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 // Every user visible function must have an entry in fastdfs_client_functions[].
 	function_entry fastdfs_client_functions[] = {
 		ZEND_FE(fastdfs_tracker_get_connection, NULL)
-
-		/*
 		ZEND_FE(fastdfs_connect_server, NULL)
 		ZEND_FE(fastdfs_disconnect_server, NULL)
 		ZEND_FE(fastdfs_tracker_list_groups, NULL)
+		/*
 		ZEND_FE(fastdfs_tracker_list_servers, NULL)
 		ZEND_FE(fastdfs_tracker_query_storage_store, NULL)
 		ZEND_FE(fastdfs_tracker_query_storage_store_without_group, NULL)
@@ -112,7 +111,6 @@ static void php_fdfs_tracker_get_connection_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		RETURN_BOOL(false);
 	}
 
-
 	array_init(return_value);
 	
 	add_assoc_stringl_ex(return_value, "ip_addr", sizeof("ip_addr"), \
@@ -123,10 +121,227 @@ static void php_fdfs_tracker_get_connection_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		pTrackerServer->sock);
 }
 
+static void php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
+{
+	int argc;
+	char *ip_addr;
+	int ip_len;
+	long port;
+	TrackerServerInfo server_info;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc != 2)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"fastdfs_connect_server parameters count: %d != 2", \
+			__LINE__, argc);
+		RETURN_BOOL(false);
+	}
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sl", \
+				&ip_addr, &ip_len, &port) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+				"zend_parse_parameters fail!", __LINE__);
+		RETURN_BOOL(false);
+	}
+
+	snprintf(server_info.ip_addr, sizeof(server_info.ip_addr), \
+		"%s", ip_addr);
+	server_info.port = port;
+
+	if (tracker_connect_server(&server_info) == 0)
+	{
+		array_init(return_value);
+		add_assoc_stringl_ex(return_value, "ip_addr", \
+			sizeof("ip_addr"), ip_addr, ip_len, 1);
+		add_assoc_long_ex(return_value, "port", sizeof("port"), \
+			port);
+		add_assoc_long_ex(return_value, "sock", sizeof("sock"), \
+			server_info.sock);
+	}
+	else
+	{
+		RETURN_BOOL(false);
+	}
+}
+
+static void php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
+{
+	int argc;
+	zval *server_info;
+	HashTable *server_hash;
+	zval **data;
+	zval ***ppp;
+	int sock;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc != 1)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"fastdfs_disconnect_server parameters count: %d != 1", \
+			__LINE__, argc);
+		RETURN_BOOL(false);
+	}
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a", \
+				&server_info) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+				"zend_parse_parameters fail!", __LINE__);
+		RETURN_BOOL(false);
+	}
+
+	server_hash = Z_ARRVAL_P(server_info);
+	data = NULL;
+	ppp = &data;
+	if (zend_hash_find(server_hash, "sock", sizeof("sock"), \
+			(void **)ppp) == FAILURE)
+	{
+		RETURN_BOOL(false);
+	}
+
+	if ((*data)->type == IS_LONG)
+	{
+		sock = (*data)->value.lval;
+		if (sock > 0)
+		{
+			close(sock);
+		}
+		RETURN_BOOL(true);
+	}
+	else
+	{
+		RETURN_BOOL(false);
+	}
+}
+
+static int php_fdfs_get_tracker_from_hash(HashTable *server_hash, \
+		TrackerServerInfo *pTrackerServer)
+{
+	zval **data;
+	zval ***ppp;
+	char *ip_addr;
+	int ip_len;
+
+	memset(pTrackerServer, 0, sizeof(TrackerServerInfo));
+	data = NULL;
+	ppp = &data;
+	if (zend_hash_find(server_hash, "ip_addr", sizeof("ip_addr"), \
+			(void **)ppp) == FAILURE)
+	{
+		return ENOENT;
+	}
+	if ((*data)->type != IS_STRING)
+	{
+		return EINVAL;
+	}
+	ip_addr = Z_STRVAL_PP(data);
+	ip_len = Z_STRLEN_PP(data);
+	if (ip_len >= IP_ADDRESS_SIZE)
+	{
+		ip_len = IP_ADDRESS_SIZE - 1;
+	}
+	memcpy(pTrackerServer->ip_addr, ip_addr, ip_len);
+
+	if (zend_hash_find(server_hash, "port", sizeof("port"), \
+			(void **)ppp) == FAILURE)
+	{
+		return ENOENT;
+	}
+	if ((*data)->type != IS_LONG)
+	{
+		return EINVAL;
+	}
+	pTrackerServer->port = (*data)->value.lval;
+
+	if (zend_hash_find(server_hash, "sock", sizeof("sock"), \
+			(void **)ppp) == FAILURE)
+	{
+		return ENOENT;
+	}
+	if ((*data)->type != IS_LONG)
+	{
+		return EINVAL;
+	}
+
+	pTrackerServer->sock = (*data)->value.lval;
+	return 0;
+}
+
+static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
+		TrackerServerGroup *pTrackerGroup)
+{
+	int argc;
+	zval *server_info;
+	HashTable *server_hash;
+	TrackerServerInfo tracker_server;
+	TrackerServerInfo *pTrackerServer;
+	FDFSGroupStat group_stats[FDFS_MAX_GROUPS];
+	FDFSGroupStat *pGroupStat;
+	FDFSGroupStat *pGroupEnd;
+	int group_count;
+	int result;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc > 1)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"fastdfs_tracker_list_groups parameters count: %d > 1", 
+			__LINE__, argc);
+		RETURN_BOOL(false);
+	}
+
+	if (argc == 0)
+	{
+		pTrackerServer = tracker_get_connection_ex(pTrackerGroup);
+		if (pTrackerServer == NULL)
+		{
+			RETURN_BOOL(false);
+		}
+	}
+	else
+	{
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a", \
+					&server_info) == FAILURE)
+		{
+			logError("file: "__FILE__", line: %d, " \
+					"zend_parse_parameters fail!", __LINE__);
+			RETURN_BOOL(false);
+		}
+
+		pTrackerServer = &tracker_server;
+		server_hash = Z_ARRVAL_P(server_info);
+		if ((result=php_fdfs_get_tracker_from_hash(server_hash, \
+				pTrackerServer)) != 0)
+		{
+			RETURN_BOOL(false);
+		}
+	}
+
+	if ((result=tracker_list_groups(pTrackerServer, group_stats, \
+		FDFS_MAX_GROUPS, &group_count)) != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	array_init(return_value);
+	pGroupEnd = group_stats + group_count;
+	for (pGroupStat=group_stats; pGroupStat<pGroupEnd; pGroupStat++)
+	{
+	}
+
+	add_assoc_stringl_ex(return_value, "ip_addr", sizeof("ip_addr"), \
+		pTrackerServer->ip_addr, strlen(pTrackerServer->ip_addr), 1);
+	add_assoc_long_ex(return_value, "port", sizeof("port"), \
+		pTrackerServer->port);
+	add_assoc_long_ex(return_value, "sock", sizeof("sock"), \
+		pTrackerServer->sock);
+}
+
 /*
-int fastdfs_tracker_get_connection(string namespace, string object_id, string key, 
-		string value [, int expires])
-return 0 for success, != 0 for error
+array fastdfs_tracker_get_connection()
+return array for success, false for error
 */
 ZEND_FUNCTION(fastdfs_tracker_get_connection)
 {
@@ -135,17 +350,32 @@ ZEND_FUNCTION(fastdfs_tracker_get_connection)
 }
 
 /*
-int fastdfs_tracker_list_servers(string namespace, string object_id, array key_list, 
-		[, int expires])
-return 0 for success, != 0 for error
+int fastdfs_connect_server(string ip_addr, int port)
+return array for success, false for error
 */
-/*
-ZEND_FUNCTION(fastdfs_tracker_list_servers)
+ZEND_FUNCTION(fastdfs_connect_server)
 {
-	php_fdfs_batch_set_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
-		&g_tracker_group, g_keep_alive);
+	php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 }
+
+/*
+boolean fastdfs_disconnect_server(array serverInfo)
+return true for success, false for error
 */
+ZEND_FUNCTION(fastdfs_disconnect_server)
+{
+	php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+}
+
+/*
+array fastdfs_tracker_list_groups([array tracker_server])
+return array for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_tracker_list_groups)
+{
+	php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+			&g_tracker_group);
+}
 
 /*
 array/int/boolean fastdfs_tracker_query_storage_store(string namespace, string object_id, \
@@ -320,6 +550,16 @@ PHP_METHOD(FastDFS, tracker_get_connection)
 			i_obj->pTrackerGroup);
 }
 
+PHP_METHOD(FastDFS, connect_server)
+{
+	php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+}
+
+PHP_METHOD(FastDFS, disconnect_server)
+{
+	php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+}
+
 /*
 void FastDFS::close()
 */
@@ -338,6 +578,15 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_tracker_get_connection, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_connect_server, 0, 0, 2)
+ZEND_ARG_INFO(0, ip_addr)
+ZEND_ARG_INFO(0, port)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_disconnect_server, 0, 0, 1)
+ZEND_ARG_INFO(0, server_info)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_close, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -346,6 +595,8 @@ ZEND_END_ARG_INFO()
 static zend_function_entry fdfs_class_methods[] = {
     FDFS_ME(__construct,        arginfo___construct)
     FDFS_ME(tracker_get_connection,   arginfo_tracker_get_connection)
+    FDFS_ME(connect_server,   arginfo_connect_server)
+    FDFS_ME(disconnect_server,   arginfo_disconnect_server)
     FDFS_ME(close,              arginfo_close)
     { NULL, NULL, NULL }
 };
