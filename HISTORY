@@ -1,5 +1,5 @@
 
-Version 1.22  2009-10-05
+Version 1.22  2009-10-06
  * bug fixed: common/shared_func.c allow_hosts array maybe overflow in some case
  * tracker/tracker_mem.c: protocol TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ALL, 
    return at least a storage server when active storage 
@@ -10,6 +10,8 @@ Version 1.22  2009-10-05
  * common/http_func.c: do not use function strsep because strsep is not portable
  * client upload file support callback function
  * client support multi tracker groups (multi FastDFS clusters)
+ * bug fixed: thread_stack_size not correct when the param thread_stack_size 
+   not set in the config file
 
 Version 1.21  2009-09-19
  * bug fixed: when source storage server synced file to new storage server done,
