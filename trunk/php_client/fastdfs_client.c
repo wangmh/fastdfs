@@ -219,7 +219,7 @@ static void php_fdfs_close(php_fdfs_t *i_obj TSRMLS_DC)
 
 	if (i_obj->pTrackerGroup != i_obj->pConfigInfo->pTrackerGroup)
 	{
-		fdfs_disconnect_all_servers(i_obj->pTrackerGroup);
+		tracker_close_all_connections_ex(i_obj->pTrackerGroup);
 	}
 }
 
@@ -230,7 +230,7 @@ static void php_fdfs_destroy(php_fdfs_t *i_obj TSRMLS_DC)
 	if (i_obj->pTrackerGroup != NULL && i_obj->pTrackerGroup != \
 		i_obj->pConfigInfo->pTrackerGroup)
 	{
-		fdfs_free_group_array(i_obj->pTrackerGroup);
+		fdfs_client_destroy_ex(i_obj->pTrackerGroup);
 		efree(i_obj->pTrackerGroup);
 		i_obj->pTrackerGroup = NULL;
 	}
@@ -281,7 +281,8 @@ static PHP_METHOD(FastDFS, __construct)
 	i_obj->pConfigInfo = config_list + config_index;
 	if (bMultiThread)
 	{
-		i_obj->pTrackerGroup = (TrackerServerGroup *)emalloc(sizeof(TrackerServerGroup));
+		i_obj->pTrackerGroup = (TrackerServerGroup *)emalloc( \
+					sizeof(TrackerServerGroup));
 		if (i_obj->pTrackerGroup == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -291,7 +292,7 @@ static PHP_METHOD(FastDFS, __construct)
 			return;
 		}
 
-		if (fdfs_copy_group_array(i_obj->pTrackerGroup, \
+		if (fdfs_copy_tracker_group(i_obj->pTrackerGroup, \
 			i_obj->pConfigInfo->pTrackerGroup) != 0)
 		{
 			ZVAL_NULL(object);
@@ -316,7 +317,7 @@ PHP_METHOD(FastDFS, tracker_get_connection)
 
 	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
 	php_fdfs_tracker_get_connection_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
-			i_obj->pTrackerGroup, true);
+			i_obj->pTrackerGroup);
 }
 
 /*
@@ -562,7 +563,7 @@ PHP_MSHUTDOWN_FUNCTION(fastdfs_client)
 		{
 			if (pConfigInfo->pTrackerGroup != NULL)
 			{
-				fdfs_disconnect_all_servers( \
+				tracker_close_all_connections_ex( \
 						pConfigInfo->pTrackerGroup);
 			}
 		}
