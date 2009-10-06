@@ -59,6 +59,16 @@ int fdfs_load_tracker_group_ex(TrackerServerGroup *pTrackerGroup, \
 		IniItemInfo *items, const int nItemCount);
 
 /**
+* copy tracker server group
+* params:
+*       pDestTrackerGroup: the dest tracker group
+*       pSrcTrackerGroup: the source tracker group
+* return: 0 success, !=0 fail, return the error code
+**/
+int fdfs_copy_tracker_group(TrackerServerGroup *pDestTrackerGroup, \
+		TrackerServerGroup *pSrcTrackerGroup);
+
+/**
 * client destroy function
 * params:
 *       pTrackerGroup: tracker group

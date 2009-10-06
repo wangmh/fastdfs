@@ -306,6 +306,37 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 	return result;
 }
 
+int fdfs_copy_tracker_group(TrackerServerGroup *pDestTrackerGroup, \
+		TrackerServerGroup *pSrcTrackerGroup)
+{
+	int bytes;
+	TrackerServerInfo *pDestServer;
+	TrackerServerInfo *pDestServerEnd;
+
+	bytes = sizeof(TrackerServerInfo) * pSrcTrackerGroup->server_count;
+	pDestTrackerGroup->servers = (TrackerServerInfo *)malloc(bytes);
+	if (pDestTrackerGroup->servers == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail", __LINE__, bytes);
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	pDestTrackerGroup->server_index = 0;
+	pDestTrackerGroup->server_count = pSrcTrackerGroup->server_count;
+	memcpy(pDestTrackerGroup->servers, pSrcTrackerGroup->servers, bytes);
+
+	pDestServerEnd = pDestTrackerGroup->servers + \
+			pDestTrackerGroup->server_count;
+	for (pDestServer=pDestTrackerGroup->servers; \
+		pDestServer<pDestServerEnd; pDestServer++)
+	{
+		pDestServer->sock = -1;
+	}
+
+	return 0;
+}
+
 void fdfs_client_destroy_ex(TrackerServerGroup *pTrackerGroup)
 {
 	if (pTrackerGroup->servers != NULL)
