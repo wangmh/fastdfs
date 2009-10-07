@@ -19,6 +19,10 @@
  var_dump(fastdfs_tracker_query_storage_update1($file_id));
  var_dump(fastdfs_tracker_query_storage_fetch1($file_id));
  var_dump(fastdfs_tracker_query_storage_list1($file_id));
+ var_dump(fastdfs_storage_upload_by_filename("/usr/include/stdio.h", null));
+ var_dump(fastdfs_storage_upload_by_filename1("/usr/include/stdio.h", null, array('width'=>1024, 'height'=>800, 'font'=>'Aris')));
+ var_dump(fastdfs_storage_upload_by_filebuff("this is a test.", "txt"));
+ var_dump(fastdfs_storage_upload_by_filebuff1("this\000is\000a\000test.", "bin"));
 
  $fdfs = new FastDFS();
  $tracker = $fdfs->tracker_get_connection();
@@ -37,4 +41,8 @@
  var_dump($fdfs->tracker_query_storage_update1($file_id));
  var_dump($fdfs->tracker_query_storage_fetch1($file_id));
  var_dump($fdfs->tracker_query_storage_list1($file_id));
+ var_dump($fdfs->storage_upload_by_filename("/usr/include/stdio.h"));
+ var_dump($fdfs->storage_upload_by_filename1("/usr/include/stdio.h", "c", array('width'=>1024, 'height'=>800, 'font'=>'Aris')));
+ var_dump($fdfs->storage_upload_by_filebuff("this is a test.", "txt"));
+ var_dump($fdfs->storage_upload_by_filebuff1("this\000is\001a\002test.", "bin"));
 ?>
