@@ -20,6 +20,7 @@
 #define FDFS_UPLOAD_BY_CALLBACK 3
 
 #define FDFS_FILE_ID_SEPERATOR		'/'
+#define FDFS_FILE_ID_SEPERATE_STR	"/"
 
 #ifdef __cplusplus
 extern "C" {
