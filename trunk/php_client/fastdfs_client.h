@@ -28,6 +28,8 @@ ZEND_FUNCTION(fastdfs_tracker_query_storage_list);
 ZEND_FUNCTION(fastdfs_tracker_query_storage_update1);
 ZEND_FUNCTION(fastdfs_tracker_query_storage_fetch1);
 ZEND_FUNCTION(fastdfs_tracker_query_storage_list1);
+ZEND_FUNCTION(fastdfs_storage_upload_by_filename);
+ZEND_FUNCTION(fastdfs_storage_upload_by_filename1);
 
 PHP_FASTDFS_API zend_class_entry *php_fdfs_get_ce(void);
 PHP_FASTDFS_API zend_class_entry *php_fdfs_get_exception(void);

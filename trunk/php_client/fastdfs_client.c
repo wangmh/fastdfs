@@ -54,6 +54,7 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
         { NULL, 0, NULL, 0, 0, 0, pass_rest_by_reference, return_reference, required_num_args },
 #endif
 
+
 // Every user visible function must have an entry in fastdfs_client_functions[].
 	function_entry fastdfs_client_functions[] = {
 		ZEND_FE(fastdfs_tracker_get_connection, NULL)
@@ -67,9 +68,8 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 		ZEND_FE(fastdfs_tracker_query_storage_update1, NULL)
 		ZEND_FE(fastdfs_tracker_query_storage_fetch1, NULL)
 		ZEND_FE(fastdfs_tracker_query_storage_list1, NULL)
-		/*
-		ZEND_FE(fastdfs_tracker_query_storage_list, NULL)
-		*/
+		ZEND_FE(fastdfs_storage_upload_by_filename, NULL)
+		ZEND_FE(fastdfs_storage_upload_by_filename1, NULL)
 
 		{NULL, NULL, NULL}  /* Must be the last line */
 	};
@@ -90,6 +90,75 @@ zend_module_entry fastdfs_client_module_entry = {
 #ifdef COMPILE_DL_FASTDFS_CLIENT
 	ZEND_GET_MODULE(fastdfs_client)
 #endif
+
+static int fastdfs_convert_metadata_to_array(FDFSMetaData **meta_list, int *meta_count)
+{
+		meta_hash = Z_ARRVAL_P(metadata_obj);
+		meta_count = zend_hash_num_elements(meta_hash);
+		if (meta_count == 0)
+		{
+			meta_list = NULL;
+		}
+		else
+		{
+			char *szKey;
+			char *szValue;
+			long index;
+			int key_len;
+			int value_len;
+			HashPosition pointer;
+
+			meta_list = (FDFSMetaData *)malloc( \
+					sizeof(FDFSMetaData) * meta_count);
+			if (meta_list == NULL)
+			{
+				RETURN_BOOL(false);
+			}
+
+			ppp = &data;
+			for (zend_hash_internal_pointer_reset_ex(meta_hash, \
+				&pointer); zend_hash_get_current_data_ex( \
+				meta_hash, (void **)ppp, &pointer) == SUCCESS;\
+				zend_hash_move_forward_ex(meta_hash, &pointer))
+			{
+				if (zend_hash_get_current_key_ex(meta_hash, &szKey, \
+					&(key_len), &index, 0, &pointer) \
+					!= HASH_KEY_IS_STRING)
+                		{
+                        		logError("file: "__FILE__", line: %d, " \
+						"fastdht_batch_set, invalid array element, " \
+						"index=%d!", __LINE__, index);
+					
+					RETURN_BOOL(false);
+				}
+
+				if (key_len > FDFS_MAX_META_NAME_LEN)
+				{
+					key_len = FDFS_MAX_META_NAME_LEN;
+				}
+				memcpy(pKeyValue->szKey, szKey, key_len);
+
+				if ((*data)->type == IS_STRING)
+				{
+					szValue = Z_STRVAL_PP(data);
+					value_len = Z_STRLEN_PP(data);
+
+					if (value_len > FDFS_MAX_META_VALUE_LEN)
+					{
+						value_len = FDFS_MAX_META_VALUE_LEN;
+					}
+				}
+				else if ((*data)->type == IS_LONG)
+				{
+					sock = (*data)->value.lval;
+				}
+				else
+				{
+				}
+
+		#define FDFS_MAX_META_VALUE_LEN         256
+		}
+}
 
 static void php_fdfs_tracker_get_connection_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		TrackerServerGroup *pTrackerGroup)
@@ -171,7 +240,7 @@ static void php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
 {
 	int argc;
 	zval *server_info;
-	HashTable *server_hash;
+	HashTable *tracker_hash;
 	zval **data;
 	zval ***ppp;
 	int sock;
@@ -193,10 +262,10 @@ static void php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
 		RETURN_BOOL(false);
 	}
 
-	server_hash = Z_ARRVAL_P(server_info);
+	tracker_hash = Z_ARRVAL_P(server_info);
 	data = NULL;
 	ppp = &data;
-	if (zend_hash_find(server_hash, "sock", sizeof("sock"), \
+	if (zend_hash_find(tracker_hash, "sock", sizeof("sock"), \
 			(void **)ppp) == FAILURE)
 	{
 		RETURN_BOOL(false);
@@ -217,7 +286,7 @@ static void php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
 	}
 }
 
-static int php_fdfs_get_tracker_from_hash(HashTable *server_hash, \
+static int php_fdfs_get_tracker_from_hash(HashTable *tracker_hash, \
 		TrackerServerInfo *pTrackerServer)
 {
 	zval **data;
@@ -228,7 +297,7 @@ static int php_fdfs_get_tracker_from_hash(HashTable *server_hash, \
 	memset(pTrackerServer, 0, sizeof(TrackerServerInfo));
 	data = NULL;
 	ppp = &data;
-	if (zend_hash_find(server_hash, "ip_addr", sizeof("ip_addr"), \
+	if (zend_hash_find(tracker_hash, "ip_addr", sizeof("ip_addr"), \
 			(void **)ppp) == FAILURE)
 	{
 		return ENOENT;
@@ -245,7 +314,7 @@ static int php_fdfs_get_tracker_from_hash(HashTable *server_hash, \
 	}
 	memcpy(pTrackerServer->ip_addr, ip_addr, ip_len);
 
-	if (zend_hash_find(server_hash, "port", sizeof("port"), \
+	if (zend_hash_find(tracker_hash, "port", sizeof("port"), \
 			(void **)ppp) == FAILURE)
 	{
 		return ENOENT;
@@ -256,7 +325,7 @@ static int php_fdfs_get_tracker_from_hash(HashTable *server_hash, \
 	}
 	pTrackerServer->port = (*data)->value.lval;
 
-	if (zend_hash_find(server_hash, "sock", sizeof("sock"), \
+	if (zend_hash_find(tracker_hash, "sock", sizeof("sock"), \
 			(void **)ppp) == FAILURE)
 	{
 		return ENOENT;
@@ -276,10 +345,10 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	int argc;
 	char *group_name;
 	int group_nlen;
-	zval *server_info;
+	zval *tracker_obj;
 	zval *group_info_array;
 	zval *server_info_array;
-	HashTable *server_hash;
+	HashTable *tracker_hash;
 	TrackerServerInfo tracker_server;
 	TrackerServerInfo *pTrackerServer;
 	FDFSGroupStat group_stats[FDFS_MAX_GROUPS];
@@ -315,7 +384,7 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	else
 	{
 		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a|s", \
-			&server_info, &group_name, &group_nlen) == FAILURE)
+			&tracker_obj, &group_name, &group_nlen) == FAILURE)
 		{
 			logError("file: "__FILE__", line: %d, " \
 					"zend_parse_parameters fail!", __LINE__);
@@ -323,8 +392,8 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		}
 
 		pTrackerServer = &tracker_server;
-		server_hash = Z_ARRVAL_P(server_info);
-		if ((result=php_fdfs_get_tracker_from_hash(server_hash, \
+		tracker_hash = Z_ARRVAL_P(tracker_obj);
+		if ((result=php_fdfs_get_tracker_from_hash(tracker_hash, \
 				pTrackerServer)) != 0)
 		{
 			RETURN_BOOL(false);
@@ -504,8 +573,8 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 	int argc;
 	char *group_name;
 	int group_nlen;
-	zval *server_info;
-	HashTable *server_hash;
+	zval *tracker_obj;
+	HashTable *tracker_hash;
 	TrackerServerInfo tracker_server;
 	TrackerServerInfo storage_server;
 	TrackerServerInfo *pTrackerServer;
@@ -534,7 +603,7 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 	else
 	{
 		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a|s", \
-			&server_info, &group_name, &group_nlen) == FAILURE)
+			&tracker_obj, &group_name, &group_nlen) == FAILURE)
 		{
 			logError("file: "__FILE__", line: %d, " \
 					"zend_parse_parameters fail!", __LINE__);
@@ -542,8 +611,8 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 		}
 
 		pTrackerServer = &tracker_server;
-		server_hash = Z_ARRVAL_P(server_info);
-		if ((result=php_fdfs_get_tracker_from_hash(server_hash, \
+		tracker_hash = Z_ARRVAL_P(tracker_obj);
+		if ((result=php_fdfs_get_tracker_from_hash(tracker_hash, \
 				pTrackerServer)) != 0)
 		{
 			RETURN_BOOL(false);
@@ -588,8 +657,8 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 	char *remote_filename;
 	int group_nlen;
 	int filename_len;
-	zval *server_info;
-	HashTable *server_hash;
+	zval *tracker_obj;
+	HashTable *tracker_hash;
 	TrackerServerInfo tracker_server;
 	TrackerServerInfo storage_server;
 	TrackerServerInfo *pTrackerServer;
@@ -619,7 +688,7 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 		RETURN_BOOL(false);
 	}
 
-	server_info = NULL;
+	tracker_obj = NULL;
 	if (bFileId)
 	{
 		char *pSeperator;
@@ -627,7 +696,7 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 		int file_id_len;
 
 		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|a", \
-			&file_id, &file_id_len, &server_info) == FAILURE)
+			&file_id, &file_id_len, &tracker_obj) == FAILURE)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"zend_parse_parameters fail!", __LINE__);
@@ -647,14 +716,14 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 	}
 	else if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|a", \
 		&group_name, &group_nlen, &remote_filename, &filename_len, \
-		&server_info) == FAILURE)
+		&tracker_obj) == FAILURE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"zend_parse_parameters fail!", __LINE__);
 		RETURN_BOOL(false);
 	}
 
-	if (server_info == NULL)
+	if (tracker_obj == NULL)
 	{
 		pTrackerServer = tracker_get_connection_ex(pTrackerGroup);
 		if (pTrackerServer == NULL)
@@ -665,8 +734,8 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 	else
 	{
 		pTrackerServer = &tracker_server;
-		server_hash = Z_ARRVAL_P(server_info);
-		if ((result=php_fdfs_get_tracker_from_hash(server_hash, \
+		tracker_hash = Z_ARRVAL_P(tracker_obj);
+		if ((result=php_fdfs_get_tracker_from_hash(tracker_hash, \
 				pTrackerServer)) != 0)
 		{
 			RETURN_BOOL(false);
@@ -699,9 +768,9 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 	char *remote_filename;
 	int group_nlen;
 	int filename_len;
-	zval *server_info;
+	zval *tracker_obj;
 	zval *server_info_array;
-	HashTable *server_hash;
+	HashTable *tracker_hash;
 	TrackerServerInfo tracker_server;
 	TrackerServerInfo storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
 	TrackerServerInfo *pTrackerServer;
@@ -734,7 +803,7 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 		RETURN_BOOL(false);
 	}
 
-	server_info = NULL;
+	tracker_obj = NULL;
 	if (bFileId)
 	{
 		char *pSeperator;
@@ -742,7 +811,7 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 		int file_id_len;
 
 		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|a", \
-			&file_id, &file_id_len, &server_info) == FAILURE)
+			&file_id, &file_id_len, &tracker_obj) == FAILURE)
 		{
 			logError("file: "__FILE__", line: %d, " \
 					"zend_parse_parameters fail!", __LINE__);
@@ -762,14 +831,14 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 	}
 	else if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|a", \
 		&group_name, &group_nlen, &remote_filename, &filename_len, \
-		&server_info) == FAILURE)
+		&tracker_obj) == FAILURE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 				"zend_parse_parameters fail!", __LINE__);
 		RETURN_BOOL(false);
 	}
 
-	if (server_info == NULL)
+	if (tracker_obj == NULL)
 	{
 		pTrackerServer = tracker_get_connection_ex(pTrackerGroup);
 		if (pTrackerServer == NULL)
@@ -780,8 +849,8 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 	else
 	{
 		pTrackerServer = &tracker_server;
-		server_hash = Z_ARRVAL_P(server_info);
-		if ((result=php_fdfs_get_tracker_from_hash(server_hash, \
+		tracker_hash = Z_ARRVAL_P(tracker_obj);
+		if ((result=php_fdfs_get_tracker_from_hash(tracker_hash, \
 				pTrackerServer)) != 0)
 		{
 			RETURN_BOOL(false);
@@ -814,6 +883,130 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 			pServer->port);
 		add_assoc_long_ex(server_info_array,"sock",sizeof("sock"),-1);
 	}
+}
+
+/*
+array fastdfs_storage_upload_by_filename(string local_filename
+	[, string file_ext_name, array meta_list, array tracker_server, 
+	array storage_server])
+return array for success, false for error
+*/
+static void php_fdfs_storage_upload_by_filename_impl( \
+		INTERNAL_FUNCTION_PARAMETERS, \
+		TrackerServerGroup *pTrackerGroup, const bool bFileId)
+{
+	int argc;
+	char *local_filename;
+	int filename_len;
+	char *file_ext_name;
+	int ext_name_len;
+	int store_path_index;
+	char *group_name;
+	char *remote_filename;
+	zval *metadata_obj;
+	zval *tracker_obj;
+	zval *storage_obj;
+	zval ***ppp;
+	zval **data;
+	HashTable *meta_hash;
+	HashTable *tracker_hash;
+	HashTable *storage_hash;
+	TrackerServerInfo tracker_server;
+	TrackerServerInfo storage_server;
+	TrackerServerInfo storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer;
+	FDFSMetaData *meta_list;
+	int meta_count;
+	int result;
+	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 64];
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc < 1 || argc > 5)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"fastdfs_tracker_query_storage_list parameters " \
+			"count: %d < 1 or > 5", __LINE__, argc);
+		RETURN_BOOL(false);
+	}
+
+	file_ext_name = NULL;
+	ext_name_len = 0;
+	metadata_obj = NULL;
+	tracker_obj = NULL;
+	storage_obj = NULL;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|saaa", \
+		&local_filename, &filename_len, &file_ext_name, &ext_name_len, \
+		&metadata_obj, &tracker_obj, &storage_obj) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+				"zend_parse_parameters fail!", __LINE__);
+		RETURN_BOOL(false);
+	}
+
+	if (tracker_obj == NULL)
+	{
+		pTrackerServer = tracker_get_connection_ex(pTrackerGroup);
+		if (pTrackerServer == NULL)
+		{
+			RETURN_BOOL(false);
+		}
+	}
+	else
+	{
+		pTrackerServer = &tracker_server;
+		tracker_hash = Z_ARRVAL_P(tracker_obj);
+		if ((result=php_fdfs_get_tracker_from_hash(tracker_hash, \
+				pTrackerServer)) != 0)
+		{
+			RETURN_BOOL(false);
+		}
+	}
+
+	if (storage_obj == NULL)
+	{
+		pStorageServer = NULL;
+		store_path_index = 0;
+	}
+	else
+	{
+		pStorageServer = &storage_server;
+		storage_hash = Z_ARRVAL_P(storage_obj);
+		if ((result=php_fdfs_get_tracker_from_hash(storage_hash, \
+				pStorageServer)) != 0)
+		{
+			RETURN_BOOL(false);
+		}
+
+		store_path_index
+	}
+
+	if (metadata_obj == NULL)
+	{
+		meta_list = NULL;
+		meta_count = 0;
+	}
+	else
+	{
+	}
+
+	result = storage_upload_by_filename(pTrackerServer, pStorageServer, \
+			store_path_index, local_filename, file_ext_name, \
+			meta_list, meta_count, group_name, remote_filename);
+	if (meta_list != NULL)
+	{
+		free(meta_list);
+	}
+	if (result != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	array_init(return_value);
+
+	add_assoc_stringl_ex(return_value, "group_name", \
+		sizeof("group_name"), pServer->ip_addr, \
+		strlen(pServer->ip_addr), 1);
 }
 
 /*
@@ -933,6 +1126,19 @@ return array for success, false for error
 ZEND_FUNCTION(fastdfs_tracker_query_storage_list1)
 {
 	php_fdfs_tracker_query_storage_list_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&g_tracker_group, true);
+}
+
+/*
+array fastdfs_storage_upload_by_filename(string local_filename, 
+	string file_ext_name, string meta_list [, array tracker_server, 
+	array storage_server])
+return array for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_storage_upload_by_filename)
+{
+	php_fdfs_storage_upload_by_filename_impl( \
 		INTERNAL_FUNCTION_PARAM_PASSTHRU, \
 		&g_tracker_group, true);
 }
@@ -1480,6 +1686,23 @@ PHP_MINIT_FUNCTION(fastdfs_client)
 	REGISTER_STRING_CONSTANT("FDFS_FILE_ID_SEPERATOR", \
 			FDFS_FILE_ID_SEPERATE_STR, \
 			CONST_CS | CONST_PERSISTENT);
+
+	REGISTER_LONG_CONSTANT("FDFS_STORAGE_STATUS_INIT", \
+		FDFS_STORAGE_STATUS_INIT, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FDFS_STORAGE_STATUS_WAIT_SYNC", \
+		FDFS_STORAGE_STATUS_WAIT_SYNC, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FDFS_STORAGE_STATUS_SYNCING", \
+		FDFS_STORAGE_STATUS_SYNCING, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FDFS_STORAGE_STATUS_DELETED", \
+		FDFS_STORAGE_STATUS_DELETED, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FDFS_STORAGE_STATUS_OFFLINE", \
+		FDFS_STORAGE_STATUS_OFFLINE, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FDFS_STORAGE_STATUS_ONLINE", \
+		FDFS_STORAGE_STATUS_ONLINE, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FDFS_STORAGE_STATUS_ACTIVE", \
+		FDFS_STORAGE_STATUS_ACTIVE, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FDFS_STORAGE_STATUS_NONE", \
+		FDFS_STORAGE_STATUS_NONE, CONST_CS | CONST_PERSISTENT);
 
 	return SUCCESS;
 }
