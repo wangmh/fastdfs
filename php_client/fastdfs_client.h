@@ -21,6 +21,9 @@ ZEND_FUNCTION(fastdfs_tracker_get_connection);
 ZEND_FUNCTION(fastdfs_connect_server);
 ZEND_FUNCTION(fastdfs_disconnect_server);
 ZEND_FUNCTION(fastdfs_tracker_list_groups);
+ZEND_FUNCTION(fastdfs_tracker_query_storage_store);
+ZEND_FUNCTION(fastdfs_tracker_query_storage_update);
+ZEND_FUNCTION(fastdfs_tracker_query_storage_fetch);
 
 PHP_FASTDFS_API zend_class_entry *php_fdfs_get_ce(void);
 PHP_FASTDFS_API zend_class_entry *php_fdfs_get_exception(void);
