@@ -30,6 +30,11 @@
  	$local_filename = 't1.txt';
 	echo 'storage_download_file_to_file result: ' . 
 		fastdfs_storage_download_file_to_file($file_info['group_name'], $file_info['filename'], $local_filename) . "\n";
+
+	echo "fastdfs_storage_set_metadata result: " . fastdfs_storage_set_metadata( 
+		$file_info['group_name'], $file_info['filename'], 
+		array('color'=>'yellow', 'size'=>32), FDFS_STORAGE_SET_METADATA_FLAG_OVERWRITE) . "\n";
+
 	echo "delete file return: " . fastdfs_storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
  }
 
@@ -39,7 +44,10 @@
 	$file_content = fastdfs_storage_download_file_to_buff1($file_id);
 	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
  	$local_filename = 't2.txt';
-	echo 'storage_download_file_to_file1 result: ' . fastdfs_storage_download_file_to_file1($file_id, $local_filename) . "\n";
+	echo 'storage_download_file_to_file1 result: ' . 
+		fastdfs_storage_download_file_to_file1($file_id, $local_filename) . "\n";
+	echo "fastdfs_storage_set_metadata1 result: " . fastdfs_storage_set_metadata1( 
+		$file_id, array('color'=>'yellow', 'size'=>32), FDFS_STORAGE_SET_METADATA_FLAG_MERGE) . "\n";
 	echo "delete file $file_id return: " . fastdfs_storage_delete_file1($file_id) . "\n";
  }
 
@@ -72,6 +80,11 @@
  	$local_filename = 't3.txt';
 	echo 'storage_download_file_to_file result: ' . 
 		$fdfs->storage_download_file_to_file($file_info['group_name'], $file_info['filename'], $local_filename) . "\n";
+
+	echo "storage_set_metadata result: " . $fdfs->storage_set_metadata( 
+		$file_info['group_name'], $file_info['filename'], 
+		array('color'=>'yellow', 'size'=>32), FDFS_STORAGE_SET_METADATA_FLAG_OVERWRITE) . "\n";
+
 	echo "delete file return: " . $fdfs->storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
  }
 
@@ -82,6 +95,8 @@
 	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
  	$local_filename = 't4.txt';
 	echo 'storage_download_file_to_file1 result: ' . $fdfs->storage_download_file_to_file1($file_id, $local_filename) . "\n";
+	echo "storage_set_metadata1 result: " . $fdfs->storage_set_metadata1( 
+		$file_id, array('color'=>'yellow', 'size'=>32), FDFS_STORAGE_SET_METADATA_FLAG_MERGE) . "\n";
         echo "delete file $file_id return: " . $fdfs->storage_delete_file1($file_id) . "\n";
  }
 ?>
