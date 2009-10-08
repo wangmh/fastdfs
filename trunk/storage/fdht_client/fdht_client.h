@@ -23,8 +23,6 @@
 extern "C" {
 #endif
 
-typedef void* (*MallocFunc)(size_t size);
-
 extern GroupArray g_group_array; //group info, including server list
 extern bool g_keep_alive;  //persistent connection flag
 
