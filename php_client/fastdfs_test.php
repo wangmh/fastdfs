@@ -3,6 +3,8 @@
  $remote_filename = "M00/28/E3/U6Q-CkrMFUgAAAAAAAAIEBucRWc5452.h";
  $file_id = $group_name . FDFS_FILE_ID_SEPERATOR . $remote_filename;
 
+ echo 'fastdfs_tracker_make_all_connections result: ' . fastdfs_tracker_make_all_connections() . "\n";
+
  $tracker = fastdfs_tracker_get_connection();
  var_dump($tracker);
 
@@ -15,9 +17,8 @@
  //var_dump(fastdfs_tracker_query_storage_update($group_name, $remote_filename));
  //var_dump(fastdfs_tracker_query_storage_fetch($group_name, $remote_filename));
  //var_dump(fastdfs_tracker_query_storage_list($group_name, $remote_filename));
-
- var_dump(fastdfs_tracker_query_storage_update1($file_id));
- var_dump(fastdfs_tracker_query_storage_fetch1($file_id));
+ //var_dump(fastdfs_tracker_query_storage_update1($file_id));
+ //var_dump(fastdfs_tracker_query_storage_fetch1($file_id));
  var_dump(fastdfs_tracker_query_storage_list1($file_id));
  var_dump(fastdfs_storage_upload_by_filename("/usr/include/stdio.h", null));
  var_dump(fastdfs_storage_upload_by_filename1("/usr/include/stdio.h", null, array('width'=>1024, 'height'=>800, 'font'=>'Aris', 'Homepage' => true, 'price' => 103.75, 'status' => FDFS_STORAGE_STATUS_ACTIVE)));
@@ -57,8 +58,10 @@
 	var_dump($meta_list);
 	echo "delete file $file_id return: " . fastdfs_storage_delete_file1($file_id) . "\n";
  }
+ echo "fastdfs_tracker_close_all_connections result: " . fastdfs_tracker_close_all_connections() . "\n";
 
  $fdfs = new FastDFS();
+ echo 'tracker_make_all_connections result: ' . $fdfs->tracker_make_all_connections() . "\n";
  $tracker = $fdfs->tracker_get_connection();
  var_dump($tracker);
 
@@ -109,9 +112,11 @@
 	echo "storage_set_metadata1 result: " . $fdfs->storage_set_metadata1( 
 		$file_id, array('color'=>'yellow', 'size'=>32), FDFS_STORAGE_SET_METADATA_FLAG_MERGE) . "\n";
 
+        echo "delete file $file_id return: " . $fdfs->storage_delete_file1($file_id) . "\n";
 	$meta_list = $fdfs->storage_get_metadata1($file_id);
 	var_dump($meta_list);
-
-        echo "delete file $file_id return: " . $fdfs->storage_delete_file1($file_id) . "\n";
+	echo "errno: " . $fdfs->get_last_error_no() . ", error info: " . $fdfs->get_last_error_info() . "\n";
+ 
  }
+ echo 'tracker_close_all_connections result: ' . $fdfs->tracker_close_all_connections() . "\n";
 ?>

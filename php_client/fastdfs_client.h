@@ -23,6 +23,8 @@ ZEND_FUNCTION(fastdfs_get_last_error_no);
 ZEND_FUNCTION(fastdfs_get_last_error_info);
 
 ZEND_FUNCTION(fastdfs_tracker_get_connection);
+ZEND_FUNCTION(fastdfs_tracker_make_all_connections);
+ZEND_FUNCTION(fastdfs_tracker_close_all_connections);
 ZEND_FUNCTION(fastdfs_tracker_list_groups);
 ZEND_FUNCTION(fastdfs_tracker_query_storage_store);
 ZEND_FUNCTION(fastdfs_tracker_query_storage_update);
