@@ -17,9 +17,12 @@ PHP_MSHUTDOWN_FUNCTION(fastdfs_client);
 PHP_RSHUTDOWN_FUNCTION(fastdfs_client);
 PHP_MINFO_FUNCTION(fastdfs_client);
 
-ZEND_FUNCTION(fastdfs_tracker_get_connection);
 ZEND_FUNCTION(fastdfs_connect_server);
 ZEND_FUNCTION(fastdfs_disconnect_server);
+ZEND_FUNCTION(fastdfs_get_last_error_no);
+ZEND_FUNCTION(fastdfs_get_last_error_info);
+
+ZEND_FUNCTION(fastdfs_tracker_get_connection);
 ZEND_FUNCTION(fastdfs_tracker_list_groups);
 ZEND_FUNCTION(fastdfs_tracker_query_storage_store);
 ZEND_FUNCTION(fastdfs_tracker_query_storage_update);

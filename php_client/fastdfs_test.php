@@ -33,12 +33,16 @@
 
 	echo "fastdfs_storage_set_metadata result: " . fastdfs_storage_set_metadata( 
 		$file_info['group_name'], $file_info['filename'], 
-		array('color'=>'yellow', 'size'=>32), FDFS_STORAGE_SET_METADATA_FLAG_OVERWRITE) . "\n";
+		array('color'=>'', 'size'=>32, 'font'=>'MS Serif'), FDFS_STORAGE_SET_METADATA_FLAG_OVERWRITE) . "\n";
+
+	$meta_list = fastdfs_storage_get_metadata($file_info['group_name'], $file_info['filename']);
+	var_dump($meta_list);
 
 	echo "delete file return: " . fastdfs_storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
  }
 
- $file_id = fastdfs_storage_upload_by_filebuff1("this\000is\000a\000test.", "bin");
+ $file_id = fastdfs_storage_upload_by_filebuff1("this\000is\000a\000test.", "bin", 
+		array('width'=>1024, 'height'=>768, 'font'=>'Aris'));
  if ($file_id)
  {
 	$file_content = fastdfs_storage_download_file_to_buff1($file_id);
@@ -46,8 +50,11 @@
  	$local_filename = 't2.txt';
 	echo 'storage_download_file_to_file1 result: ' . 
 		fastdfs_storage_download_file_to_file1($file_id, $local_filename) . "\n";
-	echo "fastdfs_storage_set_metadata1 result: " . fastdfs_storage_set_metadata1( 
-		$file_id, array('color'=>'yellow', 'size'=>32), FDFS_STORAGE_SET_METADATA_FLAG_MERGE) . "\n";
+	echo "fastdfs_storage_set_metadata1 result: " . fastdfs_storage_set_metadata1(
+		$file_id, array('color'=>'yellow', 'size'=>'1234567890', 'font'=>'MS Serif'), 
+		FDFS_STORAGE_SET_METADATA_FLAG_MERGE) . "\n";
+	$meta_list = fastdfs_storage_get_metadata1($file_id);
+	var_dump($meta_list);
 	echo "delete file $file_id return: " . fastdfs_storage_delete_file1($file_id) . "\n";
  }
 
@@ -85,10 +92,14 @@
 		$file_info['group_name'], $file_info['filename'], 
 		array('color'=>'yellow', 'size'=>32), FDFS_STORAGE_SET_METADATA_FLAG_OVERWRITE) . "\n";
 
+	$meta_list = $fdfs->storage_get_metadata($file_info['group_name'], $file_info['filename']);
+	var_dump($meta_list);
+
 	echo "delete file return: " . $fdfs->storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
  }
 
- $file_id = $fdfs->storage_upload_by_filebuff1("this\000is\001a\002test.", "bin");
+ $file_id = $fdfs->storage_upload_by_filebuff1("this\000is\001a\002test.", "bin", 
+		array('color'=>'none', 'size'=>0, 'font'=>'Aris'));
  if ($file_id)
  {
 	$file_content = $fdfs->storage_download_file_to_buff1($file_id);
@@ -97,6 +108,10 @@
 	echo 'storage_download_file_to_file1 result: ' . $fdfs->storage_download_file_to_file1($file_id, $local_filename) . "\n";
 	echo "storage_set_metadata1 result: " . $fdfs->storage_set_metadata1( 
 		$file_id, array('color'=>'yellow', 'size'=>32), FDFS_STORAGE_SET_METADATA_FLAG_MERGE) . "\n";
+
+	$meta_list = $fdfs->storage_get_metadata1($file_id);
+	var_dump($meta_list);
+
         echo "delete file $file_id return: " . $fdfs->storage_delete_file1($file_id) . "\n";
  }
 ?>
