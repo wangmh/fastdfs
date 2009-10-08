@@ -20,9 +20,23 @@
  var_dump(fastdfs_tracker_query_storage_fetch1($file_id));
  var_dump(fastdfs_tracker_query_storage_list1($file_id));
  var_dump(fastdfs_storage_upload_by_filename("/usr/include/stdio.h", null));
- var_dump(fastdfs_storage_upload_by_filename1("/usr/include/stdio.h", null, array('width'=>1024, 'height'=>800, 'font'=>'Aris')));
- var_dump(fastdfs_storage_upload_by_filebuff("this is a test.", "txt"));
- var_dump(fastdfs_storage_upload_by_filebuff1("this\000is\000a\000test.", "bin"));
+ var_dump(fastdfs_storage_upload_by_filename1("/usr/include/stdio.h", null, array('width'=>1024, 'height'=>800, 'font'=>'Aris', 'Homepage' => true, 'price' => 103.75, 'status' => FDFS_STORAGE_STATUS_ACTIVE)));
+ $file_info = fastdfs_storage_upload_by_filebuff("this is a test.", "txt");
+ if ($file_info)
+ {
+	var_dump($file_info);
+	$file_content = fastdfs_storage_download_file_to_buff($file_info['group_name'], $file_info['filename']);
+	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
+	echo "delete file return: " . fastdfs_storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
+ }
+
+ $file_id = fastdfs_storage_upload_by_filebuff1("this\000is\000a\000test.", "bin");
+ if ($file_id)
+ {
+	$file_content = fastdfs_storage_download_file_to_buff1($file_id);
+	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
+	echo "delete file $file_id return: " . fastdfs_storage_delete_file1($file_id) . "\n";
+ }
 
  $fdfs = new FastDFS();
  $tracker = $fdfs->tracker_get_connection();
@@ -43,6 +57,20 @@
  var_dump($fdfs->tracker_query_storage_list1($file_id));
  var_dump($fdfs->storage_upload_by_filename("/usr/include/stdio.h"));
  var_dump($fdfs->storage_upload_by_filename1("/usr/include/stdio.h", "c", array('width'=>1024, 'height'=>800, 'font'=>'Aris')));
- var_dump($fdfs->storage_upload_by_filebuff("this is a test.", "txt"));
- var_dump($fdfs->storage_upload_by_filebuff1("this\000is\001a\002test.", "bin"));
+ $file_info = $fdfs->storage_upload_by_filebuff("this is a test.", "txt");
+ if ($file_info)
+ {
+	var_dump($file_info);
+	$file_content = $fdfs->storage_download_file_to_buff($file_info['group_name'], $file_info['filename']);
+	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
+	echo "delete file return: " . $fdfs->storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
+ }
+
+ $file_id = $fdfs->storage_upload_by_filebuff1("this\000is\001a\002test.", "bin");
+ if ($file_id)
+ {
+	$file_content = $fdfs->storage_download_file_to_buff1($file_id);
+	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
+        echo "delete file $file_id return: " . $fdfs->storage_delete_file1($file_id) . "\n";
+ }
 ?>
