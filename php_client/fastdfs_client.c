@@ -242,7 +242,8 @@ static void php_fdfs_tracker_get_connection_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		pTrackerServer->sock);
 }
 
-static void php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
+static void php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAMETERS, \
+		FDFSPhpContext *pContext)
 {
 	int argc;
 	char *ip_addr;
@@ -256,6 +257,7 @@ static void php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
 		logError("file: "__FILE__", line: %d, " \
 			"fastdfs_connect_server parameters count: %d != 2", \
 			__LINE__, argc);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -264,6 +266,7 @@ static void php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
 	{
 		logError("file: "__FILE__", line: %d, " \
 				"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -271,7 +274,7 @@ static void php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
 		"%s", ip_addr);
 	server_info.port = port;
 
-	if (tracker_connect_server(&server_info) == 0)
+	if ((pContext->err_no=tracker_connect_server(&server_info)) == 0)
 	{
 		array_init(return_value);
 		add_assoc_stringl_ex(return_value, "ip_addr", \
@@ -287,7 +290,8 @@ static void php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
 	}
 }
 
-static void php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
+static void php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAMETERS, \
+		FDFSPhpContext *pContext)
 {
 	int argc;
 	zval *server_info;
@@ -302,6 +306,7 @@ static void php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
 		logError("file: "__FILE__", line: %d, " \
 			"fastdfs_disconnect_server parameters count: %d != 1", \
 			__LINE__, argc);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -309,7 +314,8 @@ static void php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
 				&server_info) == FAILURE)
 	{
 		logError("file: "__FILE__", line: %d, " \
-				"zend_parse_parameters fail!", __LINE__);
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -319,6 +325,7 @@ static void php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
 	if (zend_hash_find(tracker_hash, "sock", sizeof("sock"), \
 			(void **)ppp) == FAILURE)
 	{
+		pContext->err_no = ENOENT;
 		RETURN_BOOL(false);
 	}
 
@@ -329,10 +336,12 @@ static void php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAMETERS)
 		{
 			close(sock);
 		}
+		pContext->err_no = 0;
 		RETURN_BOOL(true);
 	}
 	else
 	{
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 }
@@ -885,6 +894,7 @@ static void php_fdfs_storage_delete_file_impl( \
 			"storage_delete_file parameters " \
 			"count: %d < %d or > %d", __LINE__, argc, \
 			min_param_count, max_param_count);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -902,6 +912,7 @@ static void php_fdfs_storage_delete_file_impl( \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"zend_parse_parameters fail!", __LINE__);
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 
@@ -909,6 +920,7 @@ static void php_fdfs_storage_delete_file_impl( \
 		pSeperator = strchr(new_file_id, FDFS_FILE_ID_SEPERATOR);
 		if (pSeperator == NULL)
 		{
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 
@@ -922,6 +934,7 @@ static void php_fdfs_storage_delete_file_impl( \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -930,6 +943,7 @@ static void php_fdfs_storage_delete_file_impl( \
 		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
+			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
 	}
@@ -940,6 +954,7 @@ static void php_fdfs_storage_delete_file_impl( \
 		if ((result=php_fdfs_get_tracker_from_hash(tracker_hash, \
 				pTrackerServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
@@ -955,12 +970,14 @@ static void php_fdfs_storage_delete_file_impl( \
 		if ((result=php_fdfs_get_tracker_from_hash(storage_hash, \
 				pStorageServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
 
 	result = storage_delete_file(pTrackerServer, pStorageServer, \
 			group_name, remote_filename);
+	pContext->err_no = result;
 	if (result != 0)
 	{
 		RETURN_BOOL(false);
@@ -1014,6 +1031,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 			"storage_download_file_to_buff parameters " \
 			"count: %d < %d or > %d", __LINE__, argc, \
 			min_param_count, max_param_count);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -1034,6 +1052,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"zend_parse_parameters fail!", __LINE__);
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 
@@ -1041,6 +1060,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 		pSeperator = strchr(new_file_id, FDFS_FILE_ID_SEPERATOR);
 		if (pSeperator == NULL)
 		{
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 
@@ -1055,6 +1075,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -1063,6 +1084,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
+			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1073,6 +1095,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 		if ((result=php_fdfs_get_tracker_from_hash(tracker_hash, \
 				pTrackerServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1088,6 +1111,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 		if ((result=php_fdfs_get_tracker_from_hash(storage_hash, \
 				pStorageServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1097,6 +1121,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 		file_offset, download_bytes, &file_buff, NULL, &file_size);
 	if (result != 0)
 	{
+		pContext->err_no = result;
 		RETURN_BOOL(false);
 	}
 
@@ -1107,6 +1132,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 			"emalloc %d bytes fail, errno: %d, error info: %s", \
 			__LINE__, file_size + 1, errno, strerror(errno));
 		free(file_buff);
+		pContext->err_no = errno != 0 ? errno : ENOMEM;
 		RETURN_BOOL(false);
 	}
 
@@ -1114,6 +1140,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 	*(new_file_buff + file_size) = '\0';
 	free(file_buff);
 
+	pContext->err_no = 0;
 	RETURN_STRINGL(new_file_buff, file_size, 0);
 }
 
@@ -1162,6 +1189,7 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 			"storage_set_metadata parameters " \
 			"count: %d < %d or > %d", __LINE__, argc, \
 			min_param_count, max_param_count);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -1182,6 +1210,7 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"zend_parse_parameters fail!", __LINE__);
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 
@@ -1189,6 +1218,7 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 		pSeperator = strchr(new_file_id, FDFS_FILE_ID_SEPERATOR);
 		if (pSeperator == NULL)
 		{
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 
@@ -1203,6 +1233,7 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -1211,6 +1242,7 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
+			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1221,6 +1253,7 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 		if ((result=php_fdfs_get_tracker_from_hash(tracker_hash, \
 				pTrackerServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1236,6 +1269,7 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 		if ((result=php_fdfs_get_tracker_from_hash(storage_hash, \
 				pStorageServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1243,6 +1277,7 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 	result=storage_do_download_file_ex(pTrackerServer, pStorageServer, \
 		FDFS_DOWNLOAD_TO_FILE, group_name, remote_filename, \
 		file_offset, download_bytes, &local_filename, NULL, &file_size);
+	pContext->err_no = result;
 	if (result != 0)
 	{
 		RETURN_BOOL(false);
@@ -1297,6 +1332,7 @@ static void php_fdfs_storage_get_metadata_impl( \
 			"storage_get_metadata parameters " \
 			"count: %d < %d or > %d", __LINE__, argc, \
 			min_param_count, max_param_count);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -1314,6 +1350,7 @@ static void php_fdfs_storage_get_metadata_impl( \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"zend_parse_parameters fail!", __LINE__);
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 
@@ -1321,6 +1358,7 @@ static void php_fdfs_storage_get_metadata_impl( \
 		pSeperator = strchr(new_file_id, FDFS_FILE_ID_SEPERATOR);
 		if (pSeperator == NULL)
 		{
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 
@@ -1334,6 +1372,7 @@ static void php_fdfs_storage_get_metadata_impl( \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -1342,6 +1381,7 @@ static void php_fdfs_storage_get_metadata_impl( \
 		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
+			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1352,6 +1392,7 @@ static void php_fdfs_storage_get_metadata_impl( \
 		if ((result=php_fdfs_get_tracker_from_hash(tracker_hash, \
 				pTrackerServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1367,12 +1408,14 @@ static void php_fdfs_storage_get_metadata_impl( \
 		if ((result=php_fdfs_get_tracker_from_hash(storage_hash, \
 				pStorageServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
 
 	result = storage_get_metadata(pTrackerServer, pStorageServer, \
 		group_name, remote_filename, &meta_list, &meta_count);
+	pContext->err_no = result;
 	if (result != 0)
 	{
 		RETURN_BOOL(false);
@@ -1434,6 +1477,7 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 			"fastdfs_tracker_query_storage_list parameters " \
 			"count: %d < %d or > %d", __LINE__, argc, \
 			min_param_count, max_param_count);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -1448,7 +1492,8 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 			&file_id, &file_id_len, &tracker_obj) == FAILURE)
 		{
 			logError("file: "__FILE__", line: %d, " \
-					"zend_parse_parameters fail!", __LINE__);
+				"zend_parse_parameters fail!", __LINE__);
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 
@@ -1456,6 +1501,7 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 		pSeperator = strchr(new_file_id, FDFS_FILE_ID_SEPERATOR);
 		if (pSeperator == NULL)
 		{
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 
@@ -1468,7 +1514,8 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 		&tracker_obj) == FAILURE)
 	{
 		logError("file: "__FILE__", line: %d, " \
-				"zend_parse_parameters fail!", __LINE__);
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -1477,6 +1524,7 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
+			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1487,6 +1535,7 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 		if ((result=php_fdfs_get_tracker_from_hash(tracker_hash, \
 				pTrackerServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1494,6 +1543,7 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 	result = tracker_query_storage_list(pTrackerServer, storage_servers, \
 			FDFS_MAX_SERVERS_EACH_GROUP, &server_count, \
 			group_name, remote_filename);
+	pContext->err_no = result;
 	if (result != 0)
 	{
 		RETURN_BOOL(false);
@@ -1555,8 +1605,9 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	if (argc < 1 || argc > 5)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"fastdfs_tracker_query_storage_list parameters " \
+			"storage_upload_file parameters " \
 			"count: %d < 1 or > 5", __LINE__, argc);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -1572,6 +1623,7 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -1592,8 +1644,9 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		else
 		{
 			logError("file: "__FILE__", line: %d, " \
-					"file_ext_name is not a string, type=%d!", \
-					__LINE__, ext_name_obj->type);
+				"file_ext_name is not a string, type=%d!", \
+				__LINE__, ext_name_obj->type);
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1614,6 +1667,7 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
+			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1624,6 +1678,7 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		if ((result=php_fdfs_get_tracker_from_hash(tracker_hash, \
 				pTrackerServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1643,6 +1698,7 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		if ((result=php_fdfs_get_tracker_from_hash(storage_hash, \
 				pStorageServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 
@@ -1654,6 +1710,7 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			logError("file: "__FILE__", line: %d, " \
 				"key \"store_path_index\" not exist!", \
 				__LINE__);
+			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
 
@@ -1670,6 +1727,7 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			logError("file: "__FILE__", line: %d, " \
 				"key \"store_path_index\" is invalid, " \
 				"type=%d!", __LINE__, (*data)->type);
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1685,6 +1743,7 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				&meta_list, &meta_count);
 		if (result != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1702,6 +1761,8 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			file_ext_name, meta_list, meta_count, \
 			group_name, remote_filename);
 	}
+
+	pContext->err_no = result;
 	if (meta_list != NULL)
 	{
 		free(meta_list);
@@ -1778,6 +1839,7 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			"storage_download_file_to_buff parameters " \
 			"count: %d < %d or > %d", __LINE__, argc, \
 			min_param_count, max_param_count);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -1798,6 +1860,7 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"zend_parse_parameters fail!", __LINE__);
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 
@@ -1805,6 +1868,7 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		pSeperator = strchr(new_file_id, FDFS_FILE_ID_SEPERATOR);
 		if (pSeperator == NULL)
 		{
+			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
 
@@ -1819,6 +1883,7 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
@@ -1827,6 +1892,7 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
+			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1837,6 +1903,7 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		if ((result=php_fdfs_get_tracker_from_hash(tracker_hash, \
 				pTrackerServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1852,6 +1919,7 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		if ((result=php_fdfs_get_tracker_from_hash(storage_hash, \
 				pStorageServer)) != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1867,6 +1935,7 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				&meta_list, &meta_count);
 		if (result != 0)
 		{
+			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
 	}
@@ -1887,12 +1956,14 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"invalid op_type: %s!", __LINE__, op_type_str);
+		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
 
 	result = storage_set_metadata(pTrackerServer, pStorageServer, \
 			group_name, remote_filename, \
 			meta_list, meta_count, op_type);
+	pContext->err_no = result;
 	if (meta_list != NULL)
 	{
 		free(meta_list);
@@ -1914,7 +1985,7 @@ return array for success, false for error
 ZEND_FUNCTION(fastdfs_tracker_get_connection)
 {
 	php_fdfs_tracker_get_connection_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
-			&php_context);
+		&php_context);
 }
 
 /*
@@ -1923,7 +1994,8 @@ return array for success, false for error
 */
 ZEND_FUNCTION(fastdfs_connect_server)
 {
-	php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+	php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&php_context);
 }
 
 /*
@@ -1932,7 +2004,8 @@ return true for success, false for error
 */
 ZEND_FUNCTION(fastdfs_disconnect_server)
 {
-	php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+	php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&php_context);
 }
 
 /*
@@ -2328,7 +2401,12 @@ return array for success, false for error
 */
 PHP_METHOD(FastDFS, connect_server)
 {
-	php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context));
 }
 
 /*
@@ -2337,7 +2415,12 @@ return true for success, false for error
 */
 PHP_METHOD(FastDFS, disconnect_server)
 {
-	php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context));
 }
 
 /*
