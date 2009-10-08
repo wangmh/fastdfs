@@ -27,6 +27,9 @@
 	var_dump($file_info);
 	$file_content = fastdfs_storage_download_file_to_buff($file_info['group_name'], $file_info['filename']);
 	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
+ 	$local_filename = 't1.txt';
+	echo 'storage_download_file_to_file result: ' . 
+		fastdfs_storage_download_file_to_file($file_info['group_name'], $file_info['filename'], $local_filename) . "\n";
 	echo "delete file return: " . fastdfs_storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
  }
 
@@ -35,6 +38,8 @@
  {
 	$file_content = fastdfs_storage_download_file_to_buff1($file_id);
 	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
+ 	$local_filename = 't2.txt';
+	echo 'storage_download_file_to_file1 result: ' . fastdfs_storage_download_file_to_file1($file_id, $local_filename) . "\n";
 	echo "delete file $file_id return: " . fastdfs_storage_delete_file1($file_id) . "\n";
  }
 
@@ -57,12 +62,16 @@
  var_dump($fdfs->tracker_query_storage_list1($file_id));
  var_dump($fdfs->storage_upload_by_filename("/usr/include/stdio.h"));
  var_dump($fdfs->storage_upload_by_filename1("/usr/include/stdio.h", "c", array('width'=>1024, 'height'=>800, 'font'=>'Aris')));
- $file_info = $fdfs->storage_upload_by_filebuff("this is a test.", "txt");
+ $file_info = $fdfs->storage_upload_by_filebuff("", "txt");
+
  if ($file_info)
  {
 	var_dump($file_info);
 	$file_content = $fdfs->storage_download_file_to_buff($file_info['group_name'], $file_info['filename']);
 	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
+ 	$local_filename = 't3.txt';
+	echo 'storage_download_file_to_file result: ' . 
+		$fdfs->storage_download_file_to_file($file_info['group_name'], $file_info['filename'], $local_filename) . "\n";
 	echo "delete file return: " . $fdfs->storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
  }
 
@@ -71,6 +80,8 @@
  {
 	$file_content = $fdfs->storage_download_file_to_buff1($file_id);
 	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
+ 	$local_filename = 't4.txt';
+	echo 'storage_download_file_to_file1 result: ' . $fdfs->storage_download_file_to_file1($file_id, $local_filename) . "\n";
         echo "delete file $file_id return: " . $fdfs->storage_delete_file1($file_id) . "\n";
  }
 ?>
