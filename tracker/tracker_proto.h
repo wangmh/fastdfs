@@ -49,8 +49,10 @@
 
 //for overwrite all old metadata
 #define STORAGE_SET_METADATA_FLAG_OVERWRITE	'O'
+#define STORAGE_SET_METADATA_FLAG_OVERWRITE_STR	"O"
 //for replace, insert when the meta item not exist, otherwise update it
 #define STORAGE_SET_METADATA_FLAG_MERGE		'M'
+#define STORAGE_SET_METADATA_FLAG_MERGE_STR	"M"
 
 #define FDFS_PROTO_PKG_LEN_SIZE		8
 #define FDFS_PROTO_CMD_SIZE		1
