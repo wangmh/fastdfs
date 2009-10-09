@@ -11,6 +11,7 @@
  $server = fastdfs_connect_server($tracker['ip_addr'], $tracker['port']); 
  var_dump($server);
  var_dump(fastdfs_disconnect_server($server));
+ var_dump($server);
 
  //var_dump(fastdfs_tracker_list_groups());
  //var_dump(fastdfs_tracker_query_storage_store());
