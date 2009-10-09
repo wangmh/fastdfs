@@ -381,10 +381,17 @@ static void php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	if ((*data)->type == IS_LONG)
 	{
 		sock = (*data)->value.lval;
-		if (sock > 0)
+		if (sock >= 0)
 		{
+			zval *sock_zval;
+			MAKE_STD_ZVAL(sock_zval);
+			ZVAL_LONG(sock_zval, -1);
+
+			zend_hash_update(tracker_hash, "sock", sizeof("sock"), 
+					&sock_zval, sizeof(zval *), NULL);
 			close(sock);
 		}
+
 		pContext->err_no = 0;
 		RETURN_BOOL(true);
 	}
