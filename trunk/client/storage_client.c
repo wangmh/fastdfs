@@ -69,6 +69,14 @@ static int storage_get_connection(TrackerServerInfo *pTrackerServer, \
 	int result;
 	if (*ppStorageServer == NULL)
 	{
+		if (pTrackerServer->sock < 0)
+		{
+			if ((result=tracker_connect_server(pTrackerServer))!=0)
+			{
+				return result;
+			}
+		}
+
 		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE)
 		{
 			result = tracker_query_storage_fetch(pTrackerServer, \
@@ -82,6 +90,12 @@ static int storage_get_connection(TrackerServerInfo *pTrackerServer, \
 
 		if (result != 0)
 		{
+			if (result >= ENETDOWN) //network error
+			{
+				close(pTrackerServer->sock);
+				pTrackerServer->sock = -1;
+			}
+
 			return result;
 		}
 
@@ -121,23 +135,36 @@ static int storage_get_upload_connection(TrackerServerInfo *pTrackerServer, \
 	int result;
 	if (*ppStorageServer == NULL)
 	{
-		if (*group_name == '\0')
+		if (pTrackerServer->sock < 0)
 		{
-			if ((result=tracker_query_storage_store_without_group( \
-				pTrackerServer, pNewStorage, \
-				store_path_index)) != 0)
+			if ((result=tracker_connect_server(pTrackerServer))!=0)
 			{
 				return result;
 			}
 		}
+
+		if (*group_name == '\0')
+		{
+			result = tracker_query_storage_store_without_group( \
+				pTrackerServer, pNewStorage, \
+				store_path_index);
+		}
 		else
 		{
-			if ((result=tracker_query_storage_store_with_group( \
+			result = tracker_query_storage_store_with_group( \
 				pTrackerServer, group_name, pNewStorage, \
-				store_path_index)) != 0)
+				store_path_index);
+		}
+
+		if (result != 0)
+		{
+			if (result >= ENETDOWN) //network error
 			{
-				return result;
+				close(pTrackerServer->sock);
+				pTrackerServer->sock = -1;
 			}
+
+			return result;
 		}
 
 		if ((result=tracker_connect_server(pNewStorage)) != 0)
@@ -267,6 +294,14 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
 	}
+	else
+	{
+		if (result >= ENETDOWN) //network error
+		{
+			close(pStorageServer->sock);
+			pStorageServer->sock = -1;
+		}
+	}
 
 	return result;
 }
@@ -348,6 +383,14 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	{
 		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
+	}
+	else
+	{
+		if (result >= ENETDOWN) //network error
+		{
+			close(pStorageServer->sock);
+			pStorageServer->sock = -1;
+		}
 	}
 
 	return result;
@@ -514,6 +557,14 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 	{
 		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
+	}
+	else
+	{
+		if (result >= ENETDOWN) //network error
+		{
+			close(pStorageServer->sock);
+			pStorageServer->sock = -1;
+		}
 	}
 
 	return result;
@@ -814,6 +865,15 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
 	}
+	else
+	{
+		if (result >= ENETDOWN) //network error
+		{
+			close(pStorageServer->sock);
+			pStorageServer->sock = -1;
+		}
+	}
+
 	if (pMetaData != NULL && pMetaData != meta_buff)
 	{
 		free(pMetaData);
@@ -1053,6 +1113,14 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
 	}
+	else
+	{
+		if (result >= ENETDOWN) //network error
+		{
+			close(pStorageServer->sock);
+			pStorageServer->sock = -1;
+		}
+	}
 
 	return result;
 }
@@ -1244,6 +1312,14 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	{
 		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
+	}
+	else
+	{
+		if (result >= ENETDOWN) //network error
+		{
+			close(pStorageServer->sock);
+			pStorageServer->sock = -1;
+		}
 	}
 
 	return result;

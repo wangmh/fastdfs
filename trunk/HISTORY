@@ -13,6 +13,7 @@ Version 1.22  2009-10-08
  * bug fixed: thread_stack_size not correct when the param thread_stack_size 
    not set in the config file
  * supply php extension (directory name: php_client)
+ * c client reconnect server (tracker or storage) when network IO error
 
 Version 1.21  2009-09-19
  * bug fixed: when source storage server synced file to new storage server done,
