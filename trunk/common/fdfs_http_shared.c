@@ -31,6 +31,7 @@ int fdfs_http_get_content_type_by_extname(FDFSHTTPParams *pParams, \
 	HashData *pHashData;
 	int  ext_len;
 
+	*content_type = '\0';
 	do
 	{
 	pExtName = strrchr(filename, '.');

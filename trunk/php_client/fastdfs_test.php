@@ -13,19 +13,19 @@
  var_dump(fastdfs_disconnect_server($server));
  var_dump($server);
 
- //var_dump(fastdfs_tracker_list_groups());
- //var_dump(fastdfs_tracker_query_storage_store());
- //var_dump(fastdfs_tracker_query_storage_update($group_name, $remote_filename));
- //var_dump(fastdfs_tracker_query_storage_fetch($group_name, $remote_filename));
- //var_dump(fastdfs_tracker_query_storage_list($group_name, $remote_filename));
- //var_dump(fastdfs_tracker_query_storage_update1($file_id));
- //var_dump(fastdfs_tracker_query_storage_fetch1($file_id));
- var_dump(fastdfs_tracker_query_storage_list1($file_id));
- var_dump(fastdfs_storage_upload_by_filename("/usr/include/stdio.h", null));
- var_dump(fastdfs_storage_upload_by_filename1("/usr/include/stdio.h", null, array('width'=>1024, 'height'=>800, 'font'=>'Aris', 'Homepage' => true, 'price' => 103.75, 'status' => FDFS_STORAGE_STATUS_ACTIVE)));
+
+ $storage = fastdfs_tracker_query_storage_store();
+
+ //var_dump(fastdfs_tracker_list_groups($tracker));
+
+ var_dump(fastdfs_storage_upload_by_filename("/usr/include/stdio.h", null, array(), null, $tracker, $storage));
+ var_dump(fastdfs_storage_upload_by_filename1("/usr/include/stdio.h", null, array('width'=>1024, 'height'=>800, 'font'=>'Aris', 'Homepage' => true, 'price' => 103.75, 'status' => FDFS_STORAGE_STATUS_ACTIVE), '', $tracker, $storage));
  $file_info = fastdfs_storage_upload_by_filebuff("this is a test.", "txt");
  if ($file_info)
  {
+	$group_name = $file_info['group_name'];
+	$remote_filename = $file_info['filename'];
+
 	var_dump($file_info);
 	$file_content = fastdfs_storage_download_file_to_buff($file_info['group_name'], $file_info['filename']);
 	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
@@ -59,6 +59,14 @@
 	var_dump($meta_list);
 	echo "delete file $file_id return: " . fastdfs_storage_delete_file1($file_id) . "\n";
  }
+
+ var_dump(fastdfs_tracker_query_storage_update($group_name, $remote_filename));
+ var_dump(fastdfs_tracker_query_storage_fetch($group_name, $remote_filename));
+ var_dump(fastdfs_tracker_query_storage_list($group_name, $remote_filename));
+ var_dump(fastdfs_tracker_query_storage_update1($file_id));
+ var_dump(fastdfs_tracker_query_storage_fetch1($file_id, $tracker));
+ var_dump(fastdfs_tracker_query_storage_list1($file_id, $tracker));
+
  echo "fastdfs_tracker_close_all_connections result: " . fastdfs_tracker_close_all_connections() . "\n";
 
  $fdfs = new FastDFS();

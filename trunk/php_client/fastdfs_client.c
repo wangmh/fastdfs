@@ -63,6 +63,16 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 #endif
 
 
+#define CLEAR_HASH_SOCK_FIELD(php_hash) \
+	{ \
+	    zval *sock_zval; \
+	    MAKE_STD_ZVAL(sock_zval); \
+	    ZVAL_LONG(sock_zval, -1); \
+	\
+	    zend_hash_update(php_hash, "sock", sizeof("sock"), \
+			    &sock_zval, sizeof(zval *), NULL); \
+	}
+
 // Every user visible function must have an entry in fastdfs_client_functions[].
 	function_entry fastdfs_client_functions[] = {
 		ZEND_FE(fastdfs_connect_server, NULL)
@@ -383,14 +393,10 @@ static void php_fdfs_disconnect_server_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		sock = (*data)->value.lval;
 		if (sock >= 0)
 		{
-			zval *sock_zval;
-			MAKE_STD_ZVAL(sock_zval);
-			ZVAL_LONG(sock_zval, -1);
-
-			zend_hash_update(tracker_hash, "sock", sizeof("sock"), 
-					&sock_zval, sizeof(zval *), NULL);
 			close(sock);
 		}
+
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
 
 		pContext->err_no = 0;
 		RETURN_BOOL(true);
@@ -492,6 +498,7 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	int group_count;
 	int result;
         int storage_count;
+	int saved_tracker_sock;
 	FDFSStorageInfo storage_infos[FDFS_MAX_SERVERS_EACH_GROUP];
 	FDFSStorageInfo *pStorage;
 	FDFSStorageInfo *pStorageEnd;
@@ -517,6 +524,9 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
+
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
 	}
 	else
 	{
@@ -537,10 +547,19 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+
+		saved_tracker_sock = pTrackerServer->sock;
 	}
 
-	if ((result=tracker_list_groups(pTrackerServer, group_stats, \
-		FDFS_MAX_GROUPS, &group_count)) != 0)
+	result = tracker_list_groups(pTrackerServer, group_stats, \
+		FDFS_MAX_GROUPS, &group_count);
+	if (tracker_hash != NULL && pTrackerServer->sock != \
+		saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
+	}
+
+	if (result != 0)
 	{
 		pContext->err_no = result;
 		RETURN_BOOL(false);
@@ -721,6 +740,7 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 	TrackerServerInfo storage_server;
 	TrackerServerInfo *pTrackerServer;
 	int store_path_index;
+	int saved_tracker_sock;
 	int result;
 
     	argc = ZEND_NUM_ARGS();
@@ -743,6 +763,8 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
 	}
 	else
 	{
@@ -763,6 +785,7 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = pTrackerServer->sock;
 	}
 
 	if (group_name != NULL && group_nlen > 0)
@@ -774,6 +797,12 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 	{
 		result = tracker_query_storage_store_without_group( \
 			pTrackerServer, &storage_server, &store_path_index);
+	}
+
+	if (tracker_hash != NULL && pTrackerServer->sock != \
+		saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
 	}
 
 	pContext->err_no = result;
@@ -812,6 +841,7 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 	int result;
 	int min_param_count;
 	int max_param_count;
+	int saved_tracker_sock;
 	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 64];
 
 	if (bFileId)
@@ -885,6 +915,8 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
 	}
 	else
 	{
@@ -896,10 +928,17 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = pTrackerServer->sock;
 	}
 
 	result = tracker_do_query_storage(pTrackerServer, &storage_server, \
 			cmd, group_name, remote_filename);
+
+	if (tracker_hash != NULL && pTrackerServer->sock != \
+		saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
+	}
 
 	pContext->err_no = result;
 	if (result != 0)
@@ -936,6 +975,8 @@ static void php_fdfs_storage_delete_file_impl( \
 	int result;
 	int min_param_count;
 	int max_param_count;
+	int saved_tracker_sock;
+	int saved_storage_sock;
 	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 64];
 
 	if (bFileId)
@@ -1011,6 +1052,8 @@ static void php_fdfs_storage_delete_file_impl( \
 			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
 	}
 	else
 	{
@@ -1022,11 +1065,14 @@ static void php_fdfs_storage_delete_file_impl( \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = pTrackerServer->sock;
 	}
 
 	if (storage_obj == NULL)
 	{
 		pStorageServer = NULL;
+		storage_hash = NULL;
+		saved_storage_sock = -1;
 	}
 	else
 	{
@@ -1038,10 +1084,22 @@ static void php_fdfs_storage_delete_file_impl( \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_storage_sock = pStorageServer->sock;
 	}
 
 	result = storage_delete_file(pTrackerServer, pStorageServer, \
 			group_name, remote_filename);
+	if (tracker_hash != NULL && pTrackerServer->sock != \
+		saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
+	}
+	if (pStorageServer != NULL && pStorageServer->sock != \
+		saved_storage_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(storage_hash)
+	}
+
 	pContext->err_no = result;
 	if (result != 0)
 	{
@@ -1076,6 +1134,8 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 	int result;
 	int min_param_count;
 	int max_param_count;
+	int saved_tracker_sock;
+	int saved_storage_sock;
 	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 64];
 
 	if (bFileId)
@@ -1154,6 +1214,8 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
 	}
 	else
 	{
@@ -1165,11 +1227,14 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = pTrackerServer->sock;
 	}
 
 	if (storage_obj == NULL)
 	{
 		pStorageServer = NULL;
+		storage_hash = NULL;
+		saved_storage_sock = -1;
 	}
 	else
 	{
@@ -1181,11 +1246,23 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_storage_sock = pStorageServer->sock;
 	}
 
 	result=storage_do_download_file_ex(pTrackerServer, pStorageServer, \
 		FDFS_DOWNLOAD_TO_BUFF, group_name, remote_filename, \
 		file_offset, download_bytes, &file_buff, NULL, &file_size);
+	if (tracker_hash != NULL && pTrackerServer->sock != \
+		saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
+	}
+	if (pStorageServer != NULL && pStorageServer->sock != \
+		saved_storage_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(storage_hash)
+	}
+
 	if (result != 0)
 	{
 		pContext->err_no = result;
@@ -1236,6 +1313,8 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 	int result;
 	int min_param_count;
 	int max_param_count;
+	int saved_tracker_sock;
+	int saved_storage_sock;
 	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 64];
 
 	if (bFileId)
@@ -1315,6 +1394,8 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
 	}
 	else
 	{
@@ -1326,11 +1407,14 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = pTrackerServer->sock;
 	}
 
 	if (storage_obj == NULL)
 	{
 		pStorageServer = NULL;
+		storage_hash = NULL;
+		saved_storage_sock = -1;
 	}
 	else
 	{
@@ -1342,11 +1426,23 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_storage_sock = pStorageServer->sock;
 	}
 
 	result=storage_do_download_file_ex(pTrackerServer, pStorageServer, \
 		FDFS_DOWNLOAD_TO_FILE, group_name, remote_filename, \
 		file_offset, download_bytes, &local_filename, NULL, &file_size);
+	if (tracker_hash != NULL && pTrackerServer->sock != \
+		saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
+	}
+	if (pStorageServer != NULL && pStorageServer->sock != \
+		saved_storage_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(storage_hash)
+	}
+
 	pContext->err_no = result;
 	if (result != 0)
 	{
@@ -1382,6 +1478,8 @@ static void php_fdfs_storage_get_metadata_impl( \
 	int result;
 	int min_param_count;
 	int max_param_count;
+	int saved_tracker_sock;
+	int saved_storage_sock;
 	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 64];
 
 	if (bFileId)
@@ -1457,6 +1555,8 @@ static void php_fdfs_storage_get_metadata_impl( \
 			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
 	}
 	else
 	{
@@ -1468,11 +1568,14 @@ static void php_fdfs_storage_get_metadata_impl( \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = pTrackerServer->sock;
 	}
 
 	if (storage_obj == NULL)
 	{
 		pStorageServer = NULL;
+		storage_hash = NULL;
+		saved_storage_sock = -1;
 	}
 	else
 	{
@@ -1484,10 +1587,22 @@ static void php_fdfs_storage_get_metadata_impl( \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_storage_sock = pStorageServer->sock;
 	}
 
 	result = storage_get_metadata(pTrackerServer, pStorageServer, \
 		group_name, remote_filename, &meta_list, &meta_count);
+	if (tracker_hash != NULL && pTrackerServer->sock != \
+		saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
+	}
+	if (pStorageServer != NULL && pStorageServer->sock != \
+		saved_storage_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(storage_hash)
+	}
+
 	pContext->err_no = result;
 	if (result != 0)
 	{
@@ -1530,6 +1645,7 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 	int server_count;
 	int min_param_count;
 	int max_param_count;
+	int saved_tracker_sock;
 	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 64];
 
 	if (bFileId)
@@ -1603,6 +1719,8 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
 	}
 	else
 	{
@@ -1614,11 +1732,17 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = pTrackerServer->sock;
 	}
 
 	result = tracker_query_storage_list(pTrackerServer, storage_servers, \
 			FDFS_MAX_SERVERS_EACH_GROUP, &server_count, \
 			group_name, remote_filename);
+	if (tracker_hash != NULL && pTrackerServer->sock != \
+		saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
+	}
 	pContext->err_no = result;
 	if (result != 0)
 	{
@@ -1661,7 +1785,6 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	int filename_len;
 	char *file_ext_name;
 	zval *ext_name_obj;
-	int store_path_index;
 	zval *metadata_obj;
 	zval *tracker_obj;
 	zval *storage_obj;
@@ -1674,15 +1797,18 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	TrackerServerInfo *pStorageServer;
 	FDFSMetaData *meta_list;
 	int meta_count;
+	int store_path_index;
+	int saved_tracker_sock;
+	int saved_storage_sock;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char remote_filename[128];
 
     	argc = ZEND_NUM_ARGS();
-	if (argc < 1 || argc > 5)
+	if (argc < 1 || argc > 6)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"storage_upload_file parameters " \
-			"count: %d < 1 or > 5", __LINE__, argc);
+			"count: %d < 1 or > 6", __LINE__, argc);
 		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
@@ -1746,6 +1872,8 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
 	}
 	else
 	{
@@ -1757,12 +1885,15 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = pTrackerServer->sock;
 	}
 
 	if (storage_obj == NULL)
 	{
 		pStorageServer = NULL;
 		store_path_index = 0;
+		storage_hash = NULL;
+		saved_storage_sock = -1;
 	}
 	else
 	{
@@ -1806,6 +1937,7 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			pContext->err_no = EINVAL;
 			RETURN_BOOL(false);
 		}
+		saved_storage_sock = pStorageServer->sock;
 	}
 
 	if (metadata_obj == NULL)
@@ -1836,6 +1968,17 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			store_path_index, local_filename, filename_len, \
 			file_ext_name, meta_list, meta_count, \
 			group_name, remote_filename);
+	}
+
+	if (tracker_hash != NULL && pTrackerServer->sock != \
+		saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
+	}
+	if (pStorageServer != NULL && pStorageServer->sock != \
+		saved_storage_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(storage_hash)
 	}
 
 	pContext->err_no = result;
@@ -1895,6 +2038,8 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	int meta_count;
 	int min_param_count;
 	int max_param_count;
+	int saved_tracker_sock;
+	int saved_storage_sock;
 	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 64];
 
 	if (bFileId)
@@ -1973,6 +2118,8 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			pContext->err_no = ENOENT;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
 	}
 	else
 	{
@@ -1984,11 +2131,14 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_tracker_sock = pTrackerServer->sock;
 	}
 
 	if (storage_obj == NULL)
 	{
 		pStorageServer = NULL;
+		storage_hash = NULL;
+		saved_storage_sock = -1;
 	}
 	else
 	{
@@ -2000,6 +2150,7 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
+		saved_storage_sock = pStorageServer->sock;
 	}
 
 	if (metadata_obj == NULL)
@@ -2041,6 +2192,17 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	result = storage_set_metadata(pTrackerServer, pStorageServer, \
 			group_name, remote_filename, \
 			meta_list, meta_count, op_type);
+	if (tracker_hash != NULL && pTrackerServer->sock != \
+		saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
+	}
+	if (pStorageServer != NULL && pStorageServer->sock != \
+		saved_storage_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(storage_hash)
+	}
+
 	pContext->err_no = result;
 	if (meta_list != NULL)
 	{
