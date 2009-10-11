@@ -78,7 +78,9 @@ Item detail
 ---------------------------------------------------
 | allow_hosts           | string |   *     |  N   |
 ---------------------------------------------------
-| sync_log_buff_interval| string |  10(s)  |  N   |
+| sync_log_buff_interval| int    |  10(s)  |  N   |
+---------------------------------------------------
+| thread_stack_size     | string |  1M     |  N   |
 ---------------------------------------------------
 memo:
    * base_path is the base path of sub dirs: 

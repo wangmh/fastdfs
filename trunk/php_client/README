@@ -1,24 +1,24 @@
 
 Copyright (C) 2008 Happy Fish / YuQing
 
-FastDHT client php extension may be copied only under the terms of 
+FastDFS client php extension may be copied only under the terms of 
 the Less GNU General Public License (LGPL).
 
-Please visit the FastDHT Home Page for more detail.
-Google code (English language): http://code.google.com/p/fastdht/
-Chinese language: http://fastdht.csource.com/
+Please visit the FastDFS Home Page for more detail.
+Google code (English language): http://code.google.com/p/fastdfs/
+Chinese language: http://www.csource.com/
 
-In file fastdht_client.ini, item fastdht_client.config_file point to
-the FastDHT client config filename. Please read ../INSTALL file to know 
-about how to config FastDHT client.
+In file fastdfs_client.ini, item fastdfs_client.tracker_group# point to
+the FastDFS client config filename. Please read ../INSTALL file to know 
+about how to config FastDFS client.
 
-FastDHT client php extension compiled under PHP 5.2.5, Steps:
+FastDFS client php extension compiled under PHP 5.2.5, Steps:
 phpize
 ./configure
 make
 
 #copy lib file to php extension directory, eg. /usr/lib/php/20060613/
-cp modules/fastdht_client.so  /usr/lib/php/20060613/
+cp modules/fastdfs_client.so  /usr/lib/php/20060613/
 
 #copy fastdfs_client.ini to PHP etc directory, eg. /etc/php/
 cp fastdfs_client.ini /etc/php/
@@ -26,280 +26,372 @@ cp fastdfs_client.ini /etc/php/
 #modify config file fastdfs_client.ini, such as:
 vi /etc/php/fastdfs_client.ini
 
-#run test_fastdht.php
-php test_fastdht.php
-php test_fastdht_batch.php
+#run fastdfs_test.php
+php fastdfs_test.php
 
 
 ####parameters in fastdfs_client.ini####
-fastdht_client.network_timeout: network timeout, 
-                                default value is 60 seconds
-
-fastdht_client.base_path: base absolute path, must set this item
-
-fastdht_client.log_level: standard log level as syslog, case insensitive, 
-value list:
-   emerg for emergency
-   alert
-   crit for critical
-   error
-   warn for warning
-   notice
-   info (default)
-   debug
-
-fastdht_client.log_filename: log filename, do not include path and 
-                             extension name 
-
-fastdht_client.config_count: config file count, default value is 1
-fastdht_client.config_file#: config filename, must include absolute path, 
+fastdfs_client.tracker_group_count: config file count, default value is 1
+fastdfs_client.tracker_group#: config filename, must include absolute path, 
                              # means number, base 0,
-                             such as fastdht_client.config_file0
+                             such as fastdfs_client.tracker_group0
+			     the config file is same as conf/client.conf
 
 
+FastDFS PHP functions:
 
-FastDHT PHP functions:
-
-int fastdht_set(string namespace, string object_id, string key, 
-		string value [, int expires = FDHT_EXPIRES_NEVER])
-set value of the key
-params:
-	namespace: the namespace of the key, can be empty
-	object_id: the object ID of the key, can be empty
-	key: the key name, can't be empty
-	value: value of the key, can be empty
-	expires: optional, FDHT_EXPIRES_NEVER for persistent 
-                 storage (never expired)
-return: 0 for success, != 0 for error (errno)
+long fastdfs_get_last_error_no()
+return last error no
 
 
-string/int/boolean fastdht_get(string namespace, string object_id, string key
-		[, boolean return_errno = false, int expires = FDHT_EXPIRES_NONE])
-get value of the key
-params:
-	namespace: the namespace of the key, can be empty
-	object_id: the object ID of the key, can be empty
-	key: the key name, can't be empty
-	return_errno: optional, when set to true, return UNIX errno when 
-		failure such as key not exist
-	expires: optional, unix timestamp, omitted or FDHT_EXPIRES_NONE do not 
-		change the expire time of the key
-return: string value for success, 
-        return int value (errno) for error when return_errno set to true, 
-        return false for error when return_errno set to false 
+string fastdfs_get_last_error_info()
+return last error info
 
 
-string/int/boolean fastdht_inc(string namespace, string object_id, string key, 
-		int increment [, bool return_errno = false, int expires])
-increase value of the key, if the key does not exist,
-set the value to increment value (param named "increment")
-params:
-	namespace: the namespace of the key, can be empty
-	object_id: the object ID of the key, can be empty
-	key: the key name, can't be empty
-	increment: the increment value, can be negative
-	return_errno: optional, when set to true, return UNIX errno when 
-		failure such as key not exist
-	expires: optional, omitted or FDHT_EXPIRES_NEVER for persistent
-		 storage (never expired)
-return: the value after increment, string value for success, 
-        return int value (errno) for error when return_errno set to true, 
-        return false for error when return_errno set to false 
+array fastdfs_storage_upload_by_filename(string local_filename
+	[, string file_ext_name, array meta_list, string group_name, 
+	array tracker_server, array storage_server])
+upload local file to storage server
+parameters:
+	local_filename: the local filename
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. 
+       the returned array includes elements: group_name and filename
 
 
-int fastdht_delete(string namespace, string object_id, string key)
-delete the key
-params:
-	namespace: the namespace of the key, can be empty
-	object_id: the object ID of the key, can be empty
-	key: the key name, can't be empty
-return: 0 for success, != 0 for error (errno)
+string fastdfs_storage_upload_by_filename1(string local_filename, 
+	[string file_ext_name, string meta_list, string group_name, 
+	array tracker_server, array storage_server])
+upload local file to storage server
+parameters:
+	local_filename: the local filename
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return file_id for success, false for error.
 
 
-int/array fastdht_batch_set(string namespace, string object_id, 
-		array key_list, [, int expires = FDHT_EXPIRES_NEVER])
-batch set keys
-params:
-	namespace: the namespace of the key, can't be empty
-	object_id: the object ID of the key, can't be empty
-	key_list: key value pair array
-	expires: optional, omitted or FDHT_EXPIRES_NEVER for persistent
-		 storage (never expired)
-return 0 for success, != 0 for error. 
-	return key => errno array when set some key fail
+array fastdfs_storage_upload_by_filebuff(string file_buff, 
+	[string file_ext_name, string meta_list, string group_name, 
+	array tracker_server, array storage_server])
+upload the file buff to storage server
+parameters:
+	file_buff: the file content
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. 
+       the returned array includes elements: group_name and filename
 
 
-array/int/boolean fastdht_batch_get(string namespace, string object_id, 
-		array key_list [, bool return_errno = false, 
-		int expires = FDHT_EXPIRES_NONE])
-batch get keys
-params:
-	namespace: the namespace of the key, can't be empty
-	object_id: the object ID of the key, can't be empty
-	key_list: the key array to fetch
-	return_errno: optional, when set to true, return UNIX errno when 
-		failure such as key not exist
-	expires: optional, unix timestamp, omitted or FDHT_EXPIRES_NONE do not 
-		change the expire time of the key
-return  return int value or false for error
-	return key => int value (errno) or false when set the key fail
+string fastdfs_storage_upload_by_filebuff1(string file_buff, 
+	[string file_ext_name, string meta_list, string group_name, 
+	array tracker_server, array storage_server])
+upload the file buff to storage server
+parameters:
+	file_buff: the file content
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return file_id for success, false for error
 
 
-int/array fastdht_batch_delete(string namespace, string object_id, array key_list)
-batch delete keys
-params:
-	namespace: the namespace of the key, can't be empty
-	object_id: the object ID of the key, can't be empty
-	key_list: the key array to delete
-return 0 for success, != 0 for error
-	return key => errno array when set some key fail
+boolean fastdfs_storage_delete_file(string group_name, string remote_filename 
+	[, array tracker_server, array storage_server])
+delete file from storage server
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
 
 
-array/int/boolean fastdht_stat(int server_index[, bool return_errno])
-get specified server stat info
-params:
-	server_index: server index based 0
-	return_errno: optional, when set to true, return UNIX errno when 
-		failure such as connect server fail
-return array if success. 
-       if fail, return int errno when return_errno set to true,
-                return false when return_errno set to false
+boolean fastdfs_storage_delete_file1(string file_id
+	[, array tracker_server, array storage_server])
+delete file from storage server
+parameters:
+	file_id: the file id to be deleted
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
 
 
-array/int/boolean fastdht_stat_all([bool return_errno])
-get all server stat info
-params:
-	return_errno: optional, when set to true, return UNIX errno when 
-		failure such as connect server fail
-return array if success. key is ip_addr:port such as 10.62.164.84:11411 and
-       the value is assoc array. 
-       if fail, the value is errno (int number) when return_errno set to true,
-                the value is false when return_errno set to false
+string fastdfs_storage_download_file_to_buff(string group_name, 
+	string remote_filename [, long file_offset, long download_bytes,
+	array tracker_server, array storage_server])
+get file content from storage server
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to 
+                        the file end
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return the file content for success, false for error
 
 
-FastDHT Class Info:
-
-class FastDHT([int config_index = 0, boolean bMultiThread = false]);
-constructor
-params:
-	config_index: use which config file, base 0
-	bMultiThread: if in multi-thread
-
-
-int FastDHT::set(string namespace, string object_id, string key, 
-		string value [, int expires = FDHT_EXPIRES_NEVER])
-set value of the key
-params:
-	namespace: the namespace of the key, can be empty
-	object_id: the object ID of the key, can be empty
-	key: the key name, can't be empty
-	value: value of the key, can be empty
-	expires: optional, FDHT_EXPIRES_NEVER for persistent 
-                 storage (never expired)
-return: 0 for success, != 0 for error (errno)
+string fastdfs_storage_download_file_to_buff1(string file_id
+        [, long file_offset, long download_bytes,
+	array tracker_server, array storage_server])
+get file content from storage server
+parameters:
+	file_id: the file id of the file
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to 
+                        the file end
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return the file content for success, false for error
 
 
-string/int/boolean FastDHT::get(string namespace, string object_id, string key
-		[, return_errno = false, int expires = FDHT_EXPIRES_NONE])
-params:
-	namespace: the namespace of the key, can be empty
-	object_id: the object ID of the key, can be empty
-	key: the key name, can't be empty
-	return_errno: optional, when set to true, return UNIX errno when 
-		failure such as key not exist
-	expires: optional, unix timestamp, omitted or FDHT_EXPIRES_NONE do not 
-		change the expire time of the key
-return string value for success, 
-        return int value (errno) for error when return_errno set to true, 
-        return false for error when return_errno set to false 
+boolean fastdfs_storage_download_file_to_file(string group_name, 
+	string remote_filename, string local_filename [, long file_offset, 
+	long download_bytes, array tracker_server, array storage_server])
+download file from storage server to local file 
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	local_filename: the local filename to save the file content
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to 
+                        the file end
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
 
 
-string/int/boolean FastDHT::inc(string namespace, string object_id, string key, 
-		int increment [, bool return_errno = false, int expires])
-increase value of the key, if the key does not exist,
-set the value to increment value (param named "increment")
-params:
-	namespace: the namespace of the key, can be empty
-	object_id: the object ID of the key, can be empty
-	key: the key name, can't be empty
-	increment: the increment value, can be negative
-	return_errno: optional, when set to true, return UNIX errno when 
-		failure such as key not exist
-	expires: optional, omitted or FDHT_EXPIRES_NEVER for persistent
-		 storage (never expired)
-return: the value after increment, string value for success, 
-        return int value (errno) for error when return_errno set to true, 
-        return false for error when return_errno set to false 
+boolean fastdfs_storage_download_file_to_file1(string file_id, 
+	string local_filename [, long file_offset, long download_bytes, 
+	array tracker_server, array storage_server])
+download file from storage server to local file 
+parameters:
+	file_id: the file id of the file
+	local_filename: the local filename to save the file content
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to 
+                        the file end
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
 
 
-int FastDHT::delete(string namespace, string object_id, string key)
-delete the key
-params:
-	namespace: the namespace of the key, can be empty
-	object_id: the object ID of the key, can be empty
-	key: the key name, can't be empty
-return: 0 for success, != 0 for error (errno)
+boolean fastdfs_storage_set_metadata(string group_name, string remote_filename,
+	array meta_list [, string op_type, array tracker_server, 
+	array storage_server])
+set meta data of the file
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	meta_list: meta data assoc array to be set, such as
+                   array('width'=>1024, 'height'=>768)
+	op_type: operate flag, can be one of following flags:
+		STORAGE_SET_METADATA_FLAG_MERGE: combined with the old meta data
+		STORAGE_SET_METADATA_FLAG_OVERWRITE: overwrite the old meta data
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
 
 
-int/array FastDHT::batch_set(string namespace, string object_id, 
-		array key_list, [, int expires = FDHT_EXPIRES_NEVER])
-batch set keys
-params:
-	namespace: the namespace of the key, can't be empty
-	object_id: the object ID of the key, can't be empty
-	key_list: key value pair array
-	expires: optional, omitted or FDHT_EXPIRES_NEVER for persistent
-		 storage (never expired)
-return 0 for success, != 0 for error. 
-	return key => errno array when set some key fail
+boolean fastdfs_storage_set_metadata1(string file_id, array meta_list
+	[, string op_type, array tracker_server, array storage_server])
+set meta data of the file
+parameters:
+	file_id: the file id of the file
+	meta_list: meta data assoc array to be set, such as
+                   array('width'=>1024, 'height'=>768)
+	op_type: operate flag, can be one of following flags:
+		STORAGE_SET_METADATA_FLAG_MERGE: combined with the old meta data
+		STORAGE_SET_METADATA_FLAG_OVERWRITE: overwrite the old meta data
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
 
 
-array/int/boolean FastDHT::batch_get(string namespace, string object_id, 
-		array key_list [, bool return_errno = false, 
-		int expires = FDHT_EXPIRES_NONE])
-batch get keys
-params:
-	namespace: the namespace of the key, can't be empty
-	object_id: the object ID of the key, can't be empty
-	key_list: the key array to fetch
-	return_errno: optional, when set to true, return UNIX errno when 
-		failure such as key not exist
-	expires: optional, unix timestamp, omitted or FDHT_EXPIRES_NONE do not 
-		change the expire time of the key
-return  return int value or false for error
-	return key => int value (errno) or false when set the key fail
+array fastdfs_storage_get_metadata(string group_name, string remote_filename
+	[, array tracker_server, array storage_server])
+get meta data of the file
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error
+       returned array like: array('width' => 1024, 'height' => 768)
 
 
-int/array FastDHT::batch_delete(string namespace, string object_id, array key_list)
-batch delete keys
-params:
-	namespace: the namespace of the key, can't be empty
-	object_id: the object ID of the key, can't be empty
-	key_list: the key array to delete
-return 0 for success, != 0 for error
-	return key => errno array when set some key fail
+array fastdfs_storage_get_metadata1(string file_id
+	[, array tracker_server, array storage_server])
+get meta data of the file
+parameters:
+	file_id: the file id of the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error
+       returned array like: array('width' => 1024, 'height' => 768)
 
 
-void FastDHT::close()
-close connections to FastDHT servers
+array fastdfs_connect_server(string ip_addr, int port)
+connect to the server
+parameters:
+	ip_addr: the ip address of the server
+	port: the port of the server
+return assoc array for success, false for error
 
-array/int/boolean FastDHT::stat(int server_index[, bool return_errno])
-get specified server stat info
-params:
-	server_index: server index based 0
-	return_errno: optional, when set to true, return UNIX errno when 
-		failure such as connect server fail
-return array if success. 
-       if fail, return int errno when return_errno set to true,
-                return false when return_errno set to false
 
-array/int/boolean FastDHT::stat_all([bool return_errno])
-get all server stat info
-params:
-	return_errno: optional, when set to true, return UNIX errno when 
-		failure such as connect server fail
-return array if success. key is ip_addr:port such as 10.62.164.84:11411 and
-       the value is assoc array. 
-       if fail, the value is errno (int number) when return_errno set to true,
-                the value is false when return_errno set to false
+boolean fastdfs_disconnect_server(array server_info)
+disconnect from the server
+parameters:
+	server_info: the assoc array including elements:
+                     ip_addr, port and sock
+return true for success, false for error
+
+
+array fastdfs_tracker_get_connection()
+get a connected tracker server
+return assoc array for success, false for error
+       the assoc array including elements: ip_addr, port and sock
+
+
+boolean fastdfs_tracker_make_all_connections()
+connect to all tracker servers
+return true for success, false for error
+
+
+boolean fastdfs_tracker_close_all_connections()
+connect all connections to the tracker servers
+return true for success, false for error
+
+
+array fastdfs_tracker_list_groups([string group_name, array tracker_server])
+get group stat info
+parameters:
+	group_name: specify the group name, null or empty string means all groups
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return index array for success, false for error, each group as a array element
+
+
+array fastdfs_tracker_query_storage_store([string group_name, 
+		array tracker_server])
+get the storage server info to upload file
+parameters:
+	group_name: specify the group name
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. the assoc array including
+       elements: ip_addr, port, sock and store_path_index
+
+
+array fastdfs_tracker_query_storage_update(string group_name, 
+		string remote_filename [, array tracker_server])
+get the storage server info to set metadata
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error
+       the assoc array including elements: ip_addr, port and sock
+
+
+array fastdfs_tracker_query_storage_update1(string file_id, 
+		[, array tracker_server])
+get the storage server info to set metadata
+parameters:
+	file_id: the file id of the file
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error
+       the assoc array including elements: ip_addr, port and sock
+
+
+array fastdfs_tracker_query_storage_fetch(string group_name, 
+		string remote_filename [, array tracker_server])
+get the storage server info to download file (or get metadata)
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error
+       the assoc array including elements: ip_addr, port and sock
+
+array fastdfs_tracker_query_storage_fetch1(string file_id 
+		[, array tracker_server])
+get the storage server info to download file (or get metadata)
+parameters:
+	file_id: the file id of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error
+       the assoc array including elements: ip_addr, port and sock
+
+
+array fastdfs_tracker_query_storage_list(string group_name, 
+		string remote_filename [, array tracker_server])
+get the storage server list which can retrieve the file content or metadata
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return index array for success, false for error.
+       each server as an array element
+
+
+array fastdfs_tracker_query_storage_list1(string file_id
+		[, array tracker_server])
+get the storage server list which can retrieve the file content or metadata
+parameters:
+	file_id: the file id of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return index array for success, false for error. 
+       each server as an array element
 

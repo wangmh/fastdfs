@@ -508,7 +508,7 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	if (argc > 2)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"fastdfs_tracker_list_groups parameters count: %d > 2", 
+			"tracker_list_groups parameters count: %d > 2", 
 			__LINE__, argc);
 		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
@@ -516,7 +516,17 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 
 	group_name = NULL;
 	group_nlen = 0;
-	if (argc == 0)
+	tracker_obj = NULL;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sa", \
+			&group_name, &group_nlen, &tracker_obj) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (tracker_obj == NULL)
 	{
 		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
@@ -530,15 +540,6 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	}
 	else
 	{
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a|s", \
-			&tracker_obj, &group_name, &group_nlen) == FAILURE)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"zend_parse_parameters fail!", __LINE__);
-			pContext->err_no = EINVAL;
-			RETURN_BOOL(false);
-		}
-
 		pTrackerServer = &tracker_server;
 		tracker_hash = Z_ARRVAL_P(tracker_obj);
 		if ((result=php_fdfs_get_server_from_hash(tracker_hash, \
@@ -747,7 +748,7 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 	if (argc > 2)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"fastdfs_tracker_query_storage_store parameters " \
+			"tracker_query_storage_store parameters " \
 			"count: %d > 2", __LINE__, argc);
 		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
@@ -755,7 +756,17 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 
 	group_name = NULL;
 	group_nlen = 0;
-	if (argc == 0)
+	tracker_obj = NULL;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sa", \
+			&group_name, &group_nlen, &tracker_obj) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (tracker_obj == NULL)
 	{
 		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
@@ -768,15 +779,6 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 	}
 	else
 	{
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a|s", \
-			&tracker_obj, &group_name, &group_nlen) == FAILURE)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"zend_parse_parameters fail!", __LINE__);
-			pContext->err_no = EINVAL;
-			RETURN_BOOL(false);
-		}
-
 		pTrackerServer = &tracker_server;
 		tracker_hash = Z_ARRVAL_P(tracker_obj);
 		if ((result=php_fdfs_get_server_from_hash(tracker_hash, \
@@ -2290,7 +2292,7 @@ ZEND_FUNCTION(fastdfs_get_last_error_info)
 }
 
 /*
-array fastdfs_tracker_list_groups([array tracker_server, string group_name])
+array fastdfs_tracker_list_groups([string group_name, array tracker_server])
 return array for success, false for error
 */
 ZEND_FUNCTION(fastdfs_tracker_list_groups)
@@ -2300,8 +2302,8 @@ ZEND_FUNCTION(fastdfs_tracker_list_groups)
 }
 
 /*
-array fastdfs_tracker_query_storage_store([array tracker_server, 
-			string group_name])
+array fastdfs_tracker_query_storage_store([string group_name, 
+		array tracker_server])
 return array for success, false for error
 */
 ZEND_FUNCTION(fastdfs_tracker_query_storage_store)
@@ -2712,7 +2714,7 @@ PHP_METHOD(FastDFS, disconnect_server)
 }
 
 /*
-array FastDFS::tracker_list_groups([array tracker_server, string group_name])
+array FastDFS::tracker_list_groups([string group_name, array tracker_server])
 return array for success, false for error
 */
 PHP_METHOD(FastDFS, tracker_list_groups)
@@ -2726,8 +2728,8 @@ PHP_METHOD(FastDFS, tracker_list_groups)
 }
 
 /*
-array FastDFS::tracker_query_storage_store([array tracker_server, 
-			string group_name])
+array FastDFS::tracker_query_storage_store([string group_name, 
+		array tracker_server])
 return array for success, false for error
 */
 PHP_METHOD(FastDFS, tracker_query_storage_store)
