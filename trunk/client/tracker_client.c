@@ -109,8 +109,14 @@ TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
 	TrackerServerInfo *pCurrentServer;
 	TrackerServerInfo *pServer;
 	TrackerServerInfo *pEnd;
+	int server_index;
 
-	pCurrentServer = pTrackerGroup->servers + pTrackerGroup->server_index;
+	server_index = pTrackerGroup->server_index;
+	if (server_index >= pTrackerGroup->server_count)
+	{
+		server_index = 0;
+	}
+	pCurrentServer = pTrackerGroup->servers + server_index;
 	if (pCurrentServer->sock > 0 ||
 		tracker_connect_server(pCurrentServer) == 0)
 	{
@@ -148,8 +154,14 @@ int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 	TrackerServerInfo *pCurrentServer;
 	TrackerServerInfo *pServer;
 	TrackerServerInfo *pEnd;
+	int server_index;
 
-	pCurrentServer = pTrackerGroup->servers + pTrackerGroup->server_index;
+	server_index = pTrackerGroup->server_index;
+	if (server_index >= pTrackerGroup->server_count)
+	{
+		server_index = 0;
+	}
+	pCurrentServer = pTrackerGroup->servers + server_index;
 	memcpy(pTrackerServer, pCurrentServer, sizeof(TrackerServerInfo));
 	pTrackerServer->sock = -1;
 	if (tracker_connect_server(pTrackerServer) == 0)
