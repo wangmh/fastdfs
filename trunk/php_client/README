@@ -12,10 +12,11 @@ In file fastdfs_client.ini, item fastdfs_client.tracker_group# point to
 the FastDFS client config filename. Please read ../INSTALL file to know 
 about how to config FastDFS client.
 
-FastDFS client php extension compiled under PHP 5.2.5, Steps:
+FastDFS client php extension compiled under PHP 5.2.x, Steps:
 phpize
 ./configure
 make
+make install
 
 #copy lib file to php extension directory, eg. /usr/lib/php/20060613/
 cp modules/fastdfs_client.so  /usr/lib/php/20060613/
@@ -86,7 +87,7 @@ return file_id for success, false for error.
 array fastdfs_storage_upload_by_filebuff(string file_buff, 
 	[string file_ext_name, string meta_list, string group_name, 
 	array tracker_server, array storage_server])
-upload the file buff to storage server
+upload file buff to storage server
 parameters:
 	file_buff: the file content
 	file_ext_name: the file extension name, do not include dot(.)
@@ -104,7 +105,7 @@ return assoc array for success, false for error.
 string fastdfs_storage_upload_by_filebuff1(string file_buff, 
 	[string file_ext_name, string meta_list, string group_name, 
 	array tracker_server, array storage_server])
-upload the file buff to storage server
+upload file buff to storage server
 parameters:
 	file_buff: the file content
 	file_ext_name: the file extension name, do not include dot(.)
@@ -385,6 +386,372 @@ return index array for success, false for error.
 
 
 array fastdfs_tracker_query_storage_list1(string file_id
+		[, array tracker_server])
+get the storage server list which can retrieve the file content or metadata
+parameters:
+	file_id: the file id of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return index array for success, false for error. 
+       each server as an array element
+
+
+
+FastDFS Class Info:
+
+class FastDFS([int config_index, boolean bMultiThread]);
+FastDFS class constructor
+params:
+        config_index: use which config file, base 0. default is 0
+        bMultiThread: if in multi-thread, default is false
+
+
+long FastDFS::get_last_error_no()
+return last error no
+
+
+string FastDFS::get_last_error_info()
+return last error info
+
+
+array FastDFS::storage_upload_by_filename(string local_filename
+	[, string file_ext_name, array meta_list, string group_name, 
+	array tracker_server, array storage_server])
+upload local file to storage server
+parameters:
+	local_filename: the local filename
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. 
+       the returned array includes elements: group_name and filename
+
+
+string FastDFS::storage_upload_by_filename1(string local_filename, 
+	[string file_ext_name, string meta_list, string group_name, 
+	array tracker_server, array storage_server])
+upload local file to storage server
+parameters:
+	local_filename: the local filename
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return file_id for success, false for error.
+
+
+array FastDFS::storage_upload_by_filebuff(string file_buff, 
+	[string file_ext_name, string meta_list, string group_name, 
+	array tracker_server, array storage_server])
+upload file buff to storage server
+parameters:
+	file_buff: the file content
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. 
+       the returned array includes elements: group_name and filename
+
+
+string FastDFS::storage_upload_by_filebuff1(string file_buff, 
+	[string file_ext_name, string meta_list, string group_name, 
+	array tracker_server, array storage_server])
+upload file buff to storage server
+parameters:
+	file_buff: the file content
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return file_id for success, false for error
+
+
+boolean FastDFS::storage_delete_file(string group_name, string remote_filename 
+	[, array tracker_server, array storage_server])
+delete file from storage server
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+boolean FastDFS::storage_delete_file1(string file_id
+	[, array tracker_server, array storage_server])
+delete file from storage server
+parameters:
+	file_id: the file id to be deleted
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+string FastDFS::storage_download_file_to_buff(string group_name, 
+	string remote_filename [, long file_offset, long download_bytes,
+	array tracker_server, array storage_server])
+get file content from storage server
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to 
+                        the file end
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return the file content for success, false for error
+
+
+string FastDFS::storage_download_file_to_buff1(string file_id
+        [, long file_offset, long download_bytes,
+	array tracker_server, array storage_server])
+get file content from storage server
+parameters:
+	file_id: the file id of the file
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to 
+                        the file end
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return the file content for success, false for error
+
+
+boolean FastDFS::storage_download_file_to_file(string group_name, 
+	string remote_filename, string local_filename [, long file_offset, 
+	long download_bytes, array tracker_server, array storage_server])
+download file from storage server to local file 
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	local_filename: the local filename to save the file content
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to 
+                        the file end
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+boolean FastDFS::storage_download_file_to_file1(string file_id, 
+	string local_filename [, long file_offset, long download_bytes, 
+	array tracker_server, array storage_server])
+download file from storage server to local file 
+parameters:
+	file_id: the file id of the file
+	local_filename: the local filename to save the file content
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to 
+                        the file end
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+boolean FastDFS::storage_set_metadata(string group_name, string remote_filename,
+	array meta_list [, string op_type, array tracker_server, 
+	array storage_server])
+set meta data of the file
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	meta_list: meta data assoc array to be set, such as
+                   array('width'=>1024, 'height'=>768)
+	op_type: operate flag, can be one of following flags:
+		STORAGE_SET_METADATA_FLAG_MERGE: combined with the old meta data
+		STORAGE_SET_METADATA_FLAG_OVERWRITE: overwrite the old meta data
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+boolean FastDFS::storage_set_metadata1(string file_id, array meta_list
+	[, string op_type, array tracker_server, array storage_server])
+set meta data of the file
+parameters:
+	file_id: the file id of the file
+	meta_list: meta data assoc array to be set, such as
+                   array('width'=>1024, 'height'=>768)
+	op_type: operate flag, can be one of following flags:
+		STORAGE_SET_METADATA_FLAG_MERGE: combined with the old meta data
+		STORAGE_SET_METADATA_FLAG_OVERWRITE: overwrite the old meta data
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+array FastDFS::storage_get_metadata(string group_name, string remote_filename
+	[, array tracker_server, array storage_server])
+get meta data of the file
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error
+       returned array like: array('width' => 1024, 'height' => 768)
+
+
+array FastDFS::storage_get_metadata1(string file_id
+	[, array tracker_server, array storage_server])
+get meta data of the file
+parameters:
+	file_id: the file id of the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error
+       returned array like: array('width' => 1024, 'height' => 768)
+
+
+array FastDFS::connect_server(string ip_addr, int port)
+connect to the server
+parameters:
+	ip_addr: the ip address of the server
+	port: the port of the server
+return assoc array for success, false for error
+
+
+boolean FastDFS::disconnect_server(array server_info)
+disconnect from the server
+parameters:
+	server_info: the assoc array including elements:
+                     ip_addr, port and sock
+return true for success, false for error
+
+
+array FastDFS::tracker_get_connection()
+get a connected tracker server
+return assoc array for success, false for error
+       the assoc array including elements: ip_addr, port and sock
+
+
+boolean FastDFS::tracker_make_all_connections()
+connect to all tracker servers
+return true for success, false for error
+
+
+boolean FastDFS::tracker_close_all_connections()
+connect all connections to the tracker servers
+return true for success, false for error
+
+
+array FastDFS::tracker_list_groups([string group_name, array tracker_server])
+get group stat info
+parameters:
+	group_name: specify the group name, null or empty string means all groups
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return index array for success, false for error, each group as a array element
+
+
+array FastDFS::tracker_query_storage_store([string group_name, 
+		array tracker_server])
+get the storage server info to upload file
+parameters:
+	group_name: specify the group name
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. the assoc array including
+       elements: ip_addr, port, sock and store_path_index
+
+
+array FastDFS::tracker_query_storage_update(string group_name, 
+		string remote_filename [, array tracker_server])
+get the storage server info to set metadata
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error
+       the assoc array including elements: ip_addr, port and sock
+
+
+array FastDFS::tracker_query_storage_update1(string file_id, 
+		[, array tracker_server])
+get the storage server info to set metadata
+parameters:
+	file_id: the file id of the file
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error
+       the assoc array including elements: ip_addr, port and sock
+
+
+array FastDFS::tracker_query_storage_fetch(string group_name, 
+		string remote_filename [, array tracker_server])
+get the storage server info to download file (or get metadata)
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error
+       the assoc array including elements: ip_addr, port and sock
+
+array FastDFS::tracker_query_storage_fetch1(string file_id 
+		[, array tracker_server])
+get the storage server info to download file (or get metadata)
+parameters:
+	file_id: the file id of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error
+       the assoc array including elements: ip_addr, port and sock
+
+
+array FastDFS::tracker_query_storage_list(string group_name, 
+		string remote_filename [, array tracker_server])
+get the storage server list which can retrieve the file content or metadata
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return index array for success, false for error.
+       each server as an array element
+
+
+array FastDFS::tracker_query_storage_list1(string file_id
 		[, array tracker_server])
 get the storage server list which can retrieve the file content or metadata
 parameters:
