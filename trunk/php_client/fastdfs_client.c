@@ -52,7 +52,10 @@ static int le_fdht;
 
 static zend_class_entry *fdfs_ce = NULL;
 static zend_class_entry *fdfs_exception_ce = NULL;
+
+#if HAVE_SPL
 static zend_class_entry *spl_ce_RuntimeException = NULL;
+#endif
 
 #if (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION < 3)
 const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, NULL, 0 };
@@ -130,8 +133,8 @@ static int fastdfs_convert_metadata_to_array(zval *metadata_obj, \
 	HashTable *meta_hash;
 	char *szKey;
 	char *szValue;
-	long index;
-	int key_len;
+	unsigned long index;
+	unsigned int key_len;
 	int value_len;
 	HashPosition pointer;
 	zval ***ppp;
