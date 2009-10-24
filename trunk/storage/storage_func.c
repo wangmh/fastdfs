@@ -813,12 +813,15 @@ int storage_func_init(const char *filename, \
 		pBindAddr = iniGetStrValue("bind_addr", items, nItemCount);
 		if (pBindAddr == NULL)
 		{
-			bind_addr[0] = '\0';
+			*bind_addr = '\0';
 		}
 		else
 		{
 			snprintf(bind_addr, addr_size, "%s", pBindAddr);
 		}
+
+		g_client_bind_addr = iniGetBoolValue("client_bind", items, \
+					nItemCount, true);
 
 		pGroupName = iniGetStrValue("group_name", items, nItemCount);
 		if (pGroupName == NULL)
@@ -1047,7 +1050,7 @@ int storage_func_init(const char *filename, \
 		logInfo("FastDFS v%d.%d, base_path=%s, store_path_count=%d, " \
 			"subdir_count_per_path=%d, group_name=%s, " \
 			"network_timeout=%ds, "\
-			"port=%d, bind_addr=%s, " \
+			"port=%d, bind_addr=%s, client_bind=%d, " \
 			"max_connections=%d, "    \
 			"heart_beat_interval=%ds, " \
 			"stat_report_interval=%ds, tracker_server_count=%d, " \
@@ -1066,7 +1069,8 @@ int storage_func_init(const char *filename, \
 			g_version.major, g_version.minor, \
 			g_base_path, g_path_count, g_subdir_count_per_path, \
 			g_group_name, g_network_timeout, \
-			g_server_port, bind_addr, g_max_connections, \
+			g_server_port, bind_addr, g_client_bind_addr, \
+			g_max_connections, \
 			g_heart_beat_interval, g_stat_report_interval, \
 			g_tracker_group.server_count, g_sync_wait_usec / 1000, \
 			g_sync_interval / 1000, \
