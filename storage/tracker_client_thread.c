@@ -101,7 +101,6 @@ static void* tracker_report_thread_entrance(void* arg)
 	bool sync_old_done;
 	int stat_chg_sync_count;
 	int sync_time_chg_count;
-	int sleep_secs;
 	time_t current_time;
 	time_t last_df_report_time;
 	time_t last_sync_report_time;
@@ -130,9 +129,6 @@ static void* tracker_report_thread_entrance(void* arg)
 	result = 0;
 	previousCode = 0;
 	nContinuousFail = 0;
-	sleep_secs = g_heart_beat_interval < g_stat_report_interval ? \
-			g_heart_beat_interval : g_stat_report_interval;
-
 	while (g_continue_flag)
 	{
 		if (pTrackerServer->sock >= 0)
