@@ -146,6 +146,11 @@ static void* tracker_report_thread_entrance(void* arg)
 			break;
 		}
 
+		if (g_client_bind_addr && *g_bind_addr != '\0')
+		{
+			socketBind(pTrackerServer->sock, g_bind_addr, 0);
+		}
+
 		if ((result=connectserverbyip(pTrackerServer->sock, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port)) != 0)

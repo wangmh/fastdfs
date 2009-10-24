@@ -1891,7 +1891,7 @@ package format:
 1 bytes status(char)
 data buff (struct)
 */
-	TrackerClientInfo client_info;	
+	TrackerClientInfo client_info;
 	TrackerHeader header;
 	int result;
 	int64_t nInPackLen;

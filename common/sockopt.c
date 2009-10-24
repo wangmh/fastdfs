@@ -477,14 +477,14 @@ int tcpsenddata_nb(int sock, void* data, const int size, const int timeout)
 	return 0;
 }
 
-int connectserverbyip(int sock, char* ip, short port)
+int connectserverbyip(int sock, const char *server_ip, const short server_port)
 {
 	int result;
 	struct sockaddr_in addr;
 
 	addr.sin_family = PF_INET;
-	addr.sin_port = htons(port);
-	result = inet_aton(ip, &addr.sin_addr);
+	addr.sin_port = htons(server_port);
+	result = inet_aton(server_ip, &addr.sin_addr);
 	if (result == 0 )
 	{
 #ifdef __DEBUG__
@@ -654,33 +654,10 @@ int nbaccept(int sock, const int timeout, int *err_no)
 	return result;
 }
 
-int socketServer(const char *bind_ipaddr, const int port, int *err_no)
+int socketBind(int sock, const char *bind_ipaddr, const int port)
 {
 	struct sockaddr_in bindaddr;
-	int sock;
-	int result;
-	
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock < 0)
-	{
-		*err_no = errno != 0 ? errno : EMFILE;
-		logError("file: "__FILE__", line: %d, " \
-			"socket create failed, errno: %d, error info: %s.", \
-			__LINE__, errno, strerror(errno));
-		return -1;
-	}
 
-	result = 1;
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &result, sizeof(int)) < 0)
-	{
-		*err_no = errno != 0 ? errno : ENOMEM;
-		logError("file: "__FILE__", line: %d, " \
-			"setsockopt failed, errno: %d, error info: %s.", \
-			__LINE__, errno, strerror(errno));
-		close(sock);
-		return -2;
-	}
-	
 	bindaddr.sin_family = AF_INET;
 	bindaddr.sin_port = htons(port);
 	if (bind_ipaddr == NULL || *bind_ipaddr == '\0')
@@ -691,37 +668,66 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no)
 	{
 		if (inet_aton(bind_ipaddr, &bindaddr.sin_addr) == 0)
 		{
-			*err_no = EINVAL;
 			logError("file: "__FILE__", line: %d, " \
 				"invalid ip addr %s", \
 				__LINE__, bind_ipaddr);
-			close(sock);
-			return -3;
+			return EINVAL;
 		}
 	}
 
-	result = bind(sock, (struct sockaddr*)&bindaddr, sizeof(bindaddr));
-	if (result < 0)
+	if (bind(sock, (struct sockaddr*)&bindaddr, sizeof(bindaddr)) < 0)
 	{
-		*err_no = errno != 0 ? errno : ENOMEM;
 		logError("file: "__FILE__", line: %d, " \
 			"bind port %d failed, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, port, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	return 0;
+}
+
+int socketServer(const char *bind_ipaddr, const int port, int *err_no)
+{
+	int sock;
+	int result;
+	
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock < 0)
+	{
+		*err_no = errno != 0 ? errno : EMFILE;
+		logError("file: "__FILE__", line: %d, " \
+			"socket create failed, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return -1;
+	}
+
+	result = 1;
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &result, sizeof(int))<0)
+	{
+		*err_no = errno != 0 ? errno : ENOMEM;
+		logError("file: "__FILE__", line: %d, " \
+			"setsockopt failed, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
 		close(sock);
-		return -4;
+		return -2;
+	}
+
+	if ((*err_no=socketBind(sock, bind_ipaddr, port)) != 0)
+	{
+		close(sock);
+		return -3;
 	}
 	
-	result = listen(sock, 1024);
-	if (result < 0)
+	if (listen(sock, 1024) < 0)
 	{
 		*err_no = errno != 0 ? errno : EINVAL;
 		logError("file: "__FILE__", line: %d, " \
 			"listen port %d failed, " \
-			"errno: %d, error info: %s.", \
+			"errno: %d, error info: %s", \
 			__LINE__, port, errno, strerror(errno));
 		close(sock);
-		return -5;
+		return -4;
 	}
 
 	*err_no = 0;
@@ -959,11 +965,15 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 {
 	int fd;
 	int64_t send_bytes;
-	int64_t remain_bytes;
 	int result;
 	int flags;
 #ifdef USE_SENDFILE
 	off_t offset;
+	#ifdef OS_LINUX
+	int64_t remain_bytes;
+	#endif
+#else
+	int64_t remain_bytes;
 #endif
 
 	fd = open(filename, O_RDONLY);
@@ -1248,7 +1258,7 @@ int tcpsetkeepalive(int fd, const int idleSeconds)
 int tcpprintkeepalive(int fd)
 {
 	int keepAlive;
-	int len;
+	socklen_t len;
 
 #ifdef OS_LINUX
 	int keepIdle;

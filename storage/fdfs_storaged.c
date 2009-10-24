@@ -50,7 +50,6 @@ static void sigUsrHandler(int sig);
 int main(int argc, char *argv[])
 {
 	char *conf_filename;
-	char bind_addr[IP_ADDRESS_SIZE];
 	
 	int result;
 	int sock;
@@ -67,14 +66,14 @@ int main(int argc, char *argv[])
 	}
 
 	conf_filename = argv[1];
-	memset(bind_addr, 0, sizeof(bind_addr));
+	memset(g_bind_addr, 0, sizeof(g_bind_addr));
 	if ((result=storage_func_init(conf_filename, \
-			bind_addr, sizeof(bind_addr))) != 0)
+			g_bind_addr, sizeof(g_bind_addr))) != 0)
 	{
 		return result;
 	}
 
-	sock = socketServer(bind_addr, g_server_port, &result);
+	sock = socketServer(g_bind_addr, g_server_port, &result);
 	if (sock < 0)
 	{
 		return result;
@@ -200,7 +199,7 @@ int main(int argc, char *argv[])
 #ifdef WITH_HTTPD
 	if (!g_http_params.disabled)
 	{
-		if ((result=storage_httpd_start(bind_addr)) != 0)
+		if ((result=storage_httpd_start(g_bind_addr)) != 0)
 		{
 			return result;
 		}

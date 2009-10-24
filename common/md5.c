@@ -320,17 +320,17 @@ int MD5String(char *string,unsigned char digest[16])
 	unsigned int len = strlen(string);
 
 	MD5Init(&context);
-	MD5Update(&context, string, len);
+	MD5Update(&context, (unsigned char *)string, len);
 	MD5Final(digest, &context);
 	return 0;
 }
 
-int MD5Buffer(char *buffer,unsigned int len,unsigned char digest[16])
+int MD5Buffer(char *buffer, unsigned int len, unsigned char digest[16])
 {
 	MD5_CTX	context;
 
 	MD5Init(&context);
-	MD5Update(&context, buffer, len);
+	MD5Update(&context, (unsigned char *)buffer, len);
 	MD5Final(digest, &context);
 	return 0;
 }

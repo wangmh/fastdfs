@@ -50,7 +50,6 @@ extern int g_subdir_count_per_path;
 
 extern int g_server_port;
 extern int g_max_connections;
-//extern int g_max_write_thread_count;
 extern int g_file_distribute_path_mode;
 extern int g_file_distribute_rotate_count;
 extern int g_fsync_after_written_bytes;
@@ -99,6 +98,8 @@ extern struct base64_context g_base64_context;
 extern char g_run_by_group[32];
 extern char g_run_by_user[32];
 
+extern char g_bind_addr[IP_ADDRESS_SIZE];
+extern bool g_client_bind_addr;
 extern int g_thread_stack_size;
 
 #ifdef WITH_HTTPD

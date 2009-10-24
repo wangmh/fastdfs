@@ -69,6 +69,8 @@ struct base64_context g_base64_context;
 char g_run_by_group[32] = {0};
 char g_run_by_user[32] = {0};
 
+char g_bind_addr[IP_ADDRESS_SIZE] = {0};
+bool g_client_bind_addr = true;
 int g_thread_stack_size = 1024 * 1024;
 
 #ifdef WITH_HTTPD

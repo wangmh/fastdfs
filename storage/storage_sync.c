@@ -1003,6 +1003,11 @@ static int storage_report_storage_status(const char *ip_addr, \
 				break;
 			}
 
+			if (g_client_bind_addr && *g_bind_addr != '\0')
+			{
+				socketBind(pTServer->sock, g_bind_addr, 0);
+			}
+
 			if ((result=connectserverbyip(pTServer->sock, \
 				pTServer->ip_addr, pTServer->port)) == 0)
 			{
@@ -1105,6 +1110,11 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 				g_continue_flag = false;
 				result = errno != 0 ? errno : EPERM;
 				break;
+			}
+
+			if (g_client_bind_addr && *g_bind_addr != '\0')
+			{
+				socketBind(pTServer->sock, g_bind_addr, 0);
 			}
 
 			if ((conn_ret=connectserverbyip(pTServer->sock, \
@@ -1680,6 +1690,11 @@ static void* storage_sync_thread_entrance(void* arg)
 					errno, strerror(errno));
 				g_continue_flag = false;
 				break;
+			}
+
+			if (g_client_bind_addr && *g_bind_addr != '\0')
+			{
+				socketBind(storage_server.sock, g_bind_addr, 0);
 			}
 
 			if ((conn_result=connectserverbyip(storage_server.sock,\
