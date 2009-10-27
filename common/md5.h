@@ -4,7 +4,7 @@
 
 typedef unsigned char *POINTER;
 typedef unsigned short int UINT2;
-typedef unsigned long int UINT4;
+typedef unsigned int UINT4;
 
 typedef struct {
   UINT4 state[4];				 /* state (ABCD) */

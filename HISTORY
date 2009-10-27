@@ -1,7 +1,8 @@
 
-Version 1.23  2009-10-24
+Version 1.23  2009-10-27
  * remove unuseless variable "sleep_secs" in tracker_report_thread_entrance
  * storage can bind an address when connect to other servers (as a client)
+ * common/md5.h fix UINT4 typedef wrong type in 64 bit OS
 
 Version 1.22  2009-10-12
  * bug fixed: common/shared_func.c allow_hosts array maybe overflow in some case
