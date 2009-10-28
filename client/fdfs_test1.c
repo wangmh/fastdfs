@@ -295,10 +295,9 @@ int main(int argc, char *argv[])
 			if (result != 0)
 			{
 				printf("tracker_query_storage_list1 fail, "\
-					"group_name=%s, filename=%s, " \
+					"file_id=%s, " \
 					"error no: %d, error info: %s\n", \
-					group_name, remote_filename, \
-					result, strerror(result));
+					file_id, result, strerror(result));
 			}
 			else
 			{
