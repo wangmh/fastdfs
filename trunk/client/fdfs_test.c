@@ -65,6 +65,8 @@ int main(int argc, char *argv[])
 	char token[32 + 1];
 	char file_id[128];
 	char file_url[256];
+	char szIpAddr[IP_ADDRESS_SIZE];
+	char szDatetime[20];
 	int len;
 	int url_len;
 	time_t ts;
@@ -74,6 +76,7 @@ int main(int argc, char *argv[])
 	char *meta_buff;
 	int store_path_index;
 	struct base64_context context;
+	struct in_addr ip_addr;
 
 	base64_init_ex(&context, 0, '-', '_', '.');
 	printf("This is FastDFS client test program v%d.%d\n" \
@@ -261,6 +264,13 @@ int main(int argc, char *argv[])
 			 - (FDFS_FILE_EXT_NAME_MAX_LEN + 1), buff, &len);
 		printf("group_name=%s, remote_filename=%s\n", \
 			group_name, remote_filename);
+		memset(&ip_addr, 0, sizeof(ip_addr));
+		ip_addr.s_addr = buff2int(buff);
+		printf("source ip address: %s\n", inet_ntop(AF_INET, &ip_addr, \
+			szIpAddr, sizeof(szIpAddr)));
+		printf("file timestamp=%s\n", formatDatetime(buff2int( \
+			buff+sizeof(int)), "%Y-%m-%d %H:%M:%S", \
+			szDatetime, sizeof(szDatetime)));
 		printf("file timestamp=%d\n", buff2int(buff+sizeof(int)));
 		printf("file size="INT64_PRINTF_FORMAT"\n", \
 			buff2long(buff+sizeof(int)*2));
