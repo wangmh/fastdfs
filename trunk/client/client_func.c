@@ -21,6 +21,7 @@
 #include "fdfs_define.h"
 #include "logger.h"
 #include "fdfs_global.h"
+#include "fdfs_base64.h"
 #include "sockopt.h"
 #include "shared_func.h"
 #include "ini_file_reader.h"
@@ -347,5 +348,67 @@ void fdfs_client_destroy_ex(TrackerServerGroup *pTrackerGroup)
 		pTrackerGroup->server_count = 0;
 		pTrackerGroup->server_index = 0;
 	}
+}
+
+int fdfs_get_file_info(char *remote_filename, FDFSFileInfo *pFileInfo)
+{
+	static struct base64_context context;
+	static int context_inited = 0;
+	struct in_addr ip_addr;
+	int filename_len;
+	int buff_len;
+	int count;
+	char *pFileStart;
+	char *pSplitor;
+	char *p;
+	char buff[64];
+
+	if (!context_inited)
+	{
+		context_inited = 1;
+		base64_init_ex(&context, 0, '-', '_', '.');
+	}
+
+	count = 0;
+	p = remote_filename;
+	while ((pSplitor=strchr(p, '/')) != NULL)
+	{
+		p = pSplitor + 1;
+		count++;
+	}
+
+	if (count == 3)
+	{
+		pFileStart = remote_filename;
+		filename_len = strlen(remote_filename);
+	}
+	else if (count == 4)
+	{
+		pFileStart = strchr(remote_filename, '/') + 1;
+		filename_len = strlen(pFileStart);
+	}
+	else
+	{
+		return EINVAL;
+	}
+
+	if (filename_len <= FDFS_FILE_PATH_LEN + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
+	{
+		return EINVAL;
+	}
+
+	memset(pFileInfo, 0, sizeof(FDFSFileInfo));
+	memset(buff, 0, sizeof(buff));
+	base64_decode_auto(&context, pFileStart + FDFS_FILE_PATH_LEN, \
+		filename_len - FDFS_FILE_PATH_LEN \
+		- (FDFS_FILE_EXT_NAME_MAX_LEN + 1), buff, &buff_len);
+
+	memset(&ip_addr, 0, sizeof(ip_addr));
+	ip_addr.s_addr = buff2int(buff);
+	inet_ntop(AF_INET, &ip_addr, pFileInfo->source_ip_addr, IP_ADDRESS_SIZE);
+	pFileInfo->create_timestamp = buff2int(buff+sizeof(int));
+	pFileInfo->file_size = buff2long(buff+sizeof(int)*2);
+
+	return 0;
 }
 

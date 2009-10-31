@@ -61,13 +61,10 @@ int main(int argc, char *argv[])
 	int meta_count;
 	int i;
 	FDFSMetaData *pMetaList;
-	char buff[32];
 	char token[32 + 1];
 	char file_id[128];
 	char file_url[256];
-	char szIpAddr[IP_ADDRESS_SIZE];
 	char szDatetime[20];
-	int len;
 	int url_len;
 	time_t ts;
         char *file_buff;
@@ -75,10 +72,8 @@ int main(int argc, char *argv[])
 	char *operation;
 	char *meta_buff;
 	int store_path_index;
-	struct base64_context context;
-	struct in_addr ip_addr;
+	FDFSFileInfo file_info;
 
-	base64_init_ex(&context, 0, '-', '_', '.');
 	printf("This is FastDFS client test program v%d.%d\n" \
 "\nCopyright (C) 2008, Happy Fish / YuQing\n" \
 "\nFastDFS may be copied only under the terms of the GNU General\n" \
@@ -258,22 +253,15 @@ int main(int argc, char *argv[])
 				token, (int)ts);
 		}
 
-		memset(buff, 0, sizeof(buff));
-		base64_decode_auto(&context, remote_filename + FDFS_FILE_PATH_LEN, \
-			strlen(remote_filename) - FDFS_FILE_PATH_LEN \
-			 - (FDFS_FILE_EXT_NAME_MAX_LEN + 1), buff, &len);
 		printf("group_name=%s, remote_filename=%s\n", \
 			group_name, remote_filename);
-		memset(&ip_addr, 0, sizeof(ip_addr));
-		ip_addr.s_addr = buff2int(buff);
-		printf("source ip address: %s\n", inet_ntop(AF_INET, &ip_addr, \
-			szIpAddr, sizeof(szIpAddr)));
-		printf("file timestamp=%s\n", formatDatetime(buff2int( \
-			buff+sizeof(int)), "%Y-%m-%d %H:%M:%S", \
+
+		fdfs_get_file_info(remote_filename, &file_info);
+		printf("source ip address: %s\n", file_info.source_ip_addr);
+		printf("file timestamp=%s\n", formatDatetime(
+			file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \
 			szDatetime, sizeof(szDatetime)));
-		printf("file timestamp=%d\n", buff2int(buff+sizeof(int)));
-		printf("file size="INT64_PRINTF_FORMAT"\n", \
-			buff2long(buff+sizeof(int)*2));
+		printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
 		printf("file url: %s\n", file_url);
 	}
 	else if (strcmp(operation, "download") == 0 || 
