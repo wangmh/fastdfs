@@ -14,6 +14,12 @@
 #ifndef _CLIENT_FUNC_H_
 #define _CLIENT_FUNC_H_
 
+typedef struct {
+	time_t create_timestamp;
+	int64_t file_size;
+	char source_ip_addr[IP_ADDRESS_SIZE];
+} FDFSFileInfo;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -72,9 +78,19 @@ int fdfs_copy_tracker_group(TrackerServerGroup *pDestTrackerGroup, \
 * client destroy function
 * params:
 *       pTrackerGroup: tracker group
-* return: 
+* return: none
 **/
 void fdfs_client_destroy_ex(TrackerServerGroup *pTrackerGroup);
+
+/**
+* get file info from the filename return by storage server
+* params:
+*       remote_filename: the filename return by storage server
+*       pFileInfo: return the file info
+* return: 0 success, !=0 fail, return the error code
+**/
+int fdfs_get_file_info(char *remote_filename, FDFSFileInfo *pFileInfo);
+
 
 #ifdef __cplusplus
 }
