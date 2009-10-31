@@ -830,7 +830,7 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
 			"recv body length: "INT64_PRINTF_FORMAT" is invalid, " \
-			"expect body length: %d", \
+			"expect body length: %ld", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
 			sizeof(syncReqbody));
@@ -886,7 +886,7 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
 			"recv body length: "INT64_PRINTF_FORMAT" is invalid, " \
-			"expect body length: %d", \
+			"expect body length: %ld", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
 			sizeof(syncReqbody));
@@ -1209,7 +1209,7 @@ int tracker_report_thread_start()
 	if (report_tids == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail, " \
+			"malloc %ld bytes fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, sizeof(pthread_t) * \
 			g_tracker_group.server_count, \

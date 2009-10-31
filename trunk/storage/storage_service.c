@@ -836,7 +836,8 @@ static int storage_do_set_metadata(StorageClientInfo *pClientInfo, \
 		free(new_meta_list);
 
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail", __LINE__, sizeof(FDFSMetaData) \
+			"malloc %d bytes fail", __LINE__, \
+			(int)sizeof(FDFSMetaData) \
 			 * (old_meta_count + new_meta_count));
 		return ENOMEM;
 	}
@@ -1362,7 +1363,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 				"filename length: %d is invalid, " \
 				"which < 0 or >= %d", \
 				__LINE__, pClientInfo->ip_addr, \
-				filename_len,  sizeof(filename));
+				filename_len,  (int)sizeof(filename));
 			resp.status = EPIPE;
 			break;
 		}
@@ -1551,7 +1552,7 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 				"expect length <= %d", \
 				__LINE__, \
 				pClientInfo->ip_addr, nInPackLen, \
-				sizeof(in_buff));
+				(int)sizeof(in_buff));
 			resp.status = EINVAL;
 			break;
 		}
@@ -1578,7 +1579,7 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 				"filename length: %d is invalid, " \
 				"which < 0 or >= %d", \
 				__LINE__, pClientInfo->ip_addr, \
-				dest_filename_len, sizeof(dest_filename));
+				dest_filename_len, (int)sizeof(dest_filename));
 			resp.status = EINVAL;
 			break;
 		}
@@ -1590,7 +1591,7 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 				"filename length: %d is invalid, " \
 				"which < 0 or >= %d", \
 				__LINE__, pClientInfo->ip_addr, \
-				src_filename_len, sizeof(src_filename));
+				src_filename_len, (int)sizeof(src_filename));
 			resp.status = EINVAL;
 			break;
 		}
@@ -1759,7 +1760,7 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 				"expect length should < %d", __LINE__, \
 				STORAGE_PROTO_CMD_UPLOAD_FILE, \
 				pClientInfo->ip_addr,  \
-				nInPackLen, sizeof(in_buff));
+				nInPackLen, (int)sizeof(in_buff));
 			resp.status = EINVAL;
 			break;
 		}
@@ -1918,7 +1919,7 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 				"expect length should < %d", __LINE__, \
 				STORAGE_PROTO_CMD_UPLOAD_FILE, \
 				pClientInfo->ip_addr,  \
-				nInPackLen, sizeof(in_buff));
+				nInPackLen, (int)sizeof(in_buff));
 			resp.status = EINVAL;
 			break;
 		}
@@ -2112,7 +2113,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 				__LINE__, \
 				STORAGE_PROTO_CMD_SYNC_DELETE_FILE, \
 				pClientInfo->ip_addr,  \
-				nInPackLen, sizeof(in_buff));
+				nInPackLen, (int)sizeof(in_buff));
 			resp.status = EINVAL;
 			break;
 		}
@@ -2257,7 +2258,7 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 				__LINE__, \
 				STORAGE_PROTO_CMD_UPLOAD_FILE, \
 				pClientInfo->ip_addr,  \
-				nInPackLen, sizeof(in_buff));
+				nInPackLen, (int)sizeof(in_buff));
 			resp.status = EINVAL;
 			break;
 		}

@@ -654,7 +654,7 @@ int storage_load_paths(IniItemInfo *items, const int nItemCount)
 	if (g_store_paths == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail, errno: %d, error info: %s", \
+			"malloc %ld bytes fail, errno: %d, error info: %s", \
 			__LINE__, sizeof(char *) *g_path_count, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
@@ -670,7 +670,7 @@ int storage_load_paths(IniItemInfo *items, const int nItemCount)
 	if (g_store_paths[0] == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail, errno: %d, error info: %s", \
+			"malloc %ld bytes fail, errno: %d, error info: %s", \
 			__LINE__, strlen(pPath), errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -707,7 +707,7 @@ int storage_load_paths(IniItemInfo *items, const int nItemCount)
 		if (g_store_paths[i] == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail, " \
+				"malloc %ld bytes fail, " \
 				"errno: %d, error info: %s", __LINE__, \
 				strlen(pPath), errno, strerror(errno));
 			return errno != 0 ? errno : ENOMEM;

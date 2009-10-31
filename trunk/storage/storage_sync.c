@@ -1081,7 +1081,7 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 	if (pTrackerServers == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail", __LINE__, \
+			"malloc %ld bytes fail", __LINE__, \
 			sizeof(TrackerServerInfo) * g_tracker_group.server_count);
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -1482,7 +1482,7 @@ static int storage_binlog_read(BinLogReader *pReader, \
 		logError("file: "__FILE__", line: %d, " \
 			"item \"filename\" in binlog " \
 			"file \"%s\" is invalid, file offset: " \
-			INT64_PRINTF_FORMAT", filename length: %d > %d", \
+			INT64_PRINTF_FORMAT", filename length: %d > %ld", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset, \
 			pRecord->filename_len, sizeof(pRecord->filename)-1);
@@ -2046,7 +2046,7 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage)
 	if (sync_tids == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail, " \
+			"malloc %ld bytes fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, sizeof(pthread_t) * \
 			g_storage_sync_thread_count, \
