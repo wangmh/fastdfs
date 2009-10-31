@@ -17,6 +17,7 @@
 #include "tracker_httpd.h"
 
 static struct evbuffer *ev_buf = NULL;
+static int http_start_status = 0;
 
 static void generic_handler(struct evhttp_request *req, void *arg)
 {
@@ -180,14 +181,16 @@ static void *httpd_entrance(void *arg)
 	httpd = evhttp_start(bind_addr, g_http_params.server_port);
 	if (httpd == NULL)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		logCrit("file: "__FILE__", line: %d, " \
 			"evhttp_start fail, server port=%d, " \
 			"errno: %d, error info: %s", \
 			__LINE__, g_http_params.server_port, \
 			errno, strerror(errno));
+		http_start_status = errno != 0 ? errno : EACCES;
 		return NULL;
 	}
 
+	http_start_status = 0;
 	evhttp_set_gencb(httpd, generic_handler, NULL);
 
 	event_dispatch();
@@ -204,21 +207,27 @@ int tracker_httpd_start(const char *bind_addr)
 	if (ev_buf == NULL)
 	{
 		result = errno != 0 ? errno : ENOMEM;
-		logError("file: "__FILE__", line: %d, " \
+		logCrit("file: "__FILE__", line: %d, " \
 			"call evbuffer_new fail, errno: %d, error info: %s", \
 			__LINE__, result, strerror(result));
 		return result;
 	}
 
+	http_start_status = -1;
 	if ((result=pthread_create(&tid, NULL, httpd_entrance, \
 			(void *)bind_addr)) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		logCrit("file: "__FILE__", line: %d, " \
 			"create thread failed, errno: %d, error info: %s", \
 			__LINE__, result, strerror(result));
 		return result;
 	}
 
-	return 0;
+	while (http_start_status == -1)
+	{
+		sleep(1);
+	}
+
+	return http_start_status;
 }
 
