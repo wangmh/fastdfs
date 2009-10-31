@@ -24,6 +24,7 @@
 #include "shared_func.h"
 #include "client_global.h"
 #include "fastdfs_client.h"
+#include "fdfs_http_shared.h"
 
 typedef struct
 {
@@ -107,8 +108,11 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 		ZEND_FE(fastdfs_storage_set_metadata1, NULL)
 		ZEND_FE(fastdfs_storage_get_metadata, NULL)
 		ZEND_FE(fastdfs_storage_get_metadata1, NULL)
+		ZEND_FE(fastdfs_http_gen_token, NULL)
+		ZEND_FE(fastdfs_get_file_info, NULL)
 		{NULL, NULL, NULL}  /* Must be the last line */
 	};
+
 
 zend_module_entry fastdfs_client_module_entry = {
 	STANDARD_MODULE_HEADER,
@@ -2223,6 +2227,92 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	}
 }
 
+static void php_fdfs_http_gen_token_impl(INTERNAL_FUNCTION_PARAMETERS, \
+		FDFSPhpContext *pContext)
+{
+	int result;
+	int argc;
+	char *file_id;
+	int file_id_len;
+	long ts;
+	char token[64];
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc != 2)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"storage_upload_file parameters " \
+			"count: %d != 2", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sl", \
+		&file_id, &file_id_len, &ts) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	result = fdfs_http_gen_token(&g_anti_steal_secret_key, file_id, \
+		(int)ts, token);
+	pContext->err_no = result;
+	if (result != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_STRINGL(token, strlen(token), 1);
+}
+
+static void php_fdfs_get_file_info_impl(INTERNAL_FUNCTION_PARAMETERS, \
+		FDFSPhpContext *pContext)
+
+{
+	int result;
+	int argc;
+	char *file_id;
+	int file_id_len;
+	FDFSFileInfo file_info;
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc != 1)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"storage_upload_file parameters " \
+			"count: %d != 1", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", \
+		&file_id, &file_id_len) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	result = fdfs_get_file_info(file_id, &file_info);
+	pContext->err_no = result;
+	if (result != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	array_init(return_value);
+	add_assoc_long_ex(return_value, "create_timestamp", \
+		sizeof("create_timestamp"), file_info.create_timestamp);
+	add_assoc_long_ex(return_value, "file_size", \
+		sizeof("file_size"), (long)file_info.file_size);
+	add_assoc_stringl_ex(return_value, "source_ip_addr", \
+		sizeof("source_ip_addr"), file_info.source_ip_addr, \
+		strlen(file_info.source_ip_addr), 1);
+}
+
 /*
 array fastdfs_tracker_get_connection()
 return array for success, false for error
@@ -2548,6 +2638,26 @@ ZEND_FUNCTION(fastdfs_storage_get_metadata1)
 {
 	php_fdfs_storage_get_metadata_impl( \
 		INTERNAL_FUNCTION_PARAM_PASSTHRU, &php_context, true);
+}
+
+/*
+string fastdfs_http_gen_token(string file_id, int timestamp)
+return token string for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_http_gen_token)
+{
+	php_fdfs_http_gen_token_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &php_context);
+}
+
+/*
+array fastdfs_get_file_info(string file_id)
+return array for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_get_file_info)
+{
+	php_fdfs_get_file_info_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &php_context);
 }
 
 static void php_fdfs_close(php_fdfs_t *i_obj TSRMLS_DC)
@@ -3090,6 +3200,34 @@ PHP_METHOD(FastDFS, get_last_error_info)
 }
 
 /*
+string FastDFS::http_gen_token(string file_id, int timestamp)
+return token string for success, false for error
+*/
+PHP_METHOD(FastDFS, http_gen_token)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_http_gen_token_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &(i_obj->context));
+}
+                
+/*
+array FastDFS::get_file_info(string file_id)
+return array for success, false for error
+*/
+PHP_METHOD(FastDFS, get_file_info)     
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_get_file_info_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &(i_obj->context));
+}
+
+/*
 void FastDFS::close()
 */
 PHP_METHOD(FastDFS, close)
@@ -3286,6 +3424,15 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_get_last_error_info, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_http_gen_token, 0, 0, 2)
+ZEND_ARG_INFO(0, file_id)
+ZEND_ARG_INFO(0, timestamp)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_get_file_info, 0, 0, 1)
+ZEND_ARG_INFO(0, file_id)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_close, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -3322,6 +3469,8 @@ static zend_function_entry fdfs_class_methods[] = {
     FDFS_ME(storage_get_metadata1, arginfo_storage_get_metadata1)
     FDFS_ME(get_last_error_no,     arginfo_get_last_error_no)
     FDFS_ME(get_last_error_info,   arginfo_get_last_error_info)
+    FDFS_ME(http_gen_token,        arginfo_http_gen_token)
+    FDFS_ME(get_file_info,         arginfo_get_file_info)
     FDFS_ME(close,                 arginfo_close)
     { NULL, NULL, NULL }
 };

@@ -47,6 +47,8 @@ ZEND_FUNCTION(fastdfs_storage_set_metadata);
 ZEND_FUNCTION(fastdfs_storage_set_metadata1);
 ZEND_FUNCTION(fastdfs_storage_get_metadata);
 ZEND_FUNCTION(fastdfs_storage_get_metadata1);
+ZEND_FUNCTION(fastdfs_http_gen_token);
+ZEND_FUNCTION(fastdfs_get_file_info);
 
 PHP_FASTDFS_API zend_class_entry *php_fdfs_get_ce(void);
 PHP_FASTDFS_API zend_class_entry *php_fdfs_get_exception(void);
