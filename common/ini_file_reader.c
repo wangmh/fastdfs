@@ -80,7 +80,7 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 	if (*ppItems == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail", __LINE__, \
+			"malloc %ld bytes fail", __LINE__, \
 			sizeof(IniItemInfo) * alloc_items);
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -176,7 +176,7 @@ static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 			if (pIncludeFilename == NULL)
 			{
 				logError("file: "__FILE__", line: %d, " \
-					"strdup %d bytes fail", __LINE__, \
+					"strdup %ld bytes fail", __LINE__, \
 					strlen(pLine + 9) + 1);
 				result = errno != 0 ? errno : ENOMEM;
 				break;
@@ -240,7 +240,7 @@ static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 			if (*ppItems == NULL)
 			{
 				logError("file: "__FILE__", line: %d, " \
-					"realloc %d bytes fail", __LINE__, \
+					"realloc %ld bytes fail", __LINE__, \
 					sizeof(IniItemInfo) * (*nAllocItems));
 				result = errno != 0 ? errno : ENOMEM;
 				break;

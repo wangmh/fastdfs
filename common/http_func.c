@@ -69,7 +69,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 	if (domain_len >= sizeof(domain_name))
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"domain is too large, exceed %d.", \
+			"domain is too large, exceed %ld.", \
 			__LINE__, sizeof(domain_name));
 		return EINVAL;
 	}

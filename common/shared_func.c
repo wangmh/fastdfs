@@ -106,7 +106,7 @@ char *getAppAbsolutePath(const char *exeName, char *szAbsPath, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
-			strlen(exeName) + 1);
+			(int)strlen(exeName) + 1);
 		return NULL;
 	}
 	
@@ -189,7 +189,7 @@ int getUserProcIds(const char *progName, const bool bAllOwners, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
-			strlen(progName) + 1);
+			(int)strlen(progName) + 1);
 		return -1;
 	}
 
@@ -525,7 +525,7 @@ char **split(char *src, const char seperator, const int nMaxCols, int *nColCount
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
-			sizeof(char *) * (*nColCount));
+			(int)sizeof(char *) * (*nColCount));
 		return NULL;
 	}
 
@@ -1394,7 +1394,7 @@ int load_allow_hosts(IniItemInfo *items, const int nItemCount, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s.", \
-			__LINE__, sizeof(in_addr_t) * alloc_count, \
+			__LINE__, (int)sizeof(in_addr_t) * alloc_count, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -1430,8 +1430,8 @@ int load_allow_hosts(IniItemInfo *items, const int nItemCount, \
 					logError("file: "__FILE__", line: %d, "\
 						"malloc %d bytes fail, " \
 						"errno: %d, error info: %s", \
-						__LINE__, \
-						sizeof(in_addr_t)*alloc_count,\
+						__LINE__, (int)sizeof(in_addr_t)
+							* alloc_count, \
 						errno, strerror(errno));
 
 					return errno != 0 ? errno : ENOMEM;
@@ -1586,7 +1586,8 @@ int load_allow_hosts(IniItemInfo *items, const int nItemCount, \
 						"malloc %d bytes fail, " \
 						"errno: %d, error info: %s.", \
 						__LINE__, \
-						sizeof(in_addr_t)*alloc_count,\
+						(int)sizeof(in_addr_t) * \
+						alloc_count,\
 						errno, strerror(errno));
 
 					free(pItemValue);

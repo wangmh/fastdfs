@@ -229,7 +229,7 @@ FDFSMetaData *fdfs_split_metadata_ex(char *meta_buff, \
 		*err_no = ENOMEM;
 
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail", \
+			"malloc %ld bytes fail", \
 			__LINE__, sizeof(FDFSMetaData) * (*meta_count));
 		return NULL;
 	}
@@ -242,7 +242,7 @@ FDFSMetaData *fdfs_split_metadata_ex(char *meta_buff, \
 		*err_no = ENOMEM;
 
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail", \
+			"malloc %ld bytes fail", \
 			__LINE__, sizeof(char *) * (*meta_count));
 		return NULL;
 	}
@@ -302,7 +302,7 @@ char *fdfs_pack_metadata(const FDFSMetaData *meta_list, const int meta_count, \
 			*buff_bytes = 0;
 
 			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail", \
+				"malloc %ld bytes fail", \
 				__LINE__, sizeof(FDFSMetaData) * meta_count);
 			return NULL;
 		}
