@@ -163,6 +163,19 @@ int main(int argc, char *argv[])
 		return errno;
 	}
 
+#ifdef WITH_HTTPD
+	if (!g_http_params.disabled)
+	{
+		if ((result=storage_httpd_start(g_bind_addr)) != 0)
+		{
+			logCrit("file: "__FILE__", line: %d, " \
+				"storage_httpd_start fail, " \
+				"program exit!", __LINE__);
+			return result;
+		}
+	}
+#endif
+
 	if ((result=tracker_report_thread_start()) != 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
@@ -195,16 +208,6 @@ int main(int argc, char *argv[])
 	{
 		return result;
 	}
-
-#ifdef WITH_HTTPD
-	if (!g_http_params.disabled)
-	{
-		if ((result=storage_httpd_start(g_bind_addr)) != 0)
-		{
-			return result;
-		}
-	}
-#endif
 
 	if ((result=set_run_by(g_run_by_group, g_run_by_user)) != 0)
 	{
