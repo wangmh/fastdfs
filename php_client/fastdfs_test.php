@@ -27,6 +27,12 @@
 	$remote_filename = $file_info['filename'];
 
 	var_dump($file_info);
+	var_dump(fastdfs_get_file_info($remote_filename));
+
+	$ts = time();
+	$token = fastdfs_http_gen_token($group_name . FDFS_FILE_ID_SEPERATOR . $remote_filename, $ts);
+	echo "token=$token\n";
+
 	$file_content = fastdfs_storage_download_file_to_buff($file_info['group_name'], $file_info['filename']);
 	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
  	$local_filename = 't1.txt';
@@ -114,6 +120,12 @@
 		array('color'=>'none', 'size'=>0, 'font'=>'Aris'));
  if ($file_id)
  {
+	var_dump($fdfs->get_file_info($file_id));
+
+	$ts = time();
+	$token = $fdfs->http_gen_token($file_id, $ts);
+	echo "token=$token\n";
+
 	$file_content = $fdfs->storage_download_file_to_buff1($file_id);
 	echo "file content: " . $file_content . "(" . strlen($file_content) . ")\n";
  	$local_filename = 't4.txt';
