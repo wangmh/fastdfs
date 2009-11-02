@@ -24,6 +24,7 @@ SHARED_OBJS = ../common/hash.lo ../common/chain.lo \
               client_global.lo storage_client.lo
 
 HEADER_FILES = ../common/common_define.h ../common/fdfs_define.h \
+               ../common/hash.h ../common/chain.h \
                ../common/fdfs_global.h ../common/logger.h \
                ../common/fdfs_base64.h ../common/shared_func.h \
                ../common/ini_file_reader.h ../common/_os_bits.h \
