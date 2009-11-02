@@ -2109,11 +2109,11 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, package size " \
 				INT64_PRINTF_FORMAT" is too large, " \
-				"expect length should < %d", \
+				"expect length should < %ld", \
 				__LINE__, \
 				STORAGE_PROTO_CMD_SYNC_DELETE_FILE, \
 				pClientInfo->ip_addr,  \
-				nInPackLen, (int)sizeof(in_buff));
+				nInPackLen, sizeof(in_buff));
 			resp.status = EINVAL;
 			break;
 		}
