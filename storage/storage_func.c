@@ -650,7 +650,7 @@ int storage_load_paths(IniItemInfo *items, const int nItemCount)
 		return EINVAL;
 	}
 
-	g_store_paths = (char **)malloc(sizeof(char *) *g_path_count);
+	g_store_paths = (char **)malloc(sizeof(char *) * g_path_count);
 	if (g_store_paths == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -659,7 +659,7 @@ int storage_load_paths(IniItemInfo *items, const int nItemCount)
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
-	memset(g_store_paths, 0, sizeof(char *) *g_path_count);
+	memset(g_store_paths, 0, sizeof(char *) * g_path_count);
 
 	pPath = iniGetStrValue("store_path0", items, nItemCount);
 	if (pPath == NULL)
