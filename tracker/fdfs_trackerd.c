@@ -152,6 +152,9 @@ int main(int argc, char *argv[])
 	{
 		if ((result=tracker_httpd_start(bind_addr)) != 0)
 		{
+			logCrit("file: "__FILE__", line: %d, " \
+				"tracker_httpd_start fail, program exit!", \
+				__LINE__);
 			return result;
 		}
 	}
