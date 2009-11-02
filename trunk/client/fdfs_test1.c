@@ -52,7 +52,6 @@ int main(int argc, char *argv[])
 {
 	char *conf_filename;
 	char *local_filename;
-	char *remote_filename;
 	TrackerServerInfo *pTrackerServer;
 	int result;
 	TrackerServerInfo storageServer;
@@ -61,11 +60,10 @@ int main(int argc, char *argv[])
 	int meta_count;
 	int i;
 	FDFSMetaData *pMetaList;
-	char buff[13];
 	char token[32 + 1];
 	char file_id[128];
 	char file_url[256];
-	int len;
+	char szDatetime[20];
 	int url_len;
 	time_t ts;
         char *file_buff;
@@ -73,9 +71,8 @@ int main(int argc, char *argv[])
 	char *operation;
 	char *meta_buff;
 	int store_path_index;
-	struct base64_context context;
+	FDFSFileInfo file_info;
 
-	base64_init_ex(&context, 0, '-', '_', '.');
 	printf("This is FastDFS client test program v%d.%d\n" \
 "\nCopyright (C) 2008, Happy Fish / YuQing\n" \
 "\nFastDFS may be copied only under the terms of the GNU General\n" \
@@ -238,34 +235,25 @@ int main(int argc, char *argv[])
 			return result;
 		}
 
-		memset(buff, 0, sizeof(buff));
-		remote_filename = strchr(file_id, FDFS_FILE_ID_SEPERATOR);
-		if (remote_filename != NULL)
+		url_len = sprintf(file_url, "http://%s:%d/%s", \
+				pTrackerServer->ip_addr, \
+				g_tracker_server_http_port, file_id);
+		if (g_anti_steal_token)
 		{
-			url_len = sprintf(file_url, "http://%s:%d/%s", \
-					pTrackerServer->ip_addr, \
-					g_tracker_server_http_port, file_id);
-			if (g_anti_steal_token)
-			{
-				ts = time(NULL);
-				fdfs_http_gen_token(&g_anti_steal_secret_key, \
-					file_id, ts, token);
-				sprintf(file_url + url_len, "?token=%s&ts=%d", \
-					token, (int)ts);
-			}
-
-			remote_filename++;
-			base64_decode_auto(&context, remote_filename + \
-				FDFS_FILE_PATH_LEN, \
-				strlen(remote_filename) - FDFS_FILE_PATH_LEN \
-				- (FDFS_FILE_EXT_NAME_MAX_LEN + 1), buff, &len);
-			printf("file_id=%s\n", file_id);
-			printf("file timestamp=%d\n", \
-				buff2int(buff + sizeof(int)));
-			printf("file size="INT64_PRINTF_FORMAT"\n", \
-				buff2long(buff+sizeof(int)*2));
-			printf("file url: %s\n", file_url);
+			ts = time(NULL);
+			fdfs_http_gen_token(&g_anti_steal_secret_key, \
+				file_id, ts, token);
+			sprintf(file_url + url_len, "?token=%s&ts=%d", \
+				token, (int)ts);
 		}
+
+		fdfs_get_file_info(file_id, &file_info);
+		printf("source ip address: %s\n", file_info.source_ip_addr);
+		printf("file timestamp=%s\n", formatDatetime(
+			file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \
+			szDatetime, sizeof(szDatetime)));
+		printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
+		printf("file url: %s\n", file_url);
 	}
 	else if (strcmp(operation, "download") == 0 || 
 		strcmp(operation, "getmeta") == 0 ||
