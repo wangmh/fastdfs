@@ -49,6 +49,23 @@ string fastdfs_get_last_error_info()
 return last error info
 
 
+string fastdfs_http_gen_token(string file_id, int timestamp)
+parameters:
+	file_id: the file id (including group name and filename)
+	timestamp: the timestamp (unix timestamp)
+return token string for success, false for error
+
+
+array fastdfs_get_file_info(string file_id)
+parameters:
+	file_id: the file id (including group name and filename) or remote filename
+return assoc array for success, false for error. 
+	the assoc array including following elements:
+		create_timestamp: the file create timestamp (unix timestamp)
+		file_size: the file size (bytes)
+		source_ip_addr: the source storage server ip address
+	
+
 array fastdfs_storage_upload_by_filename(string local_filename
 	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
@@ -413,6 +430,23 @@ return last error no
 
 string FastDFS::get_last_error_info()
 return last error info
+
+
+string FastDFS::http_gen_token(string file_id, int timestamp)
+parameters:
+	file_id: the file id (including group name and filename)
+	timestamp: the timestamp (unix timestamp)
+return token string for success, false for error
+
+
+array FastDFS::get_file_info(string file_id)
+parameters:
+	file_id: the file id (including group name and filename) or remote filename
+return assoc array for success, false for error. 
+	the assoc array including following elements:
+		create_timestamp: the file create timestamp (unix timestamp)
+		file_size: the file size (bytes)
+		source_ip_addr: the source storage server ip address
 
 
 array FastDFS::storage_upload_by_filename(string local_filename
