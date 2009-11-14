@@ -1125,7 +1125,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 
 	memset(&resp, 0, sizeof(resp));
 	pMetaData = meta_buff;
-	filename[0] = '\0';
+	*filename = '\0';
 	filename_len = 0;
 	do
 	{
@@ -1135,7 +1135,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, package size " \
 				INT64_PRINTF_FORMAT" is not correct, " \
-				"expect length > %d", \
+				"expect length >= %d", \
 				__LINE__, \
 				STORAGE_PROTO_CMD_UPLOAD_FILE, \
 				pClientInfo->ip_addr,  \
@@ -1258,6 +1258,261 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 					meta_filename);
 		}
 
+	} while (0);
+
+	resp.cmd = STORAGE_PROTO_CMD_RESP;
+	if (resp.status == 0)
+	{
+		out_len = FDFS_GROUP_NAME_MAX_LEN + filename_len;
+		long2buff(out_len, resp.pkg_len);
+
+		memcpy(out_buff, &resp, sizeof(resp));
+		memcpy(out_buff+sizeof(resp), g_group_name, \
+			FDFS_GROUP_NAME_MAX_LEN);
+		memcpy(out_buff+sizeof(resp)+FDFS_GROUP_NAME_MAX_LEN, \
+			filename, filename_len);
+	}
+	else
+	{
+		out_len = 0;
+		long2buff(out_len, resp.pkg_len);
+		memcpy(out_buff, &resp, sizeof(resp));
+	}
+
+	if (pMetaData != meta_buff && pMetaData != NULL)
+	{
+		free(pMetaData);
+	}
+
+	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
+		sizeof(resp) + out_len, g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			result, strerror(result));
+		return result;
+	}
+
+	return resp.status;
+}
+
+/**
+8 bytes: master filename length
+8 bytes: meta data bytes
+8 bytes: file size
+FDFS_FILE_PREFIX_MAX_LEN bytes  : filename prefix
+FDFS_FILE_EXT_NAME_MAX_LEN bytes: file ext name, do not include dot (.)
+master filename bytes: master filename
+meta data bytes: each meta data seperated by \x01,
+		 name and value seperated by \x02
+file size bytes: file content
+**/
+static int storage_upload_group_file(StorageClientInfo *pClientInfo, \
+	GroupArray *pGroupArray, const int64_t nInPackLen, int *create_flag)
+{
+	TrackerHeader resp;
+	int out_len;
+	char in_buff[3*FDFS_PROTO_PKG_LEN_SIZE+FDFS_FILE_PREFIX_MAX_LEN+\
+			FDFS_FILE_EXT_NAME_MAX_LEN+1];
+	char master_filename[64];
+	char true_filename[64];
+	char prefix_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
+	char full_filename[MAX_PATH_SIZE];
+	char meta_buff[64 * 1024];
+	char out_buff[128];
+	char filename[128];
+	char *pMetaData;
+	char *file_ext_name;
+	int meta_bytes;
+	int master_filename_len;
+	int64_t file_bytes;
+	int filename_len;
+	int result;
+	int store_path_index;
+
+	memset(&resp, 0, sizeof(resp));
+	pMetaData = meta_buff;
+	*filename = '\0';
+	filename_len = 0;
+	do
+	{
+		if (nInPackLen <= 3 * FDFS_PROTO_PKG_LEN_SIZE + \
+			FDFS_FILE_PREFIX_MAX_LEN + FDFS_FILE_EXT_NAME_MAX_LEN)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length > %d", \
+				__LINE__, \
+				STORAGE_PROTO_CMD_UPLOAD_FILE, \
+				pClientInfo->ip_addr,  \
+				nInPackLen, 3 * FDFS_PROTO_PKG_LEN_SIZE + \
+				FDFS_FILE_PREFIX_MAX_LEN + \
+				FDFS_FILE_EXT_NAME_MAX_LEN);
+			resp.status = EINVAL;
+			break;
+		}
+
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
+			3*FDFS_PROTO_PKG_LEN_SIZE+FDFS_FILE_PREFIX_MAX_LEN + \
+			FDFS_FILE_EXT_NAME_MAX_LEN, g_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, recv data fail, " \
+				"errno: %d, error info: %s.", \
+				__LINE__, pClientInfo->ip_addr, \
+				resp.status, strerror(resp.status));
+			break;
+		}
+
+		master_filename_len = buff2long(in_buff);
+		meta_bytes = buff2long(in_buff + FDFS_PROTO_PKG_LEN_SIZE);
+		file_bytes = buff2long(in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE);
+		if (master_filename_len <= FDFS_FILE_PATH_LEN || \
+			master_filename_len >= sizeof(master_filename))
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, invalid master_filename " \
+				"bytes: %d", __LINE__, \
+				pClientInfo->ip_addr, master_filename_len);
+			resp.status = EINVAL;
+			break;
+		}
+
+		if (meta_bytes < 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, invalid meta bytes: %d", \
+				__LINE__, pClientInfo->ip_addr, meta_bytes);
+			resp.status = EINVAL;
+			break;
+		}
+
+		if (file_bytes < 0 || file_bytes != nInPackLen - \
+			(3 * FDFS_PROTO_PKG_LEN_SIZE + FDFS_FILE_PREFIX_MAX_LEN
+			+ FDFS_FILE_EXT_NAME_MAX_LEN + master_filename_len 
+			+ meta_bytes))
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, pkg length is not correct, " \
+				"invalid file bytes: "INT64_PRINTF_FORMAT, \
+				__LINE__, pClientInfo->ip_addr, file_bytes);
+			resp.status = EINVAL;
+			break;
+		}
+
+		memcpy(prefix_name, in_buff + 3 * FDFS_PROTO_PKG_LEN_SIZE, \
+			FDFS_FILE_PREFIX_MAX_LEN);
+		*(prefix_name + FDFS_FILE_PREFIX_MAX_LEN) = '\0';
+		if (strlen(prefix_name) == 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, empty prefix name", \
+				__LINE__, pClientInfo->ip_addr);
+			resp.status = EINVAL;
+			break;
+		}
+
+		file_ext_name = in_buff + 3 * FDFS_PROTO_PKG_LEN_SIZE + \
+					FDFS_FILE_PREFIX_MAX_LEN;
+		*(file_ext_name + FDFS_FILE_EXT_NAME_MAX_LEN) = '\0';
+
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
+			master_filename, master_filename_len, \
+			g_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, recv data fail, " \
+				"errno: %d, error info: %s.", \
+				__LINE__, pClientInfo->ip_addr, \
+				resp.status, strerror(resp.status));
+			break;
+		}
+		*(master_filename + master_filename_len) = '\0';
+
+		if ((resp.status=storage_split_filename_ex(master_filename, \
+			&master_filename_len, true_filename, \
+			&store_path_index)) != 0)
+		{
+			break;
+		}
+
+		snprintf(full_filename, sizeof(full_filename), \
+			"%s/data/%s", g_store_paths[store_path_index], \
+			true_filename);
+		if (!fileExists(full_filename))
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, master file: %s " \
+				"not exist", __LINE__, \
+				pClientInfo->ip_addr, full_filename);
+			resp.status = ENOENT;
+			break;
+		}
+	
+
+		if (meta_bytes > 0)
+		{
+			if (meta_bytes > sizeof(meta_buff))
+			{
+				pMetaData = (char *)malloc(meta_bytes + 1);
+				if (pMetaData == NULL)
+				{
+					resp.status = ENOMEM;
+
+					logError("file: "__FILE__", line: %d, " \
+						"malloc %d bytes fail", \
+						__LINE__, meta_bytes + 1);
+					break;
+				}
+			}
+
+			if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
+				pMetaData, meta_bytes, g_network_timeout)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip:%s, recv data fail, " \
+					"errno: %d, error info: %s.", \
+					__LINE__, pClientInfo->ip_addr, \
+					resp.status, strerror(resp.status));
+				break;
+			}
+
+			*(pMetaData + meta_bytes) = '\0';
+		}
+		else
+		{
+			*pMetaData = '\0';
+		}
+
+		resp.status = storage_save_file(pClientInfo, pGroupArray, \
+			store_path_index, file_bytes, file_ext_name, \
+			pMetaData, meta_bytes, filename, &filename_len, \
+			create_flag);
+
+		if (resp.status!=0 || (*create_flag & STORAGE_CREATE_FLAG_LINK))
+		{
+			break;
+		}
+
+		resp.status = storage_binlog_write(time(NULL), \
+				STORAGE_OP_TYPE_SOURCE_CREATE_FILE, filename);
+		if (resp.status != 0)
+		{
+			break;
+		}
+
+		if (meta_bytes > 0)
+		{
+			char meta_filename[64];
+			sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, \
+				filename);
+			resp.status = storage_binlog_write(time(NULL), \
+					STORAGE_OP_TYPE_SOURCE_CREATE_FILE, \
+					meta_filename);
+		}
 	} while (0);
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
@@ -1439,8 +1694,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 			logWarning("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, data file: %s " \
 				"already exists, ignore it", \
-				__LINE__, \
-				proto_cmd, \
+				__LINE__, proto_cmd, \
 				pClientInfo->ip_addr, full_filename);
 
 			if ((resp.status=tcpdiscard(pClientInfo->sock, \

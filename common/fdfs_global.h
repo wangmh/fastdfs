@@ -23,6 +23,8 @@ extern int g_network_timeout;
 extern char g_base_path[MAX_PATH_SIZE];
 extern Version g_version;
 
+int fdfs_check_data_filename(const char *filename, const int len);
+
 #ifdef __cplusplus
 }
 #endif
