@@ -75,7 +75,6 @@ bool fileExists(const char *filename);
 bool isDir(const char *filename);
 bool isFile(const char *filename);
 bool is_filename_secure(const char *filename, const int len);
-int fdfs_check_data_filename(const char *filename, const int len);
 void load_log_level(IniItemInfo *items, const int nItemCount);
 void set_log_level(char *pLogLevel);
 int load_allow_hosts(IniItemInfo *items, const int nItemCount, \

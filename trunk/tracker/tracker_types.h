@@ -25,10 +25,11 @@
 #define FDFS_MAX_GROUPS			64
 #define FDFS_MAX_TRACKERS		16
 
-#define FDFS_MAX_META_NAME_LEN		64
+#define FDFS_MAX_META_NAME_LEN		 64
 #define FDFS_MAX_META_VALUE_LEN		256
 
-#define FDFS_FILE_EXT_NAME_MAX_LEN	5
+#define FDFS_FILE_EXT_NAME_MAX_LEN	 5
+#define FDFS_FILE_PREFIX_MAX_LEN	16
 #define FDFS_FILE_PATH_LEN		10
 
 //status order is important!

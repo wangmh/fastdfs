@@ -1170,42 +1170,6 @@ int set_rlimit(int resource, const rlim_t value)
 	return 0;
 }
 
-/*
-data filename format:
-HH/HH/filename: HH for 2 uppercase hex chars
-*/
-int fdfs_check_data_filename(const char *filename, const int len)
-{
-	if (len < 6)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"the length=%d of filename \"%s\" is too short", \
-			__LINE__, len, filename);
-		return EINVAL;
-	}
-
-	if (!IS_UPPER_HEX(*filename) || !IS_UPPER_HEX(*(filename+1)) || \
-	    *(filename+2) != '/' || \
-	    !IS_UPPER_HEX(*(filename+3)) || !IS_UPPER_HEX(*(filename+4)) || \
-	    *(filename+5) != '/')
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"the format of filename \"%s\" is invalid", \
-			__LINE__, filename);
-		return EINVAL;
-	}
-
-	if (strchr(filename + 6, '/') != NULL)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"the format of filename \"%s\" is invalid", \
-			__LINE__, filename);
-		return EINVAL;
-	}
-
-	return 0;
-}
-
 bool is_filename_secure(const char *filename, const int len)
 {
 	if (len < 3)
