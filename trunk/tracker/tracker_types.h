@@ -31,6 +31,7 @@
 #define FDFS_FILE_EXT_NAME_MAX_LEN	 5
 #define FDFS_FILE_PREFIX_MAX_LEN	16
 #define FDFS_FILE_PATH_LEN		10
+#define FDFS_FILENAME_BASE64_LENGTH     27
 
 //status order is important!
 #define FDFS_STORAGE_STATUS_INIT	  0

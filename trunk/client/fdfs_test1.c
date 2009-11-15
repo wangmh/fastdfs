@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
 	FDFSMetaData *pMetaList;
 	char token[32 + 1];
 	char file_id[128];
+	char master_file_id[128];
 	char file_url[256];
 	char szDatetime[20];
 	int url_len;
@@ -227,6 +228,80 @@ int main(int argc, char *argv[])
 		if (result != 0)
 		{
 			printf("upload file fail, " \
+				"error no: %d, error info: %s\n", \
+				result, strerror(result));
+			fdfs_quit(&storageServer);
+			tracker_disconnect_server(&storageServer);
+			fdfs_client_destroy();
+			return result;
+		}
+
+		url_len = sprintf(file_url, "http://%s:%d/%s", \
+				pTrackerServer->ip_addr, \
+				g_tracker_server_http_port, file_id);
+		if (g_anti_steal_token)
+		{
+			ts = time(NULL);
+			fdfs_http_gen_token(&g_anti_steal_secret_key, \
+				file_id, ts, token);
+			sprintf(file_url + url_len, "?token=%s&ts=%d", \
+				token, (int)ts);
+		}
+
+		fdfs_get_file_info(file_id, &file_info);
+		printf("source ip address: %s\n", file_info.source_ip_addr);
+		printf("file timestamp=%s\n", formatDatetime(
+			file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \
+			szDatetime, sizeof(szDatetime)));
+		printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
+		printf("file url: %s\n", file_url);
+
+		strcpy(master_file_id, file_id);
+		*file_id = '\0';
+		if (upload_type == FDFS_UPLOAD_BY_FILE)
+		{
+			printf("storage_upload_slave_by_filename\n");
+			result = storage_upload_slave_by_filename1( \
+				pTrackerServer, &storageServer, \
+				local_filename, master_file_id, \
+				"_big", file_ext_name, meta_list, meta_count, \
+				file_id);
+		}
+		else if (upload_type == FDFS_UPLOAD_BY_BUFF)
+		{
+			char *file_content;
+			printf("storage_upload_slave_by_filebuff\n");
+			if ((result=getFileContent(local_filename, \
+					&file_content, &file_size)) == 0)
+			{
+			result = storage_upload_slave_by_filebuff1(pTrackerServer, \
+				&storageServer, file_content, file_size, \
+				master_file_id, "1024x1024", file_ext_name, \
+				meta_list, meta_count, file_id);
+			free(file_content);
+			}
+		}
+		else
+		{
+			struct stat stat_buf;
+
+			printf("storage_upload_slave_by_callback\n");
+			if (stat(local_filename, &stat_buf) == 0 && \
+				S_ISREG(stat_buf.st_mode))
+			{
+			file_size = stat_buf.st_size;
+			result = storage_upload_slave_by_callback1( \
+				pTrackerServer, &storageServer, \
+				uploadFileCallback, local_filename, \
+				file_size, master_file_id, \
+				"-small", file_ext_name, \
+				meta_list, meta_count, file_id);
+			}
+		}
+
+		if (result != 0)
+		{
+			printf("upload slave file fail, " \
 				"error no: %d, error info: %s\n", \
 				result, strerror(result));
 			fdfs_quit(&storageServer);

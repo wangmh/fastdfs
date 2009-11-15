@@ -392,7 +392,8 @@ int fdfs_get_file_info(char *remote_filename, FDFSFileInfo *pFileInfo)
 		return EINVAL;
 	}
 
-	if (filename_len <= FDFS_FILE_PATH_LEN + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
+	if (filename_len < FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
+			+ FDFS_FILE_EXT_NAME_MAX_LEN + 1)
 	{
 		return EINVAL;
 	}
@@ -400,8 +401,7 @@ int fdfs_get_file_info(char *remote_filename, FDFSFileInfo *pFileInfo)
 	memset(pFileInfo, 0, sizeof(FDFSFileInfo));
 	memset(buff, 0, sizeof(buff));
 	base64_decode_auto(&context, pFileStart + FDFS_FILE_PATH_LEN, \
-		filename_len - FDFS_FILE_PATH_LEN \
-		- (FDFS_FILE_EXT_NAME_MAX_LEN + 1), buff, &buff_len);
+		FDFS_FILENAME_BASE64_LENGTH, buff, &buff_len);
 
 	memset(&ip_addr, 0, sizeof(ip_addr));
 	ip_addr.s_addr = buff2int(buff);
