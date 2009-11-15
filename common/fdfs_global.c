@@ -66,9 +66,10 @@ int fdfs_gen_slave_filename(const char *master_filename, \
 		char *filename, int *filename_len)
 {
 	char true_ext_name[7];
-	char *p;
+	char *pDot;
 	int ext_len;
 
+	pDot = strrchr(master_filename, '.');
 	if (ext_name != NULL)
 	{
 		if (*ext_name == '\0')
@@ -88,26 +89,45 @@ int fdfs_gen_slave_filename(const char *master_filename, \
 	}
 	else
 	{
-		p = strrchr(master_filename, '.');
-		if (p == NULL)
+		if (pDot == NULL)
 		{
 			*true_ext_name = '\0';
 		}
 		else
 		{
-			ext_len = strlen(p);
+			ext_len = strlen(pDot);
 			if (ext_len >= sizeof(true_ext_name))
 			{
 				*true_ext_name = '\0';
 			}
 			else
 			{
-				strcpy(true_ext_name, p);
+				strcpy(true_ext_name, pDot);
 			}
 		}
 	}
 
-	//filename_len = filename
+	if (*true_ext_name == '\0' && strcmp(prefix_name, "-m") == 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"prefix_name \"%s\" is invalid", \
+			__LINE__, prefix_name);
+		return EINVAL;
+	}
+
+	if (pDot == NULL)
+	{
+		*filename_len = sprintf(filename, "%s%s%s", master_filename, \
+			prefix_name, true_ext_name);
+	}
+	else
+	{
+		*filename_len = pDot - master_filename;
+		memcpy(filename, master_filename, *filename_len);
+		*filename_len += sprintf(filename + *filename_len, "%s%s", \
+			prefix_name, true_ext_name);
+	}
+
 	return 0;
 }
 

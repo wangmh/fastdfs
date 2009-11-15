@@ -24,6 +24,9 @@ extern char g_base_path[MAX_PATH_SIZE];
 extern Version g_version;
 
 int fdfs_check_data_filename(const char *filename, const int len);
+int fdfs_gen_slave_filename(const char *master_filename, \
+		const char *prefix_name, const char *ext_name, \
+		char *filename, int *filename_len);
 
 #ifdef __cplusplus
 }
