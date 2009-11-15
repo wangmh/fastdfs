@@ -70,7 +70,7 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 		group_name, remote_filename) \
 	storage_do_upload_file(pTrackerServer, pStorageServer, \
 		store_path_index, FDFS_UPLOAD_BY_BUFF, file_buff, NULL, \
-		file_size, file_ext_name, meta_list, meta_count, \
+		file_size, NULL, NULL, file_ext_name, meta_list, meta_count, \
 		group_name, remote_filename)
 
 /**
@@ -109,7 +109,8 @@ int storage_upload_by_callback(TrackerServerInfo *pTrackerServer, \
 int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const int store_path_index, \
 		const int upload_type, const char *file_buff, void *arg, \
-		const int64_t file_size, const char *file_ext_name, \
+		const int64_t file_size, const char *master_filename, \
+		const char *prefix_name, const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
 		char *group_name, char *remote_filename);
 
@@ -266,6 +267,80 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 			const char *group_name, const char *filename, \
 			FDFSMetaData **meta_list, \
 			int *meta_count);
+
+/**
+* upload slave file to storage server (by file name)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       local_filename: local filename to upload
+*       master_filename: the mater filename to generate the slave file id
+*       prefix_name: the prefix name to generate the slave file id
+*       file_ext_name: file ext name, not include dot(.), 
+*                      if be NULL will abstract ext name from the local filename
+*	meta_list: meta info array
+*       meta_count: meta item count
+*	group_name: specify the group name.
+	 	    return the group name to store the file
+*	remote_filename: return the new created filename
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_upload_slave_by_filename(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *local_filename,\
+		const char *master_filename, const char *prefix_name, \
+		const char *file_ext_name, \
+		const FDFSMetaData *meta_list, const int meta_count, \
+		char *group_name, char *remote_filename);
+
+/**
+* upload slave file to storage server (by file buff)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       file_buff: file content/buff
+*       file_size: file size (bytes)
+*       master_filename: the mater filename to generate the slave file id
+*       prefix_name: the prefix name to generate the slave file id
+*       file_ext_name: file ext name, not include dot(.), can be NULL
+*	meta_list: meta info array
+*       meta_count: meta item count
+*	group_name: specify the group name. 
+		    return the group name to store the file
+*	remote_filename: return the new created filename
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_upload_slave_by_filebuff(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *file_buff, \
+		const int64_t file_size, const char *master_filename, \
+		const char *prefix_name, const char *file_ext_name, \
+		const FDFSMetaData *meta_list, const int meta_count, \
+		char *group_name, char *remote_filename);
+
+/**
+* upload slave file to storage server (by callback)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       callback: callback function to send file content to storage server
+*       arg: callback extra arguement
+*       file_size: the file size
+*       master_filename: the mater filename to generate the slave file id
+*       prefix_name: the prefix name to generate the slave file id
+*       file_ext_name: file ext name, not include dot(.), can be NULL
+*	meta_list: meta info array
+*       meta_count: meta item count
+*	group_name: specify the group name. 
+	 	    return the group name to store the file
+*	remote_filename: return the new created filename
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_upload_slave_by_callback(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		UploadCallback callback, void *arg, \
+		const int64_t file_size, const char *master_filename, \
+		const char *prefix_name, const char *file_ext_name, \
+		const FDFSMetaData *meta_list, const int meta_count, \
+		char *group_name, char *remote_filename);
 
 #ifdef __cplusplus
 }

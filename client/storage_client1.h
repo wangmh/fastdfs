@@ -257,6 +257,73 @@ int tracker_query_storage_list1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const int nMaxServerCount, \
 		int *server_count, const char *file_id);
 
+/**
+* upload slave file to storage server (by file name)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       local_filename: local filename to upload
+*       master_file_id: the mater file id to generate the slave file id
+*       prefix_name: the prefix name to generate the file id
+*       file_ext_name: file ext name, not include dot(.), 
+*                      if be NULL will abstract ext name from the local filename
+*	meta_list: meta info array
+*       meta_count: meta item count
+*	file_id: return the slave file id
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_upload_slave_by_filename1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *local_filename,\
+		const char *master_file_id, const char *prefix_name, \
+		const char *file_ext_name, \
+		const FDFSMetaData *meta_list, const int meta_count, \
+		char *file_id);
+
+/**
+* upload slave file to storage server (by file buff)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       file_buff: file content/buff
+*       file_size: file size (bytes)
+*       master_file_id: the mater file id to generate the slave file id
+*       prefix_name: the prefix name to generate the file id
+*       file_ext_name: file ext name, not include dot(.), can be NULL
+*	meta_list: meta info array
+*       meta_count: meta item count
+*	file_id: return the slave file id
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_upload_slave_by_filebuff1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *file_buff, \
+		const int64_t file_size, const char *master_file_id, \
+		const char *prefix_name, const char *file_ext_name, \
+		const FDFSMetaData *meta_list, const int meta_count, \
+		char *file_id);
+
+/**
+* upload slave file to storage server (by callback)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       callback: callback function to send file content to storage server
+*       arg: callback extra arguement
+*       file_size: the file size
+*       master_file_id: the mater file id to generate the slave file id
+*       prefix_name: the prefix name to generate the file id
+*       file_ext_name: file ext name, not include dot(.), can be NULL
+*	meta_list: meta info array
+*       meta_count: meta item count
+*	file_id: return the slave file id
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_upload_slave_by_callback1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		UploadCallback callback, void *arg, \
+		const int64_t file_size, const char *master_file_id, \
+		const char *prefix_name, const char *file_ext_name, \
+		const FDFSMetaData *meta_list, const int meta_count, \
+		char *file_id);
 #ifdef __cplusplus
 }
 #endif
