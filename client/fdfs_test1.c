@@ -108,7 +108,10 @@ int main(int argc, char *argv[])
 	if (strcmp(operation, "upload") == 0)
 	{
 		int upload_type;
+		char *prefix_name;
 		char *file_ext_name;
+		char slave_file_id[256];
+		int slave_file_id_len;
 
 		if (argc < 4)
 		{
@@ -260,23 +263,25 @@ int main(int argc, char *argv[])
 		*file_id = '\0';
 		if (upload_type == FDFS_UPLOAD_BY_FILE)
 		{
+			prefix_name = "_big";
 			printf("storage_upload_slave_by_filename\n");
 			result = storage_upload_slave_by_filename1( \
 				pTrackerServer, &storageServer, \
 				local_filename, master_file_id, \
-				"_big", file_ext_name, meta_list, meta_count, \
-				file_id);
+				prefix_name, file_ext_name, \
+				meta_list, meta_count, file_id);
 		}
 		else if (upload_type == FDFS_UPLOAD_BY_BUFF)
 		{
 			char *file_content;
+			prefix_name = "1024x1024";
 			printf("storage_upload_slave_by_filebuff\n");
 			if ((result=getFileContent(local_filename, \
 					&file_content, &file_size)) == 0)
 			{
 			result = storage_upload_slave_by_filebuff1(pTrackerServer, \
 				&storageServer, file_content, file_size, \
-				master_file_id, "1024x1024", file_ext_name, \
+				master_file_id, prefix_name, file_ext_name, \
 				meta_list, meta_count, file_id);
 			free(file_content);
 			}
@@ -285,6 +290,7 @@ int main(int argc, char *argv[])
 		{
 			struct stat stat_buf;
 
+			prefix_name = "_small";
 			printf("storage_upload_slave_by_callback\n");
 			if (stat(local_filename, &stat_buf) == 0 && \
 				S_ISREG(stat_buf.st_mode))
@@ -294,7 +300,7 @@ int main(int argc, char *argv[])
 				pTrackerServer, &storageServer, \
 				uploadFileCallback, local_filename, \
 				file_size, master_file_id, \
-				"-small", file_ext_name, \
+				prefix_name, file_ext_name, \
 				meta_list, meta_count, file_id);
 			}
 		}
@@ -329,6 +335,19 @@ int main(int argc, char *argv[])
 			szDatetime, sizeof(szDatetime)));
 		printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
 		printf("file url: %s\n", file_url);
+
+		if (fdfs_gen_slave_filename(master_file_id, \
+               		prefix_name, file_ext_name, \
+                	slave_file_id, &slave_file_id_len) == 0)
+		{
+			if (strcmp(file_id, slave_file_id) != 0)
+			{
+				printf("slave_file_id=%s\n" \
+					"file_id=%s\n" \
+					"not equal!\n", \
+					slave_file_id, file_id);
+			}
+		}
 	}
 	else if (strcmp(operation, "download") == 0 || 
 		strcmp(operation, "getmeta") == 0 ||

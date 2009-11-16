@@ -870,7 +870,8 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	}
 	p += meta_bytes;
 
-	long2buff((p - pOutBuff) + file_size, pHeader->pkg_len);
+	long2buff((p - pOutBuff) + file_size - sizeof(TrackerHeader), \
+		pHeader->pkg_len);
 	pHeader->cmd = bUploadSlave ? STORAGE_PROTO_CMD_UPLOAD_SLAVE_FILE : \
 			STORAGE_PROTO_CMD_UPLOAD_FILE;
 	pHeader->status = 0;
