@@ -1188,8 +1188,8 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			break;
 		}
 
-		meta_bytes = buff2long(in_buff+1);
-		file_bytes = buff2long(in_buff + 1+FDFS_PROTO_PKG_LEN_SIZE);
+		meta_bytes = buff2long(in_buff + 1);
+		file_bytes = buff2long(in_buff + 1 + FDFS_PROTO_PKG_LEN_SIZE);
 		if (meta_bytes < 0)
 		{
 			logError("file: "__FILE__", line: %d, " \

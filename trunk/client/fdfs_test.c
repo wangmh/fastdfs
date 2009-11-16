@@ -109,7 +109,10 @@ int main(int argc, char *argv[])
 	if (strcmp(operation, "upload") == 0)
 	{
 		int upload_type;
+		char *prefix_name;
 		char *file_ext_name;
+		char slave_filename[256];
+		int slave_filename_len;
 
 		if (argc < 4)
 		{
@@ -269,9 +272,10 @@ int main(int argc, char *argv[])
 		*remote_filename = '\0';
 		if (upload_type == FDFS_UPLOAD_BY_FILE)
 		{
+			prefix_name = "_big";
 			result = storage_upload_slave_by_filename(pTrackerServer,
 				NULL, local_filename, master_filename, \
-				"_big", file_ext_name, \
+				prefix_name, file_ext_name, \
 				meta_list, meta_count, \
 				group_name, remote_filename);
 
@@ -280,12 +284,13 @@ int main(int argc, char *argv[])
 		else if (upload_type == FDFS_UPLOAD_BY_BUFF)
 		{
 			char *file_content;
+			prefix_name = "1024x1024";
 			if ((result=getFileContent(local_filename, \
 					&file_content, &file_size)) == 0)
 			{
 			result = storage_upload_slave_by_filebuff(pTrackerServer, \
 				NULL, file_content, file_size, master_filename,
-				"1024x1024", file_ext_name, \
+				prefix_name, file_ext_name, \
 				meta_list, meta_count, \
 				group_name, remote_filename);
 			free(file_content);
@@ -297,13 +302,14 @@ int main(int argc, char *argv[])
 		{
 			struct stat stat_buf;
 
+			prefix_name = "-small";
 			if (stat(local_filename, &stat_buf) == 0 && \
 				S_ISREG(stat_buf.st_mode))
 			{
 			file_size = stat_buf.st_size;
 			result = storage_upload_slave_by_callback(pTrackerServer, \
 				NULL, uploadFileCallback, local_filename, \
-				file_size, master_filename, "-small", \
+				file_size, master_filename, prefix_name, \
 				file_ext_name, meta_list, meta_count, \
 				group_name, remote_filename);
 			}
@@ -345,6 +351,20 @@ int main(int argc, char *argv[])
 			szDatetime, sizeof(szDatetime)));
 		printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
 		printf("file url: %s\n", file_url);
+
+		if (fdfs_gen_slave_filename(master_filename, \
+               		prefix_name, file_ext_name, \
+                	slave_filename, &slave_filename_len) == 0)
+		{
+
+			if (strcmp(remote_filename, slave_filename) != 0)
+			{
+				printf("slave_filename=%s\n" \
+					"remote_filename=%s\n" \
+					"not equal!\n", \
+					slave_filename, remote_filename);
+			}
+		}
 	}
 	else if (strcmp(operation, "download") == 0 || 
 		strcmp(operation, "getmeta") == 0 ||
