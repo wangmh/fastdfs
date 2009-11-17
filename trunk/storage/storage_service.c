@@ -2901,6 +2901,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 		FDFS_FILE_PREFIX_MAX_LEN + FDFS_FILE_EXT_NAME_MAX_LEN + 256];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char prefix_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
+	char file_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 1];
 	char meta_buff[64 * 1024];
 	char out_buff[128];
 	char src_filename[64];
@@ -2911,7 +2912,6 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 	char filename[128];
 	int create_flag;
 	char *pMetaData;
-	char *file_ext_name;
 	int meta_bytes;
 	int src_filename_len;
 	int master_filename_len;
@@ -3034,8 +3034,9 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 			FDFS_GROUP_NAME_MAX_LEN, FDFS_FILE_PREFIX_MAX_LEN);
 		*(prefix_name + FDFS_FILE_PREFIX_MAX_LEN) = '\0';
 
-		file_ext_name = in_buff + 4 * FDFS_PROTO_PKG_LEN_SIZE + \
-			FDFS_GROUP_NAME_MAX_LEN + FDFS_FILE_PREFIX_MAX_LEN;
+		memcpy(file_ext_name, in_buff + 4 * FDFS_PROTO_PKG_LEN_SIZE + \
+			FDFS_GROUP_NAME_MAX_LEN + FDFS_FILE_PREFIX_MAX_LEN, \
+			FDFS_FILE_EXT_NAME_MAX_LEN);
 		*(file_ext_name + FDFS_FILE_EXT_NAME_MAX_LEN) = '\0';
 
 		len = master_filename_len + src_filename_len + \
