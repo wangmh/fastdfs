@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
 			prefix_name = "_big";
 			printf("storage_upload_slave_by_filename\n");
 			result = storage_upload_slave_by_filename1( \
-				pTrackerServer, &storageServer, \
+				pTrackerServer, NULL, \
 				local_filename, master_file_id, \
 				prefix_name, file_ext_name, \
 				meta_list, meta_count, file_id);
@@ -279,8 +279,8 @@ int main(int argc, char *argv[])
 			if ((result=getFileContent(local_filename, \
 					&file_content, &file_size)) == 0)
 			{
-			result = storage_upload_slave_by_filebuff1(pTrackerServer, \
-				&storageServer, file_content, file_size, \
+			result = storage_upload_slave_by_filebuff1( \
+				pTrackerServer, NULL, file_content, file_size, \
 				master_file_id, prefix_name, file_ext_name, \
 				meta_list, meta_count, file_id);
 			free(file_content);
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
 			{
 			file_size = stat_buf.st_size;
 			result = storage_upload_slave_by_callback1( \
-				pTrackerServer, &storageServer, \
+				pTrackerServer, NULL, \
 				uploadFileCallback, local_filename, \
 				file_size, master_file_id, \
 				prefix_name, file_ext_name, \
