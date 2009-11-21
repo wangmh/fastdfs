@@ -740,7 +740,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	}
 
 	bUploadSlave = (strlen(group_name) > 0 && master_filename_len > 0 \
-			&& prefix_name > 0);
+			&& prefix_len > 0);
 	if (bUploadSlave)
 	{
 		if ((result=storage_get_update_connection(pTrackerServer, \
