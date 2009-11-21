@@ -84,8 +84,8 @@ return assoc array for success, false for error.
        the returned array includes elements: group_name and filename
 
 
-string fastdfs_storage_upload_by_filename1(string local_filename, 
-	[string file_ext_name, string meta_list, string group_name, 
+string fastdfs_storage_upload_by_filename1(string local_filename
+	[, string file_ext_name, string meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload local file to storage server
 parameters:
@@ -101,8 +101,8 @@ parameters:
 return file_id for success, false for error.
 
 
-array fastdfs_storage_upload_by_filebuff(string file_buff, 
-	[string file_ext_name, string meta_list, string group_name, 
+array fastdfs_storage_upload_by_filebuff(string file_buff
+	[, string file_ext_name, string meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file buff to storage server
 parameters:
@@ -119,8 +119,8 @@ return assoc array for success, false for error.
        the returned array includes elements: group_name and filename
 
 
-string fastdfs_storage_upload_by_filebuff1(string file_buff, 
-	[string file_ext_name, string meta_list, string group_name, 
+string fastdfs_storage_upload_by_filebuff1(string file_buff
+	[, string file_ext_name, string meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file buff to storage server
 parameters:
@@ -129,6 +129,86 @@ parameters:
 	meta_list: meta data assoc array, such as
                    array('width'=>1024, 'height'=>768)
 	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return file_id for success, false for error
+
+
+string/array fastdfs_storage_upload_slave_by_filename(string local_filename, 
+	string group_name, string master_filename, string prefix_name 
+	[, string file_ext_name, array meta_list, 
+	array tracker_server, array storage_server])
+upload local file to storage server (slave file mode)
+parameters:
+	file_buff: the file content
+	group_name: the group name of the master file
+	master_filename: the master filename to generate the slave file id
+	prefix_name: the prefix name to generage the slave file id
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. 
+       the returned array includes elements: group_name and filename
+
+
+string fastdfs_storage_upload_slave_by_filename1(string local_filename, 
+	string master_file_id, string prefix_name 
+	[, string file_ext_name, string meta_list, 
+	array tracker_server, array storage_server])
+upload local file to storage server (slave file mode)
+parameters:
+	local_filename: the local filename
+	master_file_id: the master file id to generate the slave file id
+	prefix_name: the prefix name to generage the slave file id
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return file_id for success, false for error.
+
+
+array fastdfs_storage_upload_slave_by_filebuff(string file_buff, 
+	string group_name, string master_filename, string prefix_name 
+	[, file_ext_name, string meta_list, 
+	array tracker_server, array storage_server])
+upload file buff to storage server (slave file mode)
+parameters:
+	file_buff: the file content
+	group_name: the group name of the master file
+	master_filename: the master filename to generate the slave file id
+	prefix_name: the prefix name to generage the slave file id
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. 
+       the returned array includes elements: group_name and filename
+
+
+string fastdfs_storage_upload_slave_by_filebuff1(string file_buff, 
+	string master_file_id, string prefix_name
+	[, string file_ext_name, string meta_list, 
+	array tracker_server, array storage_server])
+upload file buff to storage server (slave file mode)
+parameters:
+	file_buff: the file content
+	master_file_id: the master file id to generate the slave file id
+	prefix_name: the prefix name to generage the slave file id
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
 	tracker_server: the tracker server assoc array including elements: 
                         ip_addr, port and sock
 	storage_server: the storage server assoc array including elements:
@@ -467,8 +547,8 @@ return assoc array for success, false for error.
        the returned array includes elements: group_name and filename
 
 
-string FastDFS::storage_upload_by_filename1(string local_filename, 
-	[string file_ext_name, string meta_list, string group_name, 
+string FastDFS::storage_upload_by_filename1(string local_filename
+	[, string file_ext_name, string meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload local file to storage server
 parameters:
@@ -484,8 +564,8 @@ parameters:
 return file_id for success, false for error.
 
 
-array FastDFS::storage_upload_by_filebuff(string file_buff, 
-	[string file_ext_name, string meta_list, string group_name, 
+array FastDFS::storage_upload_by_filebuff(string file_buff
+	[, string file_ext_name, string meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file buff to storage server
 parameters:
@@ -502,8 +582,8 @@ return assoc array for success, false for error.
        the returned array includes elements: group_name and filename
 
 
-string FastDFS::storage_upload_by_filebuff1(string file_buff, 
-	[string file_ext_name, string meta_list, string group_name, 
+string FastDFS::storage_upload_by_filebuff1(string file_buff
+	[, string file_ext_name, string meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file buff to storage server
 parameters:
@@ -512,6 +592,86 @@ parameters:
 	meta_list: meta data assoc array, such as
                    array('width'=>1024, 'height'=>768)
 	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return file_id for success, false for error
+
+
+string/array FastDFS::storage_upload_slave_by_filename(string local_filename, 
+	string group_name, string master_filename, string prefix_name 
+	[, string file_ext_name, array meta_list, 
+	array tracker_server, array storage_server])
+upload local file to storage server (slave file mode)
+parameters:
+	file_buff: the file content
+	group_name: the group name of the master file
+	master_filename: the master filename to generate the slave file id
+	prefix_name: the prefix name to generage the slave file id
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. 
+       the returned array includes elements: group_name and filename
+
+
+string FastDFS::storage_upload_slave_by_filename1(string local_filename, 
+	string master_file_id, string prefix_name 
+	[, string file_ext_name, string meta_list, 
+	array tracker_server, array storage_server])
+upload local file to storage server (slave file mode)
+parameters:
+	local_filename: the local filename
+	master_file_id: the master file id to generate the slave file id
+	prefix_name: the prefix name to generage the slave file id
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return file_id for success, false for error.
+
+
+array FastDFS::storage_upload_slave_by_filebuff(string file_buff, 
+	string group_name, string master_filename, string prefix_name 
+	[, file_ext_name, string meta_list, 
+	array tracker_server, array storage_server])
+upload file buff to storage server (slave file mode)
+parameters:
+	file_buff: the file content
+	group_name: the group name of the master file
+	master_filename: the master filename to generate the slave file id
+	prefix_name: the prefix name to generage the slave file id
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. 
+       the returned array includes elements: group_name and filename
+
+
+string FastDFS::storage_upload_slave_by_filebuff1(string file_buff, 
+	string master_file_id, string prefix_name
+	[, string file_ext_name, string meta_list, 
+	array tracker_server, array storage_server])
+upload file buff to storage server (slave file mode)
+parameters:
+	file_buff: the file content
+	master_file_id: the master file id to generate the slave file id
+	prefix_name: the prefix name to generage the slave file id
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
 	tracker_server: the tracker server assoc array including elements: 
                         ip_addr, port and sock
 	storage_server: the storage server assoc array including elements:
