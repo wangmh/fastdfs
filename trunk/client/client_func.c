@@ -404,7 +404,7 @@ int fdfs_get_file_info(char *remote_filename, FDFSFileInfo *pFileInfo)
 		FDFS_FILENAME_BASE64_LENGTH, buff, &buff_len);
 
 	memset(&ip_addr, 0, sizeof(ip_addr));
-	ip_addr.s_addr = buff2int(buff);
+	ip_addr.s_addr = ntohl(buff2int(buff));
 	inet_ntop(AF_INET, &ip_addr, pFileInfo->source_ip_addr, IP_ADDRESS_SIZE);
 	pFileInfo->create_timestamp = buff2int(buff+sizeof(int));
 	pFileInfo->file_size = buff2long(buff+sizeof(int)*2);

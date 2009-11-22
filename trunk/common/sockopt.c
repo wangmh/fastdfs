@@ -1138,19 +1138,17 @@ int tcpsetserveropt(int fd, const int timeout)
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
                &waittime, (socklen_t)sizeof(struct timeval)) < 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		logWarning("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : ENOMEM;
 	}
 
 	if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
                &waittime, (socklen_t)sizeof(struct timeval)) < 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		logWarning("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
-		return errno != 0 ? errno : ENOMEM;
 	}
 
 	/*
