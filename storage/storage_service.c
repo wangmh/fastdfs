@@ -104,7 +104,7 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 			szStorageIp, IP_ADDRESS_SIZE);
 	r = rand();
 
-	int2buff(server_ip, buff);
+	int2buff(htonl(server_ip), buff);
 	int2buff(timestamp, buff+sizeof(int));
 	long2buff(file_size, buff+sizeof(int)*2);
 	int2buff(r, buff+sizeof(int)*4);
