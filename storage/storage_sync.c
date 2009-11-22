@@ -56,6 +56,7 @@ int g_storage_sync_thread_count = 0;
 static pthread_mutex_t sync_thread_lock;
 static char binlog_write_cache_buff[16 * 1024];
 static int binlog_write_cache_len = 0;
+static int binlog_write_version = 1;
 
 /* save sync thread ids */
 static pthread_t *sync_tids = NULL;
@@ -64,6 +65,7 @@ static int storage_write_to_mark_file(BinLogReader *pReader);
 static int storage_binlog_reader_skip(BinLogReader *pReader);
 static void storage_reader_destroy(BinLogReader *pReader);
 static int storage_binlog_fsync(const bool bNeedLock);
+static int storage_binlog_preread(BinLogReader *pReader);
 
 /**
 8 bytes: filename bytes
@@ -830,6 +832,7 @@ static int storage_binlog_fsync(const bool bNeedLock)
 		}
 	}
 
+	binlog_write_version++;
 	binlog_write_cache_len = 0;  //reset cache buff
 
 	if (bNeedLock && (result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
@@ -1204,6 +1207,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 	memset(pReader, 0, sizeof(BinLogReader));
 	pReader->mark_fd = -1;
 	pReader->binlog_fd = -1;
+	pReader->binlog_buff.current = pReader->binlog_buff.buffer;
 
 	strcpy(pReader->ip_addr, pStorage->ip_addr);
 	get_mark_filename(pReader, full_filename);
@@ -1329,6 +1333,13 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 		}
 	}
 
+	result = storage_binlog_preread(pReader);
+	if (result != 0 && result != ENOENT)
+	{
+		storage_reader_destroy(pReader);
+		return result;
+	}
+
 	return 0;
 }
 
@@ -1377,11 +1388,9 @@ static int storage_write_to_mark_file(BinLogReader *pReader)
 	return result;
 }
 
-static int rewind_to_prev_rec_end(BinLogReader *pReader, \
-			const int record_length)
+static int rewind_to_prev_rec_end(BinLogReader *pReader)
 {
-	if (lseek(pReader->binlog_fd, -1 * record_length, \
-			SEEK_CUR) < 0)
+	if (lseek(pReader->binlog_fd, pReader->binlog_offset, SEEK_SET) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"seek binlog file \"%s\"fail, " \
@@ -1393,7 +1402,120 @@ static int rewind_to_prev_rec_end(BinLogReader *pReader, \
 		return errno != 0 ? errno : ENOENT;
 	}
 
+	pReader->binlog_buff.current = pReader->binlog_buff.buffer;
+	pReader->binlog_buff.length = 0;
+
 	return 0;
+}
+
+static int storage_binlog_preread(BinLogReader *pReader)
+{
+	int bytes_read;
+	int saved_binlog_write_version;
+
+	if (pReader->binlog_buff.version == binlog_write_version && \
+		pReader->binlog_buff.length == 0)
+	{
+		return ENOENT;
+	}
+
+	saved_binlog_write_version = binlog_write_version;
+	if (pReader->binlog_buff.current != pReader->binlog_buff.buffer)
+	{
+		if (pReader->binlog_buff.length > 0)
+		{
+			memcpy(pReader->binlog_buff.buffer, \
+				pReader->binlog_buff.current, \
+				pReader->binlog_buff.length);
+		}
+
+		pReader->binlog_buff.current = pReader->binlog_buff.buffer;
+	}
+
+	bytes_read = read(pReader->binlog_fd, pReader->binlog_buff.buffer \
+		+ pReader->binlog_buff.length, \
+		STORAGE_BINLOG_BUFFER_SIZE - pReader->binlog_buff.length);
+	if (bytes_read < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"read from binlog file \"%s\" fail, " \
+			"file offset: "INT64_PRINTF_FORMAT", " \
+			"error no: %d, error info: %s", \
+			__LINE__, \
+			get_binlog_readable_filename(pReader, NULL), \
+			pReader->binlog_offset + pReader->binlog_buff.length, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : EIO;
+	}
+	else if (bytes_read == 0) //end of binlog file
+	{
+		pReader->binlog_buff.version = saved_binlog_write_version;
+		return ENOENT;
+	}
+
+	pReader->binlog_buff.length += bytes_read;
+	return 0;
+}
+
+static int storage_binlog_do_line_read(BinLogReader *pReader, \
+		char *line, const int line_size, int *line_length)
+{
+	char *pLineEnd;
+
+	if (pReader->binlog_buff.length == 0)
+	{
+		return ENOENT;
+	}
+
+	pLineEnd = (char *)memchr(pReader->binlog_buff.current, '\n', \
+			pReader->binlog_buff.length);
+	if (pLineEnd == NULL)
+	{
+		return ENOENT;
+	}
+
+	*line_length = pLineEnd - pReader->binlog_buff.current + 1;
+	if (*line_length >= line_size)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"read from binlog file \"%s\" fail, " \
+			"file offset: "INT64_PRINTF_FORMAT", " \
+			"line buffer size: %d is too small! " \
+			"<= line length: %d", __LINE__, \
+			get_binlog_readable_filename(pReader, NULL), \
+			pReader->binlog_offset, line_size, *line_length);
+		return ENOSPC;
+	}
+
+	memcpy(line, pReader->binlog_buff.current, *line_length);
+	*(line + *line_length) = '\0';
+
+	pReader->binlog_buff.current = pLineEnd + 1;
+	pReader->binlog_buff.length -= *line_length;
+
+	return 0;
+}
+
+static int storage_binlog_read_line(BinLogReader *pReader, \
+		char *line, const int line_size, int *line_length)
+{
+	int result;
+
+	result = storage_binlog_do_line_read(pReader, line, \
+			line_size, line_length);
+	if (result != ENOENT)
+	{
+		return result;
+	}
+
+	result = storage_binlog_preread(pReader);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	return storage_binlog_do_line_read(pReader, line, \
+			line_size, line_length);
 }
 
 static int storage_binlog_read(BinLogReader *pReader, \
@@ -1405,62 +1527,44 @@ static int storage_binlog_read(BinLogReader *pReader, \
 
 	while (1)
 	{
-		if ((*record_length=fd_gets(pReader->binlog_fd, line, \
-			sizeof(line), 54 + FDFS_FILE_EXT_NAME_MAX_LEN)) < 0)
+		result = storage_binlog_read_line(pReader, line, \
+				sizeof(line), record_length);
+		if (result == 0)
 		{
-			logError("file: "__FILE__", line: %d, " \
-				"read a line from binlog file \"%s\" fail, " \
-				"file offset: "INT64_PRINTF_FORMAT", " \
-				"error no: %d, error info: %s", \
-				__LINE__, \
-				get_binlog_readable_filename(pReader, NULL), \
-				pReader->binlog_offset, \
-				errno, strerror(errno));
-			return errno != 0 ? errno : ENOENT;
+			break;
 		}
-
-		if (*record_length == 0)
-		{
-			if (pReader->binlog_index < g_binlog_index) //rotate
-			{
-				pReader->binlog_index++;
-				pReader->binlog_offset = 0;
-				if ((result=storage_open_readable_binlog( \
-						pReader)) != 0)
-				{
-					return result;
-				}
-
-				if ((result=storage_write_to_mark_file( \
-						pReader)) != 0)
-				{
-					return result;
-				}
-
-				continue;  //read next binlog
-			}
-
-			return ENOENT;
-		}
-
-		break;
-	}
-
-	if (line[*record_length-1] != '\n')
-	{
-		if ((result=rewind_to_prev_rec_end(pReader, \
-				*record_length)) != 0)
+		else if (result != ENOENT)
 		{
 			return result;
 		}
 
-		logError("file: "__FILE__", line: %d, " \
-			"get a line from binlog file \"%s\" fail, " \
-			"file offset: "INT64_PRINTF_FORMAT", " \
-			"no new line char, line length: %d", \
-			__LINE__, get_binlog_readable_filename(pReader, NULL), \
-			pReader->binlog_offset, *record_length);
-		return ENOENT;
+		if (pReader->binlog_index >= g_binlog_index)
+		{
+			return ENOENT;
+		}
+
+		//rotate
+		if (pReader->binlog_buff.length != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"binlog file \"%s\" not ended by \\n, " \
+				"file offset: "INT64_PRINTF_FORMAT, __LINE__, \
+				get_binlog_readable_filename(pReader, NULL), \
+				pReader->binlog_offset);
+			return EINVAL;
+		}
+
+		pReader->binlog_index++;
+		pReader->binlog_offset = 0;
+		if ((result=storage_open_readable_binlog(pReader)) != 0)
+		{
+			return result;
+		}
+
+		if ((result=storage_write_to_mark_file(pReader)) != 0)
+		{
+			return result;
+		}
 	}
 
 	if ((result=splitEx(line, ' ', cols, 3)) < 3)
@@ -1532,8 +1636,7 @@ static int storage_binlog_reader_skip(BinLogReader *pReader)
 
 		if (record.timestamp >= pReader->until_timestamp)
 		{
-			result = rewind_to_prev_rec_end( \
-					pReader, record_len);
+			result = rewind_to_prev_rec_end(pReader);
 			break;
 		}
 
@@ -1895,8 +1998,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			if ((sync_result=storage_sync_data(&reader, \
 				&storage_server, &record)) != 0)
 			{
-				if (rewind_to_prev_rec_end( \
-					&reader, record_len) != 0)
+				if (rewind_to_prev_rec_end(&reader) != 0)
 				{
 					logCrit("file: "__FILE__", line: %d, " \
 						"rewind_to_prev_rec_end fail, "\

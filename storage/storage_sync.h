@@ -19,6 +19,7 @@
 #define STORAGE_OP_TYPE_REPLICA_DELETE_FILE	'd'
 #define STORAGE_OP_TYPE_REPLICA_UPDATE_FILE	'u'
 #define STORAGE_OP_TYPE_REPLICA_CREATE_LINK	'l'
+#define STORAGE_BINLOG_BUFFER_SIZE		64 * 1024
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,9 +27,18 @@ extern "C" {
 
 typedef struct
 {
+	char buffer[STORAGE_BINLOG_BUFFER_SIZE];
+	char *current;
+	int length;
+	int version;
+} BinLogBuffer;
+
+typedef struct
+{
 	char ip_addr[IP_ADDRESS_SIZE];
 	bool need_sync_old;
 	bool sync_old_done;
+	BinLogBuffer binlog_buff;
 	time_t until_timestamp;
 	int mark_fd;
 	int binlog_index;

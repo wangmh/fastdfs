@@ -35,7 +35,6 @@ for i in $list; do
   fi
   param="$param $p"
   first_ch=`$EXPR substr "$p" 1 1`
-  echo $first_ch
   if [ "$first_ch" = "-" ]; then
       p="'\\$p'"
   fi
