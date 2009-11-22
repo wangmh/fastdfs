@@ -1,21 +1,49 @@
 tmp_src_filename=fdfs_check_bits.c
 cat <<EOF > $tmp_src_filename
 #include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
 int main()
 {
 	printf("%d\n", sizeof(long));
+	printf("%d\n", sizeof(off_t));
 	return 0;
 }
 EOF
 
-gcc $tmp_src_filename
-bytes=`./a.out`
+gcc -o a.out $tmp_src_filename
+output=`./a.out`
 
-/bin/rm -f  a.out $tmp_src_filename
-if [ "$bytes" -eq 8 ]; then
+if [ -f /bin/expr ]; then
+  EXPR=/bin/expr
+else
+  EXPR=/usr/bin/expr
+fi
+
+count=0
+int_bytes=4
+off_bytes=8
+for col in $output; do
+    if [ $count -eq 0 ]; then
+        int_bytes=$col
+    else
+        off_bytes=$col
+    fi
+
+    count=`$EXPR $count + 1`
+done
+
+/bin/rm -f a.out $tmp_src_filename
+if [ "$int_bytes" -eq 8 ]; then
  OS_BITS=64
 else
  OS_BITS=32
+fi
+
+if [ "$off_bytes" -eq 8 ]; then
+ OFF_BITS=64
+else
+ OFF_BITS=32
 fi
 
 cat <<EOF > common/_os_bits.h
@@ -23,6 +51,7 @@ cat <<EOF > common/_os_bits.h
 #define _OS_BITS_H
 
 #define OS_BITS  $OS_BITS
+#define OFF_BITS $OFF_BITS
 
 #endif
 EOF

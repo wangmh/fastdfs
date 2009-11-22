@@ -58,6 +58,16 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
   #define INT64_PRINTF_FORMAT   "%lld"
 #endif
 
+#ifdef OFF_BITS
+  #if OFF_BITS == 64
+    #define OFF_PRINTF_FORMAT   INT64_PRINTF_FORMAT
+  #else
+    #define OFF_PRINTF_FORMAT   "%d"
+  #endif
+#else
+  #define OFF_PRINTF_FORMAT   INT64_PRINTF_FORMAT
+#endif
+
 #define USE_SENDFILE
 
 #define MAX_PATH_SIZE				256

@@ -1364,9 +1364,9 @@ static int storage_write_to_mark_file(BinLogReader *pReader)
 	int len;
 	int result;
 
-	len = sprintf(buff, 
+	len = sprintf(buff, \
 		"%s=%d\n"  \
-		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="OFF_PRINTF_FORMAT"\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
