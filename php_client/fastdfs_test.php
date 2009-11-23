@@ -47,7 +47,7 @@
 	var_dump($meta_list);
 
 	$master_filename = $remote_filename;
-	$prefix_name = '-memo';
+	$prefix_name = '.part1';
 	$file_ext_name = 'txt';
 	$slave_file_info = fastdfs_storage_upload_slave_by_filebuff('this is slave file.', 
 		$group_name, $master_filename, $prefix_name, $file_ext_name);
@@ -86,9 +86,8 @@
 	$meta_list = fastdfs_storage_get_metadata1($file_id);
 	var_dump($meta_list);
 
-
 	$master_file_id = $file_id;
-	$prefix_name = '-memo1';
+	$prefix_name = '.part2';
 	$file_ext_name = 'txt';
 	$slave_file_id = fastdfs_storage_upload_slave_by_filebuff1('this is slave file1.', 
 		$master_file_id, $prefix_name, $file_ext_name);
@@ -142,7 +141,6 @@
  var_dump($fdfs->storage_upload_by_filename("/usr/include/stdio.h"));
  var_dump($fdfs->storage_upload_by_filename1("/usr/include/stdio.h", "c", array('width'=>1024, 'height'=>800, 'font'=>'Aris')));
  $file_info = $fdfs->storage_upload_by_filebuff("", "txt");
-
  if ($file_info)
  {
 	var_dump($file_info);
@@ -158,6 +156,28 @@
 
 	$meta_list = $fdfs->storage_get_metadata($file_info['group_name'], $file_info['filename']);
 	var_dump($meta_list);
+
+	$master_filename = $file_info['filename'];
+	$prefix_name = '.part1';
+	$file_ext_name = 'txt';
+	$slave_file_info = $fdfs->storage_upload_slave_by_filebuff('this is slave file  1 by class.', 
+		$file_info['group_name'], $master_filename, $prefix_name, $file_ext_name);
+        if ($slave_file_info !== false)
+        {
+        var_dump($slave_file_info);
+
+        $generated_filename = $fdfs->gen_slave_filename($master_filename, $prefix_name, $file_ext_name);
+        if ($slave_file_info['filename'] != $generated_filename)
+        {
+                echo "${slave_file_info['filename']}\n != \n${generated_filename}\n";
+        }
+
+        echo "delete slave file return: " . $fdfs->storage_delete_file($slave_file_info['group_name'], $slave_file_info['filename']) . "\n";
+        }
+        else
+        {
+                echo "fastdfs_storage_upload_slave_by_filebuff fail, errno: " . $fdfs->get_last_error_no() . ", error info: " . $fdfs->get_last_error_info() . "\n";
+        }
 
 	echo "delete file return: " . $fdfs->storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
  }
@@ -179,11 +199,39 @@
 	echo "storage_set_metadata1 result: " . $fdfs->storage_set_metadata1( 
 		$file_id, array('color'=>'yellow', 'size'=>32), FDFS_STORAGE_SET_METADATA_FLAG_MERGE) . "\n";
 
-        echo "delete file $file_id return: " . $fdfs->storage_delete_file1($file_id) . "\n";
+	$master_file_id = $file_id;
+	$prefix_name = '.part2';
+	$file_ext_name = 'txt';
+	$slave_file_id = $fdfs->storage_upload_slave_by_filebuff1('this is slave file 2 by class.', 
+		$master_file_id, $prefix_name, $file_ext_name);
+	if ($slave_file_id !== false)
+	{
+	var_dump($slave_file_id);
+
+	$generated_file_id = $fdfs->gen_slave_filename($master_file_id, $prefix_name, $file_ext_name);
+	if ($slave_file_id != $generated_file_id)
+	{
+		echo "${slave_file_id}\n != \n${generated_file_id}\n";
+	}
+
+	echo "delete file $slave_file_id return: " . $fdfs->storage_delete_file1($slave_file_id) . "\n";
+	}
+        else
+        {
+                echo "storage_upload_slave_by_filebuff1 fail, errno: " . $fdfs->get_last_error_no() . ", error info: " . $fdfs->get_last_error_info() . "\n";
+        }
+
 	$meta_list = $fdfs->storage_get_metadata1($file_id);
-	var_dump($meta_list);
-	echo "errno: " . $fdfs->get_last_error_no() . ", error info: " . $fdfs->get_last_error_info() . "\n";
- 
+	if ($meta_list !== false)
+	{
+		var_dump($meta_list);
+	}
+	else
+	{
+		echo "errno: " . $fdfs->get_last_error_no() . ", error info: " . $fdfs->get_last_error_info() . "\n";
+	}
+
+        echo "delete file $file_id return: " . $fdfs->storage_delete_file1($file_id) . "\n";
  }
  echo 'tracker_close_all_connections result: ' . $fdfs->tracker_close_all_connections() . "\n";
 ?>
