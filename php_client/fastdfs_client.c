@@ -114,6 +114,7 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 		ZEND_FE(fastdfs_storage_get_metadata1, NULL)
 		ZEND_FE(fastdfs_http_gen_token, NULL)
 		ZEND_FE(fastdfs_get_file_info, NULL)
+		ZEND_FE(fastdfs_gen_slave_filename, NULL)
 		{NULL, NULL, NULL}  /* Must be the last line */
 	};
 
@@ -2556,7 +2557,6 @@ static void php_fdfs_http_gen_token_impl(INTERNAL_FUNCTION_PARAMETERS, \
 
 static void php_fdfs_get_file_info_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		FDFSPhpContext *pContext)
-
 {
 	int result;
 	int argc;
@@ -2598,6 +2598,94 @@ static void php_fdfs_get_file_info_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	add_assoc_stringl_ex(return_value, "source_ip_addr", \
 		sizeof("source_ip_addr"), file_info.source_ip_addr, \
 		strlen(file_info.source_ip_addr), 1);
+}
+
+/*
+string fastdfs_gen_slave_filename(string master_filename, string prefix_name
+		[, string file_ext_name])
+return slave filename string for success, false for error
+*/
+static void php_fdfs_gen_slave_filename_impl(INTERNAL_FUNCTION_PARAMETERS, \
+		FDFSPhpContext *pContext)
+{
+	int result;
+	int argc;
+	char *master_filename;
+	int master_filename_len;
+	char *prefix_name;
+	int prefix_name_len;
+	int filename_len;
+	zval *ext_name_obj;
+	char *file_ext_name;
+	int file_ext_name_len;
+	char filename[128];
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc != 3)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"storage_upload_file parameters " \
+			"count: %d != 3", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	ext_name_obj = NULL;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|z", \
+		&master_filename, &master_filename_len, &prefix_name, \
+		&prefix_name_len, &ext_name_obj) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (ext_name_obj == NULL)
+	{
+		file_ext_name = NULL;
+		file_ext_name_len = 0;
+	}
+	else
+	{
+		if (ext_name_obj->type == IS_NULL)
+		{
+			file_ext_name = NULL;
+			file_ext_name_len = 0;
+		}
+		else if (ext_name_obj->type == IS_STRING)
+		{
+			file_ext_name = ext_name_obj->value.str.val;
+			file_ext_name_len = ext_name_obj->value.str.len;
+		}
+		else
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"file_ext_name is not a string, type=%d!", \
+				__LINE__, ext_name_obj->type);
+			pContext->err_no = EINVAL;
+			RETURN_BOOL(false);
+		}
+	}
+
+	if (master_filename_len + prefix_name_len + file_ext_name_len + 1 \
+		>= sizeof(filename))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"filename length is too long!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	result = fdfs_gen_slave_filename(master_filename, \
+			prefix_name, file_ext_name, filename, &filename_len);
+	pContext->err_no = result;
+	if (result != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_STRINGL(filename, filename_len, 1);
 }
 
 /*
@@ -2998,6 +3086,18 @@ return array for success, false for error
 ZEND_FUNCTION(fastdfs_get_file_info)
 {
 	php_fdfs_get_file_info_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &php_context);
+}
+
+
+/*
+string fastdfs_gen_slave_filename(string master_filename, string prefix_name
+		[, string file_ext_name])
+return slave filename string for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_gen_slave_filename)
+{
+	php_fdfs_gen_slave_filename_impl( \
 		INTERNAL_FUNCTION_PARAM_PASSTHRU, &php_context);
 }
 
@@ -3640,6 +3740,21 @@ PHP_METHOD(FastDFS, get_file_info)
 }
 
 /*
+string FastDFS::gen_slave_filename(string master_filename, string prefix_name
+		[, string file_ext_name])
+return slave filename string for success, false for error
+*/
+PHP_METHOD(FastDFS, gen_slave_filename)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_gen_slave_filename_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &(i_obj->context));
+}
+
+/*
 void FastDFS::close()
 */
 PHP_METHOD(FastDFS, close)
@@ -3751,7 +3866,7 @@ ZEND_ARG_INFO(0, tracker_server)
 ZEND_ARG_INFO(0, storage_server)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_upload_slave_by_filename, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_upload_slave_by_filename, 0, 0, 4)
 ZEND_ARG_INFO(0, local_filename)
 ZEND_ARG_INFO(0, group_name)
 ZEND_ARG_INFO(0, master_filename)
@@ -3762,7 +3877,7 @@ ZEND_ARG_INFO(0, tracker_server)
 ZEND_ARG_INFO(0, storage_server)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_upload_slave_by_filename1, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_upload_slave_by_filename1, 0, 0, 3)
 ZEND_ARG_INFO(0, local_filename)
 ZEND_ARG_INFO(0, master_file_id)
 ZEND_ARG_INFO(0, prefix_name)
@@ -3772,7 +3887,7 @@ ZEND_ARG_INFO(0, tracker_server)
 ZEND_ARG_INFO(0, storage_server)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_upload_slave_by_filebuff, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_upload_slave_by_filebuff, 0, 0, 4)
 ZEND_ARG_INFO(0, file_buff)
 ZEND_ARG_INFO(0, group_name)
 ZEND_ARG_INFO(0, master_filename)
@@ -3783,7 +3898,7 @@ ZEND_ARG_INFO(0, tracker_server)
 ZEND_ARG_INFO(0, storage_server)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_upload_slave_by_filebuff1, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_upload_slave_by_filebuff1, 0, 0, 3)
 ZEND_ARG_INFO(0, file_buff)
 ZEND_ARG_INFO(0, master_file_id)
 ZEND_ARG_INFO(0, prefix_name)
@@ -3887,6 +4002,12 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_get_file_info, 0, 0, 1)
 ZEND_ARG_INFO(0, file_id)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_gen_slave_filename, 0, 0, 2)
+ZEND_ARG_INFO(0, master_filename)
+ZEND_ARG_INFO(0, prefix_name)
+ZEND_ARG_INFO(0, file_ext_name)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_close, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -3929,6 +4050,7 @@ static zend_function_entry fdfs_class_methods[] = {
     FDFS_ME(get_last_error_info,   arginfo_get_last_error_info)
     FDFS_ME(http_gen_token,        arginfo_http_gen_token)
     FDFS_ME(get_file_info,         arginfo_get_file_info)
+    FDFS_ME(gen_slave_filename,    arginfo_gen_slave_filename)
     FDFS_ME(close,                 arginfo_close)
     { NULL, NULL, NULL }
 };

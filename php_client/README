@@ -50,6 +50,7 @@ return last error info
 
 
 string fastdfs_http_gen_token(string file_id, int timestamp)
+generate anti-steal token for HTTP download
 parameters:
 	file_id: the file id (including group name and filename)
 	timestamp: the timestamp (unix timestamp)
@@ -57,6 +58,7 @@ return token string for success, false for error
 
 
 array fastdfs_get_file_info(string file_id)
+get file info from the filename / file id
 parameters:
 	file_id: the file id (including group name and filename) or remote filename
 return assoc array for success, false for error. 
@@ -65,6 +67,18 @@ return assoc array for success, false for error.
 		file_size: the file size (bytes)
 		source_ip_addr: the source storage server ip address
 	
+
+string fastdfs_gen_slave_filename(string master_filename, string prefix_name
+                [, string file_ext_name])
+generate slave filename by master filename, prefix name and file extension name
+parameters:
+	master_filename: the master filename / file id to generate 
+			the slave filename
+	prefix_name: the prefix name  to generate the slave filename
+	file_ext_name: slave file extension name, can be null or emtpy 
+			(do not including dot)
+return slave filename string for success, false for error
+
 
 array fastdfs_storage_upload_by_filename(string local_filename
 	[, string file_ext_name, array meta_list, string group_name, 
@@ -178,7 +192,7 @@ return file_id for success, false for error.
 
 array fastdfs_storage_upload_slave_by_filebuff(string file_buff, 
 	string group_name, string master_filename, string prefix_name 
-	[, file_ext_name, string meta_list, 
+	[, string file_ext_name, string meta_list, 
 	array tracker_server, array storage_server])
 upload file buff to storage server (slave file mode)
 parameters:
@@ -513,6 +527,7 @@ return last error info
 
 
 string FastDFS::http_gen_token(string file_id, int timestamp)
+generate anti-steal token for HTTP download
 parameters:
 	file_id: the file id (including group name and filename)
 	timestamp: the timestamp (unix timestamp)
@@ -520,6 +535,7 @@ return token string for success, false for error
 
 
 array FastDFS::get_file_info(string file_id)
+get file info from the filename / file id
 parameters:
 	file_id: the file id (including group name and filename) or remote filename
 return assoc array for success, false for error. 
@@ -527,6 +543,18 @@ return assoc array for success, false for error.
 		create_timestamp: the file create timestamp (unix timestamp)
 		file_size: the file size (bytes)
 		source_ip_addr: the source storage server ip address
+
+
+string FastDFS::gen_slave_filename(string master_filename, string prefix_name
+                [, string file_ext_name])
+generate slave filename by master filename, prefix name and file extension name
+parameters:
+	master_filename: the master filename / file id to generate 
+			the slave filename
+	prefix_name: the prefix name  to generate the slave filename
+	file_ext_name: slave file extension name, can be null or emtpy 
+			(do not including dot)
+return slave filename string for success, false for error
 
 
 array FastDFS::storage_upload_by_filename(string local_filename

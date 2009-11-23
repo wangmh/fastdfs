@@ -46,6 +46,20 @@
 	$meta_list = fastdfs_storage_get_metadata($file_info['group_name'], $file_info['filename']);
 	var_dump($meta_list);
 
+	$master_filename = $remote_filename;
+	$prefix_name = '-memo';
+	$file_ext_name = 'txt';
+	$slave_file_info = fastdfs_storage_upload_slave_by_filebuff('this is slave file.', 
+		$group_name, $master_filename, $prefix_name, $file_ext_name);
+	var_dump($slave_file_info);
+
+	$generated_filename = fastdfs_gen_slave_filename($master_filename, $prefix_name, $file_ext_name);
+	if ($slave_file_info['filename'] != $generated_filename)
+	{
+		echo "${slave_file_info['filename']}\n != \n${generated_filename}\n";
+	}
+	
+	echo "delete slave file return: " . fastdfs_storage_delete_file($slave_file_info['group_name'], $slave_file_info['filename']) . "\n";
 	echo "delete file return: " . fastdfs_storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
  }
 
@@ -63,6 +77,22 @@
 		FDFS_STORAGE_SET_METADATA_FLAG_MERGE) . "\n";
 	$meta_list = fastdfs_storage_get_metadata1($file_id);
 	var_dump($meta_list);
+
+
+	$master_file_id = $file_id;
+	$prefix_name = '-memo1';
+	$file_ext_name = 'txt';
+	$slave_file_id = fastdfs_storage_upload_slave_by_filebuff1('this is slave file1.', 
+		$master_file_id, $prefix_name, $file_ext_name);
+	var_dump($slave_file_id);
+
+	$generated_filename = fastdfs_gen_slave_filename($master_file_id, $prefix_name, $file_ext_name);
+	if ($slave_file_id != $generated_filename)
+	{
+		echo "${slave_file_id}\n != \n${generated_filename}\n";
+	}
+
+	echo "delete file $slave_file_id return: " . fastdfs_storage_delete_file1($slave_file_id) . "\n";
 	echo "delete file $file_id return: " . fastdfs_storage_delete_file1($file_id) . "\n";
  }
 
