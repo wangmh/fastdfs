@@ -2920,7 +2920,7 @@ string fastdfs_storage_upload_slave_by_filename1(string local_filename,
 	string meta_list, array tracker_server, array storage_server])
 return file_id for success, false for error
 */
-ZEND_FUNCTION(fastdfs_storage_slave_upload_by_filename1)
+ZEND_FUNCTION(fastdfs_storage_upload_slave_by_filename1)
 {
 	php_fdfs_storage_upload_slave_file_impl( \
 		INTERNAL_FUNCTION_PARAM_PASSTHRU, &php_context, \
