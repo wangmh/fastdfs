@@ -51,15 +51,23 @@
 	$file_ext_name = 'txt';
 	$slave_file_info = fastdfs_storage_upload_slave_by_filebuff('this is slave file.', 
 		$group_name, $master_filename, $prefix_name, $file_ext_name);
-	var_dump($slave_file_info);
+        if ($slave_file_info !== false)
+        {
+        var_dump($slave_file_info);
 
-	$generated_filename = fastdfs_gen_slave_filename($master_filename, $prefix_name, $file_ext_name);
-	if ($slave_file_info['filename'] != $generated_filename)
-	{
-		echo "${slave_file_info['filename']}\n != \n${generated_filename}\n";
-	}
-	
-	echo "delete slave file return: " . fastdfs_storage_delete_file($slave_file_info['group_name'], $slave_file_info['filename']) . "\n";
+        $generated_filename = fastdfs_gen_slave_filename($master_filename, $prefix_name, $file_ext_name);
+        if ($slave_file_info['filename'] != $generated_filename)
+        {
+                echo "${slave_file_info['filename']}\n != \n${generated_filename}\n";
+        }
+
+        echo "delete slave file return: " . fastdfs_storage_delete_file($slave_file_info['group_name'], $slave_file_info['filename']) . "\n";
+        }
+        else
+        {
+                echo "fastdfs_storage_upload_slave_by_filebuff fail, errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info() . "\n";
+        }
+
 	echo "delete file return: " . fastdfs_storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
  }
 
@@ -84,15 +92,23 @@
 	$file_ext_name = 'txt';
 	$slave_file_id = fastdfs_storage_upload_slave_by_filebuff1('this is slave file1.', 
 		$master_file_id, $prefix_name, $file_ext_name);
+	if ($slave_file_id !== false)
+	{
 	var_dump($slave_file_id);
 
-	$generated_filename = fastdfs_gen_slave_filename($master_file_id, $prefix_name, $file_ext_name);
-	if ($slave_file_id != $generated_filename)
+	$generated_file_id = fastdfs_gen_slave_filename($master_file_id, $prefix_name, $file_ext_name);
+	if ($slave_file_id != $generated_file_id)
 	{
-		echo "${slave_file_id}\n != \n${generated_filename}\n";
+		echo "${slave_file_id}\n != \n${generated_file_id}\n";
 	}
 
 	echo "delete file $slave_file_id return: " . fastdfs_storage_delete_file1($slave_file_id) . "\n";
+	}
+        else
+        {
+                echo "fastdfs_storage_upload_slave_by_filebuff1 fail, errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info() . "\n";
+        }
+
 	echo "delete file $file_id return: " . fastdfs_storage_delete_file1($file_id) . "\n";
  }
 
