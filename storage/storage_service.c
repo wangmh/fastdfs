@@ -302,7 +302,8 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 	pStorePath = g_store_paths[store_path_index];
 	start_time = time(NULL);
 
-	bGenFilename = (*filename_len == 0);
+        bGenFilename = (*filename_len == 0 || (pSrcFileInfo == NULL && \
+			g_check_file_duplicate));
 	if (bGenFilename)
 	{
 		for (i=0; i<10; i++)
