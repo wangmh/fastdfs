@@ -18,8 +18,66 @@
 
  //var_dump(fastdfs_tracker_list_groups($tracker));
 
- var_dump(fastdfs_storage_upload_by_filename("/usr/include/stdio.h", null, array(), null, $tracker, $storage));
- var_dump(fastdfs_storage_upload_by_filename1("/usr/include/stdio.h", null, array('width'=>1024, 'height'=>800, 'font'=>'Aris', 'Homepage' => true, 'price' => 103.75, 'status' => FDFS_STORAGE_STATUS_ACTIVE), '', $tracker, $storage));
+ $file_info = fastdfs_storage_upload_by_filename("/usr/include/stdio.h", null, array(), null, $tracker, $storage);
+ if ($file_info)
+ {
+	$group_name = $file_info['group_name'];
+	$remote_filename = $file_info['filename'];
+
+	var_dump($file_info);
+	var_dump(fastdfs_get_file_info($remote_filename));
+
+	$master_filename = $remote_filename;
+	$prefix_name = '.part1';
+	$slave_file_info = fastdfs_storage_upload_slave_by_filename("/usr/include/stdlib.h", 
+		$group_name, $master_filename, $prefix_name);
+        if ($slave_file_info !== false)
+        {
+        var_dump($slave_file_info);
+
+        $generated_filename = fastdfs_gen_slave_filename($master_filename, $prefix_name);
+        if ($slave_file_info['filename'] != $generated_filename)
+        {
+                echo "${slave_file_info['filename']}\n != \n${generated_filename}\n";
+        }
+
+        echo "delete slave file return: " . fastdfs_storage_delete_file($slave_file_info['group_name'], $slave_file_info['filename']) . "\n";
+        }
+        else
+        {
+                echo "fastdfs_storage_upload_slave_by_filename fail, errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info() . "\n";
+        }
+
+	echo "delete file return: " . fastdfs_storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
+ }
+
+ $file_id = fastdfs_storage_upload_by_filename1("/usr/include/stdio.h", null, array('width'=>1024, 'height'=>800, 'font'=>'Aris', 'Homepage' => true, 'price' => 103.75, 'status' => FDFS_STORAGE_STATUS_ACTIVE), '', $tracker, $storage);
+ if ($file_id)
+ {
+	$master_file_id = $file_id;
+	$prefix_name = '.part2';
+	$slave_file_id = fastdfs_storage_upload_slave_by_filename1("/usr/include/string.h", 
+		$master_file_id, $prefix_name);
+	if ($slave_file_id !== false)
+	{
+	var_dump($slave_file_id);
+
+	$generated_file_id = fastdfs_gen_slave_filename($master_file_id, $prefix_name);
+	if ($slave_file_id != $generated_file_id)
+	{
+		echo "${slave_file_id}\n != \n${generated_file_id}\n";
+	}
+
+	echo "delete file $slave_file_id return: " . fastdfs_storage_delete_file1($slave_file_id) . "\n";
+	}
+        else
+        {
+                echo "fastdfs_storage_upload_slave_by_filename1 fail, errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info() . "\n";
+        }
+
+	echo "delete file $file_id return: " . fastdfs_storage_delete_file1($file_id) . "\n";
+ }
+
  $file_info = fastdfs_storage_upload_by_filebuff("this is a test.", "txt");
  if ($file_info)
  {
@@ -138,8 +196,67 @@
  var_dump($fdfs->tracker_query_storage_update1($file_id));
  var_dump($fdfs->tracker_query_storage_fetch1($file_id));
  var_dump($fdfs->tracker_query_storage_list1($file_id));
- var_dump($fdfs->storage_upload_by_filename("/usr/include/stdio.h"));
- var_dump($fdfs->storage_upload_by_filename1("/usr/include/stdio.h", "c", array('width'=>1024, 'height'=>800, 'font'=>'Aris')));
+
+ $file_info = $fdfs->storage_upload_by_filename("/usr/include/stdio.h");
+ if ($file_info)
+ {
+	$group_name = $file_info['group_name'];
+	$remote_filename = $file_info['filename'];
+
+	var_dump($file_info);
+	var_dump($fdfs->get_file_info($remote_filename));
+
+	$master_filename = $remote_filename;
+	$prefix_name = '.part1';
+	$slave_file_info = $fdfs->storage_upload_slave_by_filename("/usr/include/stdlib.h", 
+		$group_name, $master_filename, $prefix_name);
+        if ($slave_file_info !== false)
+        {
+        var_dump($slave_file_info);
+
+        $generated_filename = $fdfs->gen_slave_filename($master_filename, $prefix_name);
+        if ($slave_file_info['filename'] != $generated_filename)
+        {
+                echo "${slave_file_info['filename']}\n != \n${generated_filename}\n";
+        }
+
+        echo "delete slave file return: " . $fdfs->storage_delete_file($slave_file_info['group_name'], $slave_file_info['filename']) . "\n";
+        }
+        else
+        {
+                echo "storage_upload_slave_by_filename fail, errno: " . $fdfs->get_last_error_no() . ", error info: " . $fdfs->get_last_error_info() . "\n";
+        }
+
+	echo "delete file return: " . $fdfs->storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
+ }
+
+ $file_id = $fdfs->storage_upload_by_filename1("/usr/include/stdio.h", "c", array('width'=>1024, 'height'=>800, 'font'=>'Aris'));
+ if ($file_id)
+ {
+	$master_file_id = $file_id;
+	$prefix_name = '.part2';
+	$slave_file_id = $fdfs->storage_upload_slave_by_filename1("/usr/include/string.h", 
+		$master_file_id, $prefix_name);
+	if ($slave_file_id !== false)
+	{
+	var_dump($slave_file_id);
+
+	$generated_file_id = $fdfs->gen_slave_filename($master_file_id, $prefix_name);
+	if ($slave_file_id != $generated_file_id)
+	{
+		echo "${slave_file_id}\n != \n${generated_file_id}\n";
+	}
+
+	echo "delete file $slave_file_id return: " . $fdfs->storage_delete_file1($slave_file_id) . "\n";
+	}
+        else
+        {
+                echo "fastdfs_storage_upload_slave_by_filename1 fail, errno: " . $fdfs->get_last_error_no() . ", error info: " . $fdfs->get_last_error_info() . "\n";
+        }
+
+	echo "delete file $file_id return: " . $fdfs->storage_delete_file1($file_id) . "\n";
+ }
+
  $file_info = $fdfs->storage_upload_by_filebuff("", "txt");
  if ($file_info)
  {
