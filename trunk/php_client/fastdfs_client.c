@@ -2621,11 +2621,11 @@ static void php_fdfs_gen_slave_filename_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	char filename[128];
 
     	argc = ZEND_NUM_ARGS();
-	if (argc != 3)
+	if (argc != 2 && argc != 3)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"storage_upload_file parameters " \
-			"count: %d != 3", __LINE__, argc);
+			"count: %d != 2 or 3", __LINE__, argc);
 		pContext->err_no = EINVAL;
 		RETURN_BOOL(false);
 	}
