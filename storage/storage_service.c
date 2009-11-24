@@ -3174,19 +3174,6 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 				break;
 			}
 
-			snprintf(full_filename, sizeof(full_filename), \
-				"%s/data/%s", g_store_paths[store_path_index], \
-				true_filename);
-			if (!fileExists(full_filename))
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"client ip: %s, master file: %s " \
-					"not exist", __LINE__, \
-					pClientInfo->ip_addr, full_filename);
-				resp.status = ENOENT;
-				break;
-			}
-
 			if ((resp.status=fdfs_gen_slave_filename( \
 				true_filename, \
 				prefix_name, file_ext_name, \

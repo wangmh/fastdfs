@@ -176,7 +176,7 @@
         }
         else
         {
-                echo "fastdfs_storage_upload_slave_by_filebuff fail, errno: " . $fdfs->get_last_error_no() . ", error info: " . $fdfs->get_last_error_info() . "\n";
+                echo "storage_upload_slave_by_filebuff fail, errno: " . $fdfs->get_last_error_no() . ", error info: " . $fdfs->get_last_error_info() . "\n";
         }
 
 	echo "delete file return: " . $fdfs->storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
