@@ -1119,6 +1119,138 @@ static int storage_server_set_metadata(StorageClientInfo *pClientInfo, \
 }
 
 /**
+FDFS_GROUP_NAME_MAX_LEN bytes: group_name
+filename
+**/
+static int storage_server_query_file_info(StorageClientInfo *pClientInfo, \
+				const int64_t nInPackLen)
+{
+	TrackerHeader *pResp;
+	char in_buff[128];
+	char out_buff[sizeof(TrackerHeader) + 2 * FDFS_PROTO_PKG_LEN_SIZE];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char true_filename[64];
+	char full_filename[MAX_PATH_SIZE + 64 + sizeof(STORAGE_META_FILE_EXT)];
+	char *filename;
+	char *pBasePath;
+	char *p;
+	struct stat file_stat;
+	int filename_len;
+	int true_filename_len;
+	int out_len;
+	int result;
+
+	memset(&out_buff, 0, sizeof(out_buff));
+	pResp = (TrackerHeader *)out_buff;
+	out_len = sizeof(TrackerHeader);
+	do
+	{
+		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length > %d", __LINE__, \
+				STORAGE_PROTO_CMD_QUERY_FILE_INFO, \
+				pClientInfo->ip_addr,  \
+				nInPackLen, FDFS_PROTO_PKG_LEN_SIZE);
+			pResp->status = EINVAL;
+			break;
+		}
+
+		if (nInPackLen >= sizeof(in_buff))
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length < %d", __LINE__, \
+				STORAGE_PROTO_CMD_QUERY_FILE_INFO, \
+				pClientInfo->ip_addr,  \
+				nInPackLen, (int)sizeof(in_buff));
+			pResp->status = EINVAL;
+			break;
+		}
+
+		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
+			nInPackLen, g_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, recv data fail, " \
+				"errno: %d, error info: %s.", \
+				__LINE__, pClientInfo->ip_addr, \
+				pResp->status, strerror(pResp->status));
+			break;
+		}
+
+		filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
+
+		memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
+		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
+		if (strcmp(group_name, g_group_name) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, group_name: %s " \
+				"not correct, should be: %s", \
+				__LINE__, pClientInfo->ip_addr, \
+				group_name, g_group_name);
+			pResp->status = EINVAL;
+			break;
+		}
+
+		filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
+		*(filename + filename_len) = '\0';
+
+		true_filename_len = filename_len;
+		if ((pResp->status=storage_split_filename(filename, \
+			&true_filename_len, true_filename, &pBasePath)) != 0)
+		{
+			break;
+		}
+		if ((pResp->status=fdfs_check_data_filename(true_filename, \
+			true_filename_len)) != 0)
+		{
+			break;
+		}
+
+		sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
+		if (stat(full_filename, &file_stat) != 0)
+		{
+			pResp->status = errno != 0 ? errno : ENOENT;
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, call stat file %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pClientInfo->ip_addr, true_filename, 
+				pResp->status, strerror(pResp->status));
+			break;
+		}
+
+		p = out_buff + sizeof(TrackerHeader);
+		long2buff(file_stat.st_size, p);
+		p += FDFS_PROTO_PKG_LEN_SIZE;
+		long2buff(file_stat.st_mtime, p);
+		p += FDFS_PROTO_PKG_LEN_SIZE;
+
+		out_len = p - out_buff;
+	} while (0);
+
+	long2buff(out_len - sizeof(TrackerHeader), pResp->pkg_len);
+	pResp->cmd = STORAGE_PROTO_CMD_RESP;
+
+	if ((result=tcpsenddata_nb(pClientInfo->sock, (void *)out_buff, \
+		out_len, g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			result, strerror(result));
+		return result;
+	}
+
+	return pResp->status;
+}
+
+/**
 1 byte: store path index
 8 bytes: meta data bytes
 8 bytes: file size 
@@ -3699,6 +3831,14 @@ data buff (struct)
 				g_storage_stat.total_set_meta_count, \
 				g_storage_stat.success_set_meta_count, \
 				g_storage_stat.last_source_update)
+			break;
+		case STORAGE_PROTO_CMD_QUERY_FILE_INFO:
+			if ((result=storage_server_query_file_info(&client_info,
+				nInPackLen)) != 0)
+			{
+				break;
+			}
+
 			break;
 		case FDFS_PROTO_CMD_QUIT:
 			result = ECONNRESET;  //for quit loop

@@ -25,6 +25,7 @@
 #include "shared_func.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
+#include "client_func.h"
 #include "tracker_client.h"
 #include "storage_client.h"
 #include "client_global.h"
@@ -213,7 +214,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 			FDFSMetaData **meta_list, \
 			int *meta_count)
 {
-	TrackerHeader header;
+	TrackerHeader *pHeader;
 	int result;
 	TrackerServerInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+64];
@@ -242,6 +243,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	remain bytes: filename
 	**/
 
+	pHeader = (TrackerHeader *)out_buff;
 	memset(out_buff, 0, sizeof(out_buff));
 	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
 		sizeof(TrackerHeader),  "%s", group_name);
@@ -250,10 +252,8 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 			sizeof(out_buff) - sizeof(TrackerHeader) - \
 			FDFS_GROUP_NAME_MAX_LEN,  "%s", filename);
 
-	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, header.pkg_len);
-	header.cmd = STORAGE_PROTO_CMD_GET_METADATA;
-	header.status = 0;
-	memcpy(out_buff, &header, sizeof(TrackerHeader));
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, pHeader->pkg_len);
+	pHeader->cmd = STORAGE_PROTO_CMD_GET_METADATA;
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
@@ -288,6 +288,100 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	{
 		free(file_buff);
 	}
+
+	if (new_connection)
+	{
+		fdfs_quit(pStorageServer);
+		tracker_disconnect_server(pStorageServer);
+	}
+	else
+	{
+		if (result >= ENETDOWN) //network error
+		{
+			close(pStorageServer->sock);
+			pStorageServer->sock = -1;
+		}
+	}
+
+	return result;
+}
+
+int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer,  \
+			const char *group_name, const char *filename, \
+			FDFSFileInfo *pFileInfo)
+{
+	TrackerHeader *pHeader;
+	int result;
+	TrackerServerInfo storageServer;
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+64];
+	char in_buff[2 * FDFS_PROTO_PKG_LEN_SIZE];
+	int64_t in_bytes;
+	int filename_len;
+	char *pInBuff;
+	bool new_connection;
+
+	if ((result=storage_get_read_connection(pTrackerServer, \
+		&pStorageServer, group_name, filename, \
+		&storageServer, &new_connection)) != 0)
+	{
+		return result;
+	}
+
+	do
+	{
+	/**
+	send pkg format:
+	FDFS_GROUP_NAME_MAX_LEN bytes: group_name
+	remain bytes: filename
+	**/
+
+	pHeader = (TrackerHeader *)out_buff;
+	memset(out_buff, 0, sizeof(out_buff));
+	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
+		sizeof(TrackerHeader),  "%s", group_name);
+	filename_len = snprintf(out_buff + sizeof(TrackerHeader) + \
+			FDFS_GROUP_NAME_MAX_LEN, \
+			sizeof(out_buff) - sizeof(TrackerHeader) - \
+			FDFS_GROUP_NAME_MAX_LEN,  "%s", filename);
+
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, pHeader->pkg_len);
+	pHeader->cmd = STORAGE_PROTO_CMD_QUERY_FILE_INFO;
+
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
+			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
+			filename_len, g_network_timeout)) != 0)
+	{
+		logError("send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			pStorageServer->ip_addr, \
+			pStorageServer->port, \
+			result, strerror(result));
+
+		break;
+	}
+
+	pInBuff = in_buff;
+	if ((result=fdfs_recv_response(pStorageServer, \
+		&pInBuff, sizeof(in_buff), &in_bytes)) != 0)
+	{
+		break;
+	}
+
+	if (in_bytes != sizeof(in_buff))
+	{
+		logError("recv data from storage server %s:%d fail, " \
+			"recv bytes: %d != %d", \
+			pStorageServer->ip_addr, \
+			pStorageServer->port, \
+			in_bytes, (int)sizeof(in_buff));
+		result = EINVAL;
+	}
+
+        pFileInfo->file_size = buff2long(in_buff);
+	pFileInfo->create_timestamp = buff2long(in_buff + \
+				FDFS_PROTO_PKG_LEN_SIZE);
+	} while (0);
 
 	if (new_connection)
 	{

@@ -342,6 +342,21 @@ int storage_upload_slave_by_callback(TrackerServerInfo *pTrackerServer, \
 		const FDFSMetaData *meta_list, const int meta_count, \
 		char *group_name, char *remote_filename);
 
+/**
+* query file info
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*	group_name: the group name of storage server
+*	filename: filename on storage server
+*	pFileInfo: return the file info (file size and create timestamp)
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer,  \
+			const char *group_name, const char *filename, \
+			FDFSFileInfo *pFileInfo);
+
 #ifdef __cplusplus
 }
 #endif
