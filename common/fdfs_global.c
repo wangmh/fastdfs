@@ -65,11 +65,21 @@ int fdfs_gen_slave_filename(const char *master_filename, \
 		const char *prefix_name, const char *ext_name, \
 		char *filename, int *filename_len)
 {
-	char true_ext_name[7];
+	char true_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 2];
 	char *pDot;
-	int ext_len;
+	int master_file_len;
 
-	pDot = strrchr(master_filename, '.');
+	master_file_len = strlen(master_filename);
+	if (master_file_len < 28 + FDFS_FILE_EXT_NAME_MAX_LEN)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"master filename \"%s\" is invalid", \
+			__LINE__, master_filename);
+		return EINVAL;
+	}
+
+	pDot = strchr(master_filename + (master_file_len - \
+			(FDFS_FILE_EXT_NAME_MAX_LEN + 1)), '.');
 	if (ext_name != NULL)
 	{
 		if (*ext_name == '\0')
@@ -95,15 +105,7 @@ int fdfs_gen_slave_filename(const char *master_filename, \
 		}
 		else
 		{
-			ext_len = strlen(pDot);
-			if (ext_len >= sizeof(true_ext_name))
-			{
-				*true_ext_name = '\0';
-			}
-			else
-			{
-				strcpy(true_ext_name, pDot);
-			}
+			strcpy(true_ext_name, pDot);
 		}
 	}
 
