@@ -10,6 +10,7 @@
 #define STORAGE_CLIENT_H
 
 #include "tracker_types.h"
+#include "client_func.h"
 
 #define FDFS_DOWNLOAD_TO_BUFF   	1
 #define FDFS_DOWNLOAD_TO_FILE   	2

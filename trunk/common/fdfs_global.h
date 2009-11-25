@@ -14,6 +14,9 @@
 #include "common_define.h"
 #include "fdfs_define.h"
 
+#define FDFS_FILE_EXT_NAME_MAX_LEN	6
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
