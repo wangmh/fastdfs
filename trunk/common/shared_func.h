@@ -85,7 +85,7 @@ int get_time_item_from_conf(IniItemInfo *items, const int nItemCount, \
 		const byte default_hour, const byte default_minute);
 
 void chopPath(char *filePath);
-int getFileContent(const char *filename, char **buff, off_t *file_size);
+int getFileContent(const char *filename, char **buff, int64_t *file_size);
 int writeToFile(const char *filename, const char *buff, const int file_size);
 int fd_gets(int fd, char *buff, const int size, int once_bytes);
 

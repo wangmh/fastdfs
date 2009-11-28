@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-int getFileContent(const char *filename, char **buff, off_t *file_size);
+int getFileContent(const char *filename, char **buff, int64_t *file_size);
 
 #ifdef __cplusplus
 }

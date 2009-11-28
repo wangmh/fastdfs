@@ -309,7 +309,7 @@ static int load_file_ids()
 {
 	int i;
 	int result;
-	off_t file_size;
+	int64_t file_size;
 	int bytes;
 	char filename[64];
 	char *file_buff;

@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include "common_func.h"
 
-int getFileContent(const char *filename, char **buff, off_t *file_size)
+int getFileContent(const char *filename, char **buff, int64_t *file_size)
 {
 	int fd;
 	
