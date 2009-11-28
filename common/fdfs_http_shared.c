@@ -104,7 +104,7 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 	char *token_check_fail_filename;
 	char *default_content_type;
 	int def_content_type_len;
-	off_t file_size;
+	int64_t file_size;
 
 	memset(pParams, 0, sizeof(FDFSHTTPParams));
 

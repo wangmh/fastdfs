@@ -318,7 +318,7 @@ static int load_file_contents()
 {
 	int i;
 	int result;
-	off_t file_size;
+	int64_t file_size;
 
 	for (i=0; i<FILE_TYPE_COUNT; i++)
 	{

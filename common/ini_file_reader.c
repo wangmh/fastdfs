@@ -128,7 +128,7 @@ static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 	int result;
 	int http_status;
 	int content_len;
-	off_t file_size;
+	int64_t file_size;
 
 	if (strncasecmp(szFilename, "http://", 7) == 0)
 	{

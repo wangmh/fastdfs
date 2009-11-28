@@ -36,7 +36,7 @@ int load_mime_types_from_file(HashArray *pHash, const char *mime_filename)
 	char *lasts;
 	int http_status;
 	int content_len;
-	off_t file_size;
+	int64_t file_size;
 
 	if (strncasecmp(mime_filename, "http://", 7) == 0)
 	{

@@ -930,7 +930,7 @@ int init_pthread_attr(pthread_attr_t *pattr, const int stack_size)
 	return 0;
 }
 
-int getFileContent(const char *filename, char **buff, off_t *file_size)
+int getFileContent(const char *filename, char **buff, int64_t *file_size)
 {
 	int fd;
 	
