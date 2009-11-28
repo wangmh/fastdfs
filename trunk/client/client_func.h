@@ -82,16 +82,6 @@ int fdfs_copy_tracker_group(TrackerServerGroup *pDestTrackerGroup, \
 **/
 void fdfs_client_destroy_ex(TrackerServerGroup *pTrackerGroup);
 
-/**
-* get file info from the filename return by storage server
-* params:
-*       remote_filename: the filename return by storage server
-*       pFileInfo: return the file info
-* return: 0 success, !=0 fail, return the error code
-**/
-int fdfs_get_file_info(char *remote_filename, FDFSFileInfo *pFileInfo);
-
-
 #ifdef __cplusplus
 }
 #endif

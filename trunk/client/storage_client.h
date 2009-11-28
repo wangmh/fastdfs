@@ -358,6 +358,17 @@ int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
 			const char *group_name, const char *filename, \
 			FDFSFileInfo *pFileInfo);
 
+
+/**
+* get file info from the filename return by storage server
+* params:
+*       file_id: the file id return by storage server
+*       pFileInfo: return the file info
+* return: 0 success, !=0 fail, return the error code
+**/
+int fdfs_get_file_info(const char *file_id, FDFSFileInfo *pFileInfo);
+
+
 #ifdef __cplusplus
 }
 #endif

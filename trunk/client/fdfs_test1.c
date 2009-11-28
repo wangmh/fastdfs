@@ -279,6 +279,7 @@ int main(int argc, char *argv[])
 			if ((result=getFileContent(local_filename, \
 					&file_content, &file_size)) == 0)
 			{
+			file_size -= 5;
 			result = storage_upload_slave_by_filebuff1( \
 				pTrackerServer, NULL, file_content, file_size, \
 				master_file_id, prefix_name, file_ext_name, \
