@@ -1743,3 +1743,75 @@ int storage_upload_slave_by_callback1(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
+int fdfs_get_file_info(const char *file_id, FDFSFileInfo *pFileInfo)
+{
+	static struct base64_context context;
+	static int context_inited = 0;
+	struct in_addr ip_addr;
+	int file_id_len;
+	int filename_len;
+	int buff_len;
+	int result;
+	char *group_name;
+	char *remote_filename;
+	char new_file_id[128];
+	char buff[64];
+
+	memset(pFileInfo, 0, sizeof(FDFSFileInfo));
+	if (!context_inited)
+	{
+		context_inited = 1;
+		base64_init_ex(&context, 0, '-', '_', '.');
+	}
+
+	file_id_len = snprintf(new_file_id, sizeof(new_file_id), \
+				"%s", file_id);
+	if (file_id_len <= FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
+			+ FDFS_FILE_EXT_NAME_MAX_LEN + 1)
+	{
+		return EINVAL;
+	}
+
+	group_name = new_file_id;
+	remote_filename = strchr(new_file_id, '/');
+	if (remote_filename == NULL)
+	{
+		return EINVAL;
+	}
+
+	*remote_filename = '\0';
+	remote_filename++;  //skip /
+	filename_len = strlen(remote_filename);
+
+	memset(buff, 0, sizeof(buff));
+	base64_decode_auto(&context, remote_filename + FDFS_FILE_PATH_LEN, \
+		FDFS_FILENAME_BASE64_LENGTH, buff, &buff_len);
+
+	memset(&ip_addr, 0, sizeof(ip_addr));
+	ip_addr.s_addr = ntohl(buff2int(buff));
+	inet_ntop(AF_INET,&ip_addr,pFileInfo->source_ip_addr,IP_ADDRESS_SIZE);
+
+	if (filename_len > FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH + \
+		FDFS_FILE_EXT_NAME_MAX_LEN + 1)  //slave file
+	{
+		TrackerServerInfo trackerServer;
+		if ((result=tracker_get_connection_r(&trackerServer)) != 0)
+		{
+			return result;
+		}
+
+		result = storage_query_file_info(&trackerServer, \
+				NULL,  group_name, remote_filename, pFileInfo);
+		tracker_disconnect_server(&trackerServer);
+
+		return result;
+	}
+	else  //master file (normal file)
+	{
+		pFileInfo->create_timestamp = buff2int(buff+sizeof(int));
+		pFileInfo->file_size = buff2long(buff+sizeof(int)*2);
+	}
+
+	return 0;
+}
+
