@@ -295,6 +295,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 				IP_ADDRESS_SIZE - 1);
 		pDest->total_mb = buff2long(pSrc->sz_total_mb);
 		pDest->free_mb = buff2long(pSrc->sz_free_mb);
+		pDest->upload_priority = buff2long(pSrc->sz_upload_priority);
 
 		pStorageStat->total_upload_count = buff2long( \
 			pStatBuff->sz_total_upload_count);

@@ -193,7 +193,8 @@ int tracker_load_from_conf_file(const char *filename, \
 
 		g_groups.store_server = (byte)iniGetIntValue("store_server", \
 			items, nItemCount, FDFS_STORE_SERVER_ROUND_ROBIN);
-		if (!(g_groups.store_server == FDFS_STORE_SERVER_FIRST || \
+		if (!(g_groups.store_server == FDFS_STORE_SERVER_FIRST_BY_IP ||\
+			g_groups.store_server == FDFS_STORE_SERVER_FIRST_BY_PRI||
 			g_groups.store_server == FDFS_STORE_SERVER_ROUND_ROBIN))
 		{
 			logWarning("file: "__FILE__", line: %d, " \

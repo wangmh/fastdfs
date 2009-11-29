@@ -79,6 +79,7 @@ typedef struct
 	char storage_http_port[FDFS_PROTO_PKG_LEN_SIZE];
 	char store_path_count[FDFS_PROTO_PKG_LEN_SIZE];
 	char subdir_count_per_path[FDFS_PROTO_PKG_LEN_SIZE];
+	char upload_priority[FDFS_PROTO_PKG_LEN_SIZE];
 	char init_flag;
 } TrackerStorageJoinBody;
 
@@ -101,6 +102,7 @@ typedef struct
 	char ip_addr[IP_ADDRESS_SIZE];
 	char sz_total_mb[8];
 	char sz_free_mb[8];
+	char sz_upload_priority[8];
 	FDFSStorageStatBuff stat_buff;
 } TrackerStorageStat;
 

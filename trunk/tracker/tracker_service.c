@@ -235,6 +235,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	TrackerStorageJoinBody body;
 	int store_path_count;
 	int subdir_count_per_path;
+	int upload_priority;
 	int status;
 
 	do
@@ -314,9 +315,11 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 		break;
 	}
 
+	upload_priority = (int)buff2long(body.upload_priority);
+
 	status = tracker_mem_add_group_and_storage(pClientInfo, \
 			store_path_count, subdir_count_per_path, \
-			true, body.init_flag);
+			upload_priority, true, body.init_flag);
 	} while (0);
 
 	return tracker_check_and_sync(pClientInfo, status);
@@ -597,6 +600,8 @@ static int tracker_deal_server_list_group_storages( \
 				IP_ADDRESS_SIZE);
 			long2buff((*ppServer)->total_mb, pDest->sz_total_mb);
 			long2buff((*ppServer)->free_mb, pDest->sz_free_mb);
+			long2buff((*ppServer)->upload_priority, \
+				pDest->sz_upload_priority);
 
 			long2buff(pStorageStat->total_upload_count, \
 				 pStatBuff->sz_total_upload_count);
@@ -1022,6 +1027,12 @@ static int tracker_deal_service_query_storage( \
 		}
 
 		pStorageServer = tracker_get_writable_storage(pStoreGroup);
+		if (pStorageServer == NULL)
+		{
+			resp.status = ENOENT;
+			break;
+		}
+
 		write_path_index = pStorageServer->current_write_path;
 		if (write_path_index >= pStoreGroup->store_path_count)
 		{
@@ -1517,55 +1528,7 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (g_groups.store_server == FDFS_STORE_SERVER_FIRST)
-		{
-			int max_synced_timestamp;
-
-			max_synced_timestamp = pClientInfo->pStorage->stat.\
-						last_synced_timestamp;
-			pEnd = in_buff + nInPackLen;
-			for (p=in_buff; p<pEnd; p += (IP_ADDRESS_SIZE + 4))
-			{
-				sync_timestamp = buff2int(p + IP_ADDRESS_SIZE);
-				if (sync_timestamp <= 0)
-				{
-					continue;
-				}
-
-				src_ip_addr = p;
-				*(src_ip_addr + (IP_ADDRESS_SIZE - 1)) = '\0';
- 				pSrcStorage = tracker_mem_get_storage( \
-					pClientInfo->pGroup, src_ip_addr);
-				if (pSrcStorage == NULL)
-				{
-					continue;
-				}
-				if (pSrcStorage->status != FDFS_STORAGE_STATUS_ACTIVE)
-				{
-					continue;
-				}
-
-				src_index = pSrcStorage - 
-						pClientInfo->pGroup->all_servers;
-				if (src_index == dest_index || src_index < 0 || \
-					src_index >= pClientInfo->pGroup->count)
-				{
-					continue;
-				}
-
-				pClientInfo->pGroup->last_sync_timestamps \
-					[src_index][dest_index] = sync_timestamp;
-
-				if (sync_timestamp > max_synced_timestamp)
-				{
-					max_synced_timestamp = sync_timestamp;
-				}
-			}
-
-			pClientInfo->pStorage->stat.last_synced_timestamp = \
-					max_synced_timestamp;
-		}
-		else  //round robin
+		if (g_groups.store_server == FDFS_STORE_SERVER_ROUND_ROBIN)
 		{
 			int min_synced_timestamp;
 
@@ -1618,6 +1581,54 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 				pClientInfo->pStorage->stat.last_synced_timestamp = \
 					min_synced_timestamp;
 			}
+		}
+		else
+		{
+			int max_synced_timestamp;
+
+			max_synced_timestamp = pClientInfo->pStorage->stat.\
+						last_synced_timestamp;
+			pEnd = in_buff + nInPackLen;
+			for (p=in_buff; p<pEnd; p += (IP_ADDRESS_SIZE + 4))
+			{
+				sync_timestamp = buff2int(p + IP_ADDRESS_SIZE);
+				if (sync_timestamp <= 0)
+				{
+					continue;
+				}
+
+				src_ip_addr = p;
+				*(src_ip_addr + (IP_ADDRESS_SIZE - 1)) = '\0';
+ 				pSrcStorage = tracker_mem_get_storage( \
+					pClientInfo->pGroup, src_ip_addr);
+				if (pSrcStorage == NULL)
+				{
+					continue;
+				}
+				if (pSrcStorage->status != FDFS_STORAGE_STATUS_ACTIVE)
+				{
+					continue;
+				}
+
+				src_index = pSrcStorage - 
+						pClientInfo->pGroup->all_servers;
+				if (src_index == dest_index || src_index < 0 || \
+					src_index >= pClientInfo->pGroup->count)
+				{
+					continue;
+				}
+
+				pClientInfo->pGroup->last_sync_timestamps \
+					[src_index][dest_index] = sync_timestamp;
+
+				if (sync_timestamp > max_synced_timestamp)
+				{
+					max_synced_timestamp = sync_timestamp;
+				}
+			}
+
+			pClientInfo->pStorage->stat.last_synced_timestamp = \
+					max_synced_timestamp;
 		}
 
 		if (++g_storage_sync_time_chg_count % \

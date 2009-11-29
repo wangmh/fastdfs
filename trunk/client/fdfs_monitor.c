@@ -188,6 +188,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tip_addr = %s%s  %s\n" \
 			"\t\ttotal storage = %dGB\n" \
 			"\t\tfree storage = %dGB\n" \
+			"\t\tupload priority = %d\n" \
 			"\t\ttotal_upload_count = "INT64_PRINTF_FORMAT"\n"   \
 			"\t\tsuccess_upload_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\ttotal_set_meta_count = "INT64_PRINTF_FORMAT"\n" \
@@ -210,6 +211,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			get_storage_status_caption(pStorage->status), \
 			pStorage->total_mb / 1024, \
 			pStorage->free_mb / 1024,  \
+			pStorage->upload_priority,  \
 			pStorageStat->total_upload_count, \
 			pStorageStat->success_upload_count, \
 			pStorageStat->total_set_meta_count, \

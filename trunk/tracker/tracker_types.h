@@ -49,7 +49,8 @@
 
 //which server to upload file
 #define FDFS_STORE_SERVER_ROUND_ROBIN	0  //round robin
-#define FDFS_STORE_SERVER_FIRST		1  //the first server
+#define FDFS_STORE_SERVER_FIRST_BY_IP	1  //the first server order by ip
+#define FDFS_STORE_SERVER_FIRST_BY_PRI	2  //the first server order by priority
 
 //which server to download file
 #define FDFS_DOWNLOAD_SERVER_ROUND_ROBIN	0  //round robin
@@ -162,6 +163,7 @@ typedef struct StructFDFSStorageDetail
 
 	int store_path_count;  //store base path count of each storage server
 	int subdir_count_per_path;
+	int upload_priority; //storage upload priority
 
 	int current_write_path; //current write path index
 
@@ -176,13 +178,14 @@ typedef struct
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	int64_t free_mb;  //free disk storage in MB
 	int alloc_size;
-	int count;    //server count
+	int count;    //total server count
+	int active_count; //current active server count
 	int storage_port;
 	int storage_http_port; //storage http server port
 	FDFSStorageDetail *all_servers;
-	FDFSStorageDetail **sorted_servers;  //order by addr
-	int active_count;
-	FDFSStorageDetail **active_servers;  //order by addr
+	FDFSStorageDetail **sorted_servers;  //order by ip addr
+	FDFSStorageDetail **active_servers;  //order by ip addr
+	FDFSStorageDetail *pStoreServer;  //for upload priority mode
 
 	int current_read_server;
 	int current_write_server;

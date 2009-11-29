@@ -29,6 +29,7 @@
 #define STORAGE_DEF_SYNC_WAIT_MSEC   100
 #define STORAGE_SYNC_STAT_FILE_FREQ  50000
 #define DEFAULT_DATA_DIR_COUNT_PER_PATH	 256
+#define DEFAULT_UPLOAD_PRIORITY           10
 
 #define STORAGE_MAX_LOCAL_IP_ADDRS	4
 
@@ -101,6 +102,7 @@ extern char g_run_by_user[32];
 extern char g_bind_addr[IP_ADDRESS_SIZE];
 extern bool g_client_bind_addr;
 extern int g_thread_stack_size;
+extern int g_upload_priority;
 
 #ifdef WITH_HTTPD
 extern FDFSHTTPParams g_http_params;
