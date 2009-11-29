@@ -22,6 +22,7 @@ typedef struct
         char ip_addr[IP_ADDRESS_SIZE];
 	int total_mb;  //total disk storage in MB
 	int free_mb;  //free disk storage in MB
+	int upload_priority;  //upload priority
         FDFSStorageStat stat;
 } FDFSStorageInfo;
 

@@ -986,6 +986,10 @@ int storage_func_init(const char *filename, \
 		}
 		g_thread_stack_size = (int)thread_stack_size;
 
+		g_upload_priority = iniGetIntValue( \
+				"upload_priority", items, nItemCount, \
+				DEFAULT_UPLOAD_PRIORITY);
+
 		g_check_file_duplicate = iniGetBoolValue("check_file_duplicate",
 					items, nItemCount, false);
 		if (g_check_file_duplicate)
@@ -1062,7 +1066,7 @@ int storage_func_init(const char *filename, \
 			"fsync_after_written_bytes=%d, " \
 			"sync_log_buff_interval=%ds, " \
 			"sync_binlog_buff_interval=%ds, " \
-			"thread_stack_size=%d KB, " \
+			"thread_stack_size=%d KB, upload_priority=%d, " \
 			"check_file_duplicate=%d, FDHT group count=%d, " \
 			"FDHT server count=%d, FDHT key_namespace=%s, " \
 			"FDHT keep_alive=%d", \
@@ -1080,7 +1084,7 @@ int storage_func_init(const char *filename, \
 			g_file_distribute_rotate_count, \
 			g_fsync_after_written_bytes, g_sync_log_buff_interval, \
 			g_sync_binlog_buff_interval, g_thread_stack_size/1024, \
-			g_check_file_duplicate, \
+			g_upload_priority, g_check_file_duplicate, \
 			g_group_array.group_count, g_group_array.server_count, \
 			g_key_namespace, g_keep_alive);
 

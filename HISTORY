@@ -1,5 +1,5 @@
 
-Version 1.23  2009-11-28
+Version 1.23  2009-11-29
  * remove unuseless variable "sleep_secs" in tracker_report_thread_entrance
  * storage can bind an address when connect to other servers (as a client)
  * common/md5.h fix UINT4 typedef wrong type in 64 bit OS
@@ -17,6 +17,7 @@ Version 1.23  2009-11-28
  * storage add prototol cmd: STORAGE_PROTO_CMD_QUERY_FILE_INFO
  * FDFS_FILE_EXT_NAME_MAX_LEN changed from 5 to 6
  * get file info support slave file
+ * storage server for uploading file support priority
 
 Version 1.22  2009-10-12
  * bug fixed: common/shared_func.c allow_hosts array maybe overflow in some case
