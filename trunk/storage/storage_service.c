@@ -1139,6 +1139,7 @@ static int storage_server_query_file_info(StorageClientInfo *pClientInfo, \
 	int true_filename_len;
 	int out_len;
 	int result;
+	time_t file_mtime;
 
 	memset(&out_buff, 0, sizeof(out_buff));
 	pResp = (TrackerHeader *)out_buff;
@@ -1217,17 +1218,32 @@ static int storage_server_query_file_info(StorageClientInfo *pClientInfo, \
 		{
 			pResp->status = errno != 0 ? errno : ENOENT;
 			logError("file: "__FILE__", line: %d, " \
-				"client ip:%s, call stat file %s fail, " \
+				"client ip:%s, call lstat file %s fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pClientInfo->ip_addr, true_filename, 
 				pResp->status, strerror(pResp->status));
 			break;
 		}
 
+		file_mtime = file_stat.st_mtime;
+		if (S_ISLNK(file_stat.st_mode))
+		{
+			if (stat(full_filename, &file_stat) != 0)
+			{
+			pResp->status = errno != 0 ? errno : ENOENT;
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, call stat file %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pClientInfo->ip_addr, true_filename, 
+				pResp->status, strerror(pResp->status));
+			break;
+			}
+		}
+
 		p = out_buff + sizeof(TrackerHeader);
 		long2buff(file_stat.st_size, p);
 		p += FDFS_PROTO_PKG_LEN_SIZE;
-		long2buff(file_stat.st_mtime, p);
+		long2buff(file_mtime, p);
 		p += FDFS_PROTO_PKG_LEN_SIZE;
 
 		out_len = p - out_buff;
