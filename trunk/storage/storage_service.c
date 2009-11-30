@@ -1213,7 +1213,7 @@ static int storage_server_query_file_info(StorageClientInfo *pClientInfo, \
 		}
 
 		sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
-		if (stat(full_filename, &file_stat) != 0)
+		if (lstat(full_filename, &file_stat) != 0)
 		{
 			pResp->status = errno != 0 ? errno : ENOENT;
 			logError("file: "__FILE__", line: %d, " \
