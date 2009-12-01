@@ -3117,7 +3117,7 @@ static void php_fdfs_close(php_fdfs_t *i_obj TSRMLS_DC)
 /* constructor/destructor */
 static void php_fdfs_destroy(php_fdfs_t *i_obj TSRMLS_DC)
 {
-	php_fdfs_close(i_obj);
+	php_fdfs_close(i_obj TSRMLS_CC);
 	if (i_obj->context.pTrackerGroup != NULL && i_obj->context.pTrackerGroup != \
 		i_obj->pConfigInfo->pTrackerGroup)
 	{
@@ -3763,7 +3763,7 @@ PHP_METHOD(FastDFS, close)
 	php_fdfs_t *i_obj;
 
 	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
-	php_fdfs_close(i_obj);
+	php_fdfs_close(i_obj TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo___construct, 0, 0, 0)
