@@ -1011,12 +1011,22 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 	}
 	*/
 
+#define FILE_1G_SIZE    (1 * 1024 * 1024 * 1024)
+
 	result = 0;
 	offset = file_offset;
 	remain_bytes = file_bytes;
 	while (remain_bytes > 0)
 	{
-		send_bytes = sendfile(sock, fd, &offset, remain_bytes);
+		if (remain_bytes > FILE_1G_SIZE)
+		{
+			send_bytes = sendfile(sock, fd, &offset, FILE_1G_SIZE);
+		}
+		else
+		{
+			send_bytes = sendfile(sock, fd, &offset, remain_bytes);
+		}
+
 		if (send_bytes <= 0)
 		{
 			result = errno != 0 ? errno : EIO;
