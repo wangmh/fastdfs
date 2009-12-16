@@ -245,6 +245,7 @@ typedef struct
 {
 	int sock;
 	char ip_addr[IP_ADDRESS_SIZE];
+	char tracker_client_ip[IP_ADDRESS_SIZE];
 } StorageClientInfo;
 
 typedef struct

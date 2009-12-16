@@ -178,6 +178,9 @@ static void* tracker_report_thread_entrance(void* arg)
 			}
 		}
 
+		getSockIpaddr(pTrackerServer->sock, \
+				tracker_client_ip, IP_ADDRESS_SIZE);
+
 		if (nContinuousFail == 0)
 		{
 			*szFailPrompt = '\0';
@@ -188,15 +191,32 @@ static void* tracker_report_thread_entrance(void* arg)
 				nContinuousFail);
 		}
 		logInfo("file: "__FILE__", line: %d, " \
-			"successfully connect to tracker server %s:%d%s", \
+			"successfully connect to tracker server %s:%d%s, " \
+			"as a tracker client, my ip is %s", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, szFailPrompt);
+			pTrackerServer->port, szFailPrompt, tracker_client_ip);
 
 		previousCode = 0;
 		nContinuousFail = 0;
 
-		getSockIpaddr(pTrackerServer->sock, \
-				tracker_client_ip, IP_ADDRESS_SIZE);
+		if (*g_tracker_client_ip == '\0')
+		{
+			strcpy(g_tracker_client_ip, tracker_client_ip);
+		}
+		else if (strcmp(tracker_client_ip, g_tracker_client_ip) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"as a client of tracker server %s:%d, " \
+				"my ip: %s != client ip: %s of other " \
+				"tracker client", __LINE__, \
+				pTrackerServer->ip_addr, pTrackerServer->port, \
+				tracker_client_ip, g_tracker_client_ip);
+
+			close(pTrackerServer->sock);
+			pTrackerServer->sock = -1;
+			break;
+		}
+
 		insert_into_local_host_ip(tracker_client_ip);
 
 		/*
