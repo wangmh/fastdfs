@@ -23,7 +23,7 @@
 bool g_continue_flag = true;
 int g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 char g_base_path[MAX_PATH_SIZE];
-Version g_version = {1, 23};
+Version g_version = {1, 24};
 
 /*
 data filename format:
