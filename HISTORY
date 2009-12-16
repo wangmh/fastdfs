@@ -1,6 +1,7 @@
 
-Version 1.24  2009-12-01
+Version 1.24  2009-12-15
  * call php_fdfs_close with TSRMLS_CC as php_fdfs_close(i_obj TSRMLS_CC)
+ * storage server to storage server report ip address as tracker client
 
 Version 1.23  2009-11-29
  * remove unuseless variable "sleep_secs" in tracker_report_thread_entrance

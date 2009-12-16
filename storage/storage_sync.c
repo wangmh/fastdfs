@@ -266,6 +266,41 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 }
 
 /**
+IP_ADDRESS_SIZE bytes: tracker client ip address
+**/
+static int storage_report_client_ip(TrackerServerInfo *pStorageServer)
+{
+	int result;
+	TrackerHeader *pHeader;
+	char out_buff[sizeof(TrackerHeader)+IP_ADDRESS_SIZE];
+	char in_buff[1];
+	char *pBuff;
+	int64_t in_bytes;
+
+	pHeader = (TrackerHeader *)out_buff;
+	memset(out_buff, 0, sizeof(out_buff));
+	
+	long2buff(IP_ADDRESS_SIZE, pHeader->pkg_len);
+	pHeader->cmd = STORAGE_PROTO_CMD_REPORT_CLIENT_IP;
+	strcpy(out_buff + sizeof(TrackerHeader), g_tracker_client_ip);
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
+		sizeof(TrackerHeader) + IP_ADDRESS_SIZE, \
+		g_network_timeout)) != 0)
+	{
+		logError("FILE: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pStorageServer->ip_addr, \
+			pStorageServer->port, \
+			result, strerror(result));
+		return result;
+	}
+
+	pBuff = in_buff;
+	return fdfs_recv_response(pStorageServer, &pBuff, 0, &in_bytes);
+}
+
+/**
 8 bytes: dest(link) filename length
 8 bytes: source filename length
 4 bytes: source op timestamp
@@ -1916,7 +1951,19 @@ static void* storage_sync_thread_entrance(void* arg)
 				" sync thread exit.", \
 				__LINE__, storage_server.ip_addr);
 			fdfs_quit(&storage_server);
+			close(storage_server.sock);
 			break;
+		}
+
+		if (*g_tracker_client_ip != '\0' && \
+			strcmp(local_ip_addr, g_tracker_client_ip) != 0)
+		{
+			if (storage_report_client_ip(&storage_server) != 0)
+			{
+				close(storage_server.sock);
+				storage_reader_destroy(&reader);
+				continue;
+			}
 		}
 
 		if (pStorage->status == FDFS_STORAGE_STATUS_WAIT_SYNC)

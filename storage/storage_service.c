@@ -1119,6 +1119,71 @@ static int storage_server_set_metadata(StorageClientInfo *pClientInfo, \
 }
 
 /**
+IP_ADDRESS_SIZE bytes: tracker client ip address
+**/
+static int storage_server_report_client_ip(StorageClientInfo *pClientInfo, \
+				const int64_t nInPackLen)
+{
+	TrackerHeader *pResp;
+	char tracker_client_ip[IP_ADDRESS_SIZE];
+	char out_buff[sizeof(TrackerHeader)];
+	int result;
+
+	memset(&out_buff, 0, sizeof(out_buff));
+	pResp = (TrackerHeader *)out_buff;
+	do
+	{
+		if (nInPackLen != IP_ADDRESS_SIZE)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length: %d", __LINE__, \
+				STORAGE_PROTO_CMD_REPORT_CLIENT_IP, \
+				pClientInfo->ip_addr,  \
+				nInPackLen, IP_ADDRESS_SIZE);
+			pResp->status = EINVAL;
+			break;
+		}
+
+		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, \
+			tracker_client_ip, nInPackLen, g_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, recv data fail, " \
+				"errno: %d, error info: %s.", \
+				__LINE__, pClientInfo->ip_addr, \
+				pResp->status, strerror(pResp->status));
+			break;
+		}
+
+		*(tracker_client_ip + (IP_ADDRESS_SIZE - 1)) = '\0';
+		strcpy(pClientInfo->tracker_client_ip, tracker_client_ip);
+
+		logInfo("file: "__FILE__", line: %d, " \
+			"client ip: %s, tracker client ip is %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			tracker_client_ip);
+	} while (0);
+
+	long2buff(0, pResp->pkg_len);
+	pResp->cmd = STORAGE_PROTO_CMD_RESP;
+
+	if ((result=tcpsenddata_nb(pClientInfo->sock, (void *)out_buff, \
+		sizeof(TrackerHeader), g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			result, strerror(result));
+		return result;
+	}
+
+	return pResp->status;
+}
+
+/**
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename
 **/
@@ -3472,7 +3537,7 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 \
 		if (pSrcStorage == NULL) \
 		{ \
-			pSrcStorage = get_storage_server(client_info.ip_addr); \
+			pSrcStorage = get_storage_server(client_info.tracker_client_ip); \
 		} \
 		if (pSrcStorage != NULL) \
 		{ \
@@ -3628,6 +3693,7 @@ data buff (struct)
 		}
 	}
 
+	strcpy(client_info.tracker_client_ip, client_info.ip_addr);
 	pSrcStorage = NULL;
 	count = 0;
 	while (g_continue_flag)
@@ -3858,6 +3924,14 @@ data buff (struct)
 			break;
 		case FDFS_PROTO_CMD_QUIT:
 			result = ECONNRESET;  //for quit loop
+			break;
+		case STORAGE_PROTO_CMD_REPORT_CLIENT_IP:
+			if ((result=storage_server_report_client_ip(&client_info,
+				nInPackLen)) != 0)
+			{
+				break;
+			}
+
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "   \
