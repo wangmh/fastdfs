@@ -162,6 +162,17 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			*szHostnamePrompt = '\0';
 		}
 
+		if (pStorage->up_time != 0)
+		{
+			formatDatetime(pStorage->up_time, \
+				"%Y-%m-%d %H:%M:%S", \
+				szUpTime, sizeof(szUpTime));
+		}
+		else
+		{
+			*szUpTime = '\0';
+		}
+
 		printf( "\tHost %d:\n" \
 			"\t\tip_addr = %s%s  %s\n" \
 			"\t\tup time = %s\n" \
@@ -189,10 +200,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tlast_synced_timestamp= %s\n",  \
 			++k, pStorage->ip_addr, szHostnamePrompt, \
 			get_storage_status_caption(pStorage->status), \
-			formatDatetime(pStorage->up_time, \
-				"%Y-%m-%d %H:%M:%S", \
-				szUpTime, sizeof(szUpTime)), \
-			pStorage->total_mb / 1024, \
+			szUpTime, pStorage->total_mb / 1024, \
 			pStorage->free_mb / 1024,  \
 			pStorage->upload_priority,  \
 			pStorage->src_ip_addr,  \
