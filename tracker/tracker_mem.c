@@ -2244,6 +2244,11 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 		for (pServer=briefServers; pServer<pEnd; pServer++)
 		{
 			pServer->ip_addr[IP_ADDRESS_SIZE-1] = '\0';
+			if (pServer->status == FDFS_STORAGE_STATUS_NONE)
+			{
+				pServer->status = FDFS_STORAGE_STATUS_DELETED;
+			}
+
 			memcpy(target_storage.ip_addr, pServer->ip_addr, \
 				IP_ADDRESS_SIZE);
 			pTargetStorage = &target_storage;
@@ -2280,29 +2285,32 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 					((*ppFound)->status == \
 					FDFS_STORAGE_STATUS_SYNCING))) || \
 					(pServer->status != (*ppFound)->status \
-					 && pServer->status == \
-						FDFS_STORAGE_STATUS_DELETED))
+					 && (pServer->status == \
+						FDFS_STORAGE_STATUS_DELETED)))
 				{
 					(*ppFound)->status = pServer->status;
 					pClientInfo->pGroup->version++;
 				}
-
-				continue;
 			}
+			else if (pServer->status == FDFS_STORAGE_STATUS_DELETED)
+			{
+				//ignore deleted storage server
+			}
+			else
+			{
+				pStorageServer->status = pServer->status;
+				memcpy(pStorageServer->ip_addr, \
+					pServer->ip_addr, IP_ADDRESS_SIZE);
 
-			pStorageServer->status = pServer->status;
-			memcpy(pStorageServer->ip_addr, pServer->ip_addr, \
-				IP_ADDRESS_SIZE);
+				tracker_mem_insert_into_sorted_servers( \
+					pStorageServer, \
+					pClientInfo->pGroup->sorted_servers, \
+					pClientInfo->pGroup->count);
 
-			tracker_mem_insert_into_sorted_servers( \
-				pStorageServer, \
-				pClientInfo->pGroup->sorted_servers, \
-				pClientInfo->pGroup->count);
-
-			pStorageServer++;
-			pClientInfo->pGroup->count++;
+				pStorageServer++;
+				pClientInfo->pGroup->count++;
+			}
 		}
-
 	} while (0);
 
 	if (pthread_mutex_unlock(&mem_thread_lock) != 0)
