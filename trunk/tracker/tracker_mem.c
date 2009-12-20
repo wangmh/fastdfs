@@ -2493,6 +2493,7 @@ int tracker_mem_offline_store_server(TrackerClientInfo *pClientInfo)
 		return 0;
 	}
 
+	pClientInfo->pStorage->up_time = 0;
 	if ((pClientInfo->pStorage->status == \
 			FDFS_STORAGE_STATUS_WAIT_SYNC) || \
 		(pClientInfo->pStorage->status == \
