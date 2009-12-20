@@ -1997,8 +1997,8 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		const int store_path_count, const int subdir_count_per_path, \
-		const int upload_priority, const bool bIncRef, \
-		const bool init_flag)
+		const int upload_priority, const time_t up_time, \
+		const bool bIncRef, const bool init_flag)
 {
 	int result;
 	bool bGroupInserted;
@@ -2076,6 +2076,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	pStorageServer->store_path_count = store_path_count;
 	pStorageServer->subdir_count_per_path = subdir_count_per_path;
 	pStorageServer->upload_priority = upload_priority;
+	pStorageServer->up_time = up_time;
 
 	if (pClientInfo->pGroup->store_path_count == 0)
 	{

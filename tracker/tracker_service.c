@@ -237,6 +237,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	int subdir_count_per_path;
 	int upload_priority;
 	int status;
+	time_t up_time;
 
 	do
 	{
@@ -316,10 +317,11 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	}
 
 	upload_priority = (int)buff2long(body.upload_priority);
+	up_time = (time_t)buff2long(body.up_time);
 
 	status = tracker_mem_add_group_and_storage(pClientInfo, \
 			store_path_count, subdir_count_per_path, \
-			upload_priority, true, body.init_flag);
+			upload_priority, up_time, true, body.init_flag);
 	} while (0);
 
 	return tracker_check_and_sync(pClientInfo, status);
@@ -624,6 +626,13 @@ static int tracker_deal_server_list_group_storages( \
 			pDest->status = (*ppServer)->status;
 			memcpy(pDest->ip_addr, (*ppServer)->ip_addr, \
 				IP_ADDRESS_SIZE);
+			if ((*ppServer)->psync_src_server != NULL)
+			{
+				memcpy(pDest->src_ip_addr, \
+					(*ppServer)->psync_src_server->ip_addr,\
+					IP_ADDRESS_SIZE);
+			}
+			long2buff((*ppServer)->up_time, pDest->sz_up_time);
 			long2buff((*ppServer)->total_mb, pDest->sz_total_mb);
 			long2buff((*ppServer)->free_mb, pDest->sz_free_mb);
 			long2buff((*ppServer)->upload_priority, \

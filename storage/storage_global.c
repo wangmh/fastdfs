@@ -74,6 +74,7 @@ char g_bind_addr[IP_ADDRESS_SIZE] = {0};
 bool g_client_bind_addr = true;
 int g_thread_stack_size = 1024 * 1024;
 int g_upload_priority = DEFAULT_UPLOAD_PRIORITY;
+time_t g_up_time = 0;
 
 #ifdef WITH_HTTPD
 FDFSHTTPParams g_http_params;

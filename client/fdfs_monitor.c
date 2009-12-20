@@ -107,6 +107,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 	FDFSStorageInfo *pStorage;
 	FDFSStorageInfo *pStorageEnd;
 	FDFSStorageStat *pStorageStat;
+	char szUpTime[32];
 	char szLastHeartBeatTime[32];
 	char szSrcUpdTime[32];
 	char szSyncUpdTime[32];
@@ -163,9 +164,11 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 
 		printf( "\tHost %d:\n" \
 			"\t\tip_addr = %s%s  %s\n" \
+			"\t\tup time = %s\n" \
 			"\t\ttotal storage = %dGB\n" \
 			"\t\tfree storage = %dGB\n" \
 			"\t\tupload priority = %d\n" \
+			"\t\tsource ip_addr = %s\n" \
 			"\t\ttotal_upload_count = "INT64_PRINTF_FORMAT"\n"   \
 			"\t\tsuccess_upload_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\ttotal_set_meta_count = "INT64_PRINTF_FORMAT"\n" \
@@ -186,9 +189,13 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tlast_synced_timestamp= %s\n",  \
 			++k, pStorage->ip_addr, szHostnamePrompt, \
 			get_storage_status_caption(pStorage->status), \
+			formatDatetime(pStorage->up_time, \
+				"%Y-%m-%d %H:%M:%S", \
+				szUpTime, sizeof(szUpTime)), \
 			pStorage->total_mb / 1024, \
 			pStorage->free_mb / 1024,  \
 			pStorage->upload_priority,  \
+			pStorage->src_ip_addr,  \
 			pStorageStat->total_upload_count, \
 			pStorageStat->success_upload_count, \
 			pStorageStat->total_set_meta_count, \

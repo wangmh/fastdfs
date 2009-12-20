@@ -1082,6 +1082,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, const bool sync_old_d
 	long2buff(g_path_count, pReqBody->store_path_count);
 	long2buff(g_subdir_count_per_path, pReqBody->subdir_count_per_path);
 	long2buff(g_upload_priority, pReqBody->upload_priority);
+	long2buff(g_up_time, pReqBody->up_time);
 	pReqBody->init_flag = sync_old_done ? 0 : 1;
 
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \

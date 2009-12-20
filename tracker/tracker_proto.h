@@ -82,6 +82,7 @@ typedef struct
 	char store_path_count[FDFS_PROTO_PKG_LEN_SIZE];
 	char subdir_count_per_path[FDFS_PROTO_PKG_LEN_SIZE];
 	char upload_priority[FDFS_PROTO_PKG_LEN_SIZE];
+	char up_time[FDFS_PROTO_PKG_LEN_SIZE];   //storage service started timestamp
 	char init_flag;
 } TrackerStorageJoinBody;
 
@@ -102,6 +103,8 @@ typedef struct
 {
 	char status;
 	char ip_addr[IP_ADDRESS_SIZE];
+	char src_ip_addr[IP_ADDRESS_SIZE];
+	char sz_up_time[8];
 	char sz_total_mb[8];
 	char sz_free_mb[8];
 	char sz_upload_priority[8];

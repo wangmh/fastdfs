@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "fdfs_define.h"
 #include "tracker_types.h"
 #include "client_global.h"
@@ -104,6 +105,7 @@ extern char g_bind_addr[IP_ADDRESS_SIZE];
 extern bool g_client_bind_addr;
 extern int g_thread_stack_size;
 extern int g_upload_priority;
+extern time_t g_up_time;
 
 #ifdef WITH_HTTPD
 extern FDFSHTTPParams g_http_params;
