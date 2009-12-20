@@ -1901,7 +1901,7 @@ int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
 		if (pServer->psync_src_server != NULL && \
 		strcmp(pServer->psync_src_server->ip_addr, ip_addr) == 0)
 		{
-			pServer->psync_src_server->ip_addr[0] = '\0';
+			pServer->psync_src_server = NULL;
 		}
 	}
 

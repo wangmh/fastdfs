@@ -73,9 +73,6 @@ int main(int argc, char *argv[])
 	}
 	else if (strcmp(op_type, "delete") == 0)
 	{
-		TrackerServerInfo *pServer;
-		TrackerServerInfo *pEnd;
-
 		if (argc < 5)
 		{
 			printf("Usage: %s <config_file> delete <group_name> " \
@@ -83,37 +80,17 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 
-		if ((result=tracker_get_all_connections()) != 0)
-		{
-			printf("connect to tracker server fail!\n");
-			return result;
-		}
-
-		pEnd = g_tracker_group.servers + g_tracker_group.server_count;
-		for (pServer=g_tracker_group.servers; pServer<pEnd; pServer++)
-		{
-			if (pServer->sock <= 0)
-			{
-				continue;
-			}
-
-			if ((result=tracker_delete_storage(pServer, \
+		if ((result=tracker_delete_storage(&g_tracker_group, \
 				argv[3], argv[4])) == 0)
-			{
-				printf("delete storage server %s::%s from " \
-					"tracker server %s success.\n", \
-					argv[3], argv[4], pServer->ip_addr);
-			}
-			else
-			{
-				printf("delete storage server %s::%s from " \
-					"tracker server %s fail, " \
-					"error no: %d, error info: %s\n", \
-					argv[3], argv[4], pServer->ip_addr, \
-					result, strerror(result));
-			}
-
-			fdfs_quit(pServer);
+		{
+			printf("delete storage server %s::%s success\n", \
+				argv[3], argv[4]);
+		}
+		else
+		{
+			printf("delete storage server %s::%s fail, " \
+				"error no: %d, error info: %s\n", \
+				argv[3], argv[4], result, strerror(result));
 		}
 	}
 

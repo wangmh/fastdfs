@@ -386,8 +386,7 @@ static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, invalid group_name: %s", \
-				__LINE__, pClientInfo->ip_addr, \
-				pClientInfo->group_name);
+				__LINE__, pClientInfo->ip_addr, group_name);
 			resp.status = ENOENT;
 			break;
 		}
@@ -396,7 +395,6 @@ static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
 	} while (0);
 
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
-
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_network_timeout)) != 0)
 	{
@@ -599,9 +597,8 @@ static int tracker_deal_server_list_group_storages( \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, invalid group_name: %s", \
-				__LINE__, pClientInfo->ip_addr, \
-				pClientInfo->group_name);
-			resp.status = EINVAL;
+				__LINE__, pClientInfo->ip_addr, group_name);
+			resp.status = ENOENT;
 			break;
 		}
 
