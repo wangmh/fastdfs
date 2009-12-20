@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	g_up_time = time(NULL);
 	conf_filename = argv[1];
 	memset(g_bind_addr, 0, sizeof(g_bind_addr));
 	if ((result=storage_func_init(conf_filename, \

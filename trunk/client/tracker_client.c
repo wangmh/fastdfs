@@ -311,6 +311,9 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 		pDest->status = pSrc->status;
 		memcpy(pDest->ip_addr, pSrc->ip_addr, \
 				IP_ADDRESS_SIZE - 1);
+		memcpy(pDest->src_ip_addr, pSrc->src_ip_addr, \
+				IP_ADDRESS_SIZE - 1);
+		pDest->up_time = buff2long(pSrc->sz_up_time);
 		pDest->total_mb = buff2long(pSrc->sz_total_mb);
 		pDest->free_mb = buff2long(pSrc->sz_free_mb);
 		pDest->upload_priority = buff2long(pSrc->sz_upload_priority);

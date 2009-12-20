@@ -20,9 +20,11 @@ typedef struct
 {
         char status;
         char ip_addr[IP_ADDRESS_SIZE];
+        char src_ip_addr[IP_ADDRESS_SIZE];
 	int total_mb;  //total disk storage in MB
 	int free_mb;  //free disk storage in MB
 	int upload_priority;  //upload priority
+	time_t up_time;  //storage service started timestamp
         FDFSStorageStat stat;
 } FDFSStorageInfo;
 

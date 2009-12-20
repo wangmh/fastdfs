@@ -155,6 +155,7 @@ typedef struct StructFDFSStorageDetail
 	struct StructFDFSStorageDetail *psync_src_server;
 	time_t sync_until_timestamp;
 
+	time_t up_time;
 	int64_t total_mb;  //total disk storage in MB
 	int64_t free_mb;  //free disk storage in MB
 
