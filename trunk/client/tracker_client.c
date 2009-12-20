@@ -781,10 +781,14 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-int tracker_delete_storage(TrackerServerInfo *pTrackerServer, \
+int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 		const char *group_name, const char *ip_addr)
 {
-	TrackerHeader header;
+	TrackerHeader *pHeader;
+	TrackerServerInfo tracker_server;
+	TrackerServerInfo *pServer;
+	TrackerServerInfo *pEnd;
+	FDFSStorageInfo storage_infos[1];
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
 			IP_ADDRESS_SIZE];
 	char in_buff[1];
@@ -792,16 +796,48 @@ int tracker_delete_storage(TrackerServerInfo *pTrackerServer, \
 	int64_t in_bytes;
 	int result;
 	int ipaddr_len;
+	int storage_count;
+	int enoent_count;
 
-	if (pTrackerServer->sock < 0)
+	enoent_count = 0;
+	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
+	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
 	{
-		if ((result=tracker_connect_server(pTrackerServer)) != 0)
+		memcpy(&tracker_server, pServer, sizeof(TrackerServerInfo));
+		tracker_server.sock = -1;
+		if ((result=tracker_connect_server(&tracker_server)) != 0)
 		{
 			return result;
 		}
+
+		result = tracker_list_servers(&tracker_server, \
+				group_name, ip_addr, storage_infos, 1, \
+				&storage_count);
+		close(tracker_server.sock);
+		if (result != 0 && result != ENOENT)
+		{
+			return result;
+		}
+
+		if (result == ENOENT || storage_count == 0)
+		{
+			enoent_count++;
+			continue;
+		}
+
+		if (storage_infos[0].status == FDFS_STORAGE_STATUS_ONLINE
+		   || storage_infos[0].status == FDFS_STORAGE_STATUS_ACTIVE)
+		{
+			return EBUSY;
+		}
+	}
+	if (enoent_count == pTrackerGroup->server_count)
+	{
+		return ENOENT;
 	}
 
 	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
 	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
 			sizeof(TrackerHeader),  "%s", group_name);
 	ipaddr_len = snprintf(out_buff + sizeof(TrackerHeader) + \
@@ -809,33 +845,87 @@ int tracker_delete_storage(TrackerServerInfo *pTrackerServer, \
 			sizeof(out_buff) - sizeof(TrackerHeader) - \
 			FDFS_GROUP_NAME_MAX_LEN,  "%s", ip_addr);
 	
-	long2buff(FDFS_GROUP_NAME_MAX_LEN + ipaddr_len, header.pkg_len);
-	header.cmd = TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE;
-	header.status = 0;
-	memcpy(out_buff, &header, sizeof(TrackerHeader));
-	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
-		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
-		ipaddr_len, g_network_timeout)) != 0)
-	{
-		logError("send data to tracker server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pTrackerServer->ip_addr, \
-			pTrackerServer->port, \
-			result, strerror(result));
-	}
-	else
-	{
-		pInBuff = in_buff;
-		result = fdfs_recv_response(pTrackerServer, \
-				&pInBuff, 0, &in_bytes);
-	}
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + ipaddr_len, pHeader->pkg_len);
+	pHeader->cmd = TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE;
 
-	if (result != 0)
+	result = 0;
+	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
 	{
-		close(pTrackerServer->sock);
-		pTrackerServer->sock = -1;
+		memcpy(&tracker_server, pServer, sizeof(TrackerServerInfo));
+		tracker_server.sock = -1;
+		if ((result=tracker_connect_server(&tracker_server)) != 0)
+		{
+			return result;
+		}
+
+		if ((result=tcpsenddata_nb(tracker_server.sock, out_buff, \
+			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
+			ipaddr_len, g_network_timeout)) != 0)
+		{
+			logError("send data to tracker server %s:%d fail, " \
+				"errno: %d, error info: %s", \
+				tracker_server.ip_addr, \
+				tracker_server.port, \
+				result, strerror(result));
+		}
+		else
+		{
+			pInBuff = in_buff;
+			result = fdfs_recv_response(&tracker_server, \
+					&pInBuff, 0, &in_bytes);
+		}
+
+		close(tracker_server.sock);
 	}
 
 	return result;
+}
+
+int tracker_get_storage_status(TrackerServerGroup *pTrackerGroup, \
+		const char *group_name, const char *ip_addr, int *status)
+{
+	TrackerServerInfo tracker_server;
+	TrackerServerInfo *pServer;
+	TrackerServerInfo *pEnd;
+	FDFSStorageInfo storage_infos[1];
+	int result;
+	int storage_count;
+
+	*status = -1;
+	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
+	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
+	{
+		memcpy(&tracker_server, pServer, sizeof(TrackerServerInfo));
+		tracker_server.sock = -1;
+		if ((result=tracker_connect_server(&tracker_server)) != 0)
+		{
+			return result;
+		}
+
+		result = tracker_list_servers(&tracker_server, \
+				group_name, ip_addr, storage_infos, 1, \
+				&storage_count);
+		close(tracker_server.sock);
+		if (result != 0 && result != ENOENT)
+		{
+			return result;
+		}
+
+		if (result == ENOENT || storage_count == 0)
+		{
+			continue;
+		}
+
+		if (storage_infos[0].status > *status) 
+		{
+			*status = storage_infos[0].status;
+		}
+	}
+	if (*status == -1)
+	{
+		return ENOENT;
+	}
+
+	return 0;
 }
 

@@ -29,6 +29,7 @@
 #include "storage_global.h"
 #include "storage_sync.h"
 #include "storage_func.h"
+#include "tracker_client.h"
 
 static pthread_mutex_t reporter_thread_lock;
 
@@ -314,7 +315,24 @@ static void* tracker_report_thread_entrance(void* arg)
 
 			if (k == g_tracker_group.server_count)
 			{ //src storage server already be deleted
-				tracker_sync_dest_query(pTrackerServer);
+				int my_status;
+				if (tracker_get_storage_status(&g_tracker_group,
+                			g_group_name, g_tracker_client_ip, 
+					&my_status) == 0)
+				{
+					tracker_sync_dest_query(pTrackerServer);
+					if(my_status<FDFS_STORAGE_STATUS_OFFLINE
+						&& g_sync_old_done)
+					{  //need re-sync old files
+						pthread_mutex_lock( \
+							&reporter_thread_lock);
+						g_sync_old_done = false;
+						sync_old_done = g_sync_old_done;
+						storage_write_to_sync_ini_file();
+						pthread_mutex_unlock( \
+							&reporter_thread_lock);
+					}
+				}
 			}
 
 			fdfs_quit(pTrackerServer);

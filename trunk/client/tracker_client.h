@@ -33,6 +33,7 @@ typedef struct
 /**
 * get a connection to tracker server
 * params:
+*	pTrackerGroup: the tracker group
 * return: != NULL for success, NULL for fail
 **/
 TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup);
@@ -44,6 +45,7 @@ TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup);
 /**
 * get a connection to tracker server
 * params:
+*	pTrackerGroup: the tracker group
 *       pTrackerServer: tracker server
 * return: 0 success, !=0 fail
 **/
@@ -72,6 +74,7 @@ void tracker_disconnect_server(TrackerServerInfo *pTrackerServer);
 /**
 * connect to all tracker servers
 * params:
+*	pTrackerGroup: the tracker group
 * return: 0 success, !=0 fail, return the error code
 **/
 int tracker_get_all_connections_ex(TrackerServerGroup *pTrackerGroup);
@@ -82,6 +85,7 @@ int tracker_get_all_connections_ex(TrackerServerGroup *pTrackerGroup);
 /**
 * close all connections to tracker servers
 * params:
+*	pTrackerGroup: the tracker group
 * return:
 **/
 void tracker_close_all_connections_ex(TrackerServerGroup *pTrackerGroup);
@@ -206,13 +210,26 @@ int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
 /**
 * delete a storage server from cluster
 * params:
-*	pTrackerServer: tracker server
+*	pTrackerGroup: the tracker group
 *	group_name: the group name which the storage server belongs to
 *	ip_addr: the ip address of the storage server
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_delete_storage(TrackerServerInfo *pTrackerServer, \
+int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 		const char *group_name, const char *ip_addr);
+
+
+/**
+* get storage server highest level status from all tracker servers
+* params:
+*	pTrackerGroup: the tracker group
+*	group_name: the group name which the storage server belongs to
+*	ip_addr: the ip address of the storage server
+*	status: return the highest level status
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_get_storage_status(TrackerServerGroup *pTrackerGroup, \
+		const char *group_name, const char *ip_addr, int *status);
 
 #ifdef __cplusplus
 }
