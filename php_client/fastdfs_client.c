@@ -638,6 +638,15 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			add_assoc_zval_ex(group_info_array, pStorage->ip_addr, \
 				strlen(pStorage->ip_addr)+1, server_info_array);
 
+			add_assoc_long_ex(server_info_array, \
+				"up_time", sizeof("up_time"), \
+				pStorage->up_time);
+
+			add_assoc_stringl_ex(server_info_array, \
+				"src_ip_addr", sizeof("src_ip_addr"), \
+				pStorage->src_ip_addr, \
+				strlen(pStorage->src_ip_addr), 1);
+
 			pStorageStat = &(pStorage->stat);
 
 			add_assoc_long_ex(server_info_array, "status", \
