@@ -34,11 +34,13 @@ static pthread_mutex_t reporter_thread_lock;
 
 /* save report thread ids */
 static pthread_t *report_tids = NULL;
+static int *src_storage_status = NULL; //returned by tracker server
 
 static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 			int *pstat_chg_sync_count);
 static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer);
 static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer);
+static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer);
 static int tracker_sync_notify(TrackerServerInfo *pTrackerServer);
 static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer);
 
@@ -108,11 +110,13 @@ static void* tracker_report_thread_entrance(void* arg)
 	int result;
 	int previousCode;
 	int nContinuousFail;
+	int tracker_index;
 
 	stat_chg_sync_count = 0;
 
 	pTrackerServer = (TrackerServerInfo *)arg;
 	pTrackerServer->sock = -1;
+	tracker_index = pTrackerServer - g_tracker_group.servers;
 
 	sync_old_done = g_sync_old_done;
 	while (g_continue_flag &&  \
@@ -295,8 +299,24 @@ static void* tracker_report_thread_entrance(void* arg)
 			sync_old_done = true;
 		}
 
-		if (tracker_sync_notify(pTrackerServer) != 0)
+		src_storage_status[tracker_index] = \
+					tracker_sync_notify(pTrackerServer);
+		if (src_storage_status[tracker_index] != 0)
 		{
+			int k;
+			for (k=0; k<g_tracker_group.server_count; k++)
+			{
+				if (src_storage_status[k] != ENOENT)
+				{
+					break;
+				}
+			}
+
+			if (k == g_tracker_group.server_count)
+			{ //src storage server already be deleted
+				tracker_sync_dest_query(pTrackerServer);
+			}
+
 			fdfs_quit(pTrackerServer);
 			sleep(g_heart_beat_interval);
 			continue;
@@ -935,6 +955,61 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
+static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer)
+{
+	TrackerHeader header;
+	TrackerStorageSyncReqBody syncReqbody;
+	char *pBuff;
+	int64_t in_bytes;
+	int result;
+
+	memset(&header, 0, sizeof(header));
+	header.cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_QUERY;
+	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, \
+			sizeof(header), g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, send data fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, strerror(result));
+		return result;
+	}
+
+	pBuff = (char *)&syncReqbody;
+	if ((result=fdfs_recv_response(pTrackerServer, \
+                &pBuff, sizeof(syncReqbody), &in_bytes)) != 0)
+	{
+		return result;
+	}
+
+	if (in_bytes == 0)
+	{
+		*g_sync_src_ip_addr = '\0';
+		g_sync_until_timestamp = 0;
+		return result;
+	}
+
+	if (in_bytes != sizeof(syncReqbody))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, " \
+			"recv body length: "INT64_PRINTF_FORMAT" is invalid, " \
+			"expect body length: %ld", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, in_bytes, \
+			sizeof(syncReqbody));
+		return EINVAL;
+	}
+
+	memcpy(g_sync_src_ip_addr, syncReqbody.src_ip_addr, IP_ADDRESS_SIZE);
+	g_sync_src_ip_addr[IP_ADDRESS_SIZE-1] = '\0';
+
+	g_sync_until_timestamp = (time_t)buff2long(syncReqbody.until_timestamp);
+	return 0;
+}
+
 static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 {
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageSyncReqBody)];
@@ -1237,7 +1312,20 @@ int tracker_report_thread_start()
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
-	memset(report_tids, 0, sizeof(pthread_t) * g_tracker_group.server_count);
+	memset(report_tids, 0, sizeof(pthread_t)*g_tracker_group.server_count);
+
+	src_storage_status = (int *)malloc(sizeof(int) * \
+					g_tracker_group.server_count);
+	if (src_storage_status == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %ld bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, sizeof(int)*g_tracker_group.server_count, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+	memset(src_storage_status,-1,sizeof(int)*g_tracker_group.server_count);
 
 	g_tracker_reporter_count = 0;
 	pServerEnd = g_tracker_group.servers + g_tracker_group.server_count;

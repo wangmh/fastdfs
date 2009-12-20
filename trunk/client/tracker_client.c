@@ -199,14 +199,16 @@ int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 }
 
 int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
-		const char *szGroupName, \
+		const char *szGroupName, const char *szStorageIp, \
 		FDFSStorageInfo *storage_infos, const int max_storages, \
 		int *storage_count)
 {
-	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 1];
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
+			IP_ADDRESS_SIZE];
 	TrackerHeader *pHeader;
 	int result;
 	int name_len;
+	int ip_len;
 	TrackerStorageStat stats[FDFS_MAX_GROUPS];
 	char *pInBuff;
 	TrackerStorageStat *pSrc;
@@ -233,10 +235,26 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	}
 	memcpy(out_buff + sizeof(TrackerHeader), szGroupName, name_len);
 
-	long2buff(FDFS_GROUP_NAME_MAX_LEN, pHeader->pkg_len);
+	if (szStorageIp == NULL)
+	{
+		ip_len = 0;
+	}
+	else
+	{
+		ip_len = strlen(szStorageIp);
+		if (ip_len >= IP_ADDRESS_SIZE)
+		{
+			ip_len = IP_ADDRESS_SIZE - 1;
+		}
+
+		memcpy(out_buff+sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN,\
+			szStorageIp, ip_len);
+	}
+
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + ip_len, pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_SERVER_LIST_STORAGE;
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
-		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
+		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + ip_len, \
 		g_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \

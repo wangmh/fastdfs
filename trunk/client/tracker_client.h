@@ -104,13 +104,14 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 * params:
 *	pTrackerServer: tracker server
 *	szGroupName: group name to query
+*	szStorageIp: the storage ip address to query, can be NULL or empty
 *	storage_infos: return storage info array
 *	max_storages: max storage count(storage array capacity)
 *	storage_count: return storage count
 * return: 0 success, !=0 fail, return the error code
 **/
 int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
-		const char *szGroupName, \
+		const char *szGroupName, const char *szStorageIp, \
 		FDFSStorageInfo *storage_infos, const int max_storages, \
 		int *storage_count);
 

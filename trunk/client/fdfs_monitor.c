@@ -159,7 +159,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 	);
 
 	result = tracker_list_servers(pTrackerServer, \
-		pGroupStat->group_name, \
+		pGroupStat->group_name, NULL, \
 		storage_infos, FDFS_MAX_SERVERS_EACH_GROUP, \
 		&storage_count);
 	if (result != 0)

@@ -1,8 +1,9 @@
 
-Version 1.24  2009-12-15
+Version 1.24  2009-12-20
  * call php_fdfs_close with TSRMLS_CC as php_fdfs_close(i_obj TSRMLS_CC)
  * storage server to storage server report ip address as tracker client
  * bug fixed: sendfile exceeds 2GB file in Linux
+ * bug fixed: delete storage server 
 
 Version 1.23  2009-11-29
  * remove unuseless variable "sleep_secs" in tracker_report_thread_entrance

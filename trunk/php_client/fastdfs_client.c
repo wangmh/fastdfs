@@ -619,7 +619,7 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 
 		       
 		result = tracker_list_servers(pTrackerServer, \
-				pGroupStat->group_name, \
+				pGroupStat->group_name, NULL, \
 				storage_infos, FDFS_MAX_SERVERS_EACH_GROUP, \
 				&storage_count);
 		if (result != 0)
