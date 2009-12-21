@@ -1110,7 +1110,7 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 
 		if (!g_continue_flag)
 		{
-			return 0;
+			return EINTR;
 		}
 	}
 
@@ -1238,6 +1238,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 	int nItemCount;
 	int result;
 	bool bFileExist;
+	bool saved_need_sync_old;
 
 	memset(pReader, 0, sizeof(BinLogReader));
 	pReader->mark_fd = -1;
@@ -1254,6 +1255,21 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 	else
 	{
 		bFileExist = fileExists(full_filename);
+	}
+
+	if ((!bFileExist) || pStorage->status <= FDFS_STORAGE_STATUS_SYNCING)
+	{
+		saved_need_sync_old = pReader->need_sync_old;
+		if ((result=storage_reader_sync_init_req(pReader)) != 0)
+		{
+			return result;
+		}
+
+		if (pReader->need_sync_old && \
+			pReader->need_sync_old != saved_need_sync_old)
+		{
+			bFileExist = false;
+		}
 	}
 
 	if (bFileExist)
@@ -1321,13 +1337,6 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 		}
 
 		iniFreeItems(items);
-	}
-	else
-	{
-		if ((result=storage_reader_sync_init_req(pReader)) != 0)
-		{
-			return result;
-		}
 	}
 
 	pReader->last_write_row_count = pReader->scan_row_count;
