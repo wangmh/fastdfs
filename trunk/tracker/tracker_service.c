@@ -1270,10 +1270,9 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != IP_ADDRESS_SIZE)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-				"is not correct, " \
-				"expect length: %d", \
-				__LINE__, \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length: %d", __LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ, \
 				pClientInfo->ip_addr, nInPackLen, \
 				IP_ADDRESS_SIZE);
@@ -1303,7 +1302,8 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (pDestStorage->status == FDFS_STORAGE_STATUS_INIT)
+		if (pDestStorage->status == FDFS_STORAGE_STATUS_INIT || \
+			pDestStorage->status == FDFS_STORAGE_STATUS_DELETED)
 		{
 			pResp->status = ENOENT;
 			break;
@@ -1345,9 +1345,12 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageSyncReqBody)];
 	TrackerHeader *pResp;
 	TrackerStorageSyncReqBody *pBody;
+	FDFSStorageDetail *pSrcStorage;
+	FDFSStorageDetail *pServer;
+	FDFSStorageDetail *pServerEnd;
 	int out_len;
 	int sync_until_timestamp;
-	FDFSStorageDetail *pSrcStorage;
+	int source_count;
 	int result;
 
 	sync_until_timestamp = 0;
@@ -1374,6 +1377,31 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 		if (pClientInfo->pGroup->count <= 1 || \
 			tracker_get_group_success_upload_count( \
 				pClientInfo->pGroup) <= 0)
+		{
+			pResp->status = 0;
+			break;
+		}
+
+        	source_count = 0;
+		pServerEnd = pClientInfo->pGroup->all_servers + \
+				pClientInfo->pGroup->count;
+		for (pServer=pClientInfo->pGroup->all_servers; \
+			pServer<pServerEnd; pServer++)
+		{
+			if (strcmp(pServer->ip_addr, \
+				pClientInfo->pStorage->ip_addr) == 0)
+			{
+				continue;
+			}
+
+			if (pServer->status != FDFS_STORAGE_STATUS_DELETED
+			&& pServer->status != FDFS_STORAGE_STATUS_INIT
+			&& pServer->status != FDFS_STORAGE_STATUS_WAIT_SYNC)
+			{
+				source_count++;
+			}
+		}
+		if (source_count == 0)
 		{
 			pResp->status = 0;
 			break;
