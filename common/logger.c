@@ -22,12 +22,14 @@
 #include "shared_func.h"
 #include "logger.h"
 
+#define LOG_BUFF_SIZE    64 * 1024
+
 int g_log_level = LOG_INFO;
 int g_log_fd = STDERR_FILENO;
 static pthread_mutex_t log_thread_lock;
 static bool log_to_cache = false;
-static char log_buff[64 * 1024];
-static char *pcurrent_log_buff = log_buff;
+static char *log_buff = NULL;
+static char *pcurrent_log_buff = NULL;
 
 static int log_fsync(const bool bNeedLock);
 
@@ -61,6 +63,16 @@ int log_init(const char *base_path, const char *filename_prefix)
 	}
 
 	log_destory();
+
+	log_buff = (char *)malloc(LOG_BUFF_SIZE);
+	if (log_buff == NULL)
+	{
+		fprintf(stderr, "malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			LOG_BUFF_SIZE, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+	pcurrent_log_buff = log_buff;
 
 	if ((result=init_pthread_lock(&log_thread_lock)) != 0)
 	{
@@ -101,6 +113,13 @@ void log_destory()
 		g_log_fd = STDERR_FILENO;
 
 		pthread_mutex_destroy(&log_thread_lock);
+	}
+
+	if (log_buff != NULL)
+	{
+		free(log_buff);
+		log_buff = NULL;
+		pcurrent_log_buff = NULL;
 	}
 }
 
@@ -179,16 +198,16 @@ static void doLog(const char *caption, const char* text, const int text_len, \
 			__LINE__, result, strerror(result));
 	}
 
-	if (text_len + 64 > sizeof(log_buff))
+	if (text_len + 64 > LOG_BUFF_SIZE)
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"log buff size: %d < log text length: %d ", \
-			__LINE__, (int)sizeof(log_buff), text_len + 64);
+			__LINE__, LOG_BUFF_SIZE, text_len + 64);
 		pthread_mutex_unlock(&log_thread_lock);
 		return;
 	}
 
-	if ((pcurrent_log_buff - log_buff) + text_len + 64 > sizeof(log_buff))
+	if ((pcurrent_log_buff - log_buff) + text_len + 64 > LOG_BUFF_SIZE)
 	{
 		log_fsync(false);
 	}

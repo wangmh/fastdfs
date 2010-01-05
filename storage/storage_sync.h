@@ -27,7 +27,7 @@ extern "C" {
 
 typedef struct
 {
-	char buffer[STORAGE_BINLOG_BUFFER_SIZE];
+	char *buffer;
 	char *current;
 	int length;
 	int version;
