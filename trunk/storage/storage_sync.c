@@ -47,6 +47,7 @@
 #define MARK_ITEM_UNTIL_TIMESTAMP	"until_timestamp"
 #define MARK_ITEM_SCAN_ROW_COUNT	"scan_row_count"
 #define MARK_ITEM_SYNC_ROW_COUNT	"sync_row_count"
+#define SYNC_BINLOG_WRITE_BUFF_SIZE	16 * 1024
 
 int g_binlog_fd = -1;
 int g_binlog_index = 0;
@@ -54,7 +55,7 @@ static off_t binlog_file_size = 0;
 
 int g_storage_sync_thread_count = 0;
 static pthread_mutex_t sync_thread_lock;
-static char binlog_write_cache_buff[16 * 1024];
+static char *binlog_write_cache_buff = NULL;
 static int binlog_write_cache_len = 0;
 static int binlog_write_version = 1;
 
@@ -675,6 +676,17 @@ int storage_sync_init()
 		}
 	}
 
+	binlog_write_cache_buff = (char *)malloc(SYNC_BINLOG_WRITE_BUFF_SIZE);
+	if (binlog_write_cache_buff == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, SYNC_BINLOG_WRITE_BUFF_SIZE, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
 	snprintf(full_filename, sizeof(full_filename), \
 			"%s/%s", sync_path, SYNC_BINLOG_INDEX_FILENAME);
 	if ((fd=open(full_filename, O_RDONLY)) >= 0)
@@ -765,6 +777,12 @@ int storage_sync_destroy()
 			"errno: %d, error info: %s", \
 			__LINE__, result, strerror(result));
 		return result;
+	}
+
+	if (binlog_write_cache_buff != NULL)
+	{
+		free(binlog_write_cache_buff);
+		binlog_write_cache_buff = NULL;
 	}
 
 
@@ -900,7 +918,7 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 				timestamp, op_type, filename);
 
 	//check if buff full
-	if (sizeof(binlog_write_cache_buff) - binlog_write_cache_len < 128)
+	if (SYNC_BINLOG_WRITE_BUFF_SIZE - binlog_write_cache_len < 128)
 	{
 		write_ret = storage_binlog_fsync(false);  //sync to disk
 	}
@@ -1243,6 +1261,18 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 	memset(pReader, 0, sizeof(BinLogReader));
 	pReader->mark_fd = -1;
 	pReader->binlog_fd = -1;
+
+	pReader->binlog_buff.buffer = (char *)malloc( \
+				STORAGE_BINLOG_BUFFER_SIZE);
+	if (pReader->binlog_buff.buffer == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, STORAGE_BINLOG_BUFFER_SIZE, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
 	pReader->binlog_buff.current = pReader->binlog_buff.buffer;
 
 	strcpy(pReader->ip_addr, pStorage->ip_addr);
@@ -1399,6 +1429,14 @@ static void storage_reader_destroy(BinLogReader *pReader)
 	{
 		close(pReader->binlog_fd);
 		pReader->binlog_fd = -1;
+	}
+
+	if (pReader->binlog_buff.buffer != NULL)
+	{
+		free(pReader->binlog_buff.buffer);
+		pReader->binlog_buff.buffer = NULL;
+		pReader->binlog_buff.current = NULL;
+		pReader->binlog_buff.length = 0;
 	}
 }
 
