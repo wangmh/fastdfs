@@ -980,7 +980,7 @@ static int storage_open_readable_binlog(BinLogReader *pReader)
 	    lseek(pReader->binlog_fd, pReader->binlog_offset, SEEK_SET) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"seek binlog file \"%s\" fail, file offset="INT64_PRINTF_FORMAT", " \
+			"seek binlog file \"%s\" fail, file offset="OFF_PRINTF_FORMAT", " \
 			"errno: %d, error info: %s", \
 			__LINE__, full_filename, pReader->binlog_offset, \
 			errno, strerror(errno));
@@ -1137,8 +1137,9 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 	if (pTrackerServers == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %ld bytes fail", __LINE__, \
-			sizeof(TrackerServerInfo) * g_tracker_group.server_count);
+			"malloc %d bytes fail", __LINE__, \
+			(int)sizeof(TrackerServerInfo) * \
+			g_tracker_group.server_count);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1360,7 +1361,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 			iniFreeItems(items);
 			logError("file: "__FILE__", line: %d, " \
 				"in mark file \"%s\", " \
-				"binlog_offset: "INT64_PRINTF_FORMAT" < 0", \
+				"binlog_offset: "OFF_PRINTF_FORMAT" < 0", \
 				__LINE__, full_filename, \
 				pReader->binlog_offset);
 			return EINVAL;
@@ -1476,7 +1477,7 @@ static int rewind_to_prev_rec_end(BinLogReader *pReader)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"seek binlog file \"%s\"fail, " \
-			"file offset: "INT64_PRINTF_FORMAT", " \
+			"file offset: "OFF_PRINTF_FORMAT", " \
 			"errno: %d, error info: %s", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset, \
@@ -1521,7 +1522,7 @@ static int storage_binlog_preread(BinLogReader *pReader)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"read from binlog file \"%s\" fail, " \
-			"file offset: "INT64_PRINTF_FORMAT", " \
+			"file offset: "OFF_PRINTF_FORMAT", " \
 			"error no: %d, error info: %s", \
 			__LINE__, \
 			get_binlog_readable_filename(pReader, NULL), \
@@ -1561,7 +1562,7 @@ static int storage_binlog_do_line_read(BinLogReader *pReader, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"read from binlog file \"%s\" fail, " \
-			"file offset: "INT64_PRINTF_FORMAT", " \
+			"file offset: "OFF_PRINTF_FORMAT", " \
 			"line buffer size: %d is too small! " \
 			"<= line length: %d", __LINE__, \
 			get_binlog_readable_filename(pReader, NULL), \
@@ -1630,7 +1631,7 @@ static int storage_binlog_read(BinLogReader *pReader, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"binlog file \"%s\" not ended by \\n, " \
-				"file offset: "INT64_PRINTF_FORMAT, __LINE__, \
+				"file offset: "OFF_PRINTF_FORMAT, __LINE__, \
 				get_binlog_readable_filename(pReader, NULL), \
 				pReader->binlog_offset);
 			return EINVAL;
@@ -1653,7 +1654,7 @@ static int storage_binlog_read(BinLogReader *pReader, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"read data from binlog file \"%s\" fail, " \
-			"file offset: "INT64_PRINTF_FORMAT", " \
+			"file offset: "OFF_PRINTF_FORMAT", " \
 			"read item count: %d < 3", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset, result);
@@ -1668,10 +1669,10 @@ static int storage_binlog_read(BinLogReader *pReader, \
 		logError("file: "__FILE__", line: %d, " \
 			"item \"filename\" in binlog " \
 			"file \"%s\" is invalid, file offset: " \
-			INT64_PRINTF_FORMAT", filename length: %d > %ld", \
+			OFF_PRINTF_FORMAT", filename length: %d > %d", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset, \
-			pRecord->filename_len, sizeof(pRecord->filename)-1);
+			pRecord->filename_len, (int)sizeof(pRecord->filename)-1);
 		return EINVAL;
 	}
 
@@ -2242,9 +2243,9 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage)
 	if (sync_tids == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %ld bytes fail, " \
+			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, sizeof(pthread_t) * \
+			__LINE__, (int)sizeof(pthread_t) * \
 			g_storage_sync_thread_count, \
 			errno, strerror(errno));
 	}
