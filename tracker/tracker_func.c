@@ -315,7 +315,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			"thread_stack_size", items, nItemCount);
 		if (pThreadStackSize == NULL)
 		{
-			thread_stack_size = 1 * 1024 * 1024;
+			thread_stack_size = 64 * 1024;
 		}
 		else if ((result=parse_bytes(pThreadStackSize, 1, \
 				&thread_stack_size)) != 0)
