@@ -8,6 +8,7 @@ Version 1.24  2010-01-05
  * big static or struct memeber char array buffer change to malloc in order to
    decrease stack size
  * FDFS_WRITE_BUFF_SIZE  change from 512KB to 256KB
+ * bug fixed: client/storage_client.c, meta data miss when upload file
 
 Version 1.23  2009-11-29
  * remove unuseless variable "sleep_secs" in tracker_report_thread_entrance

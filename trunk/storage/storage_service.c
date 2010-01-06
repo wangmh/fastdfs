@@ -1346,7 +1346,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	TrackerHeader resp;
 	int out_len;
 	char in_buff[1+2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_FILE_EXT_NAME_MAX_LEN+1];
-	char meta_buff[64 * 1024];
+	char meta_buff[4 * 1024];
 	char out_buff[128];
 	char filename[128];
 	char *pMetaData;
@@ -1554,7 +1554,7 @@ static int storage_upload_slave_file(StorageClientInfo *pClientInfo, \
 	char true_filename[64];
 	char prefix_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE];
-	char meta_buff[64 * 1024];
+	char meta_buff[4 * 1024];
 	char out_buff[128];
 	char filename[128];
 	char *pMetaData;
@@ -3116,7 +3116,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char prefix_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
 	char file_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 1];
-	char meta_buff[64 * 1024];
+	char meta_buff[4 * 1024];
 	char out_buff[128];
 	char src_filename[64];
 	char master_filename[64];

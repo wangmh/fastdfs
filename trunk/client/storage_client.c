@@ -927,9 +927,10 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	long2buff(file_size, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 
-	memset(p, 0, FDFS_FILE_PREFIX_MAX_LEN + FDFS_FILE_EXT_NAME_MAX_LEN);
 	if (bUploadSlave)
 	{
+		memset(p, 0, FDFS_FILE_PREFIX_MAX_LEN + \
+				FDFS_FILE_EXT_NAME_MAX_LEN);
 		if (prefix_len > FDFS_FILE_PREFIX_MAX_LEN)
 		{
 			prefix_len = FDFS_FILE_PREFIX_MAX_LEN;
@@ -939,6 +940,10 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 			memcpy(p, prefix_name, prefix_len);
 		}
 		p += FDFS_FILE_PREFIX_MAX_LEN;
+	}
+	else
+	{
+		memset(p, 0, FDFS_FILE_EXT_NAME_MAX_LEN);
 	}
 
 	if (file_ext_name != NULL)
