@@ -97,7 +97,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		{
 			if(pRecord->op_type==STORAGE_OP_TYPE_SOURCE_CREATE_FILE)
 			{
-				logWarning("file: "__FILE__", line: %d, " \
+				logDebug("file: "__FILE__", line: %d, " \
 					"sync data file, file: %s not exists, "\
 					"maybe deleted later?", \
 					__LINE__, full_filename);
@@ -336,7 +336,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 		{
 		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK)
 		{
-			logWarning("file: "__FILE__", line: %d, " \
+			logDebug("file: "__FILE__", line: %d, " \
 				"sync data file, file: %s does not exist, " \
 				"maybe delete later?", \
 				__LINE__, full_filename);
