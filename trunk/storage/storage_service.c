@@ -233,7 +233,7 @@ static int storage_sort_metadata_buff(char *meta_buff, const int meta_size)
 
 typedef struct 
 {
-	char src_true_filename[64];
+	char src_true_filename[128];
 	char src_file_sig[64];
 	int src_file_sig_len;
 } SourceFileInfo;
@@ -944,9 +944,9 @@ static int storage_server_set_metadata(StorageClientInfo *pClientInfo, \
 	TrackerHeader resp;
 	char *in_buff;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char filename[64];
-	char true_filename[64];
-	char meta_filename[64+sizeof(STORAGE_META_FILE_EXT)];
+	char filename[128];
+	char true_filename[128];
+	char meta_filename[128+sizeof(STORAGE_META_FILE_EXT)];
 	char full_filename[MAX_PATH_SIZE + 64 + sizeof(STORAGE_META_FILE_EXT)];
 	char op_flag;
 	char sync_flag;
@@ -1194,7 +1194,7 @@ static int storage_server_query_file_info(StorageClientInfo *pClientInfo, \
 	char in_buff[128];
 	char out_buff[sizeof(TrackerHeader) + 2 * FDFS_PROTO_PKG_LEN_SIZE];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char true_filename[64];
+	char true_filename[128];
 	char full_filename[MAX_PATH_SIZE + 64 + sizeof(STORAGE_META_FILE_EXT)];
 	char *filename;
 	char *pBasePath;
@@ -1484,7 +1484,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 
 		if (meta_bytes > 0)
 		{
-			char meta_filename[64];
+			char meta_filename[128];
 			sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, \
 				filename);
 			resp.status = storage_binlog_write(time(NULL), \
@@ -1550,8 +1550,8 @@ static int storage_upload_slave_file(StorageClientInfo *pClientInfo, \
 	int out_len;
 	char in_buff[3*FDFS_PROTO_PKG_LEN_SIZE+FDFS_FILE_PREFIX_MAX_LEN+\
 			FDFS_FILE_EXT_NAME_MAX_LEN+1];
-	char master_filename[64];
-	char true_filename[64];
+	char master_filename[128];
+	char true_filename[128];
 	char prefix_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE];
 	char meta_buff[4 * 1024];
@@ -1765,7 +1765,7 @@ static int storage_upload_slave_file(StorageClientInfo *pClientInfo, \
 
 		if (meta_bytes > 0)
 		{
-			char meta_filename[64];
+			char meta_filename[128];
 			sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, \
 				filename);
 			resp.status = storage_binlog_write(time(NULL), \
@@ -1827,8 +1827,8 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 	char in_buff[2 * FDFS_PROTO_PKG_LEN_SIZE + \
 			4 + FDFS_GROUP_NAME_MAX_LEN + 1];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char true_filename[64];
-	char filename[64];
+	char true_filename[128];
+	char filename[128];
 	char full_filename[MAX_PATH_SIZE];
 	char *pBasePath;
 	int filename_len;
@@ -2028,10 +2028,10 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 	char in_buff[2 * FDFS_PROTO_PKG_LEN_SIZE + \
 			4 + FDFS_GROUP_NAME_MAX_LEN + 128];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char dest_filename[64];
-	char src_filename[64];
-	char dest_true_filename[64];
-	char src_true_filename[64];
+	char dest_filename[128];
+	char src_filename[128];
+	char dest_true_filename[128];
+	char src_true_filename[128];
 	char dest_full_filename[MAX_PATH_SIZE];
 	char src_full_filename[MAX_PATH_SIZE];
 	char *pDestBasePath;
@@ -2237,10 +2237,10 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 {
 	TrackerHeader resp;
 	int result;
-	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 64];
+	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 128];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)+64];
-	char true_filename[64];
+	char true_filename[128];
 	char *filename;
 	char *pBasePath;
 	char *file_buff;
@@ -2397,7 +2397,7 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 128];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)+16];
-	char true_filename[64];
+	char true_filename[128];
 	char *pBasePath;
 	char *filename;
 	int filename_len;
@@ -2591,10 +2591,10 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 		const int64_t nInPackLen, int *timestamp)
 {
 	TrackerHeader resp;
-	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 64];
+	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 128];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)];
-	char true_filename[64];
+	char true_filename[128];
 	char *pBasePath;
 	char *filename;
 	int filename_len;
@@ -2726,11 +2726,11 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 	GroupArray *pGroupArray, const int64_t nInPackLen, int *delete_flag)
 {
 	TrackerHeader resp;
-	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 64];
+	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 128];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE+sizeof(in_buff)];
 	char meta_filename[MAX_PATH_SIZE+sizeof(in_buff)];
-	char true_filename[64];
+	char true_filename[128];
 	char value[128];
 	FDHTKeyInfo key_info_fid;
 	FDHTKeyInfo key_info_ref;
@@ -3118,9 +3118,9 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 	char file_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 1];
 	char meta_buff[4 * 1024];
 	char out_buff[128];
-	char src_filename[64];
-	char master_filename[64];
-	char true_filename[64];
+	char src_filename[128];
+	char master_filename[128];
+	char true_filename[128];
 	char src_full_filename[MAX_PATH_SIZE+64];
 	char full_filename[MAX_PATH_SIZE];
 	char filename[128];
@@ -3462,7 +3462,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 
 		if (meta_bytes > 0)
 		{
-			char meta_filename[64];
+			char meta_filename[128];
 			sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, \
 				filename);
 			resp.status = storage_binlog_write(time(NULL), \
