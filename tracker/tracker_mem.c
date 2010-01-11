@@ -775,7 +775,7 @@ static int tracker_load_data()
 static int tracker_save_groups()
 {
 	char filname[MAX_PATH_SIZE];
-	char buff[FDFS_GROUP_NAME_MAX_LEN + 64];
+	char buff[FDFS_GROUP_NAME_MAX_LEN + 128];
 	int fd;
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppEnd;

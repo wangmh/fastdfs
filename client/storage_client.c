@@ -32,7 +32,7 @@
 #include "fdfs_base64.h"
 
 #define FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id) \
-	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 64]; \
+	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
 	char *group_name; \
 	char *filename; \
 	char *pSeperator; \
@@ -217,7 +217,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader *pHeader;
 	int result;
 	TrackerServerInfo storageServer;
-	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+64];
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
 	int64_t in_bytes;
 	int filename_len;
 	char *file_buff;
@@ -314,7 +314,7 @@ int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader *pHeader;
 	int result;
 	TrackerServerInfo storageServer;
-	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+64];
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
 	char in_buff[2 * FDFS_PROTO_PKG_LEN_SIZE];
 	int64_t in_bytes;
 	int filename_len;
@@ -417,7 +417,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader header;
 	int result;
 	TrackerServerInfo storageServer;
-	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+64];
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
 	char in_buff[1];
 	char *pBuff;
 	int64_t in_bytes;
@@ -695,7 +695,7 @@ int storage_upload_by_filename1(TrackerServerInfo *pTrackerServer, \
 		const int meta_count, const char *group_name, char *file_id)
 {
 	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char remote_filename[64];
+	char remote_filename[128];
 	int result;
 
 	if (group_name == NULL)
@@ -734,7 +734,7 @@ int storage_do_upload_file1(TrackerServerInfo *pTrackerServer, \
 		const int meta_count, const char *group_name, char *file_id)
 {
 	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char remote_filename[64];
+	char remote_filename[128];
 	int result;
 
 	if (group_name == NULL)
@@ -1087,7 +1087,7 @@ int storage_upload_by_callback1(TrackerServerInfo *pTrackerServer, \
 		const char *group_name, char *file_id)
 {
 	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char remote_filename[64];
+	char remote_filename[128];
 	int result;
 
 	if (group_name == NULL)
@@ -1196,7 +1196,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	int result;
 	TrackerServerInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+2*FDFS_PROTO_PKG_LEN_SIZE+\
-			FDFS_GROUP_NAME_MAX_LEN+64];
+			FDFS_GROUP_NAME_MAX_LEN+128];
 	char in_buff[1];
 	int64_t in_bytes;
 	char *pBuff;
@@ -1403,8 +1403,8 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	{
 		master_filename_len = 0;
 	}
-	if (src_filename_len > 64 || src_file_sig_len > 64 || \
-		master_filename_len > 64)
+	if (src_filename_len >= 128 || src_file_sig_len > 64 || \
+		master_filename_len >= 128)
 	{
 		return EINVAL;
 	}
@@ -1660,7 +1660,7 @@ int storage_upload_slave_by_filename1(TrackerServerInfo *pTrackerServer, \
 {
 	int result;
 	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char remote_filename[64];
+	char remote_filename[128];
 
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(master_file_id)
 
@@ -1692,7 +1692,7 @@ int storage_upload_slave_by_filebuff1(TrackerServerInfo *pTrackerServer, \
 {
 	int result;
 	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char remote_filename[64];
+	char remote_filename[128];
 
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(master_file_id)
 
@@ -1725,7 +1725,7 @@ int storage_upload_slave_by_callback1(TrackerServerInfo *pTrackerServer, \
 {
 	int result;
 	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char remote_filename[64];
+	char remote_filename[128];
 
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(master_file_id)
 

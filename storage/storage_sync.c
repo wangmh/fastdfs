@@ -210,7 +210,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 	TrackerHeader header;
 	int result;
 	char full_filename[MAX_PATH_SIZE];
-	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+64];
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
 	char in_buff[1];
 	char *pBuff;
 	int64_t in_bytes;
@@ -316,7 +316,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	int result;
 	char full_filename[MAX_PATH_SIZE];
 	char out_buff[sizeof(TrackerHeader) + 2 * FDFS_PROTO_PKG_LEN_SIZE + \
-			4 + FDFS_GROUP_NAME_MAX_LEN + 128];
+			4 + FDFS_GROUP_NAME_MAX_LEN + 256];
 	char in_buff[1];
 	char src_full_filename[MAX_PATH_SIZE];
 	char *pSrcFilename;
@@ -425,7 +425,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 
 	pSrcFilename -= 4;
 	src_filename_len -= (pSrcFilename - src_full_filename);
-	if (src_filename_len > 64)
+	if (src_filename_len >= 128)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"source data file: %s is invalid", \
@@ -918,7 +918,7 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 				timestamp, op_type, filename);
 
 	//check if buff full
-	if (SYNC_BINLOG_WRITE_BUFF_SIZE - binlog_write_cache_len < 128)
+	if (SYNC_BINLOG_WRITE_BUFF_SIZE - binlog_write_cache_len < 256)
 	{
 		write_ret = storage_binlog_fsync(false);  //sync to disk
 	}
@@ -1557,7 +1557,7 @@ static int storage_binlog_do_line_read(BinLogReader *pReader, \
 		return ENOENT;
 	}
 
-	*line_length = pLineEnd - pReader->binlog_buff.current + 1;
+	*line_length = (pLineEnd - pReader->binlog_buff.current) + 1;
 	if (*line_length >= line_size)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1886,7 +1886,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			if ((conn_result=connectserverbyip(storage_server.sock,\
 				storage_server.ip_addr, g_server_port)) == 0)
 			{
-				char szFailPrompt[36];
+				char szFailPrompt[64];
 				if (nContinuousFail == 0)
 				{
 					*szFailPrompt = '\0';

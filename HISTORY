@@ -1,4 +1,9 @@
 
+Version 1.25  2010-01-10
+ * storage_sync.c if source file not exist when sync a file, change from 
+   logWarning to logDebug
+ * filename buff size change from 64 to 128
+
 Version 1.24  2010-01-06
  * call php_fdfs_close with TSRMLS_CC as php_fdfs_close(i_obj TSRMLS_CC)
  * storage server to storage server report ip address as tracker client

@@ -732,7 +732,7 @@ static int tracker_deal_service_query_fetch_update( \
 		const byte cmd, const int64_t nInPackLen)
 {
 	TrackerHeader *pResp;
-	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 64];
+	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 128];
 	char out_buff[sizeof(TrackerHeader) + \
 		TRACKER_QUERY_STORAGE_FETCH_BODY_LEN + \
 		FDFS_MAX_SERVERS_EACH_GROUP * IP_ADDRESS_SIZE];
