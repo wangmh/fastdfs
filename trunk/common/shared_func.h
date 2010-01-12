@@ -40,6 +40,7 @@ int getProccessCount(const char *progName, const bool bAllOwners);
 
 int getUserProcIds(const char *progName, const bool bAllOwners, \
 			int pids[], const int arrSize);
+int getExecResult(const char *command, char *output, const int buff_size);
 
 void daemon_init(bool bCloseFiles);
 

@@ -52,17 +52,9 @@ static int check_and_mk_log_dir(const char *base_path)
 	return 0;
 }
 
-int log_init(const char *base_path, const char *filename_prefix)
+int log_init()
 {
 	int result;
-	char logfile[MAX_PATH_SIZE];
-
-	if ((result=check_and_mk_log_dir(base_path)) != 0)
-	{
-		return result;
-	}
-
-	log_destory();
 
 	log_buff = (char *)malloc(LOG_BUFF_SIZE);
 	if (log_buff == NULL)
@@ -79,6 +71,19 @@ int log_init(const char *base_path, const char *filename_prefix)
 		return result;
 	}
 
+	return 0;
+}
+
+int log_set_prefix(const char *base_path, const char *filename_prefix)
+{
+	int result;
+	char logfile[MAX_PATH_SIZE];
+
+	if ((result=check_and_mk_log_dir(base_path)) != 0)
+	{
+		return result;
+	}
+
 	snprintf(logfile, MAX_PATH_SIZE, "%s/logs/%s.log", \
 		base_path, filename_prefix);
 
@@ -88,14 +93,10 @@ int log_init(const char *base_path, const char *filename_prefix)
 			"errno: %d, error info: %s", \
 			logfile, errno, strerror(errno));
 		g_log_fd = STDERR_FILENO;
-		result = errno != 0 ? errno : EACCES;
-	}
-	else
-	{
-		result = 0;
+		return errno != 0 ? errno : EACCES;
 	}
 
-	return result;
+	return 0;
 }
 
 void log_set_cache(const bool bLogCache)
@@ -180,7 +181,7 @@ static int log_fsync(const bool bNeedLock)
 	return result;
 }
 
-static void doLog(const char *caption, const char* text, const int text_len, \
+static void doLog(const char *caption, const char *text, const int text_len, \
 		const bool bNeedSync)
 {
 	time_t t;
@@ -233,6 +234,54 @@ static void doLog(const char *caption, const char* text, const int text_len, \
 			"errno: %d, error info: %s", \
 			__LINE__, result, strerror(result));
 	}
+}
+
+void log_it_ex(const int priority, const char *text, const int text_len)
+{
+	bool bNeedSync;
+	char *caption;
+
+	switch(priority)
+	{
+		case LOG_DEBUG:
+			bNeedSync = true;
+			caption = "DEBUG";
+			break;
+		case LOG_INFO:
+			bNeedSync = true;
+			caption = "INFO";
+			break;
+		case LOG_NOTICE:
+			bNeedSync = false;
+			caption = "NOTICE";
+			break;
+		case LOG_WARNING:
+			bNeedSync = false;
+			caption = "WARNING";
+			break;
+		case LOG_ERR:
+			bNeedSync = false;
+			caption = "ERROR";
+			break;
+		case LOG_CRIT:
+			bNeedSync = true;
+			caption = "CRIT";
+			break;
+		case LOG_ALERT:
+			bNeedSync = true;
+			caption = "ALERT";
+			break;
+		case LOG_EMERG:
+			bNeedSync = true;
+			caption = "EMERG";
+			break;
+		default:
+			bNeedSync = false;
+			caption = "UNKOWN";
+			break;
+	}
+
+	doLog(caption, text, text_len, bNeedSync);
 }
 
 void log_it(const int priority, const char* format, ...)

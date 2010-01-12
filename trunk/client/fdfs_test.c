@@ -18,6 +18,7 @@
 #include "fdfs_global.h"
 #include "fdfs_base64.h"
 #include "sockopt.h"
+#include "logger.h"
 #include "fdfs_http_shared.h"
 
 int writeToFileCallback(void *arg, const int64_t file_size, const char *data, \
@@ -91,6 +92,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	log_init();
 	conf_filename = argv[1];
 	operation = argv[2];
 	if ((result=fdfs_client_init(conf_filename)) != 0)
