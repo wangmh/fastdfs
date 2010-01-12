@@ -776,7 +776,7 @@ int storage_func_init(const char *filename, \
 		}
 
 		load_log_level(items, nItemCount);
-		if ((result=log_init(g_base_path, \
+		if ((result=log_set_prefix(g_base_path, \
 				STORAGE_ERROR_LOG_FILENAME)) != 0)
 		{
 			break;

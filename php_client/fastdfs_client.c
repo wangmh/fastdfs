@@ -4245,6 +4245,7 @@ PHP_MINIT_FUNCTION(fastdfs_client)
 {
 	zend_class_entry ce;
 
+	log_init();
 	if (load_config_files() != 0)
 	{
 		return FAILURE;
@@ -4313,6 +4314,7 @@ PHP_MSHUTDOWN_FUNCTION(fastdfs_client)
 	}
 
 	fdfs_client_destroy();
+	log_destory();
 
 	return SUCCESS;
 }

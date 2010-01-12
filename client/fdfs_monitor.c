@@ -15,6 +15,9 @@
 #include <signal.h>
 #include <sys/types.h>
 #include "sockopt.h"
+#include "logger.h"
+#include "client_global.h"
+#include "fdfs_global.h"
 #include "fdfs_client.h"
 
 static TrackerServerInfo *pTrackerServer;
@@ -42,6 +45,8 @@ int main(int argc, char *argv[])
 	{
 		op_type = argv[2];
 	}
+
+	log_init();
 
 	conf_filename = argv[1];
 	if ((result=fdfs_client_init(conf_filename)) != 0)

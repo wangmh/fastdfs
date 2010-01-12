@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	log_init();
 	conf_filename = argv[1];
 	memset(bind_addr, 0, sizeof(bind_addr));
 	if ((result=tracker_load_from_conf_file(conf_filename, \
