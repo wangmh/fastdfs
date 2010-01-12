@@ -33,6 +33,7 @@
 #include <ucontext.h>
 #include <dlfcn.h>
 #include "logger.h"
+#include "shared_func.h"
 #ifndef NO_CPP_DEMANGLE
 #include <cxxabi.h>
 #ifdef __cplusplus
@@ -157,6 +158,6 @@ void stack_trace_print(int signum, siginfo_t *info, void *ptr)
 	pCurrent += sprintf(pCurrent, "\tNot printing stack strace.\n");
 #endif
 
-	log_it_ex(CRIT, output, pCurrent - output);
+	log_it_ex(LOG_CRIT, output, pCurrent - output);
 }
 
