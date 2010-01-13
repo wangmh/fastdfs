@@ -112,6 +112,10 @@ extern FDFSHTTPParams g_http_params;
 extern int g_http_trunk_size;
 #endif
 
+#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+extern char g_exe_name[256];
+#endif
+
 int storage_cmp_by_ip_addr(const void *p1, const void *p2);
 
 void load_local_host_ip_addrs();
