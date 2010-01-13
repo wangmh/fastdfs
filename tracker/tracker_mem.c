@@ -290,16 +290,29 @@ static int tracker_load_groups(const char *data_path)
 static int tracker_locate_storage_sync_server(FDFSStorageSync *pStorageSyncs, \
 		const int nStorageSyncCount, const bool bLoadFromFile)
 {
+	FDFSGroupInfo *pGroup;
+	FDFSStorageDetail *pStorage;
 	FDFSStorageSync *pSyncServer;
 	FDFSStorageSync *pSyncEnd;
 
 	pSyncEnd = pStorageSyncs + nStorageSyncCount;
 	for (pSyncServer=pStorageSyncs; pSyncServer<pSyncEnd; pSyncServer++)
 	{
-		pSyncServer->pStorage->psync_src_server = \
-			tracker_mem_get_storage(pSyncServer->pGroup, \
+		pGroup = tracker_mem_get_group(pSyncServer->group_name);
+		if (pGroup == NULL)
+		{
+			continue;
+		}
+
+		pStorage=tracker_mem_get_storage(pGroup, pSyncServer->ip_addr);
+		if (pStorage == NULL)
+		{
+			continue;
+		}
+
+		pStorage->psync_src_server = tracker_mem_get_storage(pGroup, \
 			pSyncServer->sync_src_ip_addr);
-		if (pSyncServer->pStorage->psync_src_server == NULL)
+		if (pStorage->psync_src_server == NULL)
 		{
 			char buff[MAX_PATH_SIZE+64];
 			if (bLoadFromFile)
@@ -317,10 +330,9 @@ static int tracker_locate_storage_sync_server(FDFSStorageSync *pStorageSyncs, \
 			logError("file: "__FILE__", line: %d, " \
 				"%sgroup_name: %s, storage server \"%s:%d\" " \
 				"does not exist", \
-				__LINE__, buff, \
-				pSyncServer->pGroup->group_name, \
+				__LINE__, buff, pSyncServer->group_name, \
 				pSyncServer->sync_src_ip_addr, \
-				pSyncServer->pGroup->storage_port);
+				pGroup->storage_port);
 
 			return ENOENT;
 		}
@@ -477,10 +489,15 @@ static int tracker_load_storages(const char *data_path)
 			}
 		}
 
-		pStorageSyncs[nStorageSyncCount].pGroup = clientInfo.pGroup;
-		pStorageSyncs[nStorageSyncCount].pStorage = clientInfo.pStorage;
+		strcpy(pStorageSyncs[nStorageSyncCount].group_name, \
+			clientInfo.pGroup->group_name);
+		strcpy(pStorageSyncs[nStorageSyncCount].ip_addr, \
+			clientInfo.pStorage->ip_addr);
 		snprintf(pStorageSyncs[nStorageSyncCount].sync_src_ip_addr, \
 			IP_ADDRESS_SIZE, "%s", psync_src_ip_addr);
+
+
+		printf("%s:%s\n", pStorageSyncs[nStorageSyncCount].group_name, pStorageSyncs[nStorageSyncCount].ip_addr);
 		nStorageSyncCount++;
 
 	}
@@ -1610,8 +1627,10 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 			}
 		}
 
-		pStorageSyncs[nStorageSyncCount].pGroup = pGroup;
-		pStorageSyncs[nStorageSyncCount].pStorage = pServer;
+		strcpy(pStorageSyncs[nStorageSyncCount].group_name, \
+			pGroup->group_name);
+		strcpy(pStorageSyncs[nStorageSyncCount].ip_addr, \
+			pServer->ip_addr);
 		strcpy(pStorageSyncs[nStorageSyncCount].sync_src_ip_addr, \
 			pServer->psync_src_server->ip_addr);
 		nStorageSyncCount++;

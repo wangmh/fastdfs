@@ -293,7 +293,7 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 		fprintf(stderr, "base_path=%s, " \
 			"network_timeout=%d, "\
 			"tracker_server_count=%d, " \
-			"anti_steal_token=%d, ", \
+			"anti_steal_token=%d, " \
 			"anti_steal_secret_key length=%d\n", \
 			g_base_path, g_network_timeout, \
 			pTrackerGroup->server_count, g_anti_steal_token, \

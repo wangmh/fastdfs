@@ -257,8 +257,8 @@ typedef struct
 
 typedef struct
 {
-	FDFSGroupInfo *pGroup;
-	FDFSStorageDetail *pStorage;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char ip_addr[IP_ADDRESS_SIZE];
 	char sync_src_ip_addr[IP_ADDRESS_SIZE];
 } FDFSStorageSync;
 
