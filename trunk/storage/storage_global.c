@@ -81,6 +81,10 @@ FDFSHTTPParams g_http_params;
 int g_http_trunk_size = 64 * 1024;
 #endif
 
+#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+char g_exe_name[256] = {0};
+#endif
+
 int storage_cmp_by_ip_addr(const void *p1, const void *p2)
 {
 	return strcmp((*((FDFSStorageServer **)p1))->server.ip_addr,
