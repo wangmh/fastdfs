@@ -52,9 +52,9 @@ using __cxxabiv1::__cxa_demangle;
 # define REGFORMAT "%x"
 #endif
 
-extern char *g_exe_name;
+extern char g_exe_name[256];
 
-void stack_trace_print(int signum, siginfo_t *info, void *ptr)
+void signal_stack_trace_print(int signum, siginfo_t *info, void *ptr)
 {
 	static const char *si_codes[3] = {"", "SEGV_MAPERR", "SEGV_ACCERR"};
 
@@ -126,7 +126,7 @@ void stack_trace_print(int signum, siginfo_t *info, void *ptr)
 		pCurrent += sprintf(pCurrent, "\t\t% 2d: %p <%s+%lu> (%s in %s)\n",
 			++f, ip, symname,
 			(unsigned long)ip-(unsigned long)dlinfo.dli_saddr,
-			buff, dlinfo.dli_fname);
+			trim_right(buff), dlinfo.dli_fname);
 
 
 #ifndef NO_CPP_DEMANGLE

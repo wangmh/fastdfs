@@ -289,7 +289,7 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 			g_tracker_server_http_port = 80;
 		}
 
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 		fprintf(stderr, "base_path=%s, " \
 			"network_timeout=%d, "\
 			"tracker_server_count=%d, " \

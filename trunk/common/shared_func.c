@@ -93,7 +93,7 @@ char *replaceCRLF2Space(char *s)
 	return s;
 }
 
-char *getAppAbsolutePath(const char *exeName, char *szAbsPath, \
+char *getExeAbsolutePath(const char *exeName, char *szAbsPath, \
 		const int pathSize)
 {
 	char *p;
@@ -118,7 +118,7 @@ char *getAppAbsolutePath(const char *exeName, char *szAbsPath, \
 	else
 	{
 		nPathLen = p - exeName;
-		strncpy(szPath, exeName, nPathLen);
+		memcpy(szPath, exeName, nPathLen);
 		szPath[nPathLen] = '\0';
 	}
 	
@@ -153,6 +153,104 @@ char *getAppAbsolutePath(const char *exeName, char *szAbsPath, \
 	free(szPath);
 	
 	return szAbsPath;
+}
+
+char *getExeAbsoluteFilename(const char *exeFilename, char *szAbsFilename, \
+		const int nameSize)
+{
+	const char *exeName;
+	const char *p;
+	int nFileLen;
+	int nPathLen;
+	char cwd[256];
+	char szPath[256];
+	
+	nFileLen = strlen(exeFilename);
+	if (nFileLen >= sizeof(szPath))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"filename length: %d is too long, exceeds %d!", \
+			__LINE__, nFileLen, (int)sizeof(szPath));
+		return NULL;
+	}
+	
+	p = strrchr(exeFilename, '/');
+	if (p == NULL)
+	{
+		int i;
+		char *search_paths[] = {"/bin", "/usr/bin", "/usr/local/bin"};
+
+		*szPath = '\0';
+		exeName = exeFilename;
+		for (i=0; i<3; i++)
+		{
+			snprintf(cwd, sizeof(cwd), "%s/%s", \
+				search_paths[i], exeName);
+			if (fileExists(cwd))
+			{
+				strcpy(szPath, search_paths[i]);
+				break;
+			}
+		}
+
+		if (*szPath == '\0')
+		{
+			if (!fileExists(exeName))
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"can't find exe file %s!", __LINE__, \
+					exeName);
+				return NULL;
+			}
+		}
+		else
+		{
+			snprintf(szAbsFilename, nameSize, "%s/%s", \
+				szPath, exeName);
+			return szAbsFilename;
+		}
+	}
+	else
+	{
+		exeName = p + 1;
+		nPathLen = p - exeFilename;
+		memcpy(szPath, exeFilename, nPathLen);
+		szPath[nPathLen] = '\0';
+	}
+	
+	if (*szPath == '/')
+	{
+		snprintf(szAbsFilename, nameSize, "%s/%s", szPath, exeName);
+	}
+	else
+	{
+		if (getcwd(cwd, sizeof(cwd)) == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"call getcwd fail, errno: %d, error info: %s", \
+				__LINE__, errno, strerror(errno));
+			return NULL;
+		}
+		
+		nPathLen = strlen(cwd);
+		if (cwd[nPathLen - 1] == '/')
+		{
+			cwd[nPathLen - 1] = '\0';
+		}
+		
+		if (*szPath != '\0')
+		{
+			snprintf(szAbsFilename, nameSize, "%s/%s/%s", \
+				cwd, szPath, exeName);
+		}
+		else
+		{
+			snprintf(szAbsFilename, nameSize, "%s/%s", \
+				cwd, exeName);
+		}
+	}
+	
+	return szAbsFilename;
 }
 
 int getProccessCount(const char *progName, const bool bAllOwners)

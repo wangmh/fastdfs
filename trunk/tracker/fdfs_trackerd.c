@@ -36,11 +36,19 @@
 #include "tracker_httpd.h"
 #endif
 
+#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+#include "linux_stack_trace.h"
+#endif
+
 bool bTerminateFlag = false;
 
-void sigQuitHandler(int sig);
-void sigHupHandler(int sig);
-void sigUsrHandler(int sig);
+static void sigQuitHandler(int sig);
+static void sigHupHandler(int sig);
+static void sigUsrHandler(int sig);
+
+#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+static void sigSegvHandler(int signum, siginfo_t *info, void *ptr);
+#endif
 
 #define SCHEDULE_ENTRIES_COUNT 2
 
@@ -63,6 +71,15 @@ int main(int argc, char *argv[])
 	}
 
 	log_init();
+
+#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+	if (getExeAbsoluteFilename(argv[0], g_exe_name, \
+		sizeof(g_exe_name)) == NULL)
+	{
+		return errno != 0 ? errno : ENOENT;
+	}
+#endif
+
 	conf_filename = argv[1];
 	memset(bind_addr, 0, sizeof(bind_addr));
 	if ((result=tracker_load_from_conf_file(conf_filename, \
@@ -147,6 +164,20 @@ int main(int argc, char *argv[])
 			__LINE__, errno, strerror(errno));
 		return errno;
 	}
+
+#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+	memset(&act, 0, sizeof(act));
+        act.sa_sigaction = sigSegvHandler;
+        act.sa_flags = SA_SIGINFO;
+        if (sigaction(SIGSEGV, &act, NULL) < 0 || \
+        	sigaction(SIGABRT, &act, NULL) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call sigaction fail, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno;
+	}
+#endif
 
 #ifdef WITH_HTTPD
 	if (!g_http_params.disabled)
@@ -240,7 +271,22 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void sigQuitHandler(int sig)
+#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+static void sigSegvHandler(int signum, siginfo_t *info, void *ptr)
+{
+	if (!bTerminateFlag)
+	{
+		bTerminateFlag = true;
+		logCrit("file: "__FILE__", line: %d, " \
+			"catch signal %d, program exiting...", \
+			__LINE__, signum);
+	
+		signal_stack_trace_print(signum, info, ptr);
+	}
+}
+#endif
+
+static void sigQuitHandler(int sig)
 {
 	if (!bTerminateFlag)
 	{
@@ -251,15 +297,15 @@ void sigQuitHandler(int sig)
 	}
 }
 
-void sigHupHandler(int sig)
+static void sigHupHandler(int sig)
 {
+	logInfo("file: "__FILE__", line: %d, " \
+		"catch signal %d, ignore it", __LINE__, sig);
 }
 
-void sigUsrHandler(int sig)
+static void sigUsrHandler(int sig)
 {
-	/*
-	logInfo("current thread count=%d, " \
-		"mo count=%d, success count=%d", g_tracker_thread_count, \nMoCount, nSuccMoCount);
-	*/
+	logInfo("file: "__FILE__", line: %d, " \
+		"catch signal %d, ignore it", __LINE__, sig);
 }
 

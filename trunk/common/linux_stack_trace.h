@@ -16,14 +16,11 @@
 extern "C" {
 #endif
 
-void stack_trace_print(int signum, siginfo_t *info, void *ptr);
-
-#endif
+void signal_stack_trace_print(int signum, siginfo_t *info, void *ptr);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-
 
