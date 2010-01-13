@@ -3,8 +3,9 @@ Version 1.25  2010-01-12
  * storage_sync.c if source file not exist when sync a file, change from 
    logWarning to logDebug
  * filename buff size change from 64 to 128
- * bug fixed: c client and php client, log not inited cause coredump when 
+ * bug fixed: c client and php client, log not inited cause core dump when 
    call log functions
+ * can print stack trace when process core dumped in Linux server
 
 Version 1.24  2010-01-06
  * call php_fdfs_close with TSRMLS_CC as php_fdfs_close(i_obj TSRMLS_CC)

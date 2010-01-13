@@ -50,6 +50,10 @@ extern int g_thread_stack_size;
 extern FDFSHTTPParams g_http_params;
 #endif
 
+#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+extern char g_exe_name[256];
+#endif
+
 #ifdef __cplusplus
 }
 #endif

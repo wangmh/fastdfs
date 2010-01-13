@@ -61,8 +61,14 @@ TARGET_PATH=/usr/local/bin
 #WITH_HTTPD=1
 #WITH_LINUX_SERVICE=1
 
-CFLAGS='-O3 -Wall -D_FILE_OFFSET_BITS=64'
-#CFLAGS='-g -Wall -D_FILE_OFFSET_BITS=64 -D__DEBUG__'
+DEBUG_FLAG=1
+
+CFLAGS='-Wall -D_FILE_OFFSET_BITS=64'
+if [ "$DEBUG_FLAG" = "1" ]; then
+  CFLAGS="$CFLAGS -g -DDEBUG_FLAG"
+else
+  CFLAGS="$CFLAGS -O3"
+fi
 
 LIBS=''
 uname=`uname`
@@ -96,6 +102,12 @@ else
   if [ -n "$line" ]; then
     LIBS="$LIBS -lc_r"
   fi
+fi
+
+if [ "$DEBUG_FLAG" = "1" ] && [ "$uname" = "Linux" ]; then
+  LIBS="$LIBS -ldl -rdynamic"
+  TRACKER_HTTPD_OBJS="$TRACKER_HTTPD_OBJS ../common/linux_stack_trace.o"
+  STORAGE_HTTPD_OBJS="$STORAGE_HTTPD_OBJS ../common/linux_stack_trace.o"
 fi
 
 cd tracker

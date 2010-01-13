@@ -33,8 +33,10 @@ char *formatDatetime(const time_t nTime, \
 int getCharLen(const char *s);
 char *replaceCRLF2Space(char *s);
 
-char *getAppAbsolutePath(const char *exeName, char *szAbsPath, \
+char *getExeAbsolutePath(const char *exeName, char *szAbsPath, \
 				const int pathSize);
+char *getExeAbsoluteFilename(const char *exeFilename, char *szAbsFilename, \
+		const int nameSize);
 
 int getProccessCount(const char *progName, const bool bAllOwners);
 

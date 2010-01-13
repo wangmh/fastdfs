@@ -31,3 +31,7 @@ int g_thread_stack_size = 64 * 1024;
 FDFSHTTPParams g_http_params;
 #endif
 
+#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+char g_exe_name[256] = {0};
+#endif
+

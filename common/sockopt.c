@@ -58,7 +58,7 @@ int tcpgets(int sock, char* s, const int size, const int timeout)
 
 	if (s == NULL || size <= 0)
 	{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 		fprintf(stderr,"%s,%d:tcpgets argument is illegal.\n",
 				__FILE__,__LINE__);
 #endif
@@ -70,7 +70,7 @@ int tcpgets(int sock, char* s, const int size, const int timeout)
 		result = tcprecvdata(sock, &t, 1, timeout);
 		if (result != 0)
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcpgets call tcprecvdata failed.\n",
 					__FILE__,__LINE__);
 #endif
@@ -151,7 +151,7 @@ int tcprecvdata_ex(int sock, void *data, const int size, \
 
 		if (res < 0)
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcprecvdata call select failed:%s.\n",
 				__FILE__,__LINE__,strerror(errno));
 #endif
@@ -160,7 +160,7 @@ int tcprecvdata_ex(int sock, void *data, const int size, \
 		}
 		else if (res == 0)
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcprecvdata call select timeout.\n",
 				__FILE__,__LINE__);
 #endif
@@ -171,7 +171,7 @@ int tcprecvdata_ex(int sock, void *data, const int size, \
 		read_bytes = recv(sock, p, left_bytes, 0);
 		if (read_bytes < 0)
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcprecvdata call read failed:%s.\n",
 					__FILE__,__LINE__,strerror(errno));
 #endif
@@ -180,7 +180,7 @@ int tcprecvdata_ex(int sock, void *data, const int size, \
 		}
 		if (read_bytes == 0)
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr, "%s,%d:tcprecvdata call read return 0,"\
 					" remote close connection? " \
 					"errno:%d, error info:%s.\n",
@@ -250,7 +250,7 @@ int tcpsenddata(int sock, void* data, const int size, const int timeout)
 
 		if (result < 0)
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcpsenddata call select failed:%s.\n",
 				__FILE__,__LINE__,strerror(errno));
 #endif
@@ -258,7 +258,7 @@ int tcpsenddata(int sock, void* data, const int size, const int timeout)
 		}
 		else if (result == 0)
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcpsenddata call select timeout.\n",
 				__FILE__,__LINE__);
 #endif
@@ -268,7 +268,7 @@ int tcpsenddata(int sock, void* data, const int size, const int timeout)
 		write_bytes = send(sock, p, left_bytes, 0);
 		if (write_bytes < 0)
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcpsenddata call write failed:%s.\n",
 					__FILE__,__LINE__,strerror(errno));
 #endif			
@@ -324,7 +324,7 @@ int tcprecvdata_nb_ex(int sock, void *data, const int size, \
 
 			if (!(errno == EAGAIN || errno == EWOULDBLOCK))
 			{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcprecvdata call read failed:%s.\n",
 					__FILE__,__LINE__,strerror(errno));
 #endif
@@ -334,7 +334,7 @@ int tcprecvdata_nb_ex(int sock, void *data, const int size, \
 		}
 		else
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr, "%s,%d:tcprecvdata call read return 0,"\
 					" remote close connection? " \
 					"errno:%d, error info:%s.\n",
@@ -367,7 +367,7 @@ int tcprecvdata_nb_ex(int sock, void *data, const int size, \
 
 		if (res < 0)
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcprecvdata call select failed:%s.\n",
 				__FILE__,__LINE__,strerror(errno));
 #endif
@@ -376,7 +376,7 @@ int tcprecvdata_nb_ex(int sock, void *data, const int size, \
 		}
 		else if (res == 0)
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcprecvdata call select timeout.\n",
 				__FILE__,__LINE__);
 #endif
@@ -423,7 +423,7 @@ int tcpsenddata_nb(int sock, void* data, const int size, const int timeout)
 		{
 			if (!(errno == EAGAIN || errno == EWOULDBLOCK))
 			{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcpsenddata call write failed:%s.\n",
 					__FILE__,__LINE__,strerror(errno));
 #endif			
@@ -458,7 +458,7 @@ int tcpsenddata_nb(int sock, void* data, const int size, const int timeout)
 
 		if (result < 0)
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcpsenddata call select failed:%s.\n",
 				__FILE__,__LINE__,strerror(errno));
 #endif
@@ -466,7 +466,7 @@ int tcpsenddata_nb(int sock, void* data, const int size, const int timeout)
 		}
 		else if (result == 0)
 		{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 			fprintf(stderr,"%s,%d:tcpsenddata call select timeout.\n",
 				__FILE__,__LINE__);
 #endif
@@ -487,7 +487,7 @@ int connectserverbyip(int sock, const char *server_ip, const short server_port)
 	result = inet_aton(server_ip, &addr.sin_addr);
 	if (result == 0 )
 	{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 		fprintf(stderr,"file: %s, line: %d:connectserverbyip call " \
 			"inet_aton failed: errno: %d, error info: %s.\n",
 			__FILE__, __LINE__, errno, strerror(errno));
@@ -498,11 +498,12 @@ int connectserverbyip(int sock, const char *server_ip, const short server_port)
 	result = connect(sock, (const struct sockaddr*)&addr, sizeof(addr));
 	if (result < 0)
 	{
-#ifdef __DEBUG__
+#ifdef DEBUG_FLAG
 		fprintf(stderr,"file: %s, line: %d, connectserverbyip " \
 			"%s:%d, call connect is failed, " \
 			"errno: %d, error info: %s.\n",
-			__FILE__, __LINE__, ip, port, errno, strerror(errno));
+			__FILE__, __LINE__, server_ip, server_port, \
+			errno, strerror(errno));
 #endif
 		return errno != 0 ? errno : EINTR;
 	}
