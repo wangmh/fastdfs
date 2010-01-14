@@ -496,8 +496,6 @@ static int tracker_load_storages(const char *data_path)
 		snprintf(pStorageSyncs[nStorageSyncCount].sync_src_ip_addr, \
 			IP_ADDRESS_SIZE, "%s", psync_src_ip_addr);
 
-
-		printf("%s:%s\n", pStorageSyncs[nStorageSyncCount].group_name, pStorageSyncs[nStorageSyncCount].ip_addr);
 		nStorageSyncCount++;
 
 	}
