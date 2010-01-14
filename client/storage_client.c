@@ -414,7 +414,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const char *group_name, const char *filename)
 {
-	TrackerHeader header;
+	TrackerHeader *pHeader;
 	int result;
 	TrackerServerInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
@@ -447,10 +447,9 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 			sizeof(out_buff) - sizeof(TrackerHeader) - \
 			FDFS_GROUP_NAME_MAX_LEN,  "%s", filename);
 
-	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, header.pkg_len);
-	header.cmd = STORAGE_PROTO_CMD_DELETE_FILE;
-	header.status = 0;
-	memcpy(out_buff, &header, sizeof(TrackerHeader));
+	pHeader = (TrackerHeader *)out_buff;
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, pHeader->pkg_len);
+	pHeader->cmd = STORAGE_PROTO_CMD_DELETE_FILE;
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
@@ -1192,7 +1191,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 			FDFSMetaData *meta_list, const int meta_count, \
 			const char op_flag)
 {
-	TrackerHeader header;
+	TrackerHeader *pHeader;
 	int result;
 	TrackerServerInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+2*FDFS_PROTO_PKG_LEN_SIZE+\
@@ -1252,11 +1251,10 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	filename_len = snprintf(p, pEnd - p, "%s", filename);
 	p += filename_len;
 
+	pHeader = (TrackerHeader *)out_buff;
 	long2buff((int)(p - (out_buff + sizeof(TrackerHeader))) + \
-		meta_bytes, header.pkg_len);
-	header.cmd = STORAGE_PROTO_CMD_SET_METADATA;
-	header.status = 0;
-	memcpy(out_buff, &header, sizeof(TrackerHeader));
+		meta_bytes, pHeader->pkg_len);
+	pHeader->cmd = STORAGE_PROTO_CMD_SET_METADATA;
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 			p - out_buff, g_network_timeout)) != 0)

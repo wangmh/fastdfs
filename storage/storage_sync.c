@@ -79,15 +79,15 @@ file size bytes: file content
 static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 			const BinLogRecord *pRecord, const char proto_cmd)
 {
-	TrackerHeader header;
-	int result;
-	int64_t in_bytes;
+	TrackerHeader *pHeader;
 	char *p;
 	char *pBuff;
 	char full_filename[MAX_PATH_SIZE];
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+256];
 	char in_buff[1];
 	struct stat stat_buf;
+	int64_t in_bytes;
+	int result;
 
 	snprintf(full_filename, sizeof(full_filename), \
 		"%s/data/%s", pRecord->pBasePath, pRecord->true_filename);
@@ -118,13 +118,13 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	//printf("sync create file: %s\n", pRecord->filename);
 	do
 	{
-		memset(&header, 0, sizeof(header));
+		pHeader = (TrackerHeader *)out_buff;
+		memset(pHeader, 0, sizeof(TrackerHeader));
 		long2buff(2 * FDFS_PROTO_PKG_LEN_SIZE + \
 				4 + FDFS_GROUP_NAME_MAX_LEN + \
 				pRecord->filename_len + stat_buf.st_size,\
-				header.pkg_len);
-		header.cmd = proto_cmd;
-		memcpy(out_buff, &header, sizeof(TrackerHeader));
+				pHeader->pkg_len);
+		pHeader->cmd = proto_cmd;
 
 		p = out_buff + sizeof(TrackerHeader);
 
@@ -207,13 +207,13 @@ remain bytes: filename
 static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 			const BinLogRecord *pRecord)
 {
-	TrackerHeader header;
-	int result;
+	TrackerHeader *pHeader;
 	char full_filename[MAX_PATH_SIZE];
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
 	char in_buff[1];
 	char *pBuff;
 	int64_t in_bytes;
+	int result;
 
 	snprintf(full_filename, sizeof(full_filename), \
 		"%s/data/%s", pRecord->pBasePath, pRecord->true_filename);
@@ -237,11 +237,10 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 	memcpy(out_buff + sizeof(TrackerHeader) + 4 + FDFS_GROUP_NAME_MAX_LEN, \
 		pRecord->filename, pRecord->filename_len);
 
-	memset(&header, 0, sizeof(header));
+	pHeader = (TrackerHeader *)out_buff;
 	long2buff(4 + FDFS_GROUP_NAME_MAX_LEN + pRecord->filename_len, \
-			header.pkg_len);
-	header.cmd = STORAGE_PROTO_CMD_SYNC_DELETE_FILE;
-	memcpy(out_buff, &header, sizeof(TrackerHeader));
+			pHeader->pkg_len);
+	pHeader->cmd = STORAGE_PROTO_CMD_SYNC_DELETE_FILE;
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		sizeof(TrackerHeader) + 4 + FDFS_GROUP_NAME_MAX_LEN + \
