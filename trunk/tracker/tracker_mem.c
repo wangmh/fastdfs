@@ -1923,7 +1923,7 @@ int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
 	}
 
 	pStorageServer->status = FDFS_STORAGE_STATUS_DELETED;
-	pGroup->version++;
+	pGroup->chg_count++;
 	return 0;
 }
 
@@ -1984,7 +1984,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 				pClientInfo->pGroup->sorted_servers, \
 				pClientInfo->pGroup->count);
 			pClientInfo->pGroup->count++;
-			pClientInfo->pGroup->version++;
+			pClientInfo->pGroup->chg_count++;
 		} while (0);
 
 		if (pthread_mutex_unlock(&mem_thread_lock) != 0)
@@ -2005,8 +2005,8 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 	if (bIncRef)
 	{
 		++(*(pStorageServer->ref_count));
-		//printf("group: %s, pStorageServer->ref_count=%d\n", pClientInfo->pGroup->group_name, *(pStorageServer->ref_count));
 	}
+
 	pClientInfo->pStorage = pStorageServer;
 	pClientInfo->pAllocedStorages = pClientInfo->pGroup->all_servers;
 	return 0;
@@ -2015,7 +2015,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		const int store_path_count, const int subdir_count_per_path, \
 		const int upload_priority, const time_t up_time, \
-		const bool bIncRef, const bool init_flag)
+		const char *version, const bool bIncRef, const bool init_flag)
 {
 	int result;
 	bool bGroupInserted;
@@ -2094,6 +2094,8 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	pStorageServer->subdir_count_per_path = subdir_count_per_path;
 	pStorageServer->upload_priority = upload_priority;
 	pStorageServer->up_time = up_time;
+	snprintf(pStorageServer->version, sizeof(pStorageServer->version), \
+		"%s", version);
 
 	if (pClientInfo->pGroup->store_path_count == 0)
 	{
@@ -2291,7 +2293,7 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 					FDFS_STORAGE_STATUS_SYNCING))
 				{
 					(*ppFound)->status = pServer->status;
-					pClientInfo->pGroup->version++;
+					pClientInfo->pGroup->chg_count++;
 					continue;
 				}
 
@@ -2307,7 +2309,7 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 						FDFS_STORAGE_STATUS_DELETED)))
 				{
 					(*ppFound)->status = pServer->status;
-					pClientInfo->pGroup->version++;
+					pClientInfo->pGroup->chg_count++;
 				}
 			}
 			else if (pServer->status == FDFS_STORAGE_STATUS_DELETED)
@@ -2407,7 +2409,7 @@ int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
 		}
 
 		pGroup->active_count--;
-		pGroup->version++;
+		pGroup->chg_count++;
 		if (pGroup->current_write_server >= pGroup->active_count)
 		{
 			pGroup->current_write_server = 0;
@@ -2486,7 +2488,7 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 			pTargetServer, pGroup->active_servers, \
 			pGroup->active_count);
 		pGroup->active_count++;
-		pGroup->version++;
+		pGroup->chg_count++;
 	}
 
 	tracker_mem_find_store_server(pGroup);

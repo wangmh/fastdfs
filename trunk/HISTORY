@@ -9,6 +9,7 @@ Version 1.25  2010-01-14
  * bug fixed: tracker/tracker_mem.c load storage servers fail with many groups
    and storage servers
  * common/sockopt.c remove debug info
+ * storage stat add fields: version
 
 Version 1.24  2010-01-06
  * call php_fdfs_close with TSRMLS_CC as php_fdfs_close(i_obj TSRMLS_CC)

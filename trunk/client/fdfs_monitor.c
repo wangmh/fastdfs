@@ -180,6 +180,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 
 		printf( "\tHost %d:\n" \
 			"\t\tip_addr = %s%s  %s\n" \
+			"\t\tverson = %s\n" \
 			"\t\tup time = %s\n" \
 			"\t\ttotal storage = %dGB\n" \
 			"\t\tfree storage = %dGB\n" \
@@ -205,7 +206,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tlast_synced_timestamp= %s\n",  \
 			++k, pStorage->ip_addr, szHostnamePrompt, \
 			get_storage_status_caption(pStorage->status), \
-			szUpTime, pStorage->total_mb / 1024, \
+			pStorage->version, szUpTime, pStorage->total_mb / 1024,\
 			pStorage->free_mb / 1024,  \
 			pStorage->upload_priority,  \
 			pStorage->src_ip_addr,  \

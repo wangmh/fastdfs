@@ -32,6 +32,8 @@
 #define FDFS_FILE_PATH_LEN		10
 #define FDFS_FILENAME_BASE64_LENGTH     27
 
+#define FDFS_VERSION_SIZE		6
+
 //status order is important!
 #define FDFS_STORAGE_STATUS_INIT	  0
 #define FDFS_STORAGE_STATUS_WAIT_SYNC	  1
@@ -151,6 +153,7 @@ typedef struct StructFDFSStorageDetail
 	char status;
 	bool dirty;
 	char ip_addr[IP_ADDRESS_SIZE];
+	char version[FDFS_VERSION_SIZE];
 
 	struct StructFDFSStorageDetail *psync_src_server;
 	time_t sync_until_timestamp;
@@ -169,7 +172,7 @@ typedef struct StructFDFSStorageDetail
 	int current_write_path; //current write path index
 
 	int *ref_count;   //group/storage servers referer count
-	int version;      //current server version
+	int chg_count;    //current server changed counter
 	FDFSStorageStat stat;
 } FDFSStorageDetail;
 
@@ -201,7 +204,7 @@ typedef struct
 	int **last_sync_timestamps;//row for src storage, col for dest storage
 
 	int *ref_count;  //groups referer count
-	int version;     //current group version
+	int chg_count;   //current group changed count 
 	time_t last_source_update;
 	time_t last_sync_update;
 } FDFSGroupInfo;
