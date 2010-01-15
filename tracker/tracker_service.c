@@ -74,7 +74,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 	resp.status = status;
 
 	if (status != 0 || pClientInfo->pGroup == NULL ||
-		pClientInfo->pGroup->version == pClientInfo->pStorage->version)
+	pClientInfo->pGroup->chg_count == pClientInfo->pStorage->chg_count)
 	{
 		if ((result=tcpsenddata_nb(pClientInfo->sock, \
 			&resp, sizeof(resp), g_network_timeout)) != 0)
@@ -128,7 +128,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 		return result;
 	}
 
-	pClientInfo->pStorage->version = pClientInfo->pGroup->version;
+	pClientInfo->pStorage->chg_count = pClientInfo->pGroup->chg_count;
 	return status;
 }
 
@@ -321,7 +321,8 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 
 	status = tracker_mem_add_group_and_storage(pClientInfo, \
 			store_path_count, subdir_count_per_path, \
-			upload_priority, up_time, true, body.init_flag);
+			upload_priority, up_time, body.version, \
+			true, body.init_flag);
 	} while (0);
 
 	return tracker_check_and_sync(pClientInfo, status);
@@ -450,7 +451,7 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 	    pClientInfo->pStorage->status == FDFS_STORAGE_STATUS_SYNCING)
 	{
 		pClientInfo->pStorage->status = FDFS_STORAGE_STATUS_ONLINE;
-		pClientInfo->pGroup->version++;
+		pClientInfo->pGroup->chg_count++;
 		tracker_save_storages();
 	}
 
@@ -462,7 +463,7 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 	if (pClientInfo->pStorage->status == FDFS_STORAGE_STATUS_INIT)
 	{
 		pClientInfo->pStorage->status = FDFS_STORAGE_STATUS_WAIT_SYNC;
-		pClientInfo->pGroup->version++;
+		pClientInfo->pGroup->chg_count++;
 		bSaveStorages = true;
 	}
 
@@ -632,6 +633,8 @@ static int tracker_deal_server_list_group_storages( \
 					(*ppServer)->psync_src_server->ip_addr,\
 					IP_ADDRESS_SIZE);
 			}
+
+			strcpy(pDest->version, (*ppServer)->version);
 			long2buff((*ppServer)->up_time, pDest->sz_up_time);
 			long2buff((*ppServer)->total_mb, pDest->sz_total_mb);
 			long2buff((*ppServer)->free_mb, pDest->sz_free_mb);
@@ -1444,7 +1447,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 		{
 			pClientInfo->pStorage->status = \
 				FDFS_STORAGE_STATUS_ONLINE;
-			pClientInfo->pGroup->version++;
+			pClientInfo->pGroup->chg_count++;
 			tracker_save_storages();
 		}
 
@@ -1488,7 +1491,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 	pClientInfo->pStorage->psync_src_server = pSrcStorage;
 	pClientInfo->pStorage->sync_until_timestamp = sync_until_timestamp;
 	pClientInfo->pStorage->status = FDFS_STORAGE_STATUS_WAIT_SYNC;
-	pClientInfo->pGroup->version++;
+	pClientInfo->pGroup->chg_count++;
 
 	tracker_save_storages();
 	return 0;

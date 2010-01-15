@@ -18,9 +18,10 @@ extern "C" {
 
 typedef struct
 {
-        char status;
-        char ip_addr[IP_ADDRESS_SIZE];
-        char src_ip_addr[IP_ADDRESS_SIZE];
+	char status;
+	char ip_addr[IP_ADDRESS_SIZE];
+	char src_ip_addr[IP_ADDRESS_SIZE];
+	char version[FDFS_VERSION_SIZE];
 	int total_mb;  //total disk storage in MB
 	int free_mb;  //free disk storage in MB
 	int upload_priority;  //upload priority
