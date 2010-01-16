@@ -26,14 +26,17 @@
 #include "tracker_mem.h"
 #include "shared_func.h"
 
-static pthread_mutex_t mem_thread_lock;
-
-#define STORAGE_GROUPS_LIST_FILENAME	"storage_groups.dat"
-#define STORAGE_SERVERS_LIST_FILENAME	"storage_servers.dat"
-#define STORAGE_SYNC_TIMESTAMP_FILENAME	"storage_sync_timestamp.dat"
-#define STORAGE_DATA_FIELD_SEPERATOR	','
+#define STORAGE_GROUPS_LIST_FILENAME	   "storage_groups.dat"
+#define STORAGE_SERVERS_LIST_FILENAME	   "storage_servers.dat"
+#define STORAGE_SERVERS_CHANGELOG_FILENAME "storage_changelog.dat"
+#define STORAGE_SYNC_TIMESTAMP_FILENAME	   "storage_sync_timestamp.dat"
+#define STORAGE_DATA_FIELD_SEPERATOR	   ','
 
 #define TRACKER_MEM_ALLOC_ONCE	2
+
+static pthread_mutex_t mem_thread_lock;
+static off_t changelog_fsize = 0; //storage server change log file size
+static int changelog_fd = -1;  //storage server change log fd for write
 
 static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup);
 
@@ -789,7 +792,7 @@ static int tracker_load_data()
 
 static int tracker_save_groups()
 {
-	char filname[MAX_PATH_SIZE];
+	char filename[MAX_PATH_SIZE];
 	char buff[FDFS_GROUP_NAME_MAX_LEN + 128];
 	int fd;
 	FDFSGroupInfo **ppGroup;
@@ -797,14 +800,14 @@ static int tracker_save_groups()
 	int result;
 	int len;
 
-	snprintf(filname, sizeof(filname), "%s/data/%s", \
+	snprintf(filename, sizeof(filename), "%s/data/%s", \
 		g_base_path, STORAGE_GROUPS_LIST_FILENAME);
-	if ((fd=open(filname, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
+	if ((fd=open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, filname, errno, strerror(errno));
+			__LINE__, filename, errno, strerror(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -825,7 +828,7 @@ static int tracker_save_groups()
 			logError("file: "__FILE__", line: %d, " \
 				"write to file \"%s\" fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, filname, errno, strerror(errno));
+				__LINE__, filename, errno, strerror(errno));
 			result = errno != 0 ? errno : EIO;
 			break;
 		}
@@ -837,7 +840,7 @@ static int tracker_save_groups()
 
 int tracker_save_storages()
 {
-	char filname[MAX_PATH_SIZE];
+	char filename[MAX_PATH_SIZE];
 	char buff[256];
 	int fd;
 	int len;
@@ -847,14 +850,14 @@ int tracker_save_storages()
 	FDFSStorageDetail *pStorageEnd;
 	int result;
 
-	snprintf(filname, sizeof(filname), "%s/data/%s", \
+	snprintf(filename, sizeof(filename), "%s/data/%s", \
 		g_base_path, STORAGE_SERVERS_LIST_FILENAME);
-	if ((fd=open(filname, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
+	if ((fd=open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, filname, errno, strerror(errno));
+			__LINE__, filename, errno, strerror(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -931,7 +934,7 @@ int tracker_save_storages()
 				logError("file: "__FILE__", line: %d, " \
 					"write to file \"%s\" fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, filname, \
+					__LINE__, filename, \
 					errno, strerror(errno));
 				result = errno != 0 ? errno : EIO;
 				break;
@@ -945,7 +948,7 @@ int tracker_save_storages()
 
 int tracker_save_sync_timestamps()
 {
-	char filname[MAX_PATH_SIZE];
+	char filename[MAX_PATH_SIZE];
 	char buff[512];
 	int fd;
 	int len;
@@ -956,14 +959,14 @@ int tracker_save_sync_timestamps()
 	int k;
 	int result;
 
-	snprintf(filname, sizeof(filname), "%s/data/%s", \
+	snprintf(filename, sizeof(filename), "%s/data/%s", \
 		g_base_path, STORAGE_SYNC_TIMESTAMP_FILENAME);
-	if ((fd=open(filname, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
+	if ((fd=open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, filname, errno, strerror(errno));
+			__LINE__, filename, errno, strerror(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -1004,7 +1007,7 @@ int tracker_save_sync_timestamps()
 				logError("file: "__FILE__", line: %d, " \
 					"write to file \"%s\" fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, filname, \
+					__LINE__, filename, \
 					errno, strerror(errno));
 				result = errno != 0 ? errno : EIO;
 				break;
@@ -1014,6 +1017,35 @@ int tracker_save_sync_timestamps()
 
 	close(fd);
 	return result;
+}
+
+static int tracker_open_changlog_file()
+{
+	char filename[MAX_PATH_SIZE];
+
+	snprintf(filename, sizeof(filename), "%s/data/%s", \
+		g_base_path, STORAGE_SERVERS_CHANGELOG_FILENAME);
+	changelog_fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (changelog_fd < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"open \"%s\" fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, filename, errno, strerror(errno));
+		return errno != 0 ? errno : ENOENT;
+	}
+
+	changelog_fsize = lseek(changelog_fd, 0, SEEK_END);
+        if (changelog_fsize < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"lseek file \"%s\" fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, filename, errno, strerror(errno));
+		return errno != 0 ? errno : EIO;
+	}
+
+	return 0;
 }
 
 int tracker_mem_init()
@@ -1085,6 +1117,11 @@ int tracker_mem_init()
 		return result;
 	}
 
+	if ((result=tracker_open_changlog_file()) != 0)
+	{
+		return result;
+	}
+	
 	/*
 	if (g_groups.store_lookup == FDFS_STORE_LOOKUP_SPEC_GROUP)
 	{
@@ -1281,6 +1318,12 @@ int tracker_mem_destroy()
 
 		free(g_groups.groups);
 		g_groups.groups = NULL;
+	}
+
+	if (changelog_fd >= 0)
+	{
+		close(changelog_fd);
+		changelog_fd = -1;
 	}
 
 	if (pthread_mutex_destroy(&mem_thread_lock) != 0)

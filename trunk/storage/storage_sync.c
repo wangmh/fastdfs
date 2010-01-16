@@ -1040,7 +1040,7 @@ static int storage_report_storage_status(const char *ip_addr, \
 	result = 0;
 	pTServer = &trackerServer;
 	pTServerEnd = g_tracker_group.servers + g_tracker_group.server_count;
-	for (pGlobalServer=g_tracker_group.servers; pGlobalServer < pTServerEnd; \
+	for (pGlobalServer=g_tracker_group.servers; pGlobalServer<pTServerEnd; \
 			pGlobalServer++)
 	{
 		memcpy(pTServer, pGlobalServer, sizeof(TrackerServerInfo));

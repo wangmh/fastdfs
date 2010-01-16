@@ -88,7 +88,9 @@ extern int g_sync_until_timestamp;
 extern int g_local_host_ip_count;
 extern char g_local_host_ip_addrs[STORAGE_MAX_LOCAL_IP_ADDRS * \
 				IP_ADDRESS_SIZE];
-extern char g_tracker_client_ip[IP_ADDRESS_SIZE];
+
+extern char g_tracker_client_ip[IP_ADDRESS_SIZE]; //storage ip as tracker client
+extern char g_last_storage_ip[IP_ADDRESS_SIZE];	//the last storage ip address
 
 extern int g_allow_ip_count;  /* -1 means match any ip address */
 extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
