@@ -57,7 +57,9 @@ int g_sync_until_timestamp = 0;
 int g_local_host_ip_count = 0;
 char g_local_host_ip_addrs[STORAGE_MAX_LOCAL_IP_ADDRS * \
 				IP_ADDRESS_SIZE];
-char g_tracker_client_ip[IP_ADDRESS_SIZE] = {0} ;
+
+char g_tracker_client_ip[IP_ADDRESS_SIZE] = {0}; //storage ip as tracker client
+char g_last_storage_ip[IP_ADDRESS_SIZE] = {0};	 //the last storage ip address
 
 int g_allow_ip_count = 0;
 in_addr_t *g_allow_ip_addrs = NULL;

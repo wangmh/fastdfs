@@ -1,5 +1,5 @@
 
-Version 1.25  2010-01-14
+Version 1.25  2010-01-16
  * storage_sync.c if source file not exist when sync a file, change from 
    logWarning to logDebug
  * filename buff size change from 64 to 128
@@ -10,6 +10,7 @@ Version 1.25  2010-01-14
    and storage servers
  * common/sockopt.c remove debug info
  * storage stat add fields: version
+ * auto adjust when storage server ip address changed
 
 Version 1.24  2010-01-06
  * call php_fdfs_close with TSRMLS_CC as php_fdfs_close(i_obj TSRMLS_CC)

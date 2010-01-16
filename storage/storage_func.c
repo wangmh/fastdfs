@@ -45,6 +45,7 @@
 #define INIT_ITEM_SYNC_OLD_DONE		"sync_old_done"
 #define INIT_ITEM_SYNC_SRC_SERVER	"sync_src_server"
 #define INIT_ITEM_SYNC_UNTIL_TIMESTAMP	"sync_until_timestamp"
+#define INIT_ITEM_LAST_IP_ADDRESS	"last_ip_addr"
 
 #define STAT_ITEM_TOTAL_UPLOAD		"total_upload_count"
 #define STAT_ITEM_SUCCESS_UPLOAD	"success_upload_count"
@@ -346,11 +347,13 @@ int storage_write_to_sync_ini_file()
 	len = sprintf(buff, "%s=%d\n" \
 		"%s=%d\n"  \
 		"%s=%s\n"  \
-		"%s=%d\n", \
+		"%s=%d\n"  \
+		"%s=%s\n", \
 		INIT_ITEM_STORAGE_JOIN_TIME, g_storage_join_time, \
 		INIT_ITEM_SYNC_OLD_DONE, g_sync_old_done, \
 		INIT_ITEM_SYNC_SRC_SERVER, g_sync_src_ip_addr, \
-		INIT_ITEM_SYNC_UNTIL_TIMESTAMP, g_sync_until_timestamp \
+		INIT_ITEM_SYNC_UNTIL_TIMESTAMP, g_sync_until_timestamp, \
+		INIT_ITEM_LAST_IP_ADDRESS, g_tracker_client_ip
 	    );
 	if (write(fd, buff, len) != len)
 	{
@@ -439,11 +442,21 @@ static int storage_check_and_make_data_dirs()
 		g_sync_until_timestamp = iniGetIntValue( \
 				INIT_ITEM_SYNC_UNTIL_TIMESTAMP, \
 				items, nItemCount, 0);
+
+		pValue = iniGetStrValue(INIT_ITEM_LAST_IP_ADDRESS, \
+				items, nItemCount);
+		if (pValue != NULL)
+		{
+			snprintf(g_last_storage_ip, sizeof(g_last_storage_ip), \
+				"%s", pValue);
+		}
+
 		iniFreeItems(items);
 
-		//printf("g_sync_old_done = %d\n", g_sync_old_done);
-		//printf("g_sync_src_ip_addr = %s\n", g_sync_src_ip_addr);
-		//printf("g_sync_until_timestamp = %d\n", g_sync_until_timestamp);
+		printf("g_sync_old_done = %d\n", g_sync_old_done);
+		printf("g_sync_src_ip_addr = %s\n", g_sync_src_ip_addr);
+		printf("g_sync_until_timestamp = %d\n", g_sync_until_timestamp);
+		printf("g_last_storage_ip= %s\n", g_last_storage_ip);
 	}
 	else
 	{
