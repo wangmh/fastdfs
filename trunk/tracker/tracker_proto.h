@@ -22,8 +22,9 @@
 #define TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ 87  //dest storage require sync
 #define TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY   88  //sync done notify
 #define TRACKER_PROTO_CMD_STORAGE_SYNC_REPORT	89  //report src last synced time as dest server
-#define TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_QUERY 79  //dest storage query sync src storage server
-#define TRACKER_PROTO_CMD_STORAGE_RESP          80
+#define TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_QUERY   79 //dest storage query sync src storage server
+#define TRACKER_PROTO_CMD_STORAGE_REPORT_IP_CHANGED 78
+#define TRACKER_PROTO_CMD_STORAGE_RESP              80
 
 #define TRACKER_PROTO_CMD_SERVER_LIST_GROUP			91
 #define TRACKER_PROTO_CMD_SERVER_LIST_STORAGE			92
@@ -36,7 +37,6 @@
 #define TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ALL		105
 #define TRACKER_PROTO_CMD_SERVICE_RESP				100
 
-#define STORAGE_PROTO_CMD_REPORT_IP_CHANGED	 8
 #define STORAGE_PROTO_CMD_REPORT_CLIENT_IP	 9   //ip as tracker client
 #define STORAGE_PROTO_CMD_UPLOAD_FILE		11
 #define STORAGE_PROTO_CMD_DELETE_FILE		12

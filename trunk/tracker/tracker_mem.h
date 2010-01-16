@@ -32,10 +32,13 @@ FDFSStorageDetail *tracker_mem_get_active_storage(FDFSGroupInfo *pGroup, \
 				const char *ip_addr);
 
 int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
-			const bool bIncRef, bool *bInserted);
+		const bool bIncRef, bool *bInserted);
 int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
-			const bool bIncRef, bool *bInserted);
+		const bool bIncRef, bool *bInserted);
 int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr);
+int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
+		const char *old_storage_ip, const char *new_storage_ip);
+
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		const int store_path_count, const int subdir_count_per_path, \
 		const int upload_priority, const time_t up_time, \
