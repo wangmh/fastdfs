@@ -29,6 +29,46 @@
 #include "storage_func.h"
 #include "storage_ip_changed_dealer.h"
 
+static int storage_report_ip_changed(TrackerServerInfo *pTrackerServer)
+{
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
+		2 * IP_ADDRESS_SIZE];
+	char in_buff[1];
+	char *pInBuff;
+	TrackerHeader *pHeader;
+	int result;
+	int64_t in_bytes;
+
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
+
+	long2buff(FDFS_GROUP_NAME_MAX_LEN+2*IP_ADDRESS_SIZE, pHeader->pkg_len);
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_REPORT_IP_CHANGED;
+	strcpy(out_buff + sizeof(TrackerHeader), g_group_name);
+	strcpy(out_buff + sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
+		g_last_storage_ip);
+	strcpy(out_buff + sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
+		IP_ADDRESS_SIZE, g_tracker_client_ip);
+
+	if((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+		sizeof(TrackerHeader) + 2 * IP_ADDRESS_SIZE, \
+		g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, send data fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, strerror(result));
+		return result;
+	}
+
+	pInBuff = in_buff;
+	result = fdfs_recv_response(pTrackerServer, \
+                &pInBuff, 0, &in_bytes);
+	return result == EALREADY ? 0 : result;
+}
+
 static int storage_report_storage_ip_addr()
 {
 	TrackerServerInfo *pGlobalServer;
@@ -178,19 +218,23 @@ static int storage_report_storage_ip_addr()
 			continue;
 		}
 
+		if (storage_report_ip_changed(pTServer) == 0)
+		{
+			success_count++;
+		}
+
+		fdfs_quit(pTServer);
+		close(pTServer->sock);
+	}
+	}
+
+		/*
 		if (tracker_report_join(pTServer, g_sync_old_done) != 0)
 		{
 			close(pTServer->sock);
 			continue;
 		}
-
-		//to do report ip addr changed
-
-		fdfs_quit(pTServer);
-		close(pTServer->sock);
-		success_count++;
-	}
-	}
+		*/
 
 	if (!g_continue_flag)
 	{

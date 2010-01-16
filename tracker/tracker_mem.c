@@ -40,6 +40,65 @@ static int changelog_fd = -1;  //storage server change log fd for write
 
 static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup);
 
+static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
+		FDFSStorageDetail *pStorage, const char *pArg)
+{
+	char buff[256];
+	int len;
+	int result;
+
+	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	len = snprintf(buff, sizeof(buff), "%d %s %s %d %s\n", \
+		(int)time(NULL), pGroup->group_name, pStorage->ip_addr, \
+		pStorage->status, pArg != NULL ? pArg : "");
+
+	if (write(changelog_fd, buff, len) != len)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"write to file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, STORAGE_SERVERS_CHANGELOG_FILENAME, \
+			result, strerror(result));
+
+		pthread_mutex_unlock(&mem_thread_lock);
+		return result;
+	}
+
+	changelog_fsize += len;
+	if (fsync(changelog_fd) != 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"call fsync of file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, STORAGE_SERVERS_CHANGELOG_FILENAME, \
+			result, strerror(result));
+
+		pthread_mutex_unlock(&mem_thread_lock);
+		return result;
+	}
+
+	if ((result=pthread_mutex_unlock(&mem_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	return 0;
+}
+
 static int tracker_malloc_storage_path_mbs(FDFSStorageDetail *pStorage, \
 		const int store_path_count)
 {
@@ -1939,7 +1998,8 @@ int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
 	FDFSStorageDetail *pEnd;
 
 	pStorageServer = tracker_mem_get_storage(pGroup, ip_addr);
-	if (pStorageServer == NULL)
+	if (pStorageServer == NULL || pStorageServer->status == \
+		FDFS_STORAGE_STATUS_IP_CHANGED)
 	{
 		return ENOENT;
 	}
@@ -1967,6 +2027,60 @@ int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
 
 	pStorageServer->status = FDFS_STORAGE_STATUS_DELETED;
 	pGroup->chg_count++;
+
+	tracker_write_to_changelog(pGroup, pStorageServer, NULL);
+	return 0;
+}
+
+int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
+		const char *old_storage_ip, const char *new_storage_ip)
+{
+	FDFSStorageDetail *pStorageServer;
+	FDFSStorageDetail *pServer;
+	FDFSStorageDetail *pEnd;
+
+	pStorageServer = tracker_mem_get_storage(pGroup, old_storage_ip);
+	if (pStorageServer == NULL || pStorageServer->status == \
+		FDFS_STORAGE_STATUS_DELETED)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, old storage server: %s not exists", \
+			__LINE__, new_storage_ip, old_storage_ip);
+		return ENOENT;
+	}
+
+	if (pStorageServer->status == FDFS_STORAGE_STATUS_ONLINE || \
+	    pStorageServer->status == FDFS_STORAGE_STATUS_ACTIVE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, old storage server: %s is online", \
+			__LINE__, new_storage_ip, old_storage_ip);
+		return EBUSY;
+	}
+
+	if (pStorageServer->status == FDFS_STORAGE_STATUS_IP_CHANGED)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, old storage server: %s " \
+			"'s ip address already changed", \
+			__LINE__, new_storage_ip, old_storage_ip);
+		return EALREADY;
+	}
+
+	pEnd = pGroup->all_servers + pGroup->count;
+	for (pServer=pGroup->all_servers; pServer<pEnd; pServer++)
+	{
+		if (pServer->psync_src_server != NULL && \
+		strcmp(pServer->psync_src_server->ip_addr, old_storage_ip) == 0)
+		{
+			pServer->psync_src_server = NULL;
+		}
+	}
+
+	pStorageServer->status = FDFS_STORAGE_STATUS_IP_CHANGED;
+	pGroup->chg_count++;
+
+	tracker_write_to_changelog(pGroup, pStorageServer, new_storage_ip);
 	return 0;
 }
 
