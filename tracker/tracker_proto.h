@@ -13,18 +13,19 @@
 
 #include "tracker_types.h"
 
-#define TRACKER_PROTO_CMD_STORAGE_JOIN          81
-#define FDFS_PROTO_CMD_QUIT			82
-#define TRACKER_PROTO_CMD_STORAGE_BEAT          83  //heart beat
-#define TRACKER_PROTO_CMD_STORAGE_REPORT        84  //report disk usage
-#define TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG   85  //repl new storage servers
-#define TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ  86  //src storage require sync
-#define TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ 87  //dest storage require sync
-#define TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY   88  //sync done notify
-#define TRACKER_PROTO_CMD_STORAGE_SYNC_REPORT	89  //report src last synced time as dest server
+#define TRACKER_PROTO_CMD_STORAGE_JOIN              81
+#define FDFS_PROTO_CMD_QUIT			    82
+#define TRACKER_PROTO_CMD_STORAGE_BEAT              83  //heart beat
+#define TRACKER_PROTO_CMD_STORAGE_REPORT_DISK_USAGE 84  //report disk usage
+#define TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG       85  //repl new storage servers
+#define TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ      86  //src storage require sync
+#define TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ     87  //dest storage require sync
+#define TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY       88  //sync done notify
+#define TRACKER_PROTO_CMD_STORAGE_SYNC_REPORT	    89  //report src last synced time as dest server
 #define TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_QUERY   79 //dest storage query sync src storage server
 #define TRACKER_PROTO_CMD_STORAGE_REPORT_IP_CHANGED 78
 #define TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ     77
+#define TRACKER_PROTO_CMD_STORAGE_REPORT_STATUS     76  //report specified storage server status
 #define TRACKER_PROTO_CMD_STORAGE_RESP              80
 
 #define TRACKER_PROTO_CMD_SERVER_LIST_GROUP			91

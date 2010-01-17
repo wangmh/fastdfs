@@ -96,7 +96,7 @@ int kill_tracker_report_threads()
 	return result;
 }
 
-static void* tracker_report_thread_entrance(void* arg)
+static void *tracker_report_thread_entrance(void *arg)
 {
 	TrackerServerInfo *pTrackerServer;
 	char tracker_client_ip[IP_ADDRESS_SIZE];
@@ -503,6 +503,61 @@ int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 		return result;
 	}
 
+
+	if ((result=tcprecvdata_nb(pTrackerServer->sock, &resp, \
+			sizeof(resp), g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, recv data fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, result, strerror(result));
+		return result;
+	}
+
+	if (memcmp(resp.pkg_len, "\0\0\0\0\0\0\0\0", \
+		FDFS_PROTO_PKG_LEN_SIZE) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, " \
+			"expect pkg len 0, but recv pkg len != 0", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port);
+		return EINVAL;
+	}
+
+	return resp.status;
+}
+
+int tracker_report_storage_status(TrackerServerInfo *pTrackerServer, \
+		FDFSStorageBrief *briefServer)
+{
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
+			sizeof(FDFSStorageBrief)];
+	TrackerHeader *pHeader;
+	TrackerHeader resp;
+	int result;
+
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_REPORT_STATUS;
+
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + sizeof(FDFSStorageBrief), \
+			pHeader->pkg_len);
+	strcpy(out_buff + sizeof(TrackerHeader), g_group_name);
+	memcpy(out_buff + sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
+			briefServer, sizeof(FDFSStorageBrief));
+	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
+			sizeof(FDFSStorageBrief), g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"trackert server %s:%d, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, result, strerror(result));
+		return result;
+	}
 
 	if ((result=tcprecvdata_nb(pTrackerServer->sock, &resp, \
 			sizeof(resp), g_network_timeout)) != 0)
@@ -1187,7 +1242,7 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer)
 	pStatBuff = (TrackerStatReportReqBody*) \
 			(pBuff + sizeof(TrackerHeader));
 	long2buff(body_len, pHeader->pkg_len);
-	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_REPORT;
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_REPORT_DISK_USAGE;
 	pHeader->status = 0;
 
 	for (i=0; i<g_path_count; i++)

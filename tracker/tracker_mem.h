@@ -56,7 +56,7 @@ int tracker_mem_offline_store_server(TrackerClientInfo *pClientInfo);
 int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 			FDFSStorageDetail *pTargetServer);
 
-int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
+int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
                 FDFSStorageBrief *briefServers, const int server_count);
 int tracker_save_storages();
 int tracker_save_sync_timestamps();
