@@ -29,6 +29,34 @@
 #include "storage_func.h"
 #include "storage_ip_changed_dealer.h"
 
+static int storage_do_changelog_req(TrackerServerInfo *pTrackerServer)
+{
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN];
+	TrackerHeader *pHeader;
+	int result;
+
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
+
+	long2buff(FDFS_GROUP_NAME_MAX_LEN, pHeader->pkg_len);
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ;
+	strcpy(out_buff + sizeof(TrackerHeader), g_group_name);
+	if((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
+		g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, send data fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, strerror(result));
+		return result;
+	}
+
+	return tracker_deal_changelog_response(pTrackerServer);
+}
+
 static int storage_report_ip_changed(TrackerServerInfo *pTrackerServer)
 {
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
@@ -198,7 +226,7 @@ static int storage_report_storage_ip_addr()
 
 			close(pTServer->sock);
 			pTServer->sock = -1;
-			sleep(5);
+			sleep(1);
 		}
 
 		if (pTServer->sock < 0)
@@ -228,20 +256,97 @@ static int storage_report_storage_ip_addr()
 	}
 	}
 
-		/*
-		if (tracker_report_join(pTServer, g_sync_old_done) != 0)
-		{
-			close(pTServer->sock);
-			continue;
-		}
-		*/
-
 	if (!g_continue_flag)
 	{
 		return EINTR;
 	}
 
 	return storage_write_to_sync_ini_file();
+}
+
+static int storage_changlog_req()
+{
+	TrackerServerInfo *pGlobalServer;
+	TrackerServerInfo *pTServer;
+	TrackerServerInfo *pTServerEnd;
+	TrackerServerInfo trackerServer;
+	int success_count;
+	int result;
+	int i;
+
+	success_count = 0;
+	pTServer = &trackerServer;
+	pTServerEnd = g_tracker_group.servers + g_tracker_group.server_count;
+
+	while (success_count == 0 && g_continue_flag)
+	{
+	for (pGlobalServer=g_tracker_group.servers; pGlobalServer<pTServerEnd; \
+			pGlobalServer++)
+	{
+		memcpy(pTServer, pGlobalServer, sizeof(TrackerServerInfo));
+		for (i=0; i < 3; i++)
+		{
+			pTServer->sock = socket(AF_INET, SOCK_STREAM, 0);
+			if(pTServer->sock < 0)
+			{
+				result = errno != 0 ? errno : EPERM;
+				logError("file: "__FILE__", line: %d, " \
+					"socket create failed, errno: %d, " \
+					"error info: %s.", \
+					__LINE__, result, strerror(result));
+				sleep(5);
+				break;
+			}
+
+			if (g_client_bind_addr && *g_bind_addr != '\0')
+			{
+				socketBind(pTServer->sock, g_bind_addr, 0);
+			}
+
+			if ((result=connectserverbyip(pTServer->sock, \
+				pTServer->ip_addr, pTServer->port)) == 0)
+			{
+				break;
+			}
+
+			close(pTServer->sock);
+			pTServer->sock = -1;
+			sleep(1);
+		}
+
+		if (pTServer->sock < 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"connect to tracker server %s:%d fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pTServer->ip_addr, pTServer->port, \
+				result, strerror(result));
+
+			continue;
+		}
+
+		if (tcpsetnonblockopt(pTServer->sock) != 0)
+		{
+			close(pTServer->sock);
+			continue;
+		}
+
+		if (storage_do_changelog_req(pTServer) == 0)
+		{
+			success_count++;
+		}
+
+		fdfs_quit(pTServer);
+		close(pTServer->sock);
+	}
+	}
+
+	if (!g_continue_flag)
+	{
+		return EINTR;
+	}
+
+	return 0;
 }
 
 int storage_check_ip_changed()
@@ -253,6 +358,6 @@ int storage_check_ip_changed()
 		return result;
 	}
 
-	return 0;
+	return storage_changlog_req();
 }
 

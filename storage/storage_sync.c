@@ -992,7 +992,7 @@ static int storage_open_readable_binlog(BinLogReader *pReader)
 	return 0;
 }
 
-static char *get_mark_filename(const void *pArg, \
+static char *get_mark_filename_by_reader(const void *pArg, \
 			char *full_filename)
 {
 	const BinLogReader *pReader;
@@ -1007,6 +1007,15 @@ static char *get_mark_filename(const void *pArg, \
 	snprintf(full_filename, MAX_PATH_SIZE, \
 			"%s/data/"SYNC_DIR_NAME"/%s_%d%s", g_base_path, \
 			pReader->ip_addr, g_server_port, SYNC_MARK_FILE_EXT);
+	return full_filename;
+}
+
+static char *get_mark_filename_by_ip(const char *ip_addr, char *full_filename, \
+		const int filename_size)
+{
+	snprintf(full_filename, filename_size, \
+			"%s/data/"SYNC_DIR_NAME"/%s_%d%s", g_base_path, \
+			ip_addr, g_server_port, SYNC_MARK_FILE_EXT);
 	return full_filename;
 }
 
@@ -1276,7 +1285,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 	pReader->binlog_buff.current = pReader->binlog_buff.buffer;
 
 	strcpy(pReader->ip_addr, pStorage->ip_addr);
-	get_mark_filename(pReader, full_filename);
+	get_mark_filename_by_reader(pReader, full_filename);
 
 	if (pStorage->status == FDFS_STORAGE_STATUS_WAIT_SYNC)
 	{
@@ -1461,8 +1470,8 @@ static int storage_write_to_mark_file(BinLogReader *pReader)
 		MARK_ITEM_UNTIL_TIMESTAMP, (int)pReader->until_timestamp, \
 		MARK_ITEM_SCAN_ROW_COUNT, pReader->scan_row_count, \
 		MARK_ITEM_SYNC_ROW_COUNT, pReader->sync_row_count);
-	if ((result=storage_write_to_fd(pReader->mark_fd, get_mark_filename, \
-		pReader, buff, len)) == 0)
+	if ((result=storage_write_to_fd(pReader->mark_fd, \
+		get_mark_filename_by_reader, pReader, buff, len)) == 0)
 	{
 		pReader->last_write_row_count = pReader->scan_row_count;
 	}
@@ -1728,7 +1737,7 @@ static int storage_binlog_reader_skip(BinLogReader *pReader)
 	return result;
 }
 
-static int storage_unlink_mark_file(BinLogReader *pReader)
+int storage_unlink_mark_file(const char *ip_addr)
 {
 	char old_filename[MAX_PATH_SIZE];
 	char new_filename[MAX_PATH_SIZE];
@@ -1738,11 +1747,41 @@ static int storage_unlink_mark_file(BinLogReader *pReader)
 	t = time(NULL);
 	localtime_r(&t, &tm);
 
-	get_mark_filename(pReader, old_filename);
+	get_mark_filename_by_ip(ip_addr, old_filename, sizeof(old_filename));
+	if (!fileExists(old_filename))
+	{
+		return ENOENT;
+	}
+
 	snprintf(new_filename, sizeof(new_filename), \
 		"%s.%04d%02d%02d%02d%02d%02d", old_filename, \
 		tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
 		tm.tm_hour, tm.tm_min, tm.tm_sec);
+	if (rename(old_filename, new_filename) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"rename file %s to %s fail" \
+			", errno: %d, error info: %s", \
+			__LINE__, old_filename, new_filename, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : EACCES;
+	}
+
+	return 0;
+}
+
+int storage_rename_mark_file(const char *old_ip_addr, const char *new_ip_addr)
+{
+	char old_filename[MAX_PATH_SIZE];
+	char new_filename[MAX_PATH_SIZE];
+
+	get_mark_filename_by_ip(old_ip_addr, old_filename,sizeof(old_filename));
+	if (!fileExists(old_filename))
+	{
+		return ENOENT;
+	}
+
+	get_mark_filename_by_ip(new_ip_addr, new_filename,sizeof(new_filename));
 	if (rename(old_filename, new_filename) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -2159,10 +2198,10 @@ static void* storage_sync_thread_entrance(void* arg)
 
 	if (pStorage->status == FDFS_STORAGE_STATUS_DELETED)
 	{
-		storage_unlink_mark_file(&reader);
+		storage_unlink_mark_file(reader.ip_addr);
 		if (strcmp(g_sync_src_ip_addr, pStorage->ip_addr) == 0)
 		{
-			g_sync_src_ip_addr[0] = '\0';
+			*g_sync_src_ip_addr = '\0';
 			storage_write_to_sync_ini_file();
 		}
 

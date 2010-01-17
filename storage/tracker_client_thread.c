@@ -1409,11 +1409,24 @@ int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer)
 
 			if (server_status == FDFS_STORAGE_STATUS_DELETED)
 			{
+				storage_unlink_mark_file(pOldIpAddr);
 
+				if (strcmp(g_sync_src_ip_addr, pOldIpAddr) == 0)
+				{
+					*g_sync_src_ip_addr = '\0';
+					storage_write_to_sync_ini_file();
+				}
 			}
 			else if (server_status == FDFS_STORAGE_STATUS_IP_CHANGED)
 			{
-
+				storage_rename_mark_file(pOldIpAddr, pNewIpAddr);
+				if (strcmp(g_sync_src_ip_addr, pOldIpAddr) == 0)
+				{
+					snprintf(g_sync_src_ip_addr, \
+						sizeof(g_sync_src_ip_addr), \
+						"%s", pNewIpAddr);
+					storage_write_to_sync_ini_file();
+				}
 			}
 			else
 			{
