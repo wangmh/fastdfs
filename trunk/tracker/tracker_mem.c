@@ -2392,10 +2392,15 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		pStorageServer->status = FDFS_STORAGE_STATUS_ONLINE;
 	}
 
+	logDebug("file: "__FILE__", line: %d, " \
+		"storage server %s::%s join in", \
+		__LINE__, pClientInfo->pGroup->group_name, \
+		pStorageServer->ip_addr);
+
 	return 0;
 }
 
-int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
+int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 		FDFSStorageBrief *briefServers, const int server_count)
 {
 	int result;
@@ -2418,11 +2423,10 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 	result = 0;
 	do
 	{
-		if (pClientInfo->pGroup->count + server_count >= \
-			pClientInfo->pGroup->alloc_size)
+		if (pGroup->count + server_count >= pGroup->alloc_size)
 		{
 			result = tracker_mem_realloc_store_servers( \
-					pClientInfo->pGroup, server_count);
+					pGroup, server_count);
 			if (result != 0)
 			{
 				break;
@@ -2430,8 +2434,7 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 		}
 
 		memset(&target_storage, 0, sizeof(target_storage));
-		pStorageServer = pClientInfo->pGroup->all_servers \
-					 + pClientInfo->pGroup->count;
+		pStorageServer = pGroup->all_servers + pGroup->count;
 		pEnd = briefServers + server_count;
 		for (pServer=briefServers; pServer<pEnd; pServer++)
 		{
@@ -2446,8 +2449,8 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 			pTargetStorage = &target_storage;
 			if ((ppFound=(FDFSStorageDetail **)bsearch( \
 				&pTargetStorage, \
-				pClientInfo->pGroup->sorted_servers, \
-				pClientInfo->pGroup->count, \
+				pGroup->sorted_servers, \
+				pGroup->count, \
 				sizeof(FDFSStorageDetail *), \
 				tracker_mem_cmp_by_ip_addr)) != NULL)
 			{
@@ -2465,7 +2468,7 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 					FDFS_STORAGE_STATUS_SYNCING))
 				{
 					(*ppFound)->status = pServer->status;
-					pClientInfo->pGroup->chg_count++;
+					pGroup->chg_count++;
 					continue;
 				}
 
@@ -2481,7 +2484,7 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 						FDFS_STORAGE_STATUS_DELETED)))
 				{
 					(*ppFound)->status = pServer->status;
-					pClientInfo->pGroup->chg_count++;
+					pGroup->chg_count++;
 				}
 			}
 			else if (pServer->status == FDFS_STORAGE_STATUS_DELETED)
@@ -2495,12 +2498,11 @@ int tracker_mem_sync_storages(TrackerClientInfo *pClientInfo, \
 					pServer->ip_addr, IP_ADDRESS_SIZE);
 
 				tracker_mem_insert_into_sorted_servers( \
-					pStorageServer, \
-					pClientInfo->pGroup->sorted_servers, \
-					pClientInfo->pGroup->count);
+					pStorageServer, pGroup->sorted_servers,\
+					pGroup->count);
 
 				pStorageServer++;
-				pClientInfo->pGroup->count++;
+				pGroup->count++;
 			}
 		}
 	} while (0);
@@ -2661,6 +2663,11 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 			pGroup->active_count);
 		pGroup->active_count++;
 		pGroup->chg_count++;
+
+		logDebug("file: "__FILE__", line: %d, " \
+			"storage server %s::%s now active", \
+			__LINE__, pGroup->group_name, \
+			pTargetServer->ip_addr);
 	}
 
 	tracker_mem_find_store_server(pGroup);
@@ -2696,6 +2703,11 @@ int tracker_mem_offline_store_server(TrackerClientInfo *pClientInfo)
 	{
 		return 0;
 	}
+
+	logDebug("file: "__FILE__", line: %d, " \
+		"storage server %s::%s offline", \
+		__LINE__, pClientInfo->pGroup->group_name, \
+		pClientInfo->pStorage->ip_addr);
 
 	pClientInfo->pStorage->status = FDFS_STORAGE_STATUS_OFFLINE;
 	return tracker_mem_deactive_store_server(pClientInfo->pGroup, \

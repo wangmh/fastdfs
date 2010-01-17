@@ -423,8 +423,77 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		resp.status = tracker_mem_sync_storages(pClientInfo, \
+		resp.status = tracker_mem_sync_storages(pClientInfo->pGroup, \
 				briefServers, server_count);
+	} while (0);
+
+	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
+		&resp, sizeof(resp), g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			result, strerror(result));
+		return result;
+	}
+
+	return resp.status;
+}
+
+static int tracker_deal_storage_report_status(TrackerClientInfo *pClientInfo, \
+			const int64_t nInPackLen)
+{
+	TrackerHeader resp;
+	char in_buff[FDFS_GROUP_NAME_MAX_LEN + sizeof(FDFSStorageBrief)];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	FDFSGroupInfo *pGroup;
+	FDFSStorageBrief *briefServers;
+	int result;
+
+	memset(&resp, 0, sizeof(resp));
+	do
+	{
+		if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN + \
+			sizeof(FDFSStorageBrief))
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip addr: %s, " \
+				"package size "INT64_PRINTF_FORMAT" " \
+				"is not correct", __LINE__, \
+				TRACKER_PROTO_CMD_STORAGE_REPORT_STATUS, \
+				pClientInfo->ip_addr, nInPackLen);
+			resp.status = EINVAL;
+			break;
+		}
+
+		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
+			nInPackLen, g_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip addr: %s, recv data fail, " \
+				"errno: %d, error info: %s.", \
+				__LINE__, pClientInfo->ip_addr, \
+				resp.status, strerror(resp.status));
+			break;
+		}
+
+		memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
+		*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
+		pGroup = tracker_mem_get_group(group_name);
+		if (pGroup == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, invalid group_name: %s", \
+				__LINE__, pClientInfo->ip_addr, group_name);
+			result = ENOENT;
+			break;
+		}
+
+		briefServers = (FDFSStorageBrief *)(in_buff + \
+				FDFS_GROUP_NAME_MAX_LEN);
+		resp.status=tracker_mem_sync_storages(pGroup, briefServers, 1);
 	} while (0);
 
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
@@ -2103,7 +2172,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 				"cmd=%d, client ip: %s, package size " \
 				INT64_PRINTF_FORMAT" is not correct, " \
 				"expect length: %d", __LINE__, \
-				TRACKER_PROTO_CMD_STORAGE_REPORT, \
+				TRACKER_PROTO_CMD_STORAGE_REPORT_DISK_USAGE, \
 				pClientInfo->ip_addr, nInPackLen, \
 				sizeof(TrackerStatReportReqBody) * \
                         	pClientInfo->pGroup->store_path_count);
@@ -2131,7 +2200,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 				"cmd=%d, client ip addr: %s, recv data fail, " \
 				"errno: %d, error info: %s.", \
 				__LINE__, \
-				TRACKER_PROTO_CMD_STORAGE_REPORT, \
+				TRACKER_PROTO_CMD_STORAGE_REPORT_DISK_USAGE, \
 				pClientInfo->ip_addr, \
 				status, strerror(status));
 			break;
@@ -2472,7 +2541,7 @@ data buff (struct)
 			result = tracker_deal_storage_sync_report( \
 				&client_info, nInPackLen);
 			break;
-		case TRACKER_PROTO_CMD_STORAGE_REPORT:
+		case TRACKER_PROTO_CMD_STORAGE_REPORT_DISK_USAGE:
 			if ((result=tracker_check_logined(&client_info)) != 0)
 			{
 				break;
@@ -2484,6 +2553,10 @@ data buff (struct)
 		case TRACKER_PROTO_CMD_STORAGE_JOIN:
 			result = tracker_deal_storage_join(&client_info, \
 				nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_REPORT_STATUS:
+			result = tracker_deal_storage_report_status( \
+					&client_info, nInPackLen);
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG:
 			if ((result=tracker_check_logined(&client_info)) != 0)

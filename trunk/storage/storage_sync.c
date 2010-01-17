@@ -1022,7 +1022,7 @@ static char *get_mark_filename_by_ip(const char *ip_addr, char *full_filename, \
 static int storage_report_storage_status(const char *ip_addr, \
 			const char status)
 {
-	FDFSStorageBrief briefServers[1];
+	FDFSStorageBrief briefServer;
 	TrackerServerInfo trackerServer;
 	TrackerServerInfo *pGlobalServer;
 	TrackerServerInfo *pTServer;
@@ -1030,8 +1030,8 @@ static int storage_report_storage_status(const char *ip_addr, \
 	int result;
 	int i;
 
-	strcpy(briefServers[0].ip_addr, ip_addr);
-	briefServers[0].status = status;
+	strcpy(briefServer.ip_addr, ip_addr);
+	briefServer.status = status;
 
 	if (!g_sync_old_done)
 	{
@@ -1100,14 +1100,8 @@ static int storage_report_storage_status(const char *ip_addr, \
 			continue;
 		}
 
-		if (tracker_report_join(pTServer, g_sync_old_done) != 0)
-		{
-			close(pTServer->sock);
-			continue;
-		}
-
-		if ((result=tracker_sync_diff_servers(pTServer, \
-			briefServers, 1)) != 0)
+		if ((result=tracker_report_storage_status(pTServer, \
+			&briefServer)) != 0)
 		{
 		}
 

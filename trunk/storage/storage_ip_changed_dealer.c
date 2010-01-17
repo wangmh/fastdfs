@@ -331,7 +331,8 @@ static int storage_changlog_req()
 			continue;
 		}
 
-		if (storage_do_changelog_req(pTServer) == 0)
+		result = storage_do_changelog_req(pTServer);
+		if (result == 0 || result == ENOENT)
 		{
 			success_count++;
 		}
