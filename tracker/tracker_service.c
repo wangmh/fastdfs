@@ -244,20 +244,90 @@ static int tracker_deal_changelog_req(TrackerClientInfo *pClientInfo, \
 			const int64_t nInPackLen)
 {
 	TrackerHeader resp;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	int result;
+	FDFSGroupInfo *pGroup;
+	FDFSStorageDetail *pStorage;
 
-	if (nInPackLen != 0)
+	do
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"cmd=%d, client ip: %s, package size " \
-			INT64_PRINTF_FORMAT" is not correct, " \
-			"expect length = %d", __LINE__, \
-			TRACKER_PROTO_CMD_STORAGE_REPORT_IP_CHANGED, \
-			pClientInfo->ip_addr, nInPackLen, 0);
+	if (pClientInfo->pGroup != NULL && pClientInfo->pStorage != NULL)
+	{  //already logined
+		if (nInPackLen != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length = %d", __LINE__, \
+				TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ, \
+				pClientInfo->ip_addr, nInPackLen, 0);
 
+			result = EINVAL;
+			break;
+		}
+
+		pStorage = pClientInfo->pStorage;
+		result = 0;
+	}
+	else
+	{
+		if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length = %d", __LINE__, \
+				TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ, \
+				pClientInfo->ip_addr, nInPackLen, \
+				FDFS_GROUP_NAME_MAX_LEN);
+
+			result = EINVAL;
+			break;
+		}
+
+		if ((result=tcprecvdata_nb(pClientInfo->sock, group_name, \
+			FDFS_GROUP_NAME_MAX_LEN, g_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip addr: %s, recv data fail, " \
+				"errno: %d, error info: %s.", \
+				__LINE__, pClientInfo->ip_addr, \
+				result, strerror(result));
+			break;
+		}
+
+		*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
+		pGroup = tracker_mem_get_group(group_name);
+		if (pGroup == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, invalid group_name: %s", \
+				__LINE__, pClientInfo->ip_addr, group_name);
+			result = ENOENT;
+			break;
+		}
+
+		pStorage = tracker_mem_get_storage(pGroup, pClientInfo->ip_addr);
+		if (pStorage == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, group_name: %s, " \
+				"storage server: %s not exist", \
+				__LINE__, pClientInfo->ip_addr, \
+				group_name, pClientInfo->ip_addr);
+			result = ENOENT;
+			break;
+		}
+		
+		result = 0;
+	}
+	} while (0);
+
+	if (result != 0)
+	{
 		memset(&resp, 0, sizeof(TrackerHeader));
 		resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
-		resp.status = EINVAL;
+		resp.status = result;
 		if ((result=tcpsenddata_nb(pClientInfo->sock, &resp, \
 			sizeof(TrackerHeader), g_network_timeout)) != 0)
 		{
@@ -269,10 +339,10 @@ static int tracker_deal_changelog_req(TrackerClientInfo *pClientInfo, \
 			return result;
 		}
 
-		return EINVAL;
+		return resp.status;
 	}
 
-	return tracker_changelog_response(pClientInfo, pClientInfo->pStorage);
+	return tracker_changelog_response(pClientInfo, pStorage);
 }
 
 static void tracker_check_dirty(TrackerClientInfo *pClientInfo)
@@ -2479,6 +2549,10 @@ data buff (struct)
 			}
 
 			result = tracker_deal_storage_report_ip_changed( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ:
+			result = tracker_deal_changelog_req( \
 				&client_info, nInPackLen);
 			break;
 		case FDFS_PROTO_CMD_QUIT:

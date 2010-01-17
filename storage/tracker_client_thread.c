@@ -1291,7 +1291,6 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 
 	long2buff(body_len, pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_BEAT;
-	pHeader->status = 0;
 
 	if((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 		sizeof(TrackerHeader) + body_len, g_network_timeout)) != 0)
@@ -1306,6 +1305,136 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 	}
 
 	return tracker_check_response(pTrackerServer);
+}
+
+static int tracker_storage_changelog_req(TrackerServerInfo *pTrackerServer)
+{
+	char out_buff[sizeof(TrackerHeader)];
+	TrackerHeader *pHeader;
+	int result;
+
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
+
+	long2buff(0, pHeader->pkg_len);
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ;
+
+	if((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+		sizeof(TrackerHeader), g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, send data fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, strerror(result));
+		return result;
+	}
+
+	return tracker_deal_changelog_response(pTrackerServer);
+}
+
+int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer)
+{
+#define FDFS_CHANGELOG_FIELDS  5
+	int64_t nInPackLen;
+	char *pInBuff;
+	char *pBuffEnd;
+	char *pLineStart;
+	char *pLineEnd;
+	char *cols[FDFS_CHANGELOG_FIELDS + 1];
+	char *pGroupName;
+	char *pOldIpAddr;
+	char *pNewIpAddr;
+	char szLine[256];
+	int server_status;
+	int col_count;
+	int result;
+
+	pInBuff = NULL;
+	result = fdfs_recv_response(pTrackerServer, \
+			&pInBuff, 0, &nInPackLen);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	if (nInPackLen == 0)
+	{
+		return result;
+	}
+
+	*(pInBuff + nInPackLen) = '\0';
+
+	pLineStart = pInBuff;
+	pBuffEnd = pInBuff + nInPackLen;
+	while (pLineStart < pBuffEnd)
+	{
+		if (*pLineStart == '\0')  //skip empty line
+		{
+			pLineStart++;
+			continue;
+		}
+
+		pLineEnd = strchr(pLineStart, '\n');
+		if (pLineEnd != NULL)
+		{
+			*pLineEnd = '\0';
+		}
+
+		snprintf(szLine, sizeof(szLine), "%s", pLineStart);
+		col_count = splitEx(szLine, ' ', cols, \
+				FDFS_CHANGELOG_FIELDS + 1);
+
+		do
+		{
+			if (col_count != FDFS_CHANGELOG_FIELDS)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"changelog line field count: %d != %d,"\
+					"line content=%s", __LINE__, col_count,\
+					FDFS_CHANGELOG_FIELDS, pLineStart);
+				break;
+			}
+
+			pGroupName = cols[1];
+			if (strcmp(pGroupName, g_group_name) != 0)
+			{   //ignore other group's changelog
+				break;
+			}
+
+			pOldIpAddr = cols[2];
+			server_status = atoi(cols[3]);
+			pNewIpAddr = cols[4];
+
+			if (server_status == FDFS_STORAGE_STATUS_DELETED)
+			{
+
+			}
+			else if (server_status == FDFS_STORAGE_STATUS_IP_CHANGED)
+			{
+
+			}
+			else
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"invalid status: %d in changelog, " \
+					"line content=%s", __LINE__, \
+					server_status, pLineStart);
+			}
+		} while (0);
+
+		if (pLineEnd == NULL)
+		{
+			break;
+		}
+
+		pLineStart = pLineEnd + 1;
+	}
+
+	free(pInBuff);
+
+	return 0;
 }
 
 int tracker_report_thread_start()
