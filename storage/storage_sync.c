@@ -1214,20 +1214,6 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 				tracker_client_ip, IP_ADDRESS_SIZE);
 		insert_into_local_host_ip(tracker_client_ip);
 
-		/*
-		//printf("file: "__FILE__", line: %d, " \
-			"tracker_client_ip: %s\n", \
-			__LINE__, tracker_client_ip);
-		//print_local_host_ip_addrs();
-		*/
-
-		if (tracker_report_join(pTServer, g_sync_old_done) != 0)
-		{
-			close(pTServer->sock);
-			sleep(g_heart_beat_interval);
-			continue;
-		}
-
 		if ((result=tracker_sync_src_req(pTServer, pReader)) != 0)
 		{
 			fdfs_quit(pTServer);

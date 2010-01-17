@@ -898,7 +898,8 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer)
 int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 			BinLogReader *pReader)
 {
-	char out_buff[sizeof(TrackerHeader) + IP_ADDRESS_SIZE];
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
+			IP_ADDRESS_SIZE];
 	char sync_src_ip_addr[IP_ADDRESS_SIZE];
 	TrackerHeader *pHeader;
 	TrackerStorageSyncReqBody syncReqbody;
@@ -908,9 +909,11 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 
 	memset(out_buff, 0, sizeof(out_buff));
 	pHeader = (TrackerHeader *)out_buff;
-	long2buff(IP_ADDRESS_SIZE, pHeader->pkg_len);
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE, pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ;
-	strcpy(out_buff + sizeof(TrackerHeader), pReader->ip_addr);
+	strcpy(out_buff + sizeof(TrackerHeader), g_group_name);
+	strcpy(out_buff + sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
+		pReader->ip_addr);
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 			sizeof(out_buff), g_network_timeout)) != 0)
 	{
