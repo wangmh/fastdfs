@@ -1625,8 +1625,11 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 				const int64_t nInPackLen)
 {
+	char in_buff[FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageSyncReqBody)];
-	char dest_ip_addr[IP_ADDRESS_SIZE];
+	FDFSGroupInfo *pGroup;
+	char *dest_ip_addr;
 	TrackerHeader *pResp;
 	TrackerStorageSyncReqBody *pBody;
 	FDFSStorageDetail *pDestStorage;
@@ -1639,7 +1642,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 	out_len = sizeof(TrackerHeader);
 	do
 	{
-		if (nInPackLen != IP_ADDRESS_SIZE)
+		if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, package size " \
@@ -1647,13 +1650,13 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 				"expect length: %d", __LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ, \
 				pClientInfo->ip_addr, nInPackLen, \
-				IP_ADDRESS_SIZE);
+				FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE);
 			pResp->status = EINVAL;
 			break;
 		}
 
 		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, \
-			dest_ip_addr, nInPackLen, g_network_timeout)) != 0)
+			in_buff, nInPackLen, g_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip addr: %s, recv data fail, " \
@@ -1665,8 +1668,21 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
+		memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
+		*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
+		pGroup = tracker_mem_get_group(group_name);
+		if (pGroup == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, invalid group_name: %s", \
+				__LINE__, pClientInfo->ip_addr, group_name);
+			pResp->status = ENOENT;
+			break;
+		}
+
+		dest_ip_addr = in_buff + FDFS_GROUP_NAME_MAX_LEN;
 		dest_ip_addr[IP_ADDRESS_SIZE-1] = '\0';
-		pDestStorage = tracker_mem_get_storage(pClientInfo->pGroup, \
+		pDestStorage = tracker_mem_get_storage(pGroup, \
 				dest_ip_addr);
 		if (pDestStorage == NULL)
 		{
