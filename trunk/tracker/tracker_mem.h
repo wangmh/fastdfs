@@ -14,9 +14,17 @@
 #include <pthread.h>
 #include "tracker_types.h"
 
+#define STORAGE_GROUPS_LIST_FILENAME	   "storage_groups.dat"
+#define STORAGE_SERVERS_LIST_FILENAME	   "storage_servers.dat"
+#define STORAGE_SERVERS_CHANGELOG_FILENAME "storage_changelog.dat"
+#define STORAGE_SYNC_TIMESTAMP_FILENAME	   "storage_sync_timestamp.dat"
+#define STORAGE_DATA_FIELD_SEPERATOR	   ','
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+extern off_t g_changelog_fsize; //storage server change log file size
 
 int tracker_mem_init();
 int tracker_mem_destroy();

@@ -26,16 +26,10 @@
 #include "tracker_mem.h"
 #include "shared_func.h"
 
-#define STORAGE_GROUPS_LIST_FILENAME	   "storage_groups.dat"
-#define STORAGE_SERVERS_LIST_FILENAME	   "storage_servers.dat"
-#define STORAGE_SERVERS_CHANGELOG_FILENAME "storage_changelog.dat"
-#define STORAGE_SYNC_TIMESTAMP_FILENAME	   "storage_sync_timestamp.dat"
-#define STORAGE_DATA_FIELD_SEPERATOR	   ','
-
 #define TRACKER_MEM_ALLOC_ONCE	2
 
 static pthread_mutex_t mem_thread_lock;
-static off_t changelog_fsize = 0; //storage server change log file size
+off_t g_changelog_fsize = 0; //storage server change log file size
 static int changelog_fd = -1;  //storage server change log fd for write
 
 static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup);
@@ -73,7 +67,7 @@ static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
 		return result;
 	}
 
-	changelog_fsize += len;
+	g_changelog_fsize += len;
 	if (fsync(changelog_fd) != 0)
 	{
 		result = errno != 0 ? errno : EIO;
@@ -405,7 +399,7 @@ static int tracker_locate_storage_sync_server(FDFSStorageSync *pStorageSyncs, \
 
 static int tracker_load_storages(const char *data_path)
 {
-#define STORAGE_DATA_SERVER_FIELDS	17
+#define STORAGE_DATA_SERVER_FIELDS	18
 
 	FILE *fp;
 	char szLine[256];
@@ -440,17 +434,19 @@ static int tracker_load_storages(const char *data_path)
 			continue;
 		}
 
-		if ((cols=splitEx(szLine, STORAGE_DATA_FIELD_SEPERATOR, \
-			fields, STORAGE_DATA_SERVER_FIELDS)) != \
-				STORAGE_DATA_SERVER_FIELDS)
+		cols = splitEx(szLine, STORAGE_DATA_FIELD_SEPERATOR, \
+				fields, STORAGE_DATA_SERVER_FIELDS);
+		if (cols != STORAGE_DATA_SERVER_FIELDS && \
+		    cols != STORAGE_DATA_SERVER_FIELDS - 1)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"the format of the file \"%s/%s\" is invalid" \
-				", colums: %d != expect colums: %d", \
+				", colums: %d != expect colums: %d or %d", \
 				__LINE__, data_path, \
 				STORAGE_SERVERS_LIST_FILENAME, \
-				cols, STORAGE_DATA_SERVER_FIELDS);
-			result = errno != 0 ? errno : EINVAL;
+				cols, STORAGE_DATA_SERVER_FIELDS, \
+				STORAGE_DATA_SERVER_FIELDS - 1);
+			result = EINVAL;
 			break;
 		}
 	
@@ -529,6 +525,26 @@ static int tracker_load_storages(const char *data_path)
 					trim_left(fields[15]));
 		clientInfo.pStorage->stat.last_sync_update = atoi( \
 					trim_left(fields[16]));
+		if (cols == STORAGE_DATA_SERVER_FIELDS)
+		{
+			clientInfo.pStorage->changelog_offset = strtoll( \
+					trim_left(fields[17]), NULL, 10);
+			if (clientInfo.pStorage->changelog_offset < 0)
+			{
+				clientInfo.pStorage->changelog_offset = 0;
+			}
+			if (clientInfo.pStorage->changelog_offset > \
+				g_changelog_fsize)
+			{
+				clientInfo.pStorage->changelog_offset = \
+					g_changelog_fsize;
+			}
+		}
+		else
+		{
+			clientInfo.pStorage->changelog_offset = 0;
+		}
+
 		if (*psync_src_ip_addr == '\0')
 		{
 			continue;
@@ -559,7 +575,6 @@ static int tracker_load_storages(const char *data_path)
 			IP_ADDRESS_SIZE, "%s", psync_src_ip_addr);
 
 		nStorageSyncCount++;
-
 	}
 
 	fclose(fp);
@@ -1094,8 +1109,8 @@ static int tracker_open_changlog_file()
 		return errno != 0 ? errno : ENOENT;
 	}
 
-	changelog_fsize = lseek(changelog_fd, 0, SEEK_END);
-        if (changelog_fsize < 0)
+	g_changelog_fsize = lseek(changelog_fd, 0, SEEK_END);
+        if (g_changelog_fsize < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"lseek file \"%s\" fail, " \
@@ -1119,6 +1134,11 @@ int tracker_mem_init()
 		return result;
 	}
 
+	if ((result=tracker_open_changlog_file()) != 0)
+	{
+		return result;
+	}
+	
 	g_groups.alloc_size = TRACKER_MEM_ALLOC_ONCE;
 	g_groups.count = 0;
 	g_groups.current_write_group = 0;
@@ -1176,11 +1196,6 @@ int tracker_mem_init()
 		return result;
 	}
 
-	if ((result=tracker_open_changlog_file()) != 0)
-	{
-		return result;
-	}
-	
 	/*
 	if (g_groups.store_lookup == FDFS_STORE_LOOKUP_SPEC_GROUP)
 	{
