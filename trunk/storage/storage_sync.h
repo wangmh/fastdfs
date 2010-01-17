@@ -74,6 +74,9 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage);
 int kill_storage_sync_threads();
 int fdfs_binlog_sync_func(void *args);
 
+int storage_unlink_mark_file(const char *ip_addr);
+int storage_rename_mark_file(const char *old_ip_addr, const char *new_ip_addr);
+
 #ifdef __cplusplus
 }
 #endif
