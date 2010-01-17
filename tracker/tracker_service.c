@@ -17,6 +17,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <fcntl.h>
 #include "fdfs_define.h"
 #include "fdfs_base64.h"
 #include "logger.h"
@@ -58,26 +59,31 @@ int tracker_service_destroy()
 	return 0;
 }
 
+/*
+storage server list
+*/
 static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 			const int status)
 {
-	TrackerHeader resp;
+	char out_buff[sizeof(TrackerHeader) + sizeof(FDFSStorageBrief) \
+			* FDFS_MAX_SERVERS_EACH_GROUP];
+	TrackerHeader *pHeader;
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppEnd;
-	FDFSStorageBrief briefServers[FDFS_MAX_SERVERS_EACH_GROUP];
 	FDFSStorageBrief *pDestServer;
 	int out_len;
 	int result;
 
-	memset(&resp, 0, sizeof(resp));
-	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
-	resp.status = status;
+	memset(out_buff, 0, sizeof(TrackerHeader));
+	pHeader = (TrackerHeader *)out_buff;
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+	pHeader->status = status;
 
 	if (status != 0 || pClientInfo->pGroup == NULL ||
 	pClientInfo->pGroup->chg_count == pClientInfo->pStorage->chg_count)
 	{
 		if ((result=tcpsenddata_nb(pClientInfo->sock, \
-			&resp, sizeof(resp), g_network_timeout)) != 0)
+			out_buff, sizeof(TrackerHeader), g_network_timeout))!=0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, send data fail, " \
@@ -90,9 +96,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 		return status;
 	}
 
-	//printf("sync %d servers\n", pClientInfo->pGroup->count);
-
-	pDestServer = briefServers;
+	pDestServer = (FDFSStorageBrief *)(out_buff + sizeof(TrackerHeader));
 	ppEnd = pClientInfo->pGroup->sorted_servers + \
 			pClientInfo->pGroup->count;
 	for (ppServer=pClientInfo->pGroup->sorted_servers; \
@@ -105,20 +109,9 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 	}
 
 	out_len = sizeof(FDFSStorageBrief) * pClientInfo->pGroup->count;
-	long2buff(out_len, resp.pkg_len);
-	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, send data fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pClientInfo->ip_addr, \
-			result, strerror(result));
-		return result;
-	}
-
-	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		briefServers, out_len, g_network_timeout)) != 0)
+	long2buff(out_len, pHeader->pkg_len);
+	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
+		sizeof(TrackerHeader) + out_len, g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -130,6 +123,156 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 
 	pClientInfo->pStorage->chg_count = pClientInfo->pGroup->chg_count;
 	return status;
+}
+
+static int tracker_changelog_response(TrackerClientInfo *pClientInfo, \
+		FDFSStorageDetail *pStorage)
+{
+#define FDFS_CHANGELOG_BUFFER_SIZE 4 * 1024
+	TrackerHeader resp;
+	char buff[FDFS_CHANGELOG_BUFFER_SIZE];
+	char filename[MAX_PATH_SIZE];
+	off_t changelog_fsize;
+	off_t remain_bytes;
+	int send_bytes;
+	int chg_len;
+	int result;
+	int fd;
+
+	memset(&resp, 0, sizeof(TrackerHeader));
+	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+
+	changelog_fsize = g_changelog_fsize;
+	chg_len = changelog_fsize - pStorage->changelog_offset;
+	if (chg_len < 0)
+	{
+		chg_len = 0;
+	}
+
+	long2buff(chg_len, resp.pkg_len);
+	if ((result=tcpsenddata_nb(pClientInfo->sock, &resp, \
+		sizeof(TrackerHeader), g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			result, strerror(result));
+		return result;
+	}
+
+	if (resp.status != 0 || chg_len == 0)
+	{
+		return resp.status;
+	}
+
+	snprintf(filename, sizeof(filename), "%s/data/%s", g_base_path,\
+		 STORAGE_SERVERS_CHANGELOG_FILENAME);
+	fd = open(filename, O_RDONLY);
+	if (fd < 0)
+	{
+		result = errno != 0 ? errno : EACCES;
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, open changelog file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			filename, result, strerror(result));
+		return result;
+	}
+
+	if (pStorage->changelog_offset > 0 && \
+		lseek(fd, pStorage->changelog_offset, SEEK_SET) < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, lseek changelog file %s fail, "\
+			"errno: %d, error info: %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			filename, result, strerror(result));
+		close(fd);
+		return result;
+	}
+
+	result = 0;
+	remain_bytes = chg_len;
+	while (remain_bytes > 0)
+	{
+		if (remain_bytes > sizeof(buff))
+		{
+			send_bytes = sizeof(buff);
+		}
+		else
+		{
+			send_bytes = remain_bytes;
+		}
+
+		if (read(fd, buff, send_bytes) != send_bytes)
+		{
+			result = errno != 0 ? errno : EIO;
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, read changelog file %s fail, "\
+				"errno: %d, error info: %s", \
+				__LINE__, pClientInfo->ip_addr, \
+				filename, result, strerror(result));
+			break;
+		}
+
+		if ((result=tcpsenddata_nb(pClientInfo->sock, buff, \
+			send_bytes, g_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, send data fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pClientInfo->ip_addr, \
+				result, strerror(result));
+			break;
+		}
+
+		remain_bytes -= send_bytes;
+	}
+
+	if (result == 0)
+	{
+		pStorage->changelog_offset = changelog_fsize;
+	}
+
+	close(fd);
+	return result;
+}
+
+static int tracker_deal_changelog_req(TrackerClientInfo *pClientInfo, \
+			const int64_t nInPackLen)
+{
+	TrackerHeader resp;
+	int result;
+
+	if (nInPackLen != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT" is not correct, " \
+			"expect length = %d", __LINE__, \
+			TRACKER_PROTO_CMD_STORAGE_REPORT_IP_CHANGED, \
+			pClientInfo->ip_addr, nInPackLen, 0);
+
+		memset(&resp, 0, sizeof(TrackerHeader));
+		resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+		resp.status = EINVAL;
+		if ((result=tcpsenddata_nb(pClientInfo->sock, &resp, \
+			sizeof(TrackerHeader), g_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, send data fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pClientInfo->ip_addr, \
+				result, strerror(result));
+			return result;
+		}
+
+		return EINVAL;
+	}
+
+	return tracker_changelog_response(pClientInfo, pClientInfo->pStorage);
 }
 
 static void tracker_check_dirty(TrackerClientInfo *pClientInfo)
