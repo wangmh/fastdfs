@@ -12,6 +12,7 @@
 #define _COMMON_DEFINE_H_
 
 #include <pthread.h>
+#include <errno.h>
 
 #ifdef WIN32
 
@@ -98,6 +99,10 @@ typedef char  bool;
 
 #ifndef INADDR_NONE
 #define  INADDR_NONE  ((in_addr_t) 0xffffffff)
+#endif
+
+#ifndef ECANCELED
+#define ECANCELED 125
 #endif
 
 #define IS_UPPER_HEX(ch) ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F'))
