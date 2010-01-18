@@ -13,6 +13,7 @@ Version 1.25  2010-01-17
  * auto adjust when storage server ip address changed
  * bug fixed: when add a new storage server, other storage servers' status keep
    the same, not changed
+ * add macros, compile passed in cygwin, thanks Seapeak
 
 Version 1.24  2010-01-06
  * call php_fdfs_close with TSRMLS_CC as php_fdfs_close(i_obj TSRMLS_CC)

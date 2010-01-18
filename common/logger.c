@@ -22,6 +22,10 @@
 #include "shared_func.h"
 #include "logger.h"
 
+#ifndef LINE_MAX
+#define LINE_MAX 2048
+#endif
+
 #define LOG_BUFF_SIZE    64 * 1024
 
 int g_log_level = LOG_INFO;

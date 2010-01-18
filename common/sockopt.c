@@ -50,6 +50,20 @@
 //#define USE_SELECT
 #define USE_POLL
 
+#ifdef OS_LINUX
+#ifndef TCP_KEEPIDLE
+#define TCP_KEEPIDLE	 4	/* Start keeplives after this period */
+#endif
+
+#ifndef TCP_KEEPINTVL
+#define TCP_KEEPINTVL	 5	/* Interval between keepalives */
+#endif
+
+#ifndef TCP_KEEPCNT
+#define TCP_KEEPCNT 	6	/* Number of keepalives before death */
+#endif
+#endif
+
 int tcpgets(int sock, char* s, const int size, const int timeout)
 {
 	int result;
