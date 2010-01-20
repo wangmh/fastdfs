@@ -29,18 +29,16 @@
 #define TRACKER_MEM_ALLOC_ONCE	2
 
 static pthread_mutex_t mem_thread_lock;
+static pthread_mutex_t mem_file_lock;
+
 off_t g_changelog_fsize = 0; //storage server change log file size
 static int changelog_fd = -1;  //storage server change log fd for write
 
 static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup);
 
-static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
-		FDFSStorageDetail *pStorage, const char *pArg)
+int tracker_mem_pthread_lock()
 {
-	char buff[256];
-	int len;
 	int result;
-
 	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -49,6 +47,63 @@ static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
 			__LINE__, result, strerror(result));
 		return result;
 	}
+
+	return 0;
+}
+
+int tracker_mem_pthread_unlock()
+{
+	int result;
+	if ((result=pthread_mutex_unlock(&mem_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	return 0;
+}
+
+static int tracker_mem_file_lock()
+{
+	int result;
+	if ((result=pthread_mutex_lock(&mem_file_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	return 0;
+}
+
+static int tracker_mem_file_unlock()
+{
+	int result;
+	if ((result=pthread_mutex_unlock(&mem_file_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	return 0;
+}
+
+static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
+		FDFSStorageDetail *pStorage, const char *pArg)
+{
+	char buff[256];
+	int len;
+	int result;
+
+	tracker_mem_file_lock();
 
 	len = snprintf(buff, sizeof(buff), "%d %s %s %d %s\n", \
 		(int)time(NULL), pGroup->group_name, pStorage->ip_addr, \
@@ -63,12 +118,13 @@ static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
 			__LINE__, STORAGE_SERVERS_CHANGELOG_FILENAME, \
 			result, strerror(result));
 
-		pthread_mutex_unlock(&mem_thread_lock);
+		tracker_mem_file_unlock();
 		return result;
 	}
 
 	g_changelog_fsize += len;
-	if (fsync(changelog_fd) != 0)
+	result = fsync(changelog_fd);
+	if (result != 0)
 	{
 		result = errno != 0 ? errno : EIO;
 		logError("file: "__FILE__", line: %d, " \
@@ -76,21 +132,11 @@ static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
 			"errno: %d, error info: %s", \
 			__LINE__, STORAGE_SERVERS_CHANGELOG_FILENAME, \
 			result, strerror(result));
-
-		pthread_mutex_unlock(&mem_thread_lock);
-		return result;
 	}
 
-	if ((result=pthread_mutex_unlock(&mem_thread_lock)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_unlock fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
-		return result;
-	}
+	tracker_mem_file_unlock();
 
-	return 0;
+	return result;
 }
 
 static int tracker_malloc_storage_path_mbs(FDFSStorageDetail *pStorage, \
@@ -874,10 +920,14 @@ static int tracker_save_groups()
 	int result;
 	int len;
 
+	tracker_mem_file_lock();
+
 	snprintf(filename, sizeof(filename), "%s/data/%s", \
 		g_base_path, STORAGE_GROUPS_LIST_FILENAME);
 	if ((fd=open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
+		tracker_mem_file_unlock();
+
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
 			"errno: %d, error info: %s", \
@@ -909,13 +959,15 @@ static int tracker_save_groups()
 	}
 
 	close(fd);
+	tracker_mem_file_unlock();
+
 	return result;
 }
 
 int tracker_save_storages()
 {
 	char filename[MAX_PATH_SIZE];
-	char buff[256];
+	char buff[512];
 	int fd;
 	int len;
 	FDFSGroupInfo **ppGroup;
@@ -924,10 +976,14 @@ int tracker_save_storages()
 	FDFSStorageDetail *pStorageEnd;
 	int result;
 
+	tracker_mem_file_lock();
+
 	snprintf(filename, sizeof(filename), "%s/data/%s", \
 		g_base_path, STORAGE_SERVERS_LIST_FILENAME);
 	if ((fd=open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
+		tracker_mem_file_unlock();
+
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
 			"errno: %d, error info: %s", \
@@ -966,7 +1022,8 @@ int tracker_save_storages()
 				INT64_PRINTF_FORMAT"%c" \
 				INT64_PRINTF_FORMAT"%c" \
 				"%d%c" \
-				"%d\n", \
+				"%d%c" \
+				OFF_PRINTF_FORMAT"\n", \
 				(*ppGroup)->group_name, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
 				pStorage->ip_addr, \
@@ -1000,7 +1057,9 @@ int tracker_save_storages()
 				STORAGE_DATA_FIELD_SEPERATOR, \
 				(int)(pStorage->stat.last_source_update), \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(int)(pStorage->stat.last_sync_update) \
+				(int)(pStorage->stat.last_sync_update), \
+				STORAGE_DATA_FIELD_SEPERATOR, \
+				pStorage->changelog_offset \
 	 		    );
 
 			if (write(fd, buff, len) != len)
@@ -1017,6 +1076,8 @@ int tracker_save_storages()
 	}
 
 	close(fd);
+	tracker_mem_file_unlock();
+
 	return result;
 }
 
@@ -1130,6 +1191,11 @@ int tracker_mem_init()
 	int result;
 
 	if ((result=init_pthread_lock(&mem_thread_lock)) != 0)
+	{
+		return result;
+	}
+
+	if ((result=init_pthread_lock(&mem_file_lock)) != 0)
 	{
 		return result;
 	}
@@ -1401,6 +1467,13 @@ int tracker_mem_destroy()
 	}
 
 	if (pthread_mutex_destroy(&mem_thread_lock) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_destroy fail", \
+			__LINE__);
+	}
+
+	if (pthread_mutex_destroy(&mem_file_lock) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_destroy fail", \
@@ -2712,36 +2785,6 @@ int tracker_mem_offline_store_server(TrackerClientInfo *pClientInfo)
 	pClientInfo->pStorage->status = FDFS_STORAGE_STATUS_OFFLINE;
 	return tracker_mem_deactive_store_server(pClientInfo->pGroup, \
 				pClientInfo->pStorage);
-}
-
-int tracker_mem_pthread_lock()
-{
-	int result;
-	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_lock fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
-		return result;
-	}
-
-	return 0;
-}
-
-int tracker_mem_pthread_unlock()
-{
-	int result;
-	if ((result=pthread_mutex_unlock(&mem_thread_lock)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_unlock fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
-		return result;
-	}
-
-	return 0;
 }
 
 FDFSStorageDetail *tracker_get_writable_storage(FDFSGroupInfo *pStoreGroup)
