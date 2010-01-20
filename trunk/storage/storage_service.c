@@ -3586,6 +3586,7 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 		} \
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
+
 void* storage_thread_entrance(void* arg)
 {
 /*
