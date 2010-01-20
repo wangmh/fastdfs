@@ -234,6 +234,7 @@ static int tracker_changelog_response(TrackerClientInfo *pClientInfo, \
 	if (result == 0)
 	{
 		pStorage->changelog_offset = changelog_fsize;
+		tracker_save_storages();
 	}
 
 	close(fd);
