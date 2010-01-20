@@ -44,6 +44,8 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer);
 static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer);
 static int tracker_sync_notify(TrackerServerInfo *pTrackerServer);
 static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer);
+static bool tracker_insert_into_sorted_servers( \
+		FDFSStorageServer *pInsertedServer);
 
 int tracker_report_init()
 {
@@ -696,17 +698,17 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		{
 			//logInfo("ip_addr=%s, tracker status: %d", pServer->ip_addr, pServer->status);
 
+			if ((res=pthread_mutex_lock( \
+				 &reporter_thread_lock)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, "\
+					"call pthread_mutex_lock fail,"\
+					" errno: %d, error info: %s", \
+					__LINE__, res, strerror(res));
+			}
+
 			if (g_storage_count < FDFS_MAX_SERVERS_EACH_GROUP)
 			{
-				if ((result=pthread_mutex_lock( \
-					&reporter_thread_lock)) != 0)
-				{
-					logError("file: "__FILE__", line: %d, "\
-						"call pthread_mutex_lock fail,"\
-						" errno: %d, error info: %s", \
-						__LINE__, \
-						result, strerror(result));
-				}
 				pInsertedServer = g_storage_servers + \
 						g_storage_count;
 				memcpy(&(pInsertedServer->server), \
@@ -716,20 +718,9 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 				{
 					g_storage_count++;
 				}
-				if ((result=pthread_mutex_unlock( \
-					&reporter_thread_lock)) != 0)
-				{
-					logError("file: "__FILE__", line: %d, "\
-					"call pthread_mutex_unlock fail, " \
-					"errno: %d, error info: %s", \
-					__LINE__, result, strerror(result));
-				}
 
-				if ((result=storage_sync_thread_start( \
-					&(pInsertedServer->server))) != 0)
-				{
-					return result;
-				}
+				result = storage_sync_thread_start( \
+					&(pInsertedServer->server));
 			}
 			else
 			{
@@ -741,6 +732,21 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 					pTrackerServer->port, \
 					pTrackerServer->group_name, \
 					FDFS_MAX_SERVERS_EACH_GROUP);
+				result = ENOSPC;
+			}
+
+			if ((res=pthread_mutex_unlock( \
+				&reporter_thread_lock)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, "\
+				"call pthread_mutex_unlock fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, res, strerror(res));
+			}
+
+			if (result != 0)
+			{
+				return result;
 			}
 		}
 	}
