@@ -593,8 +593,8 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 	FDFSStorageBrief *pEnd;
 	FDFSStorageServer *pInsertedServer;
 	FDFSStorageServer **ppFound;
-	FDFSStorageServer *pGlobalServer;
-	FDFSStorageServer *pGlobalEnd;
+	FDFSStorageServer **ppGlobalServer;
+	FDFSStorageServer **ppGlobalEnd;
 	FDFSStorageServer targetServer;
 	FDFSStorageServer *pTargetServer;
 	FDFSStorageBrief diffServers[FDFS_MAX_SERVERS_EACH_GROUP];
@@ -762,18 +762,18 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		return 0;
 	}
 
-	pGlobalServer = g_storage_servers;
-	pGlobalEnd = g_storage_servers + g_storage_count;
+	ppGlobalServer = g_sorted_storages;
+	ppGlobalEnd = g_sorted_storages + g_storage_count;
 	pServer = briefServers;
-	while (pServer < pEnd && pGlobalServer < pGlobalEnd)
+	while (pServer < pEnd && ppGlobalServer < ppGlobalEnd)
 	{
-		if (pGlobalServer->server.status == FDFS_STORAGE_STATUS_NONE)
+		if ((*ppGlobalServer)->server.status == FDFS_STORAGE_STATUS_NONE)
 		{
-			pGlobalServer++;
+			ppGlobalServer++;
 			continue;
 		}
 
-		res = strcmp(pServer->ip_addr, pGlobalServer->server.ip_addr);
+		res = strcmp(pServer->ip_addr, (*ppGlobalServer)->server.ip_addr);
 		if (res < 0)
 		{
 			if (pServer->status != FDFS_STORAGE_STATUS_DELETED)
@@ -793,27 +793,27 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		else if (res == 0)
 		{
 			pServer++;
-			pGlobalServer++;
+			ppGlobalServer++;
 		}
 		else
 		{
-			memcpy(pDiffServer++, &(pGlobalServer->server), \
+			memcpy(pDiffServer++, &((*ppGlobalServer)->server), \
 				sizeof(FDFSStorageBrief));
-			pGlobalServer++;
+			ppGlobalServer++;
 		}
 	}
 
-	while (pGlobalServer < pGlobalEnd)
+	while (ppGlobalServer < ppGlobalEnd)
 	{
-		if (pGlobalServer->server.status == FDFS_STORAGE_STATUS_NONE)
+		if ((*ppGlobalServer)->server.status == FDFS_STORAGE_STATUS_NONE)
 		{
-			pGlobalServer++;
+			ppGlobalServer++;
 			continue;
 		}
 
-		memcpy(pDiffServer++, &(pGlobalServer->server), \
+		memcpy(pDiffServer++, &((*ppGlobalServer)->server), \
 			sizeof(FDFSStorageBrief));
-		pGlobalServer++;
+		ppGlobalServer++;
 	}
 
 	return tracker_sync_diff_servers(pTrackerServer, \
