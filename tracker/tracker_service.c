@@ -346,6 +346,54 @@ static int tracker_deal_changelog_req(TrackerClientInfo *pClientInfo, \
 	return tracker_changelog_response(pClientInfo, pStorage);
 }
 
+static int tracker_deal_parameter_req(TrackerClientInfo *pClientInfo, \
+			const int64_t nInPackLen)
+{
+	char out_buff[sizeof(TrackerHeader) + 256];
+	TrackerHeader *pHeader;
+	int body_len;
+	int result;
+
+	pHeader = (TrackerHeader *)out_buff;
+	memset(out_buff, 0, sizeof(out_buff));
+	do
+	{
+		if (nInPackLen != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length = %d", __LINE__, \
+				TRACKER_PROTO_CMD_STORAGE_PARAMETER_REQ, \
+				pClientInfo->ip_addr, nInPackLen, 0);
+
+			body_len = 0;
+			pHeader->status = EINVAL;
+			break;
+		}
+
+		body_len = sprintf(out_buff + sizeof(TrackerHeader), \
+				"storage_ip_changed_auto_adjust=%d\n", \
+				g_storage_ip_changed_auto_adjust);
+	} while (0);
+	
+	long2buff(body_len, pHeader->pkg_len);
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
+			sizeof(TrackerHeader) + body_len, \
+			g_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			result, strerror(result));
+		return result;
+	}
+
+	return pHeader->status;
+}
+
 static void tracker_check_dirty(TrackerClientInfo *pClientInfo)
 {
 	bool bInserted;
@@ -2430,7 +2478,7 @@ data buff (struct)
 	in_addr_t client_ip;
 	int server_sock;
 	
-	server_sock = (int)arg;
+	server_sock = (long)arg;
 
 	while (g_continue_flag)
 	{
@@ -2643,6 +2691,10 @@ data buff (struct)
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ:
 			result = tracker_deal_changelog_req( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_PARAMETER_REQ:
+			result = tracker_deal_parameter_req( \
 				&client_info, nInPackLen);
 			break;
 		case FDFS_PROTO_CMD_QUIT:

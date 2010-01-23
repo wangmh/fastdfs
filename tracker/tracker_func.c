@@ -324,6 +324,10 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 		g_thread_stack_size = (int)thread_stack_size;
 
+		g_storage_ip_changed_auto_adjust = iniGetBoolValue( \
+				"storage_ip_changed_auto_adjust", \
+				items, nItemCount, true);
+
 #ifdef WITH_HTTPD
 		if ((result=fdfs_http_params_load(items, nItemCount, \
 				filename, &g_http_params)) != 0)
@@ -342,7 +346,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			"download_server=%d, " \
 			"allow_ip_count=%d, sync_log_buff_interval=%ds, " \
 			"check_active_interval=%ds, " \
-			"thread_stack_size=%d KB",  \
+			"thread_stack_size=%d KB, " \
+			"storage_ip_changed_auto_adjust=%d",  \
 			g_version.major, g_version.minor,  \
 			g_base_path, g_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
@@ -350,7 +355,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_groups.store_server, g_groups.store_path, \
 			g_storage_reserved_mb, g_groups.download_server, \
 			g_allow_ip_count, g_sync_log_buff_interval, \
-			g_check_active_interval, g_thread_stack_size / 1024);
+			g_check_active_interval, g_thread_stack_size / 1024, \
+			g_storage_ip_changed_auto_adjust);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)

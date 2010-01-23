@@ -30,6 +30,8 @@ extern "C" {
 
 int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 			int *nItemCount);
+int iniLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
+		int *nItemCount);
 
 void iniFreeItems(IniItemInfo *items);
 
