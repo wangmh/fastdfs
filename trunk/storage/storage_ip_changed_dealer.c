@@ -183,6 +183,10 @@ static int storage_report_storage_ip_addr()
 	}
 	}
 
+	logDebug("file: "__FILE__", line: %d, " \
+		"last my ip is %s, current my ip is %s", \
+		__LINE__, g_last_storage_ip, g_tracker_client_ip);
+
 	if (*g_last_storage_ip == '\0')
 	{
 		return storage_write_to_sync_ini_file();
@@ -353,6 +357,11 @@ static int storage_changlog_req()
 int storage_check_ip_changed()
 {
 	int result;
+
+	if (!g_storage_ip_changed_auto_adjust)
+	{
+		return 0;
+	}
 
 	if ((result=storage_report_storage_ip_addr()) != 0)
 	{

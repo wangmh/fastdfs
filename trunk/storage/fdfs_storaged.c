@@ -259,7 +259,7 @@ int main(int argc, char *argv[])
 
 	g_storage_thread_count = g_max_connections;
 	if ((result=create_work_threads(&g_storage_thread_count, \
-		storage_thread_entrance, (void *)sock, tids, \
+		storage_thread_entrance, (void *)(long)sock, tids, \
 		g_thread_stack_size)) != 0)
 	{
 		free(tids);

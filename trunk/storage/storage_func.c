@@ -30,6 +30,8 @@
 #include "tracker_proto.h"
 #include "storage_global.h"
 #include "storage_func.h"
+#include "storage_param_getter.h"
+#include "storage_ip_changed_dealer.h"
 #include "fdht_func.h"
 #include "fdht_client.h"
 #include "client_func.h"
@@ -1049,7 +1051,7 @@ int storage_func_init(const char *filename, \
 		if ((result=fdfs_http_params_load(&itemContext, \
 				filename, &g_http_params)) != 0)
 		{
-			return result;
+			break;
 		}
 
 		pHttpTrunkSize = iniGetStrValue( \
@@ -1061,7 +1063,7 @@ int storage_func_init(const char *filename, \
 		else if ((result=parse_bytes(pHttpTrunkSize, 1, \
 				&http_trunk_size)) != 0)
 		{
-			return result;
+			break;
 		}
 
 		g_http_trunk_size = (int)http_trunk_size;
@@ -1130,38 +1132,32 @@ int storage_func_init(const char *filename, \
 
 	} while (0);
 
-	/*
-	if ((result=init_pthread_lock(&fsync_thread_mutex)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"init_pthread_lock fail, program exit!", __LINE__);
-		return result;
-	}
-
-	if ((result=init_fsync_pthread_cond()) != 0)
-	{
-		return result;
-	}
-	*/
-
 	iniFreeItems(&itemContext);
 
-	if (result == 0)
-	{
-		if ((result=storage_check_and_make_data_dirs()) != 0)
-		{
-			logCrit("file: "__FILE__", line: %d, " \
-				"storage_check_and_make_data_dirs fail, " \
-				"program exit!", __LINE__);
-			return result;
-		}
-
-		return storage_open_storage_stat();
-	}
-	else
+	if (result != 0)
 	{
 		return result;
 	}
+
+	if ((result=storage_get_params_from_tracker()) != 0)
+	{
+		return result;
+	}
+
+	if ((result=storage_check_ip_changed()) != 0)
+	{
+		return result;
+	}
+
+	if ((result=storage_check_and_make_data_dirs()) != 0)
+	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"storage_check_and_make_data_dirs fail, " \
+			"program exit!", __LINE__);
+		return result;
+	}
+
+	return storage_open_storage_stat();
 }
 
 int storage_func_destroy()

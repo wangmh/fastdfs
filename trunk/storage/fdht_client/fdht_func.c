@@ -334,7 +334,7 @@ static void fdht_insert_sorted_servers(GroupArray *pGroupArray, \
 	memcpy(pCurrent,  pInsertedServer, sizeof(FDHTServerInfo));
 }
 
-int fdht_load_groups_ex(IniItemInfo *items, const int nItemCount, \
+int fdht_load_groups_ex(IniItemContext *pItemContext, \
 		GroupArray *pGroupArray, const bool bLoadProxyParams)
 {
 	IniItemInfo *pItemInfo;
@@ -353,7 +353,7 @@ int fdht_load_groups_ex(IniItemInfo *items, const int nItemCount, \
 	char *pProxyIpAddr;
 
 	pGroupArray->group_count = iniGetIntValue("group_count", \
-			items, nItemCount, 0);
+			pItemContext, 0);
 	if (pGroupArray->group_count <= 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -402,8 +402,8 @@ int fdht_load_groups_ex(IniItemInfo *items, const int nItemCount, \
 	for (group_id=0; group_id<pGroupArray->group_count; group_id++)
 	{
 		sprintf(item_name, "group%d", group_id);
-		pItemInfo = iniGetValuesEx(item_name, items, \
-					nItemCount, &(pServerArray->count));
+		pItemInfo = iniGetValuesEx(item_name, pItemContext, \
+					&(pServerArray->count));
 		if (pItemInfo == NULL || pServerArray->count <= 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -594,14 +594,14 @@ int fdht_load_groups_ex(IniItemInfo *items, const int nItemCount, \
 	}
 
 	pGroupArray->use_proxy = iniGetBoolValue("use_proxy", \
-			items, nItemCount, false);
+			pItemContext, false);
 	if (!pGroupArray->use_proxy)
 	{
 		return 0;
 	}
 
 	pProxyIpAddr = iniGetStrValue("proxy_addr", \
-			items, nItemCount);
+			pItemContext);
 	if (pProxyIpAddr == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -614,7 +614,7 @@ int fdht_load_groups_ex(IniItemInfo *items, const int nItemCount, \
 		"%s", pProxyIpAddr);
 
 	pGroupArray->proxy_server.port = iniGetIntValue("proxy_port", \
-		items, nItemCount, FDHT_DEFAULT_PROXY_PORT);
+		pItemContext, FDHT_DEFAULT_PROXY_PORT);
 	if (pGroupArray->proxy_server.port <= 0 || \
 		pGroupArray->proxy_server.port > 65535)
 	{
