@@ -1139,6 +1139,14 @@ int storage_func_init(const char *filename, \
 		return result;
 	}
 
+	if ((result=storage_check_and_make_data_dirs()) != 0)
+	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"storage_check_and_make_data_dirs fail, " \
+			"program exit!", __LINE__);
+		return result;
+	}
+
 	if ((result=storage_get_params_from_tracker()) != 0)
 	{
 		return result;
@@ -1146,14 +1154,6 @@ int storage_func_init(const char *filename, \
 
 	if ((result=storage_check_ip_changed()) != 0)
 	{
-		return result;
-	}
-
-	if ((result=storage_check_and_make_data_dirs()) != 0)
-	{
-		logCrit("file: "__FILE__", line: %d, " \
-			"storage_check_and_make_data_dirs fail, " \
-			"program exit!", __LINE__);
 		return result;
 	}
 
