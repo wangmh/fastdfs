@@ -141,15 +141,13 @@ static int copy_tracker_servers(TrackerServerGroup *pTrackerGroup, \
 }
 
 int fdfs_load_tracker_group_ex(TrackerServerGroup *pTrackerGroup, \
-		const char *conf_filename, \
-		IniItemInfo *items, const int nItemCount)
+		const char *conf_filename, IniItemContext *pItemContext)
 {
 	int result;
 	char *ppTrackerServers[FDFS_MAX_TRACKERS];
 
 	if ((pTrackerGroup->server_count=iniGetValues("tracker_server", \
-		items, nItemCount, ppTrackerServers, \
-		FDFS_MAX_TRACKERS)) <= 0)
+		pItemContext, ppTrackerServers, FDFS_MAX_TRACKERS)) <= 0)
 	{
 		logError("conf file \"%s\", " \
 			"get item \"tracker_server\" fail", conf_filename);
@@ -184,11 +182,10 @@ int fdfs_load_tracker_group_ex(TrackerServerGroup *pTrackerGroup, \
 int fdfs_load_tracker_group(TrackerServerGroup *pTrackerGroup, \
 		const char *conf_filename)
 {
-	IniItemInfo *items;
-	int nItemCount;
+	IniItemContext itemContext;
 	int result;
 
-	if ((result=iniLoadItems(conf_filename, &items, &nItemCount)) != 0)
+	if ((result=iniLoadItems(conf_filename, &itemContext)) != 0)
 	{
 		logError("load conf file \"%s\" fail, ret code: %d", \
 			conf_filename, result);
@@ -196,8 +193,9 @@ int fdfs_load_tracker_group(TrackerServerGroup *pTrackerGroup, \
 	}
 
 	result = fdfs_load_tracker_group_ex(pTrackerGroup, conf_filename, \
-			items, nItemCount);
-	iniFreeItems(items);
+			&itemContext);
+	iniFreeItems(&itemContext);
+
 	return result;
 }
 
@@ -205,11 +203,10 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 		const char *conf_filename)
 {
 	char *pBasePath;
-	IniItemInfo *items;
-	int nItemCount;
+	IniItemContext itemContext;
 	int result;
 
-	if ((result=iniLoadItems(conf_filename, &items, &nItemCount)) != 0)
+	if ((result=iniLoadItems(conf_filename, &itemContext)) != 0)
 	{
 		logError("load conf file \"%s\" fail, ret code: %d", \
 			conf_filename, result);
@@ -218,7 +215,7 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 
 	do
 	{
-		pBasePath = iniGetStrValue("base_path", items, nItemCount);
+		pBasePath = iniGetStrValue("base_path", &itemContext);
 		if (pBasePath == NULL)
 		{
 			logError("conf file \"%s\" must have item " \
@@ -244,14 +241,14 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 		}
 
 		g_network_timeout = iniGetIntValue("network_timeout", \
-				items, nItemCount, DEFAULT_NETWORK_TIMEOUT);
+				&itemContext, DEFAULT_NETWORK_TIMEOUT);
 		if (g_network_timeout <= 0)
 		{
 			g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 		}
 
 		result = fdfs_load_tracker_group_ex(pTrackerGroup, \
-			conf_filename, items, nItemCount);
+			conf_filename, &itemContext);
 		if (result != 0)
 		{
 			break;
@@ -259,14 +256,14 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 
 		g_anti_steal_token = iniGetBoolValue( \
 				"http.anti_steal.check_token", \
-				items, nItemCount, false);
+				&itemContext, false);
 		if (g_anti_steal_token)
 		{
 			char *anti_steal_secret_key;
 
 			anti_steal_secret_key = iniGetStrValue( \
 					"http.anti_steal.secret_key", \
-					items, nItemCount);
+					&itemContext);
 			if (anti_steal_secret_key == NULL || \
 				*anti_steal_secret_key == '\0')
 			{
@@ -283,7 +280,7 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 
 		g_tracker_server_http_port = iniGetIntValue( \
 				"http.tracker_server_port", \
-				items, nItemCount, 80);
+				&itemContext, 80);
 		if (g_tracker_server_http_port <= 0)
 		{
 			g_tracker_server_http_port = 80;
@@ -302,7 +299,7 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 
 	} while (0);
 
-	iniFreeItems(items);
+	iniFreeItems(&itemContext);
 
 	return result;
 }

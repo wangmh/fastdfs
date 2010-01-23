@@ -24,35 +24,38 @@ typedef struct
 	char value[INI_ITEM_VALUE_LEN + 1];
 } IniItemInfo;
 
+typedef struct
+{
+	IniItemInfo *items;
+	int count;
+} IniItemContext;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, \
-			int *nItemCount);
-int iniLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
-		int *nItemCount);
+int iniLoadItems(const char *szFilename, IniItemContext *pContext);
+int iniLoadItemsFromBuffer(char *content, IniItemContext *pContext);
 
-void iniFreeItems(IniItemInfo *items);
+void iniFreeItems(IniItemContext *pContext);
 
-char *iniGetStrValue(const char *szName, IniItemInfo *items, \
-			const int nItemCount);
-int iniGetValues(const char *szName, IniItemInfo *items, const int nItemCount, \
+char *iniGetStrValue(const char *szName, IniItemContext *pContext);
+int iniGetValues(const char *szName, IniItemContext *pContext, \
 			char **szValues, const int max_values);
 
-int iniGetIntValue(const char *szName, IniItemInfo *items, \
-			const int nItemCount, const int nDefaultValue);
-IniItemInfo *iniGetValuesEx(const char *szName, IniItemInfo *items, 
-		const int nItemCount, int *nTargetCount);
+int iniGetIntValue(const char *szName, IniItemContext *pContext, \
+			const int nDefaultValue);
+IniItemInfo *iniGetValuesEx(const char *szName, IniItemContext *pContext, \
+		int *nTargetCount);
 
-int64_t iniGetInt64Value(const char *szName, IniItemInfo *items, \
-			const int nItemCount, const int64_t nDefaultValue);
-bool iniGetBoolValue(const char *szName, IniItemInfo *items, \
-		const int nItemCount, const bool bDefaultValue);
-double iniGetDoubleValue(const char *szName, IniItemInfo *items, \
-			const int nItemCount, const double dbDefaultValue);
+int64_t iniGetInt64Value(const char *szName, IniItemContext *pContext, \
+			const int64_t nDefaultValue);
+bool iniGetBoolValue(const char *szName, IniItemContext *pContext, \
+		const bool bDefaultValue);
+double iniGetDoubleValue(const char *szName, IniItemContext *pContext, \
+			const double dbDefaultValue);
 
-void iniPrintItems(IniItemInfo *items, const int nItemCount);
+void iniPrintItems(IniItemContext *pContext);
 
 #ifdef __cplusplus
 }

@@ -41,13 +41,12 @@ extern "C" {
 /**
 load HTTP params from conf file
 params:
-	items: the ini file items, return by iniLoadItems
-	nItemCount: item count, return by iniLoadItems
+	pItemContext: the ini file items, return by iniLoadItems
 	conf_filename: config filename
 	pHTTPParams: the HTTP params
 return: 0 for success, != 0 fail
 **/
-int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
+int fdfs_http_params_load(IniItemContext *pItemContext, \
 		const char *conf_filename, FDFSHTTPParams *pHTTPParams);
 
 void fdfs_http_params_destroy(FDFSHTTPParams *pParams);
