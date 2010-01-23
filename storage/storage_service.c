@@ -3611,7 +3611,7 @@ data buff (struct)
 	int delete_flag;
 	GroupArray group_array;
 	
-	server_sock = (int)arg;
+	server_sock = (long)arg;
 
 	if (g_check_file_duplicate)
 	{

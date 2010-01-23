@@ -63,23 +63,23 @@ static void fdht_proxy_extra_deal(GroupArray *pGroupArray, bool *bKeepAlive)
 int fdht_client_init(const char *filename)
 {
 	char *pBasePath;
-	IniItemInfo *items;
-	int nItemCount;
+	IniItemContext itemContext;
 	char szProxyPrompt[64];
 	int result;
 
-	if ((result=iniLoadItems(filename, &items, &nItemCount)) != 0)
+	memset(&itemContext, 0, sizeof(IniItemContext));
+	if ((result=iniLoadItems(filename, &itemContext)) != 0)
 	{
 		logError("load conf file \"%s\" fail, ret code: %d", \
 			filename, result);
 		return result;
 	}
 
-	//iniPrintItems(items, nItemCount);
+	//iniPrintItems(&itemContext);
 
 	while (1)
 	{
-		pBasePath = iniGetStrValue("base_path", items, nItemCount);
+		pBasePath = iniGetStrValue("base_path", &itemContext);
 		if (pBasePath == NULL)
 		{
 			logError("conf file \"%s\" must have item " \
@@ -105,16 +105,16 @@ int fdht_client_init(const char *filename)
 		}
 
 		g_network_timeout = iniGetIntValue("network_timeout", \
-				items, nItemCount, DEFAULT_NETWORK_TIMEOUT);
+				&itemContext, DEFAULT_NETWORK_TIMEOUT);
 		if (g_network_timeout <= 0)
 		{
 			g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 		}
 
 		g_keep_alive = iniGetBoolValue("keep_alive", \
-				items, nItemCount, false);
+				&itemContext, false);
 
-		if ((result=fdht_load_groups(items, nItemCount, \
+		if ((result=fdht_load_groups(&itemContext, \
 				&g_group_array)) != 0)
 		{
 			break;
@@ -131,7 +131,7 @@ int fdht_client_init(const char *filename)
 			*szProxyPrompt = '\0';
 		}
 
-		load_log_level(items, nItemCount);
+		load_log_level(&itemContext);
 
 		logInfo("file: "__FILE__", line: %d, " \
 			"base_path=%s, " \
@@ -146,7 +146,7 @@ int fdht_client_init(const char *filename)
 		break;
 	}
 
-	iniFreeItems(items);
+	iniFreeItems(&itemContext);
 
 	return result;
 }
@@ -154,11 +154,10 @@ int fdht_client_init(const char *filename)
 int fdht_load_conf(const char *filename, GroupArray *pGroupArray, \
 		bool *bKeepAlive)
 {
-	IniItemInfo *items;
-	int nItemCount;
+	IniItemContext itemContext;
 	int result;
 
-	if ((result=iniLoadItems(filename, &items, &nItemCount)) != 0)
+	if ((result=iniLoadItems(filename, &itemContext)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"load conf file \"%s\" fail, " \
@@ -167,16 +166,16 @@ int fdht_load_conf(const char *filename, GroupArray *pGroupArray, \
 		return result;
 	}
 
-	*bKeepAlive = iniGetBoolValue("keep_alive", items, nItemCount, false);
-	if ((result=fdht_load_groups(items, nItemCount, pGroupArray)) != 0)
+	*bKeepAlive = iniGetBoolValue("keep_alive", &itemContext, false);
+	if ((result=fdht_load_groups(&itemContext, pGroupArray)) != 0)
 	{
-		iniFreeItems(items);
+		iniFreeItems(&itemContext);
 		return result;
 	}
 
 	fdht_proxy_extra_deal(pGroupArray, bKeepAlive);
 
-	iniFreeItems(items);
+	iniFreeItems(&itemContext);
 	return 0;
 }
 
@@ -197,9 +196,13 @@ static FDHTServerInfo *get_connection(ServerArray *pServerArray, \
 	FDHTServerInfo **ppServer;
 	FDHTServerInfo **ppEnd;
 	int server_index;
-	unsigned int new_hash_code;
+	int new_hash_code;
 
 	new_hash_code = (hash_code << 16) | (hash_code >> 16);
+	if (new_hash_code < 0)
+	{
+		new_hash_code &= 0x7FFFFFFF;
+	}
 	server_index = new_hash_code % pServerArray->count;
 	ppEnd = pServerArray->servers + pServerArray->count;
 	for (ppServer = pServerArray->servers + server_index; \
