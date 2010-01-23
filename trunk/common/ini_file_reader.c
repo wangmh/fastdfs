@@ -21,7 +21,9 @@
 #define _LINE_BUFFER_SIZE	512
 #define _ALLOC_ITEMS_ONCE	8
 
-static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
+static int iniDoLoadItemsFromFile(const char *szFilename, IniItemInfo **ppItems, \
+		int *nItemCount, int *nAllocItems);
+static int iniDoLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
 		int *nItemCount, int *nAllocItems);
 
 int compareByItemName(const void *p1, const void *p2)
@@ -86,7 +88,8 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 	}
 
 	memset(*ppItems, 0, sizeof(IniItemInfo) * alloc_items);
-	result = iniDoLoadItems(szFilename, ppItems, nItemCount, &alloc_items);
+	result = iniDoLoadItemsFromFile(szFilename, ppItems, nItemCount, \
+				&alloc_items);
 	if (result != 0)
 	{
 		if (*ppItems != NULL)
@@ -114,17 +117,10 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 	return result;
 }
 
-static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
+static int iniDoLoadItemsFromFile(const char *szFilename, IniItemInfo **ppItems, \
 		int *nItemCount, int *nAllocItems)
 {
-	IniItemInfo *pItem;
 	char *content;
-	char *pLine;
-	char *pLastEnd;
-	char *pEqualChar;
-	char *pIncludeFilename;
-	int nNameLen;
-	int nValueLen;
 	int result;
 	int http_status;
 	int content_len;
@@ -155,6 +151,30 @@ static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 			return result;
 		}
 	}
+
+	result = iniDoLoadItemsFromContent(content, ppItems, \
+		nItemCount, nAllocItems);
+	free(content);
+	return result;
+}
+
+int iniLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
+		int *nItemCount)
+{
+	return 0;
+}
+
+static int iniDoLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
+		int *nItemCount, int *nAllocItems)
+{
+	IniItemInfo *pItem;
+	char *pLine;
+	char *pLastEnd;
+	char *pEqualChar;
+	char *pIncludeFilename;
+	int nNameLen;
+	int nValueLen;
+	int result;
 
 	result = 0;
 	pLastEnd = content - 1;
@@ -195,7 +215,7 @@ static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 				break;
 			}
 
-			result = iniDoLoadItems(pIncludeFilename, \
+			result = iniDoLoadItemsFromFile(pIncludeFilename, \
 					ppItems, nItemCount, nAllocItems);
 			if (result != 0)
 			{
@@ -260,8 +280,6 @@ static int iniDoLoadItems(const char *szFilename, IniItemInfo **ppItems, \
 		(*nItemCount)++;
 		pItem++;
 	}
-
-	free(content);
 
 	return result;
 }

@@ -23,9 +23,10 @@
 #define TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY       88  //sync done notify
 #define TRACKER_PROTO_CMD_STORAGE_SYNC_REPORT	    89  //report src last synced time as dest server
 #define TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_QUERY   79 //dest storage query sync src storage server
-#define TRACKER_PROTO_CMD_STORAGE_REPORT_IP_CHANGED 78
-#define TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ     77
+#define TRACKER_PROTO_CMD_STORAGE_REPORT_IP_CHANGED 78  //storage server report it's ip changed
+#define TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ     77  //storage server request storage server's changelog
 #define TRACKER_PROTO_CMD_STORAGE_REPORT_STATUS     76  //report specified storage server status
+#define TRACKER_PROTO_CMD_STORAGE_PARAMETER_REQ	    75  //storage server request parameters
 #define TRACKER_PROTO_CMD_STORAGE_RESP              80
 
 #define TRACKER_PROTO_CMD_SERVER_LIST_GROUP			91

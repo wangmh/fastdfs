@@ -25,6 +25,7 @@ struct base64_context g_base64_context;
 char g_run_by_group[32] = {0};
 char g_run_by_user[32] = {0};
 
+bool g_storage_ip_changed_auto_adjust = true;
 int g_thread_stack_size = 64 * 1024;
 
 #ifdef WITH_HTTPD
