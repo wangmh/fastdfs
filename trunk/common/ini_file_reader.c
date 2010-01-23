@@ -21,17 +21,17 @@
 #define _LINE_BUFFER_SIZE	512
 #define _ALLOC_ITEMS_ONCE	8
 
-static int iniDoLoadItemsFromFile(const char *szFilename, IniItemInfo **ppItems, \
-		int *nItemCount, int *nAllocItems);
-static int iniDoLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
-		int *nItemCount, int *nAllocItems);
+static int iniDoLoadItemsFromFile(const char *szFilename, \
+		IniItemContext *pContext, int *nAllocItems);
+static int iniDoLoadItemsFromBuffer(char *content, \
+		IniItemContext *pContext, int *nAllocItems);
 
 int compareByItemName(const void *p1, const void *p2)
 {
 	return strcmp(((IniItemInfo *)p1)->name, ((IniItemInfo *)p2)->name);
 }
 
-int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
+int iniLoadItems(const char *szFilename, IniItemContext *pContext)
 {
 	int alloc_items;
 	int result;
@@ -76,10 +76,10 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 		}
 	}
 
-	*nItemCount = 0;
+	pContext->count = 0;
 	alloc_items = _ALLOC_ITEMS_ONCE;
-	*ppItems = (IniItemInfo *)malloc(sizeof(IniItemInfo) * alloc_items);
-	if (*ppItems == NULL)
+	pContext->items = (IniItemInfo *)malloc(sizeof(IniItemInfo) * alloc_items);
+	if (pContext->items == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %ld bytes fail", __LINE__, \
@@ -87,21 +87,20 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 		return errno != 0 ? errno : ENOMEM;
 	}
 
-	memset(*ppItems, 0, sizeof(IniItemInfo) * alloc_items);
-	result = iniDoLoadItemsFromFile(szFilename, ppItems, nItemCount, \
-				&alloc_items);
+	memset(pContext->items, 0, sizeof(IniItemInfo) * alloc_items);
+	result = iniDoLoadItemsFromFile(szFilename, pContext, &alloc_items);
 	if (result != 0)
 	{
-		if (*ppItems != NULL)
+		if (pContext->items != NULL)
 		{
-			free(*ppItems);
-			*ppItems = NULL;
+			free(pContext->items);
+			pContext->items = NULL;
 		}
-		*nItemCount = 0;
+		pContext->count = 0;
 	}
 	else
 	{
-		qsort(*ppItems, *nItemCount, sizeof(IniItemInfo), \
+		qsort(pContext->items, pContext->count, sizeof(IniItemInfo), \
 			compareByItemName);
 	}
 
@@ -117,8 +116,8 @@ int iniLoadItems(const char *szFilename, IniItemInfo **ppItems, int *nItemCount)
 	return result;
 }
 
-static int iniDoLoadItemsFromFile(const char *szFilename, IniItemInfo **ppItems, \
-		int *nItemCount, int *nAllocItems)
+static int iniDoLoadItemsFromFile(const char *szFilename, \
+		IniItemContext *pContext, int *nAllocItems)
 {
 	char *content;
 	int result;
@@ -152,20 +151,50 @@ static int iniDoLoadItemsFromFile(const char *szFilename, IniItemInfo **ppItems,
 		}
 	}
 
-	result = iniDoLoadItemsFromContent(content, ppItems, \
-		nItemCount, nAllocItems);
+	result = iniDoLoadItemsFromBuffer(content, pContext, nAllocItems);
 	free(content);
+
 	return result;
 }
 
-int iniLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
-		int *nItemCount)
+int iniLoadItemsFromBuffer(char *content, IniItemContext *pContext)
 {
-	return 0;
+	int alloc_items;
+	int result;
+
+	pContext->count = 0;
+	alloc_items = _ALLOC_ITEMS_ONCE;
+	pContext->items = (IniItemInfo *)malloc(sizeof(IniItemInfo) * alloc_items);
+	if (pContext->items == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %ld bytes fail", __LINE__, \
+			sizeof(IniItemInfo) * alloc_items);
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	memset(pContext->items, 0, sizeof(IniItemInfo) * alloc_items);
+	result = iniDoLoadItemsFromBuffer(content, pContext, &alloc_items);
+	if (result != 0)
+	{
+		if (pContext->items != NULL)
+		{
+			free(pContext->items);
+			pContext->items = NULL;
+		}
+		pContext->count = 0;
+	}
+	else
+	{
+		qsort(pContext->items, pContext->count, sizeof(IniItemInfo), \
+			compareByItemName);
+	}
+
+	return result;
 }
 
-static int iniDoLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
-		int *nItemCount, int *nAllocItems)
+static int iniDoLoadItemsFromBuffer(char *content, IniItemContext *pContext, \
+		int *nAllocItems)
 {
 	IniItemInfo *pItem;
 	char *pLine;
@@ -178,7 +207,7 @@ static int iniDoLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
 
 	result = 0;
 	pLastEnd = content - 1;
-	pItem = *ppItems + (*nItemCount);
+	pItem = pContext->items + pContext->count;
 	while (pLastEnd != NULL)
 	{
 		pLine = pLastEnd + 1;
@@ -216,14 +245,14 @@ static int iniDoLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
 			}
 
 			result = iniDoLoadItemsFromFile(pIncludeFilename, \
-					ppItems, nItemCount, nAllocItems);
+					pContext, nAllocItems);
 			if (result != 0)
 			{
 				free(pIncludeFilename);
 				break;
 			}
 
-			pItem = (*ppItems) + (*nItemCount);  //must re-asign
+			pItem = pContext->items + pContext->count;  //must re-asign
 			free(pIncludeFilename);
 			continue;
 		}
@@ -252,12 +281,12 @@ static int iniDoLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
 			nValueLen = INI_ITEM_VALUE_LEN;
 		}
 	
-		if (*nItemCount >= *nAllocItems)
+		if (pContext->count >= *nAllocItems)
 		{
 			(*nAllocItems) += _ALLOC_ITEMS_ONCE;
-			*ppItems = (IniItemInfo *)realloc(*ppItems, 
+			pContext->items=(IniItemInfo *)realloc(pContext->items, 
 				sizeof(IniItemInfo) * (*nAllocItems));
-			if (*ppItems == NULL)
+			if (pContext->items == NULL)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"realloc %ld bytes fail", __LINE__, \
@@ -266,9 +295,9 @@ static int iniDoLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
 				break;
 			}
 
-			pItem = (*ppItems) + (*nItemCount);
+			pItem = pContext->items + pContext->count;
 			memset(pItem, 0, sizeof(IniItemInfo) * \
-				((*nAllocItems) - (*nItemCount)));
+				((*nAllocItems) - pContext->count));
 		}
 
 		memcpy(pItem->name, pLine, nNameLen);
@@ -277,34 +306,35 @@ static int iniDoLoadItemsFromContent(char *content, IniItemInfo **ppItems, \
 		trim(pItem->name);
 		trim(pItem->value);
 		
-		(*nItemCount)++;
+		pContext->count++;
 		pItem++;
 	}
 
 	return result;
 }
 
-void iniFreeItems(IniItemInfo *items)
+void iniFreeItems(IniItemContext *pContext)
 {
-	if (items != NULL)
+	if (pContext != NULL && pContext->items != NULL)
 	{
-		free(items);
+		free(pContext->items);
+		pContext->items = NULL;
+		pContext->count = 0;
 	}
 }
 
-char *iniGetStrValue(const char *szName, IniItemInfo *items, \
-			const int nItemCount)
+char *iniGetStrValue(const char *szName, IniItemContext *pContext)
 {
 	IniItemInfo targetItem;
 	void *pResult;
 	
-	if (nItemCount <= 0)
+	if (pContext->count <= 0)
 	{
 		return NULL;
 	}
 	
 	snprintf(targetItem.name, sizeof(targetItem.name), "%s", szName);
-	pResult = bsearch(&targetItem, items, nItemCount, \
+	pResult = bsearch(&targetItem, pContext->items, pContext->count, \
 			sizeof(IniItemInfo), compareByItemName);
 	if (pResult == NULL)
 	{
@@ -316,12 +346,12 @@ char *iniGetStrValue(const char *szName, IniItemInfo *items, \
 	}
 }
 
-int64_t iniGetInt64Value(const char *szName, IniItemInfo *items, \
-			const int nItemCount, const int64_t nDefaultValue)
+int64_t iniGetInt64Value(const char *szName, IniItemContext *pContext, \
+			const int64_t nDefaultValue)
 {
 	char *pValue;
 	
-	pValue = iniGetStrValue(szName, items, nItemCount);
+	pValue = iniGetStrValue(szName, pContext);
 	if (pValue == NULL)
 	{
 		return nDefaultValue;
@@ -332,12 +362,12 @@ int64_t iniGetInt64Value(const char *szName, IniItemInfo *items, \
 	}
 }
 
-int iniGetIntValue(const char *szName, IniItemInfo *items, \
-		const int nItemCount, const int nDefaultValue)
+int iniGetIntValue(const char *szName, IniItemContext *pContext, \
+		const int nDefaultValue)
 {
 	char *pValue;
 	
-	pValue = iniGetStrValue(szName, items, nItemCount);
+	pValue = iniGetStrValue(szName, pContext);
 	if (pValue == NULL)
 	{
 		return nDefaultValue;
@@ -348,12 +378,12 @@ int iniGetIntValue(const char *szName, IniItemInfo *items, \
 	}
 }
 
-double iniGetDoubleValue(const char *szName, IniItemInfo *items, \
-			const int nItemCount, const double dbDefaultValue)
+double iniGetDoubleValue(const char *szName, IniItemContext *pContext, \
+			const double dbDefaultValue)
 {
 	char *pValue;
 	
-	pValue = iniGetStrValue(szName, items, nItemCount);
+	pValue = iniGetStrValue(szName, pContext);
 	if (pValue == NULL)
 	{
 		return dbDefaultValue;
@@ -364,12 +394,12 @@ double iniGetDoubleValue(const char *szName, IniItemInfo *items, \
 	}
 }
 
-bool iniGetBoolValue(const char *szName, IniItemInfo *items, \
-		const int nItemCount, const bool bDefaultValue)
+bool iniGetBoolValue(const char *szName, IniItemContext *pContext, \
+		const bool bDefaultValue)
 {
 	char *pValue;
 	
-	pValue = iniGetStrValue(szName, items, nItemCount);
+	pValue = iniGetStrValue(szName, pContext);
 	if (pValue == NULL)
 	{
 		return bDefaultValue;
@@ -383,7 +413,7 @@ bool iniGetBoolValue(const char *szName, IniItemInfo *items, \
 	}
 }
 
-int iniGetValues(const char *szName, IniItemInfo *items, const int nItemCount, \
+int iniGetValues(const char *szName, IniItemContext *pContext, \
 			char **szValues, const int max_values)
 {
 	IniItemInfo targetItem;
@@ -392,14 +422,14 @@ int iniGetValues(const char *szName, IniItemInfo *items, const int nItemCount, \
 	IniItemInfo *pItemEnd;
 	char **ppValues;
 	
-	if (nItemCount <= 0 || max_values <= 0)
+	if (pContext->count <= 0 || max_values <= 0)
 	{
 		return 0;
 	}
 	
 	snprintf(targetItem.name, sizeof(targetItem.name), "%s", szName);
-	pFound = (IniItemInfo *)bsearch(&targetItem, items, nItemCount, \
-				sizeof(IniItemInfo), compareByItemName);
+	pFound = (IniItemInfo *)bsearch(&targetItem, pContext->items, \
+		pContext->count, sizeof(IniItemInfo), compareByItemName);
 	if (pFound == NULL)
 	{
 		return 0;
@@ -407,7 +437,7 @@ int iniGetValues(const char *szName, IniItemInfo *items, const int nItemCount, \
 
 	ppValues = szValues;
 	*ppValues++ = pFound->value;
-	for (pItem=pFound-1; pItem>=items; pItem--)
+	for (pItem=pFound-1; pItem>=pContext->items; pItem--)
 	{
 		if (strcmp(pItem->name, szName) != 0)
 		{
@@ -420,7 +450,7 @@ int iniGetValues(const char *szName, IniItemInfo *items, const int nItemCount, \
 		}
 	}
 
-	pItemEnd = items + nItemCount;
+	pItemEnd = pContext->items + pContext->count;
 	for (pItem=pFound+1; pItem<pItemEnd; pItem++)
 	{
 		if (strcmp(pItem->name, szName) != 0)
@@ -437,8 +467,8 @@ int iniGetValues(const char *szName, IniItemInfo *items, const int nItemCount, \
 	return ppValues - szValues;
 }
 
-IniItemInfo *iniGetValuesEx(const char *szName, IniItemInfo *items, 
-		const int nItemCount, int *nTargetCount)
+IniItemInfo *iniGetValuesEx(const char *szName, IniItemContext *pContext, \
+		int *nTargetCount)
 {
 	IniItemInfo targetItem;
 	IniItemInfo *pFound;
@@ -446,15 +476,15 @@ IniItemInfo *iniGetValuesEx(const char *szName, IniItemInfo *items,
 	IniItemInfo *pItemEnd;
 	IniItemInfo *pItemStart;
 	
-	if (nItemCount <= 0)
+	if (pContext->count <= 0)
 	{
 		*nTargetCount = 0;
 		return NULL;
 	}
 	
 	snprintf(targetItem.name, sizeof(targetItem.name), "%s", szName);
-	pFound = (IniItemInfo *)bsearch(&targetItem, items, nItemCount, \
-				sizeof(IniItemInfo), compareByItemName);
+	pFound = (IniItemInfo *)bsearch(&targetItem, pContext->items, \
+		pContext->count, sizeof(IniItemInfo), compareByItemName);
 	if (pFound == NULL)
 	{
 		*nTargetCount = 0;
@@ -462,7 +492,7 @@ IniItemInfo *iniGetValuesEx(const char *szName, IniItemInfo *items,
 	}
 
 	*nTargetCount = 1;
-	for (pItem=pFound-1; pItem>=items; pItem--)
+	for (pItem=pFound-1; pItem>=pContext->items; pItem--)
 	{
 		if (strcmp(pItem->name, szName) != 0)
 		{
@@ -473,7 +503,7 @@ IniItemInfo *iniGetValuesEx(const char *szName, IniItemInfo *items,
 	}
 	pItemStart = pFound - (*nTargetCount) + 1;
 
-	pItemEnd = items + nItemCount;
+	pItemEnd = pContext->items + pContext->count;
 	for (pItem=pFound+1; pItem<pItemEnd; pItem++)
 	{
 		if (strcmp(pItem->name, szName) != 0)
@@ -487,15 +517,15 @@ IniItemInfo *iniGetValuesEx(const char *szName, IniItemInfo *items,
 	return pItemStart;
 }
 
-void iniPrintItems(IniItemInfo *items, const int nItemCount)
+void iniPrintItems(IniItemContext *pContext)
 {
 	IniItemInfo *pItem;
 	IniItemInfo *pItemEnd;
 	int i;
 
 	i = 0;
-	pItemEnd = items + nItemCount;
-	for (pItem=items; pItem<pItemEnd; pItem++)
+	pItemEnd = pContext->items + pContext->count;
+	for (pItem=pContext->items; pItem<pItemEnd; pItem++)
 	{
 		printf("%d. %s=%s\n", ++i, pItem->name, pItem->value);	
 	}

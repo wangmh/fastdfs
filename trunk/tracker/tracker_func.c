@@ -35,11 +35,11 @@
 #endif
 
 static int tracker_load_store_lookup(const char *filename, \
-		IniItemInfo *items, const int nItemCount)
+		IniItemContext *pItemContext)
 {
 	char *pGroupName;
 	g_groups.store_lookup = iniGetIntValue("store_lookup", \
-			items, nItemCount, FDFS_STORE_LOOKUP_ROUND_ROBIN);
+			pItemContext, FDFS_STORE_LOOKUP_ROUND_ROBIN);
 	if (g_groups.store_lookup == FDFS_STORE_LOOKUP_ROUND_ROBIN)
 	{
 		g_groups.store_group[0] = '\0';
@@ -61,7 +61,7 @@ static int tracker_load_store_lookup(const char *filename, \
 		return EINVAL;
 	}
 
-	pGroupName = iniGetStrValue("store_group", items, nItemCount);
+	pGroupName = iniGetStrValue("store_group", pItemContext);
 	if (pGroupName == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -100,13 +100,13 @@ int tracker_load_from_conf_file(const char *filename, \
 	char *pRunByGroup;
 	char *pRunByUser;
 	char *pThreadStackSize;
-	IniItemInfo *items;
-	int nItemCount;
+	IniItemContext itemContext;
 	int result;
 	int64_t storage_reserved;
 	int64_t thread_stack_size;
 
-	if ((result=iniLoadItems(filename, &items, &nItemCount)) != 0)
+	memset(&itemContext, 0, sizeof(IniItemContext));
+	if ((result=iniLoadItems(filename, &itemContext)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"load conf file \"%s\" fail, ret code: %d", \
@@ -116,7 +116,7 @@ int tracker_load_from_conf_file(const char *filename, \
 
 	do
 	{
-		if (iniGetBoolValue("disabled", items, nItemCount, false))
+		if (iniGetBoolValue("disabled", &itemContext, false))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"conf file \"%s\" disabled=true, exit", \
@@ -125,7 +125,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			break;
 		}
 
-		pBasePath = iniGetStrValue("base_path", items, nItemCount);
+		pBasePath = iniGetStrValue("base_path", &itemContext);
 		if (pBasePath == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -154,7 +154,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			break;
 		}
 
-		load_log_level(items, nItemCount);
+		load_log_level(&itemContext);
 		if ((result=log_set_prefix(g_base_path, \
 				TRACKER_ERROR_LOG_FILENAME)) != 0)
 		{
@@ -162,20 +162,20 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 
 		g_network_timeout = iniGetIntValue("network_timeout", \
-				items, nItemCount, DEFAULT_NETWORK_TIMEOUT);
+				&itemContext, DEFAULT_NETWORK_TIMEOUT);
 		if (g_network_timeout <= 0)
 		{
 			g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 		}
 
-		g_server_port = iniGetIntValue("port", items, nItemCount, \
+		g_server_port = iniGetIntValue("port", &itemContext, \
 				FDFS_TRACKER_SERVER_DEF_PORT);
 		if (g_server_port <= 0)
 		{
 			g_server_port = FDFS_TRACKER_SERVER_DEF_PORT;
 		}
 
-		pBindAddr = iniGetStrValue("bind_addr", items, nItemCount);
+		pBindAddr = iniGetStrValue("bind_addr", &itemContext);
 		if (pBindAddr == NULL)
 		{
 			bind_addr[0] = '\0';
@@ -186,13 +186,13 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 
 		if ((result=tracker_load_store_lookup(filename, \
-			items, nItemCount)) != 0)
+			&itemContext)) != 0)
 		{
 			break;
 		}
 
 		g_groups.store_server = (byte)iniGetIntValue("store_server", \
-			items, nItemCount, FDFS_STORE_SERVER_ROUND_ROBIN);
+			&itemContext, FDFS_STORE_SERVER_ROUND_ROBIN);
 		if (!(g_groups.store_server == FDFS_STORE_SERVER_FIRST_BY_IP ||\
 			g_groups.store_server == FDFS_STORE_SERVER_FIRST_BY_PRI||
 			g_groups.store_server == FDFS_STORE_SERVER_ROUND_ROBIN))
@@ -207,7 +207,7 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 
 		g_groups.download_server = (byte)iniGetIntValue( \
-			"download_server", items, nItemCount, \
+			"download_server", &itemContext, \
 			FDFS_DOWNLOAD_SERVER_ROUND_ROBIN);
 		if (!(g_groups.download_server==FDFS_DOWNLOAD_SERVER_ROUND_ROBIN
 			|| g_groups.download_server == 
@@ -224,7 +224,7 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 
 		g_groups.store_path = (byte)iniGetIntValue("store_path", \
-			items, nItemCount, FDFS_STORE_PATH_ROUND_ROBIN);
+			&itemContext, FDFS_STORE_PATH_ROUND_ROBIN);
 		if (!(g_groups.store_path == FDFS_STORE_PATH_ROUND_ROBIN || \
 			g_groups.store_path == FDFS_STORE_PATH_LOAD_BALANCE))
 		{
@@ -237,7 +237,7 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 
 		pStorageReserved = iniGetStrValue("reserved_storage_space", \
-						items, nItemCount);
+						&itemContext);
 		if (pStorageReserved == NULL)
 		{
 			g_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
@@ -254,7 +254,7 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 
 		g_max_connections = iniGetIntValue("max_connections", \
-				items, nItemCount, DEFAULT_MAX_CONNECTONS);
+				&itemContext, DEFAULT_MAX_CONNECTONS);
 		if (g_max_connections <= 0)
 		{
 			g_max_connections = DEFAULT_MAX_CONNECTONS;
@@ -265,10 +265,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			break;
 		}
 	
-		pRunByGroup = iniGetStrValue("run_by_group", \
-						items, nItemCount);
-		pRunByUser = iniGetStrValue("run_by_user", \
-						items, nItemCount);
+		pRunByGroup = iniGetStrValue("run_by_group", &itemContext);
+		pRunByUser = iniGetStrValue("run_by_user", &itemContext);
 		if (pRunByGroup == NULL)
 		{
 			*g_run_by_group = '\0';
@@ -289,14 +287,14 @@ int tracker_load_from_conf_file(const char *filename, \
 				"%s", pRunByUser);
 		}
 
-		if ((result=load_allow_hosts(items, nItemCount, \
+		if ((result=load_allow_hosts(&itemContext, \
                 	 &g_allow_ip_addrs, &g_allow_ip_count)) != 0)
 		{
 			return result;
 		}
 
 		g_sync_log_buff_interval = iniGetIntValue( \
-				"sync_log_buff_interval", items, nItemCount, \
+				"sync_log_buff_interval", &itemContext, \
 				SYNC_LOG_BUFF_DEF_INTERVAL);
 		if (g_sync_log_buff_interval <= 0)
 		{
@@ -304,7 +302,7 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 
 		g_check_active_interval = iniGetIntValue( \
-				"check_active_interval", items, nItemCount, \
+				"check_active_interval", &itemContext, \
 				CHECK_ACTIVE_DEF_INTERVAL);
 		if (g_check_active_interval <= 0)
 		{
@@ -312,7 +310,7 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 
 		pThreadStackSize = iniGetStrValue( \
-			"thread_stack_size", items, nItemCount);
+			"thread_stack_size", &itemContext);
 		if (pThreadStackSize == NULL)
 		{
 			thread_stack_size = 64 * 1024;
@@ -326,10 +324,10 @@ int tracker_load_from_conf_file(const char *filename, \
 
 		g_storage_ip_changed_auto_adjust = iniGetBoolValue( \
 				"storage_ip_changed_auto_adjust", \
-				items, nItemCount, true);
+				&itemContext, true);
 
 #ifdef WITH_HTTPD
-		if ((result=fdfs_http_params_load(items, nItemCount, \
+		if ((result=fdfs_http_params_load(&itemContext, \
 				filename, &g_http_params)) != 0)
 		{
 			return result;
@@ -381,7 +379,7 @@ int tracker_load_from_conf_file(const char *filename, \
 
 	} while (0);
 
-	iniFreeItems(items);
+	iniFreeItems(&itemContext);
 
 	return result;
 }

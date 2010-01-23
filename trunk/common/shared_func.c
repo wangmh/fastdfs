@@ -1283,9 +1283,9 @@ bool is_filename_secure(const char *filename, const int len)
 	return (strstr(filename, "/../") == NULL);
 }
 
-void load_log_level(IniItemInfo *items, const int nItemCount)
+void load_log_level(IniItemContext *pItemContext)
 {
-	set_log_level(iniGetStrValue("log_level", items, nItemCount));
+	set_log_level(iniGetStrValue("log_level", pItemContext));
 }
 
 void set_log_level(char *pLogLevel)
@@ -1412,7 +1412,7 @@ int set_run_by(const char *group_name, const char *username)
 	return 0;
 }
 
-int load_allow_hosts(IniItemInfo *items, const int nItemCount, \
+int load_allow_hosts(IniItemContext *pItemContext, \
 		in_addr_t **allow_ip_addrs, int *allow_ip_count)
 {
 	int count;
@@ -1431,7 +1431,7 @@ int load_allow_hosts(IniItemInfo *items, const int nItemCount, \
 	char hostname[256];
 
 	if ((pItemStart=iniGetValuesEx("allow_hosts", \
-		items, nItemCount, &count)) == NULL)
+		pItemContext, &count)) == NULL)
 	{
 		*allow_ip_count = -1; /* -1 means match any ip address */
 		*allow_ip_addrs = NULL;
@@ -1820,7 +1820,7 @@ int set_rand_seed()
 	return 0;
 }
 
-int get_time_item_from_conf(IniItemInfo *items, const int nItemCount, \
+int get_time_item_from_conf(IniItemContext *pItemContext, \
 		const char *item_name, TimeInfo *pTimeInfo, \
 		const byte default_hour, const byte default_minute)
 {
@@ -1828,7 +1828,7 @@ int get_time_item_from_conf(IniItemInfo *items, const int nItemCount, \
 	int hour;
 	int minute;
 
-	pValue = iniGetStrValue(item_name, items, nItemCount);
+	pValue = iniGetStrValue(item_name, pItemContext);
 	if (pValue == NULL)
 	{
 		pTimeInfo->hour = default_hour;

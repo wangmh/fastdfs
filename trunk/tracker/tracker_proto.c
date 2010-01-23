@@ -100,8 +100,8 @@ int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
 		if (*in_bytes > buff_size)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"server: %s:%d, recv body bytes: "INT64_PRINTF_FORMAT"" \
-				" exceed max: %d", \
+				"server: %s:%d, recv body bytes: " \
+				INT64_PRINTF_FORMAT" exceed max: %d", \
 				__LINE__, pTrackerServer->ip_addr, \
 				pTrackerServer->port, *in_bytes, buff_size);
 			*in_bytes = 0;

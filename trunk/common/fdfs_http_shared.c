@@ -94,7 +94,7 @@ int fdfs_http_get_content_type_by_extname(FDFSHTTPParams *pParams, \
 }
 
 
-int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
+int fdfs_http_params_load(IniItemContext *pItemContext, \
 		const char *conf_filename, FDFSHTTPParams *pParams)
 {
 	int result;
@@ -109,14 +109,14 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 	memset(pParams, 0, sizeof(FDFSHTTPParams));
 
 	pParams->disabled = iniGetBoolValue("http.disabled", \
-					items, nItemCount, false);
+					pItemContext, false);
 	if (pParams->disabled)
 	{
 		return 0;
 	}
 
 	pParams->server_port = iniGetIntValue("http.server_port", \
-					items, nItemCount, 0);
+					pItemContext, 0);
 	if (pParams->server_port <= 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -126,7 +126,7 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 	}
 
 	mime_types_filename = iniGetStrValue("http.mime_types_filename", \
-                                        items, nItemCount);
+                                        pItemContext);
 	if (mime_types_filename == NULL || *mime_types_filename == '\0')
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -184,7 +184,7 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 
 	default_content_type = iniGetStrValue( \
 			"http.default_content_type", \
-			items, nItemCount);
+			pItemContext);
 	if (default_content_type == NULL || *default_content_type == '\0')
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -206,7 +206,7 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 
 	pParams->anti_steal_token = iniGetBoolValue( \
 				"http.anti_steal.check_token", \
-				items, nItemCount, false);
+				pItemContext, false);
 	if (!pParams->anti_steal_token)
 	{
 		return 0;
@@ -214,7 +214,7 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 
 	pParams->token_ttl = iniGetIntValue( \
 				"http.anti_steal.token_ttl", \
-				items, nItemCount, 600);
+				pItemContext, 600);
 	if (pParams->token_ttl <= 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -225,7 +225,7 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 
 	anti_steal_secret_key = iniGetStrValue( \
 			"http.anti_steal.secret_key", \
-			items, nItemCount);
+			pItemContext);
 	if (anti_steal_secret_key == NULL || *anti_steal_secret_key == '\0')
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -238,7 +238,7 @@ int fdfs_http_params_load(IniItemInfo *items, const int nItemCount, \
 
 	token_check_fail_filename = iniGetStrValue( \
 			"http.anti_steal.token_check_fail", \
-			items, nItemCount);
+			pItemContext);
 	if (token_check_fail_filename == NULL || \
 		*token_check_fail_filename == '\0')
 	{
