@@ -2084,6 +2084,33 @@ FDFSStorageDetail *tracker_mem_get_storage(FDFSGroupInfo *pGroup, \
 	}
 }
 
+static void tracker_mem_clear_storage_fields(FDFSStorageDetail *pStorageServer)
+{
+        if (pStorageServer->path_total_mbs != NULL)
+	{
+		memset(pStorageServer->path_total_mbs, 0, sizeof(int64_t) \
+			* pStorageServer->store_path_count);
+	}
+
+        if (pStorageServer->path_free_mbs != NULL)
+	{
+		memset(pStorageServer->path_free_mbs, 0, sizeof(int64_t) \
+			* pStorageServer->store_path_count);
+	}
+
+	pStorageServer->psync_src_server = NULL;
+	pStorageServer->sync_until_timestamp = 0;
+	pStorageServer->total_mb = 0;
+	pStorageServer->free_mb = 0;
+	pStorageServer->changelog_offset = 0;
+	pStorageServer->store_path_count = 0;
+	pStorageServer->subdir_count_per_path = 0;
+	pStorageServer->upload_priority = 0;
+	pStorageServer->current_write_path = 0;
+
+	memset(&(pStorageServer->stat), 0, sizeof(FDFSStorageStat));
+}
+
 int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
 {
 	FDFSStorageDetail *pStorageServer;
@@ -2117,6 +2144,8 @@ int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
 			pServer->psync_src_server = NULL;
 		}
 	}
+
+	tracker_mem_clear_storage_fields(pStorageServer);
 
 	pStorageServer->status = FDFS_STORAGE_STATUS_DELETED;
 	pGroup->chg_count++;
@@ -2170,6 +2199,8 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 		}
 	}
 
+	tracker_mem_clear_storage_fields(pStorageServer);
+
 	pStorageServer->status = FDFS_STORAGE_STATUS_IP_CHANGED;
 	pGroup->chg_count++;
 
@@ -2188,16 +2219,11 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 				pClientInfo->ip_addr);
 	if (pStorageServer != NULL)
 	{
-		/*
-		if (pStorageServer->status == FDFS_STORAGE_STATUS_DELETED)
+		if (pStorageServer->status == FDFS_STORAGE_STATUS_DELETED \
+		 || pStorageServer->status == FDFS_STORAGE_STATUS_IP_CHANGED)
 		{
-			logError("file: "__FILE__", line: %d, " \
-				"storage ip: %s already deleted, you can " \
-				"restart the tracker servers to reset.", \
-				__LINE__, pClientInfo->ip_addr);
-			return EAGAIN;
+		 	pStorageServer->status = FDFS_STORAGE_STATUS_INIT;
 		}
-		*/
 	}
 	else
 	{
@@ -2695,6 +2721,7 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 		return 0;
 	}
 
+	/*
 	if (pTargetServer->status == FDFS_STORAGE_STATUS_DELETED)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -2703,6 +2730,7 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 			__LINE__, pTargetServer->ip_addr);
 		return EAGAIN;
 	}
+	*/
 
 	pTargetServer->status = FDFS_STORAGE_STATUS_ACTIVE;
 
