@@ -44,6 +44,7 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer);
 static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer);
 static int tracker_sync_notify(TrackerServerInfo *pTrackerServer);
 static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer);
+static int tracker_storage_changelog_req(TrackerServerInfo *pTrackerServer);
 static bool tracker_insert_into_sorted_servers( \
 		FDFSStorageServer *pInsertedServer);
 
@@ -359,6 +360,13 @@ static void *tracker_report_thread_entrance(void *arg)
 					break;
 				}
 
+				if (g_storage_ip_changed_auto_adjust && \
+					tracker_storage_changelog_req( \
+							pTrackerServer) != 0)
+				{
+					break;
+				}
+
 				last_beat_time = current_time;
 			}
 
@@ -619,79 +627,73 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		if (ppFound != NULL)
 		{
 			//logInfo("ip_addr=%s, local status: %d, tracker status: %d", pServer->ip_addr, (*ppFound)->server.status, pServer->status);
-			if ((*ppFound)->server.status != pServer->status)
+			if ((*ppFound)->server.status == pServer->status)
 			{
-				if (pServer->status == \
-					FDFS_STORAGE_STATUS_OFFLINE)
-				{
-					if ((*ppFound)->server.status == \
-						FDFS_STORAGE_STATUS_WAIT_SYNC \
-						|| (*ppFound)->server.status ==\
-						FDFS_STORAGE_STATUS_SYNCING \
-						|| (*ppFound)->server.status ==\
-						FDFS_STORAGE_STATUS_DELETED)
-					{
-						memcpy(pDiffServer++, \
-						&((*ppFound)->server), \
-						sizeof(FDFSStorageBrief));
-					}
-					else if ((*ppFound)->server.status == \
-						FDFS_STORAGE_STATUS_ACTIVE)
-					{
-						(*ppFound)->server.status = \
-						FDFS_STORAGE_STATUS_OFFLINE;
-					}
-				}
-				else if ((*ppFound)->server.status == \
-					FDFS_STORAGE_STATUS_OFFLINE)
+				continue;
+			}
+
+			if (pServer->status == FDFS_STORAGE_STATUS_OFFLINE)
+			{
+				if ((*ppFound)->server.status == \
+						FDFS_STORAGE_STATUS_ACTIVE
+				 || (*ppFound)->server.status == \
+						FDFS_STORAGE_STATUS_ONLINE)
 				{
 					(*ppFound)->server.status = \
-							pServer->status;
+					FDFS_STORAGE_STATUS_OFFLINE;
 				}
-				else if ((((pServer->status == \
-					FDFS_STORAGE_STATUS_WAIT_SYNC) || \
-					(pServer->status == \
-					FDFS_STORAGE_STATUS_SYNCING)) && \
-					((*ppFound)->server.status > \
-						pServer->status)) \
-					 || ((*ppFound)->server.status == \
-						FDFS_STORAGE_STATUS_DELETED))
+				else if ((*ppFound)->server.status != \
+						FDFS_STORAGE_STATUS_NONE
+				     && (*ppFound)->server.status != \
+						FDFS_STORAGE_STATUS_INIT)
 				{
 					memcpy(pDiffServer++, \
 						&((*ppFound)->server), \
 						sizeof(FDFSStorageBrief));
 				}
-				else if ((*ppFound)->server.status == \
-					FDFS_STORAGE_STATUS_NONE && \
-					pServer->status == \
-					FDFS_STORAGE_STATUS_DELETED) //ignore
-				{
+			}
+			else if ((*ppFound)->server.status == \
+					FDFS_STORAGE_STATUS_OFFLINE)
+			{
+				(*ppFound)->server.status = pServer->status;
+			}
+			else if ((*ppFound)->server.status == \
+					FDFS_STORAGE_STATUS_NONE)
+			{
+				if (pServer->status == \
+					FDFS_STORAGE_STATUS_DELETED \
+				 || pServer->status == \
+					FDFS_STORAGE_STATUS_IP_CHANGED)
+				{ //ignore
 				}
 				else
 				{
-					if ((*ppFound)->server.status == \
-						FDFS_STORAGE_STATUS_NONE && \
-						pServer->status != \
-						FDFS_STORAGE_STATUS_DELETED)
-					{
-						(*ppFound)->server.status = \
+					(*ppFound)->server.status = \
 							pServer->status;
 					if ((result=storage_sync_thread_start( \
 						&((*ppFound)->server))) != 0)
-						{
-							return result;
-						}
-					}
-					else
 					{
-						(*ppFound)->server.status = \
-							pServer->status;
+							return result;
 					}
 				}
 			}
+			else if (((pServer->status == \
+					FDFS_STORAGE_STATUS_WAIT_SYNC) || \
+				(pServer->status == \
+					FDFS_STORAGE_STATUS_SYNCING)) && \
+				((*ppFound)->server.status > pServer->status))
+			{
+				memcpy(pDiffServer++, &((*ppFound)->server), \
+					sizeof(FDFSStorageBrief));
+			}
+			else
+			{
+				(*ppFound)->server.status = pServer->status;
+			}
 		}
-		else if (pServer->status == FDFS_STORAGE_STATUS_DELETED)//ignore
-		{
+		else if (pServer->status == FDFS_STORAGE_STATUS_DELETED
+		      || pServer->status == FDFS_STORAGE_STATUS_IP_CHANGED)
+		{   //ignore
 			nDeletedCount++;
 		}
 		else
@@ -776,16 +778,16 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		res = strcmp(pServer->ip_addr, (*ppGlobalServer)->server.ip_addr);
 		if (res < 0)
 		{
-			if (pServer->status != FDFS_STORAGE_STATUS_DELETED)
+			if (pServer->status != FDFS_STORAGE_STATUS_DELETED
+			 && pServer->status != FDFS_STORAGE_STATUS_IP_CHANGED)
 			{
-			logError("file: "__FILE__", line: %d, " \
-				"tracker server %s:%d, " \
-				"group \"%s\", " \
-				"enter impossible statement branch", \
-				__LINE__, pTrackerServer->ip_addr, \
-				pTrackerServer->port, \
-				pTrackerServer->group_name
-			);
+				logError("file: "__FILE__", line: %d, " \
+					"tracker server %s:%d, " \
+					"group \"%s\", " \
+					"enter impossible statement branch", \
+					__LINE__, pTrackerServer->ip_addr, \
+					pTrackerServer->port, \
+					pTrackerServer->group_name);
 			}
 
 			pServer++;

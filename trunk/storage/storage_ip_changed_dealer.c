@@ -268,7 +268,7 @@ static int storage_report_storage_ip_addr()
 	return storage_write_to_sync_ini_file();
 }
 
-static int storage_changlog_req()
+int storage_changelog_req()
 {
 	TrackerServerInfo *pGlobalServer;
 	TrackerServerInfo *pTServer;
@@ -368,6 +368,6 @@ int storage_check_ip_changed()
 		return result;
 	}
 
-	return storage_changlog_req();
+	return storage_changelog_req();
 }
 
