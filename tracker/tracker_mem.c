@@ -1000,7 +1000,8 @@ int tracker_save_storages()
 		for (pStorage=(*ppGroup)->all_servers; \
 			pStorage<pStorageEnd; pStorage++)
 		{
-			if (pStorage->status == FDFS_STORAGE_STATUS_DELETED)
+			if (pStorage->status == FDFS_STORAGE_STATUS_DELETED
+			 || pStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED)
 			{
 				continue;
 			}
@@ -1114,7 +1115,9 @@ int tracker_save_sync_timestamps()
 		for (i=0; i<(*ppGroup)->count; i++)
 		{
 			if ((*ppGroup)->all_servers[i].status == \
-				FDFS_STORAGE_STATUS_DELETED)
+				FDFS_STORAGE_STATUS_DELETED \
+			 || (*ppGroup)->all_servers[i].status == \
+				FDFS_STORAGE_STATUS_IP_CHANGED)
 			{
 				continue;
 			}
@@ -1125,7 +1128,9 @@ int tracker_save_sync_timestamps()
 			for (k=0; k<(*ppGroup)->count; k++)
 			{
 				if ((*ppGroup)->all_servers[k].status == \
-					FDFS_STORAGE_STATUS_DELETED)
+					FDFS_STORAGE_STATUS_DELETED \
+				 || (*ppGroup)->all_servers[k].status == \
+					FDFS_STORAGE_STATUS_IP_CHANGED)
 				{
 					continue;
 				}
@@ -2183,6 +2188,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 				pClientInfo->ip_addr);
 	if (pStorageServer != NULL)
 	{
+		/*
 		if (pStorageServer->status == FDFS_STORAGE_STATUS_DELETED)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -2191,7 +2197,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 				__LINE__, pClientInfo->ip_addr);
 			return EAGAIN;
 		}
-		//printf("pGroup->count=%d, found %s\n", pClientInfo->pGroup->count, pClientInfo->ip_addr);
+		*/
 	}
 	else
 	{
@@ -2460,6 +2466,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		(pStorageServer->status == FDFS_STORAGE_STATUS_SYNCING) || \
 		(pStorageServer->status == FDFS_STORAGE_STATUS_INIT) || \
 		(pStorageServer->status == FDFS_STORAGE_STATUS_DELETED) || \
+		(pStorageServer->status == FDFS_STORAGE_STATUS_IP_CHANGED) ||\
 		(pStorageServer->status == FDFS_STORAGE_STATUS_ACTIVE)))
 	{
 		pStorageServer->status = FDFS_STORAGE_STATUS_ONLINE;
@@ -2512,9 +2519,11 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 		for (pServer=briefServers; pServer<pEnd; pServer++)
 		{
 			pServer->ip_addr[IP_ADDRESS_SIZE-1] = '\0';
-			if (pServer->status == FDFS_STORAGE_STATUS_NONE)
+			if (pServer->status == FDFS_STORAGE_STATUS_NONE \
+			 || pServer->status == FDFS_STORAGE_STATUS_ACTIVE \
+			 || pServer->status == FDFS_STORAGE_STATUS_ONLINE)
 			{
-				pServer->status = FDFS_STORAGE_STATUS_DELETED;
+				continue;
 			}
 
 			memcpy(target_storage.ip_addr, pServer->ip_addr, \
@@ -2527,40 +2536,31 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 				sizeof(FDFSStorageDetail *), \
 				tracker_mem_cmp_by_ip_addr)) != NULL)
 			{
-				if ((*ppFound)->status == \
+				if ((*ppFound)->status == pServer->status \
+				 || (*ppFound)->status == \
+					FDFS_STORAGE_STATUS_ONLINE \
+				 || (*ppFound)->status == \
 					FDFS_STORAGE_STATUS_ACTIVE)
 				{
 					continue;
 				}
 
 				if ((*ppFound)->status == \
-					FDFS_STORAGE_STATUS_OFFLINE && \
-					(pServer->status == \
-					FDFS_STORAGE_STATUS_WAIT_SYNC || \
-					pServer->status == \
-					FDFS_STORAGE_STATUS_SYNCING))
+					FDFS_STORAGE_STATUS_OFFLINE)
 				{
 					(*ppFound)->status = pServer->status;
 					pGroup->chg_count++;
 					continue;
 				}
 
-				if (((pServer->status > (*ppFound)->status) && \
-					(((*ppFound)->status == \
-					FDFS_STORAGE_STATUS_INIT) || \
-					((*ppFound)->status == \
-					FDFS_STORAGE_STATUS_WAIT_SYNC) || \
-					((*ppFound)->status == \
-					FDFS_STORAGE_STATUS_SYNCING))) || \
-					(pServer->status != (*ppFound)->status \
-					 && (pServer->status == \
-						FDFS_STORAGE_STATUS_DELETED)))
+				if (pServer->status > (*ppFound)->status)
 				{
 					(*ppFound)->status = pServer->status;
 					pGroup->chg_count++;
 				}
 			}
-			else if (pServer->status == FDFS_STORAGE_STATUS_DELETED)
+			else if (pServer->status == FDFS_STORAGE_STATUS_DELETED
+			   || pServer->status == FDFS_STORAGE_STATUS_IP_CHANGED)
 			{
 				//ignore deleted storage server
 			}
@@ -2689,6 +2689,7 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 
 	if ((pTargetServer->status == FDFS_STORAGE_STATUS_WAIT_SYNC) || \
 		(pTargetServer->status == FDFS_STORAGE_STATUS_SYNCING) || \
+		(pTargetServer->status == FDFS_STORAGE_STATUS_IP_CHANGED) || \
 		(pTargetServer->status == FDFS_STORAGE_STATUS_INIT))
 	{
 		return 0;
@@ -2772,7 +2773,9 @@ int tracker_mem_offline_store_server(TrackerClientInfo *pClientInfo)
 		(pClientInfo->pStorage->status == \
 			FDFS_STORAGE_STATUS_INIT) || \
 		(pClientInfo->pStorage->status == \
-			FDFS_STORAGE_STATUS_DELETED))
+			FDFS_STORAGE_STATUS_DELETED) || \
+		(pClientInfo->pStorage->status == \
+			FDFS_STORAGE_STATUS_IP_CHANGED))
 	{
 		return 0;
 	}

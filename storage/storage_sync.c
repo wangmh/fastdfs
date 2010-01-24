@@ -32,6 +32,7 @@
 #include "storage_global.h"
 #include "storage_func.h"
 #include "storage_sync.h"
+#include "storage_ip_changed_dealer.h"
 #include "tracker_client_thread.h"
 
 #define SYNC_BINLOG_FILE_MAX_SIZE	1024 * 1024 * 1024
@@ -1832,21 +1833,21 @@ static void* storage_sync_thread_entrance(void* arg)
 	storage_server.port = g_server_port;
 	storage_server.sock = -1;
 	while (g_continue_flag && \
-		pStorage->status != FDFS_STORAGE_STATUS_DELETED &&
+		pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
+		pStorage->status != FDFS_STORAGE_STATUS_IP_CHANGED && \
 		pStorage->status != FDFS_STORAGE_STATUS_NONE)
 	{
 		while (g_continue_flag && \
-			(pStorage->status != FDFS_STORAGE_STATUS_ACTIVE && \
-			pStorage->status != FDFS_STORAGE_STATUS_WAIT_SYNC && \
-			pStorage->status != FDFS_STORAGE_STATUS_SYNCING && \
-			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
-			pStorage->status != FDFS_STORAGE_STATUS_NONE))
+			(pStorage->status == FDFS_STORAGE_STATUS_INIT ||
+			 pStorage->status == FDFS_STORAGE_STATUS_OFFLINE ||
+			 pStorage->status == FDFS_STORAGE_STATUS_ONLINE))
 		{
 			sleep(1);
 		}
 
-		if (!g_continue_flag ||
+		if ((!g_continue_flag) ||
 			pStorage->status == FDFS_STORAGE_STATUS_DELETED || \
+			pStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED || \
 			pStorage->status == FDFS_STORAGE_STATUS_NONE)
 		{
 			break;
@@ -1873,6 +1874,7 @@ static void* storage_sync_thread_entrance(void* arg)
 		conn_result = 0;
 		while (g_continue_flag && \
 			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
+			pStorage->status != FDFS_STORAGE_STATUS_IP_CHANGED && \
 			pStorage->status != FDFS_STORAGE_STATUS_NONE)
 		{
 			storage_server.sock = \
@@ -1943,8 +1945,9 @@ static void* storage_sync_thread_entrance(void* arg)
 				conn_result, strerror(conn_result));
 		}
 
-		if (!g_continue_flag ||
+		if ((!g_continue_flag) ||
 			pStorage->status == FDFS_STORAGE_STATUS_DELETED || \
+			pStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED || \
 			pStorage->status == FDFS_STORAGE_STATUS_NONE)
 		{
 			break;
@@ -1971,8 +1974,9 @@ static void* storage_sync_thread_entrance(void* arg)
 		{
 			while (g_continue_flag && \
 			(pStorage->status != FDFS_STORAGE_STATUS_ACTIVE && \
-			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
-			pStorage->status != FDFS_STORAGE_STATUS_NONE))
+			 pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
+			 pStorage->status != FDFS_STORAGE_STATUS_IP_CHANGED && \
+			 pStorage->status != FDFS_STORAGE_STATUS_NONE))
 			{
 				sleep(1);
 			}
@@ -2056,7 +2060,6 @@ static void* storage_sync_thread_entrance(void* arg)
 			(pStorage->status == FDFS_STORAGE_STATUS_ACTIVE || \
 			pStorage->status == FDFS_STORAGE_STATUS_SYNCING))
 		{
-
 			if (g_sync_part_time)
 			{
 				current_time = time(NULL);
@@ -2168,15 +2171,10 @@ static void* storage_sync_thread_entrance(void* arg)
 	}
 	storage_reader_destroy(&reader);
 
-	if (pStorage->status == FDFS_STORAGE_STATUS_DELETED)
+	if (pStorage->status == FDFS_STORAGE_STATUS_DELETED
+	 || pStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED)
 	{
-		storage_unlink_mark_file(reader.ip_addr);
-		if (strcmp(g_sync_src_ip_addr, pStorage->ip_addr) == 0)
-		{
-			*g_sync_src_ip_addr = '\0';
-			storage_write_to_sync_ini_file();
-		}
-
+		storage_changelog_req();
 		sleep(2 * g_heart_beat_interval + 1);
 		pStorage->status = FDFS_STORAGE_STATUS_NONE;
 	}
@@ -2207,7 +2205,8 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage)
 	pthread_t tid;
 
 	if (pStorage->status == FDFS_STORAGE_STATUS_DELETED || \
-		pStorage->status == FDFS_STORAGE_STATUS_NONE)
+	    pStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED || \
+	    pStorage->status == FDFS_STORAGE_STATUS_NONE)
 	{
 		return 0;
 	}

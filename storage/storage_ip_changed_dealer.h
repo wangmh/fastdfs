@@ -18,6 +18,7 @@
 extern "C" {
 #endif
 
+int storage_changelog_req();
 int storage_check_ip_changed();
 
 #ifdef __cplusplus

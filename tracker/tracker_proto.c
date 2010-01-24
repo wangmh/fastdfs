@@ -200,6 +200,8 @@ const char *get_storage_status_caption(const int status)
 			return "ONLINE";
 		case FDFS_STORAGE_STATUS_DELETED:
 			return "DELETED";
+		case FDFS_STORAGE_STATUS_IP_CHANGED:
+			return "IP_CHANGED";
 		case FDFS_STORAGE_STATUS_ACTIVE:
 			return "ACTIVE";
 		default:

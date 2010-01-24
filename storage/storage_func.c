@@ -451,10 +451,12 @@ static int storage_check_and_make_data_dirs()
 
 		iniFreeItems(&itemContext);
 
+		/*
 		printf("g_sync_old_done = %d\n", g_sync_old_done);
 		printf("g_sync_src_ip_addr = %s\n", g_sync_src_ip_addr);
 		printf("g_sync_until_timestamp = %d\n", g_sync_until_timestamp);
 		printf("g_last_storage_ip= %s\n", g_last_storage_ip);
+		*/
 	}
 	else
 	{

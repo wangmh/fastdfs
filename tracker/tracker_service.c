@@ -916,6 +916,18 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
+		if (pClientInfo->pStorage->psync_src_server->status == \
+			FDFS_STORAGE_STATUS_IP_CHANGED)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, the ip address of " \
+				"the sync src server: %s changed", \
+				__LINE__, pClientInfo->ip_addr, \
+				sync_src_ip_addr);
+			status = ENOENT;
+			break;
+		}
+
 		pClientInfo->pStorage->sync_until_timestamp = \
 				(int)buff2long(body.until_timestamp);
 		bSaveStorages = true;
@@ -1740,7 +1752,8 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 		}
 
 		if (pDestStorage->status == FDFS_STORAGE_STATUS_INIT || \
-			pDestStorage->status == FDFS_STORAGE_STATUS_DELETED)
+			pDestStorage->status == FDFS_STORAGE_STATUS_DELETED || \
+			pDestStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED)
 		{
 			pResp->status = ENOENT;
 			break;
@@ -1748,17 +1761,28 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 
 		if (pDestStorage->psync_src_server != NULL)
 		{
-			strcpy(pBody->src_ip_addr, \
-				pDestStorage->psync_src_server->ip_addr);
-			long2buff(pDestStorage->sync_until_timestamp, \
-				pBody->until_timestamp);
-			out_len += sizeof(TrackerStorageSyncReqBody);
+			if (pDestStorage->psync_src_server->status == \
+				FDFS_STORAGE_STATUS_OFFLINE
+			 || pDestStorage->psync_src_server->status == \
+				FDFS_STORAGE_STATUS_ONLINE
+			 || pDestStorage->psync_src_server->status == \
+				FDFS_STORAGE_STATUS_ACTIVE)
+			{
+				strcpy(pBody->src_ip_addr, \
+					pDestStorage->psync_src_server->ip_addr);
+				long2buff(pDestStorage->sync_until_timestamp, \
+					pBody->until_timestamp);
+				out_len += sizeof(TrackerStorageSyncReqBody);
+			}
+			else
+			{
+				pDestStorage->psync_src_server = NULL;
+				tracker_save_storages();
+			}
 		}
 
 		pResp->status = 0;
 	} while (0);
-
-	//printf("deal sync request, status=%d\n", pResp->status);
 
 	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
@@ -1831,9 +1855,9 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 				continue;
 			}
 
-			if (pServer->status != FDFS_STORAGE_STATUS_DELETED
-			&& pServer->status != FDFS_STORAGE_STATUS_INIT
-			&& pServer->status != FDFS_STORAGE_STATUS_WAIT_SYNC)
+			if (pServer->status ==FDFS_STORAGE_STATUS_OFFLINE 
+			 || pServer->status == FDFS_STORAGE_STATUS_ONLINE
+			 || pServer->status == FDFS_STORAGE_STATUS_ACTIVE)
 			{
 				source_count++;
 			}
