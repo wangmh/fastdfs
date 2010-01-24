@@ -1835,9 +1835,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		if (pClientInfo->pGroup->count <= 1 || \
-			tracker_get_group_success_upload_count( \
-				pClientInfo->pGroup) <= 0)
+		if (pClientInfo->pGroup->count <= 1)
 		{
 			pResp->status = 0;
 			break;

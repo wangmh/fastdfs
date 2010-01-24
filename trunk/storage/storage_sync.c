@@ -1245,6 +1245,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 	IniItemContext itemContext;
 	int result;
 	bool bFileExist;
+	bool bNeedSyncOld;
 
 	memset(pReader, 0, sizeof(BinLogReader));
 	pReader->mark_fd = -1;
@@ -1305,47 +1306,72 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 			return ENOENT;
 		}
 
-		pReader->binlog_index = iniGetIntValue( \
-				MARK_ITEM_BINLOG_FILE_INDEX, \
-				&itemContext, -1);
-		pReader->binlog_offset = iniGetInt64Value( \
-				MARK_ITEM_BINLOG_FILE_OFFSET, \
-				&itemContext, -1);
-		pReader->need_sync_old = iniGetBoolValue(   \
+		bNeedSyncOld = iniGetBoolValue(  \
 				MARK_ITEM_NEED_SYNC_OLD, \
 				&itemContext, false);
-		pReader->sync_old_done = iniGetBoolValue(  \
-				MARK_ITEM_SYNC_OLD_DONE, \
-				&itemContext, false);
-		pReader->until_timestamp = iniGetIntValue( \
-				MARK_ITEM_UNTIL_TIMESTAMP, \
-				&itemContext, -1);
-		pReader->scan_row_count = iniGetInt64Value( \
-				MARK_ITEM_SCAN_ROW_COUNT, \
-				&itemContext, 0);
-		pReader->sync_row_count = iniGetInt64Value( \
-				MARK_ITEM_SYNC_ROW_COUNT, \
-				&itemContext, 0);
+		if (pStorage->status == FDFS_STORAGE_STATUS_SYNCING)
+		{
+			if ((result=storage_reader_sync_init_req(pReader)) != 0)
+			{
+				iniFreeItems(&itemContext);
+				return result;
+			}
 
-		if (pReader->binlog_index < 0)
-		{
-			iniFreeItems(&itemContext);
-			logError("file: "__FILE__", line: %d, " \
-				"in mark file \"%s\", " \
-				"binlog_index: %d < 0", \
-				__LINE__, full_filename, \
-				pReader->binlog_index);
-			return EINVAL;
+			if (pReader->need_sync_old && !bNeedSyncOld)
+			{
+				bFileExist = false;  //re-sync
+			}
+			else
+			{
+				pReader->need_sync_old = bNeedSyncOld;
+			}
 		}
-		if (pReader->binlog_offset < 0)
+		else
 		{
-			iniFreeItems(&itemContext);
-			logError("file: "__FILE__", line: %d, " \
-				"in mark file \"%s\", " \
-				"binlog_offset: "OFF_PRINTF_FORMAT" < 0", \
-				__LINE__, full_filename, \
-				pReader->binlog_offset);
-			return EINVAL;
+			pReader->need_sync_old = bNeedSyncOld;
+		}
+
+		if (bFileExist)
+		{
+			pReader->binlog_index = iniGetIntValue( \
+					MARK_ITEM_BINLOG_FILE_INDEX, \
+					&itemContext, -1);
+			pReader->binlog_offset = iniGetInt64Value( \
+					MARK_ITEM_BINLOG_FILE_OFFSET, \
+					&itemContext, -1);
+			pReader->sync_old_done = iniGetBoolValue(  \
+					MARK_ITEM_SYNC_OLD_DONE, \
+					&itemContext, false);
+			pReader->until_timestamp = iniGetIntValue( \
+					MARK_ITEM_UNTIL_TIMESTAMP, \
+					&itemContext, -1);
+			pReader->scan_row_count = iniGetInt64Value( \
+					MARK_ITEM_SCAN_ROW_COUNT, \
+					&itemContext, 0);
+			pReader->sync_row_count = iniGetInt64Value( \
+					MARK_ITEM_SYNC_ROW_COUNT, \
+					&itemContext, 0);
+
+			if (pReader->binlog_index < 0)
+			{
+				iniFreeItems(&itemContext);
+				logError("file: "__FILE__", line: %d, " \
+					"in mark file \"%s\", " \
+					"binlog_index: %d < 0", \
+					__LINE__, full_filename, \
+					pReader->binlog_index);
+				return EINVAL;
+			}
+			if (pReader->binlog_offset < 0)
+			{
+				iniFreeItems(&itemContext);
+				logError("file: "__FILE__", line: %d, " \
+					"in mark file \"%s\", binlog_offset: "\
+					OFF_PRINTF_FORMAT" < 0", \
+					__LINE__, full_filename, \
+					pReader->binlog_offset);
+				return EINVAL;
+			}
 		}
 
 		iniFreeItems(&itemContext);
@@ -2034,11 +2060,12 @@ static void* storage_sync_thread_entrance(void* arg)
 			storage_report_storage_status(pStorage->ip_addr, \
 				pStorage->status);
 		}
+
 		if (pStorage->status == FDFS_STORAGE_STATUS_SYNCING)
 		{
 			if (reader.need_sync_old && reader.sync_old_done)
 			{
-				pStorage->status = FDFS_STORAGE_STATUS_ONLINE;
+				pStorage->status = FDFS_STORAGE_STATUS_OFFLINE;
 				storage_report_storage_status(  \
 					pStorage->ip_addr, \
 					pStorage->status);
@@ -2087,7 +2114,7 @@ static void* storage_sync_thread_entrance(void* arg)
 					FDFS_STORAGE_STATUS_SYNCING)
 				{
 					pStorage->status = \
-						FDFS_STORAGE_STATUS_ONLINE;
+						FDFS_STORAGE_STATUS_OFFLINE;
 					storage_report_storage_status(  \
 						pStorage->ip_addr, \
 						pStorage->status);
