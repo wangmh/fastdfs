@@ -87,9 +87,6 @@ int kill_tracker_report_threads()
 	{
 		result = kill_work_threads(report_tids, \
 				g_tracker_group.server_count);
-
-		free(report_tids);
-		report_tids = NULL;
 	}
 	else
 	{
@@ -97,6 +94,49 @@ int kill_tracker_report_threads()
 	}
 
 	return result;
+}
+
+static void thracker_report_thread_exit(TrackerServerInfo *pTrackerServer)
+{
+	int result;
+	int i;
+	pthread_t tid;
+
+	if ((result=pthread_mutex_lock(&reporter_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	tid = pthread_self();
+	for (i=0; i<g_tracker_group.server_count; i++)
+	{
+		if (pthread_equal(report_tids[i], tid))
+		{
+			break;
+		}
+	}
+
+	while (i < g_tracker_group.server_count - 1)
+	{
+		report_tids[i] = report_tids[i + 1];
+		i++;
+	}
+	
+	g_tracker_reporter_count--;
+	if ((result=pthread_mutex_unlock(&reporter_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	logDebug("file: "__FILE__", line: %d, " \
+		"report thread to tracker server %s:%d exit", \
+		__LINE__, pTrackerServer->ip_addr, pTrackerServer->port);
 }
 
 static void *tracker_report_thread_entrance(void *arg)
@@ -122,17 +162,16 @@ static void *tracker_report_thread_entrance(void *arg)
 	pTrackerServer->sock = -1;
 	tracker_index = pTrackerServer - g_tracker_group.servers;
 
+	logDebug("file: "__FILE__", line: %d, " \
+		"report thread to tracker server %s:%d started", \
+		__LINE__, pTrackerServer->ip_addr, pTrackerServer->port);
+
 	sync_old_done = g_sync_old_done;
 	while (g_continue_flag &&  \
 		g_tracker_reporter_count < g_tracker_group.server_count)
 	{
 		sleep(1); //waiting for all thread started
 	}
-
-	/*
-	//printf("tracker_report_thread %s:%d start.\n", \
-		pTrackerServer->ip_addr, pTrackerServer->port);
-	*/
 
 	result = 0;
 	previousCode = 0;
@@ -420,21 +459,7 @@ static void *tracker_report_thread_entrance(void *arg)
 			result, strerror(result));
 	}
 
-	if ((result=pthread_mutex_lock(&reporter_thread_lock)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_lock fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
-	}
-	g_tracker_reporter_count--;
-	if ((result=pthread_mutex_unlock(&reporter_thread_lock)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_unlock fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
-	}
+	thracker_report_thread_exit(pTrackerServer);
 
 	return NULL;
 }
@@ -1024,8 +1049,8 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 
 	memset(&header, 0, sizeof(header));
 	header.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
-	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, sizeof(header), \
-				g_network_timeout)) != 0)
+	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, \
+			sizeof(header), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \

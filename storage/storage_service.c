@@ -3649,14 +3649,21 @@ data buff (struct)
 			"call pthread_mutex_unlock fail", \
 			__LINE__);
 	}
+
 	if(client_info.sock < 0) //error
 	{
-		if (result == ETIMEDOUT || result == EINTR || \
-			result == EAGAIN)
+		if (result == ETIMEDOUT || result == EAGAIN)
 		{
 			continue;
 		}
-			
+
+		/*
+		if (result == EINTR)
+		{
+			usleep(1000);
+		}
+		*/
+	
 		if(result == EBADF)
 		{
 			logError("file: "__FILE__", line: %d, " \
