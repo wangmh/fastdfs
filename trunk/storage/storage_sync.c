@@ -797,9 +797,6 @@ int kill_storage_sync_threads()
 	{
 		result = kill_work_threads(sync_tids, \
 				g_storage_sync_thread_count);
-
-		free(sync_tids);
-		sync_tids = NULL;
 	}
 	else
 	{
@@ -1827,6 +1824,50 @@ static void storage_sync_get_start_end_times(time_t current_time, \
 	*end_time = mktime(&tm_time);
 }
 
+static void storage_sync_thread_exit(TrackerServerInfo *pStorage)
+{
+	int result;
+	int i;
+	pthread_t tid;
+
+	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	tid = pthread_self();
+	for (i=0; i<g_storage_sync_thread_count; i++)
+	{
+		if (pthread_equal(sync_tids[i], tid))
+		{
+			break;
+		}
+	}
+
+	while (i < g_storage_sync_thread_count - 1)
+	{
+		sync_tids[i] = sync_tids[i + 1];
+		i++;
+	}
+	
+	g_storage_sync_thread_count--;
+
+	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	logDebug("file: "__FILE__", line: %d, " \
+		"sync thread to storage server %s:%d exit", 
+		__LINE__, pStorage->ip_addr, pStorage->port);
+}
+
 static void* storage_sync_thread_entrance(void* arg)
 {
 	FDFSStorageBrief *pStorage;
@@ -1837,7 +1878,6 @@ static void* storage_sync_thread_entrance(void* arg)
 	int read_result;
 	int sync_result;
 	int conn_result;
-	int result;
 	int record_len;
 	int previousCode;
 	int nContinuousFail;
@@ -1858,6 +1898,11 @@ static void* storage_sync_thread_entrance(void* arg)
 	strcpy(storage_server.group_name, g_group_name);
 	storage_server.port = g_server_port;
 	storage_server.sock = -1;
+
+	logDebug("file: "__FILE__", line: %d, " \
+		"sync thread to storage server %s:%d started", \
+		__LINE__, storage_server.ip_addr, storage_server.port);
+
 	while (g_continue_flag && \
 		pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
 		pStorage->status != FDFS_STORAGE_STATUS_IP_CHANGED && \
@@ -2206,21 +2251,7 @@ static void* storage_sync_thread_entrance(void* arg)
 		pStorage->status = FDFS_STORAGE_STATUS_NONE;
 	}
 
-	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_lock fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
-	}
-	g_storage_sync_thread_count--;
-	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_unlock fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
-	}
+	storage_sync_thread_exit(&storage_server);
 
 	return NULL;
 }
