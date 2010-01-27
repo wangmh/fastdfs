@@ -2497,6 +2497,8 @@ data buff (struct)
 	int count;
 	int recv_bytes;
 	int log_level;
+	struct sockaddr_in inaddr;
+	socklen_t sockaddr_len;
 	in_addr_t client_ip;
 	int server_sock;
 	
@@ -2519,15 +2521,21 @@ data buff (struct)
 	}
 
 	memset(&client_info, 0, sizeof(client_info));
-	client_info.sock = nbaccept(server_sock, 1 * 60, &result);
+	//client_info.sock = nbaccept(server_sock, 1 * 60, &result);
+
+	sockaddr_len = sizeof(inaddr);
+	client_info.sock = accept(server_sock, (struct sockaddr*)&inaddr, \
+				&sockaddr_len);
 	if (pthread_mutex_unlock(&tracker_thread_lock) != 0)
 	{
 		logError("file: "__FILE__", line: %d, "   \
 			"call pthread_mutex_unlock fail", \
 			__LINE__);
 	}
+
 	if(client_info.sock < 0) //error
 	{
+		result = errno != 0 ? errno : EINTR;
 		if (result == ETIMEDOUT || result == EINTR || \
 			result == EAGAIN)
 		{
@@ -2772,6 +2780,11 @@ data buff (struct)
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, result, strerror(result));
+	}
+
+	while (!g_thread_kill_done)  //waiting for kill signal
+	{
+		sleep(1);
 	}
 
 	return NULL;

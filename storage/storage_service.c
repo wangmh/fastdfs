@@ -3607,7 +3607,7 @@ data buff (struct)
 	int src_sync_timestamp;
 	FDFSStorageServer *pSrcStorage;
 	struct sockaddr_in inaddr;
-	unsigned int sockaddr_len;
+	socklen_t sockaddr_len;
 	int server_sock;
 	int create_flag;
 	int delete_flag;

@@ -539,7 +539,7 @@ in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize)
 int nbaccept(int sock, const int timeout, int *err_no)
 {
 	struct sockaddr_in inaddr;
-	unsigned int sockaddr_len;
+	socklen_t sockaddr_len;
 	fd_set read_set;
 	struct timeval t;
 	int result;
