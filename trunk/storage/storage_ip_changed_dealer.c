@@ -368,6 +368,11 @@ int storage_check_ip_changed()
 		return result;
 	}
 
+	if (*g_last_storage_ip == '\0') //first run
+	{
+		return 0;
+	}
+
 	return storage_changelog_req();
 }
 
