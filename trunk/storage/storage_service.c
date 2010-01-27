@@ -3606,6 +3606,8 @@ data buff (struct)
 	in_addr_t client_ip;
 	int src_sync_timestamp;
 	FDFSStorageServer *pSrcStorage;
+	struct sockaddr_in inaddr;
+	unsigned int sockaddr_len;
 	int server_sock;
 	int create_flag;
 	int delete_flag;
@@ -3642,7 +3644,11 @@ data buff (struct)
 	}
 
 	memset(&client_info, 0, sizeof(client_info));
-	client_info.sock = nbaccept(server_sock, 1 * 60, &result);
+	//client_info.sock = nbaccept(server_sock, 0, &result);
+
+	sockaddr_len = sizeof(inaddr);
+	client_info.sock = accept(server_sock, (struct sockaddr*)&inaddr, \
+				&sockaddr_len);
 	if (pthread_mutex_unlock(&g_storage_thread_lock) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -3652,18 +3658,12 @@ data buff (struct)
 
 	if(client_info.sock < 0) //error
 	{
+		result = errno != 0 ? errno : EINTR;
 		if (result == ETIMEDOUT || result == EAGAIN)
 		{
 			continue;
 		}
 
-		/*
-		if (result == EINTR)
-		{
-			usleep(1000);
-		}
-		*/
-	
 		if(result == EBADF)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -3983,6 +3983,11 @@ data buff (struct)
 		}
 
 		fdht_free_group_array(&group_array);
+	}
+
+	while (!g_thread_kill_done)  //waiting for kill signal
+	{
+		sleep(1);
 	}
 
 	return NULL;
