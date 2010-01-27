@@ -210,7 +210,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 {
 	TrackerHeader *pHeader;
 	char full_filename[MAX_PATH_SIZE];
-	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+256];
 	char in_buff[1];
 	char *pBuff;
 	int64_t in_bytes;
