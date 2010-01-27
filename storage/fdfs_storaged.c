@@ -268,6 +268,7 @@ int main(int argc, char *argv[])
 
 	log_set_cache(true);
 
+	g_thread_kill_done = false;
 	bTerminateFlag = false;
 	while (g_continue_flag)
 	{
@@ -276,9 +277,11 @@ int main(int argc, char *argv[])
 			pthread_kill(schedule_tid, SIGINT);
 			kill_tracker_report_threads();
 			kill_storage_sync_threads();
-			kill_work_threads(tids, g_max_connections);
 
 			g_continue_flag = false;
+			kill_work_threads(tids, g_max_connections);
+			g_thread_kill_done = true;
+
 			break;
 		}
 

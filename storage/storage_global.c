@@ -75,6 +75,7 @@ char g_run_by_user[32] = {0};
 char g_bind_addr[IP_ADDRESS_SIZE] = {0};
 bool g_client_bind_addr = true;
 bool g_storage_ip_changed_auto_adjust = false;
+bool g_thread_kill_done = false;
 
 int g_thread_stack_size = 512 * 1024;
 int g_upload_priority = DEFAULT_UPLOAD_PRIORITY;

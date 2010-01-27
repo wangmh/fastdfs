@@ -106,6 +106,8 @@ extern char g_run_by_user[32];
 extern char g_bind_addr[IP_ADDRESS_SIZE];
 extern bool g_client_bind_addr;
 extern bool g_storage_ip_changed_auto_adjust;
+extern bool g_thread_kill_done;
+
 extern int g_thread_stack_size;
 extern int g_upload_priority;
 extern time_t g_up_time;
