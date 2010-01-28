@@ -1527,8 +1527,7 @@ static int storage_binlog_preread(BinLogReader *pReader)
 		logError("file: "__FILE__", line: %d, " \
 			"read from binlog file \"%s\" fail, " \
 			"file offset: "OFF_PRINTF_FORMAT", " \
-			"error no: %d, error info: %s", \
-			__LINE__, \
+			"error no: %d, error info: %s", __LINE__, \
 			get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset + pReader->binlog_buff.length, \
 			errno, strerror(errno));
@@ -1775,6 +1774,16 @@ int storage_rename_mark_file(const char *old_ip_addr, const char *new_ip_addr)
 	if (!fileExists(old_filename))
 	{
 		return ENOENT;
+	}
+
+	get_mark_filename_by_ip(new_ip_addr, new_filename,sizeof(new_filename));
+	if (fileExists(new_filename))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"mark file %s already exists, " \
+			"ignore rename file %s to %s", \
+			__LINE__, new_filename, old_filename, new_filename);
+		return EEXIST;
 	}
 
 	get_mark_filename_by_ip(new_ip_addr, new_filename,sizeof(new_filename));

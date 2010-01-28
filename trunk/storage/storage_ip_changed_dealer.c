@@ -105,7 +105,7 @@ static int storage_report_ip_changed(TrackerServerInfo *pTrackerServer)
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, result, strerror(result));
-		return result;
+		return result == EBUSY ? 0 : result;
 	}
 }
 
