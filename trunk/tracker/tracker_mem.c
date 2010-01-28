@@ -607,7 +607,7 @@ static int tracker_load_storages(const char *data_path)
 				result = errno != 0 ? errno : ENOMEM;
 				logError("file: "__FILE__", line: %d, " \
 					"realloc %d bytes fail", __LINE__, \
-					sizeof(FDFSStorageSync) * \
+					(int)sizeof(FDFSStorageSync) * \
 					nStorageSyncSize);
 				break;
 			}
@@ -1219,8 +1219,8 @@ int tracker_mem_init()
 	if (g_groups.groups == NULL)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail, program exit!", \
-			__LINE__, sizeof(FDFSGroupInfo) * g_groups.alloc_size);
+			"malloc %d bytes fail, program exit!", __LINE__, \
+			(int)sizeof(FDFSGroupInfo) * g_groups.alloc_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1234,7 +1234,7 @@ int tracker_mem_init()
 
 		logCrit("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, program exit!", \
-			__LINE__, sizeof(int));
+			__LINE__, (int)sizeof(int));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1255,7 +1255,7 @@ int tracker_mem_init()
 
 		logCrit("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, program exit!", __LINE__, \
-			sizeof(FDFSGroupInfo *) * g_groups.alloc_size);
+			(int)sizeof(FDFSGroupInfo *) * g_groups.alloc_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1310,7 +1310,7 @@ static int **tracker_malloc_last_sync_timestamps(const int alloc_size, \
 		*err_no = errno != 0 ? errno : ENOMEM;
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
-			sizeof(int *) * alloc_size);
+			(int)sizeof(int *) * alloc_size);
 		return NULL;
 	}
 
@@ -1323,7 +1323,7 @@ static int **tracker_malloc_last_sync_timestamps(const int alloc_size, \
 			*err_no = errno != 0 ? errno : ENOMEM;
 			logError("file: "__FILE__", line: %d, " \
 				"malloc %d bytes fail", __LINE__, \
-				sizeof(int) * alloc_size);
+				(int)sizeof(int) * alloc_size);
 
 			tracker_free_last_sync_timestamps(results, alloc_size);
 			return NULL;
@@ -1351,7 +1351,7 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
-			sizeof(FDFSStorageDetail) * pGroup->alloc_size);
+			(int)sizeof(FDFSStorageDetail) * pGroup->alloc_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1364,7 +1364,7 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
-			sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
+			(int)sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 	memset(pGroup->sorted_servers, 0, \
@@ -1376,7 +1376,7 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
-			sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
+			(int)sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 	memset(pGroup->active_servers, 0, \
@@ -1387,7 +1387,7 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", \
-			__LINE__, sizeof(int));
+			__LINE__, (int)sizeof(int));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1508,7 +1508,7 @@ int tracker_mem_realloc_groups()
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", \
-			__LINE__, sizeof(FDFSGroupInfo) * new_size);
+			__LINE__, (int)sizeof(FDFSGroupInfo) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1519,7 +1519,7 @@ int tracker_mem_realloc_groups()
 		free(new_groups);
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", \
-			__LINE__, sizeof(FDFSGroupInfo *) * new_size);
+			__LINE__, (int)sizeof(FDFSGroupInfo *) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1530,7 +1530,7 @@ int tracker_mem_realloc_groups()
 		free(new_sorted_groups);
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", \
-			__LINE__, sizeof(int));
+			__LINE__, (int)sizeof(int));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1672,7 +1672,7 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", \
-			__LINE__, sizeof(FDFSStorageDetail) * new_size);
+			__LINE__, (int)sizeof(FDFSStorageDetail) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1683,7 +1683,7 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 		free(new_servers);
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", \
-			__LINE__, sizeof(FDFSStorageDetail *) * new_size);
+			__LINE__, (int)sizeof(FDFSStorageDetail *) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1696,7 +1696,7 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", \
-			__LINE__, sizeof(FDFSStorageDetail *) * new_size);
+			__LINE__, (int)sizeof(FDFSStorageDetail *) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1748,7 +1748,7 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", \
-			__LINE__, sizeof(int));
+			__LINE__, (int)sizeof(int));
 		return errno != 0 ? errno : ENOMEM;
 	}
 	*new_ref_count = 0;
@@ -1773,7 +1773,7 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 	{
 		memcpy(new_last_sync_timestamps[i],  \
 			pGroup->last_sync_timestamps[i], \
-			sizeof(int) *  pGroup->alloc_size);
+			(int)sizeof(int) *  pGroup->alloc_size);
 	}
 
 	old_size = pGroup->alloc_size;
@@ -1814,7 +1814,7 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 				result = errno != 0 ? errno : ENOMEM;
 				logError("file: "__FILE__", line: %d, " \
 					"realloc %d bytes fail", __LINE__, \
-					sizeof(FDFSStorageSync) * \
+					(int)sizeof(FDFSStorageSync) * \
 					nStorageSyncSize);
 				break;
 			}
@@ -2496,6 +2496,11 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		(pStorageServer->status == FDFS_STORAGE_STATUS_ACTIVE)))
 	{
 		pStorageServer->status = FDFS_STORAGE_STATUS_ONLINE;
+	}
+
+	if (pStorageServer->status == FDFS_STORAGE_STATUS_INIT)
+	{
+	 	pStorageServer->changelog_offset = g_changelog_fsize;
 	}
 
 	logDebug("file: "__FILE__", line: %d, " \

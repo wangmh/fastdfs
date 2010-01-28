@@ -79,22 +79,34 @@ static int storage_report_ip_changed(TrackerServerInfo *pTrackerServer)
 		IP_ADDRESS_SIZE, g_tracker_client_ip);
 
 	if((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
-		sizeof(TrackerHeader) + 2 * IP_ADDRESS_SIZE, \
-		g_network_timeout)) != 0)
+		sizeof(out_buff), g_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
-			"errno: %d, error info: %s.", \
+			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, \
-			result, strerror(result));
+			pTrackerServer->port, result, strerror(result));
 		return result;
 	}
 
 	pInBuff = in_buff;
 	result = fdfs_recv_response(pTrackerServer, \
                 &pInBuff, 0, &in_bytes);
-	return result == EALREADY ? 0 : result;
+
+	if (result == 0 || result == EALREADY || result == ENOENT)
+	{
+		return 0;
+	}
+	else
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, recv data fail or " \
+			"response status != 0, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, result, strerror(result));
+		return result;
+	}
 }
 
 static int storage_report_storage_ip_addr()
@@ -250,9 +262,13 @@ static int storage_report_storage_ip_addr()
 			continue;
 		}
 
-		if (storage_report_ip_changed(pTServer) == 0)
+		if ((result=storage_report_ip_changed(pTServer)) == 0)
 		{
 			success_count++;
+		}
+		else
+		{
+			sleep(1);
 		}
 
 		fdfs_quit(pTServer);
@@ -339,6 +355,10 @@ int storage_changelog_req()
 		if (result == 0 || result == ENOENT)
 		{
 			success_count++;
+		}
+		else
+		{
+			sleep(1);
 		}
 
 		fdfs_quit(pTServer);

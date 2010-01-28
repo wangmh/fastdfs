@@ -1032,7 +1032,7 @@ int fdht_batch_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 			*success_count = 0;
 			logError("server %s:%d reponse bytes: %d != %d", \
 				pServer->ip_addr, pServer->port, \
-				in_bytes, p - pInBuff);
+				in_bytes, (int)(p - pInBuff));
 			result = EINVAL;
 			break;
 		}
@@ -1419,9 +1419,9 @@ int fdht_stat_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 
 		if (in_bytes >= size)
 		{
-			logError("server %s:%d reponse bytes: %d >= buff size",
-				pServer->ip_addr, pServer->port, 
-				in_bytes, size);
+			logError("server %s:%d reponse bytes: %d >= " \
+				"buff size: %d", pServer->ip_addr, \
+				pServer->port, in_bytes, size);
 			result = ENOSPC;
 			break;
 		}

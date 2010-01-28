@@ -160,7 +160,8 @@ int fdfs_load_tracker_group_ex(TrackerServerGroup *pTrackerGroup, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
-			sizeof(TrackerServerInfo)*pTrackerGroup->server_count);
+			(int)sizeof(TrackerServerInfo) * \
+			pTrackerGroup->server_count);
 		pTrackerGroup->server_count = 0;
 		return errno != 0 ? errno : ENOMEM;
 	}

@@ -371,7 +371,7 @@ int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
 	if (in_bytes != sizeof(in_buff))
 	{
 		logError("recv data from storage server %s:%d fail, " \
-			"recv bytes: %d != %d", \
+			"recv bytes: "INT64_PRINTF_FORMAT" != %d", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
 			in_bytes, (int)sizeof(in_buff));

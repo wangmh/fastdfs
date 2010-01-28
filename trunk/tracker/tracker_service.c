@@ -575,10 +575,11 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	if (nInPackLen != sizeof(body))
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"cmd: %d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
+			"cmd: %d, client ip: %s, " \
+			"package size "INT64_PRINTF_FORMAT" " \
 			"is not correct, expect length: %d.", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_JOIN, \
-			pClientInfo->ip_addr, nInPackLen, sizeof(body));
+			pClientInfo->ip_addr, nInPackLen, (int)sizeof(body));
 		status = EINVAL;
 		break;
 	}
@@ -675,10 +676,9 @@ static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-				"is not correct, " \
-				"expect length > %d", \
-				__LINE__, \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length > %d", __LINE__, \
 				TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE, \
 				pClientInfo->ip_addr,  \
 				nInPackLen, FDFS_GROUP_NAME_MAX_LEN);
@@ -689,13 +689,12 @@ static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen >= sizeof(in_buff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-				"is too large, " \
-				"expect length should < %d", \
-				__LINE__, \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is too large, " \
+				"expect length should < %d", __LINE__, \
 				TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE, \
 				pClientInfo->ip_addr, nInPackLen, \
-				sizeof(in_buff));
+				(int)sizeof(in_buff));
 			resp.status = EINVAL;
 			break;
 		}
@@ -843,10 +842,11 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 	if (nInPackLen != sizeof(body))
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"cmd: %d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-			"is not correct, expect length: %d.", \
-			__LINE__, TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY, \
-			pClientInfo->ip_addr, nInPackLen, sizeof(body));
+			"cmd: %d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT" is not correct, " \
+			"expect length: %d", __LINE__, \
+			TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY, \
+			pClientInfo->ip_addr, nInPackLen, (int)sizeof(body));
 		status = EINVAL;
 		break;
 	}
@@ -1003,7 +1003,7 @@ static int tracker_deal_server_list_group_storages( \
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, package size " \
 				INT64_PRINTF_FORMAT" is not correct, " \
-				"expect length >= %d && <=", __LINE__, \
+				"expect length >= %d && <= %d", __LINE__, \
 				TRACKER_PROTO_CMD_SERVER_LIST_STORAGE, \
 				pClientInfo->ip_addr,  \
 				nInPackLen, FDFS_GROUP_NAME_MAX_LEN, \
@@ -1207,7 +1207,7 @@ static int tracker_deal_service_query_fetch_update( \
 				"expect length should < %d", \
 				__LINE__, cmd, \
 				pClientInfo->ip_addr, nInPackLen, \
-				sizeof(in_buff));
+				(int)sizeof(in_buff));
 			pResp->status = EINVAL;
 			break;
 		}
@@ -2261,7 +2261,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 				"expect length: %d", __LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_REPORT_DISK_USAGE, \
 				pClientInfo->ip_addr, nInPackLen, \
-				sizeof(TrackerStatReportReqBody) * \
+				(int)sizeof(TrackerStatReportReqBody) * \
                         	pClientInfo->pGroup->store_path_count);
 			status = EINVAL;
 			break;
@@ -2395,13 +2395,12 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 		if (nInPackLen != sizeof(FDFSStorageStatBuff))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size "INT64_PRINTF_FORMAT" " \
-				"is not correct, " \
-				"expect length: 0 or %d", \
-				__LINE__, \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length: 0 or %d", __LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_BEAT, \
 				pClientInfo->ip_addr, nInPackLen, \
-				sizeof(FDFSStorageStatBuff));
+				(int)sizeof(FDFSStorageStatBuff));
 			status = EINVAL;
 			break;
 		}
@@ -2711,11 +2710,6 @@ data buff (struct)
 				&client_info, nInPackLen);
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_REPORT_IP_CHANGED:
-			if ((result=tracker_check_logined(&client_info)) != 0)
-			{
-				break;
-			}
-
 			result = tracker_deal_storage_report_ip_changed( \
 				&client_info, nInPackLen);
 			break;
