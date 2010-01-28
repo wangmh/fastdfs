@@ -50,7 +50,7 @@ int fdht_split_ids(const char *szIds, int **ppIds, int *id_count)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s.", \
-			__LINE__, sizeof(int) * alloc_count, \
+			__LINE__, (int)sizeof(int) * alloc_count, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -235,7 +235,7 @@ int fdht_split_ids(const char *szIds, int **ppIds, int *id_count)
 					"malloc %d bytes fail, " \
 					"errno: %d, error info: %s.", \
 					__LINE__, \
-					sizeof(int) * alloc_count,\
+					(int)sizeof(int) * alloc_count,\
 					result, strerror(result));
 
 				break;
@@ -367,8 +367,9 @@ int fdht_load_groups_ex(IniItemContext *pItemContext, \
 	if (pGroupArray->groups == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, sizeof(ServerArray)*pGroupArray->group_count,\
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			(int)sizeof(ServerArray) * pGroupArray->group_count,\
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -379,7 +380,7 @@ int fdht_load_groups_ex(IniItemContext *pItemContext, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, sizeof(FDHTServerInfo *) * \
+			__LINE__, (int)sizeof(FDHTServerInfo *) * \
 			pGroupArray->group_count, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
@@ -391,8 +392,9 @@ int fdht_load_groups_ex(IniItemContext *pItemContext, \
 	if (pGroupArray->servers == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, sizeof(FDHTServerInfo) * alloc_server_count, \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			(int)sizeof(FDHTServerInfo) * alloc_server_count, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -418,7 +420,7 @@ int fdht_load_groups_ex(IniItemContext *pItemContext, \
 			logError("file: "__FILE__", line: %d, " \
 				"malloc %d bytes fail, " \
 				"errno: %d, error info: %s", __LINE__, \
-				sizeof(FDHTServerInfo) * pServerArray->count, \
+				(int)sizeof(FDHTServerInfo)*pServerArray->count,
 				errno, strerror(errno));
 			return errno != 0 ? errno : ENOMEM;
 		}
@@ -430,7 +432,7 @@ int fdht_load_groups_ex(IniItemContext *pItemContext, \
 			logError("file: "__FILE__", line: %d, " \
 				"malloc %d bytes fail, " \
 				"errno: %d, error info: %s", __LINE__, \
-				sizeof(FDHTServerInfo *) * pServerArray->count,\
+				(int)sizeof(FDHTServerInfo *)*pServerArray->count,
 				errno, strerror(errno));
 			return errno != 0 ? errno : ENOMEM;
 		}
@@ -508,7 +510,7 @@ int fdht_load_groups_ex(IniItemContext *pItemContext, \
 							"errno: %d, " \
 							"error info: %s", \
 							__LINE__, \
-							sizeof(FDHTServerInfo) \
+							(int)sizeof(FDHTServerInfo) \
 							 * alloc_server_count, \
 							errno, strerror(errno));
 						return errno!=0 ? errno:ENOMEM;
@@ -580,7 +582,7 @@ int fdht_load_groups_ex(IniItemContext *pItemContext, \
 			logError("file: "__FILE__", line: %d, " \
 				"malloc %d bytes fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, sizeof(FDHTServerInfo) * \
+				__LINE__, (int)sizeof(FDHTServerInfo) * \
 				pGroupArray->server_count, \
 				errno, strerror(errno));
 			return errno != 0 ? errno : ENOMEM;
@@ -648,7 +650,7 @@ int fdht_copy_group_array(GroupArray *pDestGroupArray, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, sizeof(ServerArray) * \
+			__LINE__, (int)sizeof(ServerArray) * \
 			pDestGroupArray->group_count, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
@@ -660,7 +662,7 @@ int fdht_copy_group_array(GroupArray *pDestGroupArray, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, sizeof(FDHTServerInfo) * \
+			__LINE__, (int)sizeof(FDHTServerInfo) * \
 			pDestGroupArray->server_count, \
 			errno, strerror(errno));
 
@@ -685,7 +687,7 @@ int fdht_copy_group_array(GroupArray *pDestGroupArray, \
 			logError("file: "__FILE__", line: %d, " \
 				"malloc %d bytes fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, sizeof(FDHTServerInfo *) * \
+				__LINE__, (int)sizeof(FDHTServerInfo *) * \
 				pServerArray->count, \
 				errno, strerror(errno));
 			return errno != 0 ? errno : ENOMEM;
