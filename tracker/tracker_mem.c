@@ -1488,7 +1488,7 @@ int tracker_mem_destroy()
 	return result;
 }
 
-int tracker_mem_realloc_groups()
+static int tracker_mem_realloc_groups(const bool bNeedSleep)
 {
 	FDFSGroupInfo *old_groups;
 	FDFSGroupInfo **old_sorted_groups;
@@ -1565,7 +1565,10 @@ int tracker_mem_realloc_groups()
 					g_groups.store_group);
 	}
 
-	sleep(1);
+	if (bNeedSleep)
+	{
+		sleep(1);
+	}
 
 	if (*(old_groups[0].ref_count) <= 0)
 	{
@@ -1640,7 +1643,7 @@ FDFSStorageDetail *tracker_get_group_sync_src_server(FDFSGroupInfo *pGroup, \
 }
 
 static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
-		const int inc_count)
+		const int inc_count, const bool bNeedSleep)
 {
 	int result;
 	FDFSStorageDetail *old_servers;
@@ -1837,7 +1840,10 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 		free(pStorageSyncs);
 	}
 
-	sleep(1);
+	if (bNeedSleep)
+	{
+		sleep(1);
+	}
 
 	if (*(old_servers[0].ref_count) <= 0)
 	{
@@ -1947,7 +1953,7 @@ FDFSGroupInfo *tracker_mem_get_group(const char *group_name)
 }
 
 int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
-			const bool bIncRef, bool *bInserted)
+		const bool bIncRef, bool *bInserted)
 {
 	FDFSGroupInfo *pGroup;
 	int result;
@@ -1974,7 +1980,7 @@ int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 		{
 			if (g_groups.count >= g_groups.alloc_size)
 			{
-				result = tracker_mem_realloc_groups();
+				result = tracker_mem_realloc_groups(bIncRef);
 				if (result != 0)
 				{
 					break;
@@ -2244,7 +2250,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 				pClientInfo->pGroup->alloc_size)
 			{
 				result = tracker_mem_realloc_store_servers( \
-						pClientInfo->pGroup, 1);
+						pClientInfo->pGroup, 1, bIncRef);
 				if (result != 0)
 				{
 					break;
@@ -2537,7 +2543,7 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 		if (pGroup->count + server_count >= pGroup->alloc_size)
 		{
 			result = tracker_mem_realloc_store_servers( \
-					pGroup, server_count);
+					pGroup, server_count, true);
 			if (result != 0)
 			{
 				break;
