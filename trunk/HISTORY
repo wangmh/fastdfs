@@ -17,7 +17,8 @@ Version 1.25  2010-01-27
  * write to system data file using lock
  * common/ini_file_reader.c: use one context parameter, not two parameters
  * storage status sync modified (the code of tracker and storage both changed)
- * when recv kill signal, worker thread quit more quickly
+ * when recv kill signal, worker thread quit more quickly, daemon process 
+   fdfs_trackerd and fdfs_storage quit very quickly when recv kill signal
  * remove compile warning info of logError
  * tracker server start more quickly with many groups and storage servers
 
