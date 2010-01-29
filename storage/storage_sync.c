@@ -2026,6 +2026,12 @@ static void* storage_sync_thread_entrance(void* arg)
 			nContinuousFail++;
 			close(storage_server.sock);
 			storage_server.sock = -1;
+
+			if (!g_continue_flag)
+			{
+				break;
+			}
+
 			sleep(1);
 		}
 
