@@ -3987,7 +3987,7 @@ data buff (struct)
 
 	while (!g_thread_kill_done)  //waiting for kill signal
 	{
-		sleep(1);
+		usleep(50000);
 	}
 
 	return NULL;

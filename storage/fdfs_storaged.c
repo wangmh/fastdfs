@@ -272,20 +272,23 @@ int main(int argc, char *argv[])
 	bTerminateFlag = false;
 	while (g_continue_flag)
 	{
+		sleep(1);
+
 		if (bTerminateFlag)
 		{
-			pthread_kill(schedule_tid, SIGINT);
+			g_continue_flag = false;
+
+			if (g_schedule_flag)
+			{
+				pthread_kill(schedule_tid, SIGINT);
+			}
 			kill_tracker_report_threads();
 			kill_storage_sync_threads();
-
-			g_continue_flag = false;
 			kill_work_threads(tids, g_max_connections);
 			g_thread_kill_done = true;
 
 			break;
 		}
-
-		sleep(1);
 	}
 
 	while (g_storage_thread_count != 0 || \
@@ -293,7 +296,7 @@ int main(int argc, char *argv[])
 		g_storage_sync_thread_count > 0 || \
 		g_schedule_flag)
 	{
-		sleep(1);
+		usleep(50000);
 	}
 
 	tracker_report_destroy();

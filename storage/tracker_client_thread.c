@@ -82,18 +82,32 @@ int tracker_report_destroy()
 int kill_tracker_report_threads()
 {
 	int result;
+	int kill_res;
 
-	if (report_tids != NULL)
+	if (report_tids == NULL)
 	{
-		result = kill_work_threads(report_tids, \
-				g_tracker_group.server_count);
-	}
-	else
-	{
-		result = 0;
+		return 0;
 	}
 
-	return result;
+	if ((result=pthread_mutex_lock(&reporter_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	kill_res = kill_work_threads(report_tids, g_tracker_group.server_count);
+
+	if ((result=pthread_mutex_unlock(&reporter_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	return kill_res;
 }
 
 static void thracker_report_thread_exit(TrackerServerInfo *pTrackerServer)
