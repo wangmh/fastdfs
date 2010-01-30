@@ -1161,7 +1161,21 @@ int tracker_save_sync_timestamps()
 
 static int tracker_open_changlog_file()
 {
+	char data_path[MAX_PATH_SIZE];
 	char filename[MAX_PATH_SIZE];
+
+	snprintf(data_path, sizeof(data_path), "%s/data", g_base_path);
+	if (!fileExists(data_path))
+	{
+		if (mkdir(data_path, 0755) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"mkdir \"%s\" fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, data_path, errno, strerror(errno));
+			return errno != 0 ? errno : ENOENT;
+		}
+	}
 
 	snprintf(filename, sizeof(filename), "%s/data/%s", \
 		g_base_path, STORAGE_SERVERS_CHANGELOG_FILENAME);

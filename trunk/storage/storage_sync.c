@@ -991,8 +991,8 @@ static int storage_open_readable_binlog(BinLogReader *pReader)
 	    lseek(pReader->binlog_fd, pReader->binlog_offset, SEEK_SET) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"seek binlog file \"%s\" fail, file offset="OFF_PRINTF_FORMAT", " \
-			"errno: %d, error info: %s", \
+			"seek binlog file \"%s\" fail, file offset=" \
+			OFF_PRINTF_FORMAT", errno: %d, error info: %s", \
 			__LINE__, full_filename, pReader->binlog_offset, \
 			errno, strerror(errno));
 
@@ -1901,6 +1901,7 @@ static void* storage_sync_thread_entrance(void* arg)
 	int read_result;
 	int sync_result;
 	int conn_result;
+	int result;
 	int record_len;
 	int previousCode;
 	int nContinuousFail;
@@ -2061,11 +2062,12 @@ static void* storage_sync_thread_entrance(void* arg)
 			continue;
 		}
 
-		if (storage_reader_init(pStorage, &reader) != 0)
+		if ((result=storage_reader_init(pStorage, &reader)) != 0)
 		{
 			logCrit("file: "__FILE__", line: %d, " \
-				"storage_reader_init fail, program exit!", \
-				__LINE__);
+				"storage_reader_init fail, errno=%d, " \
+				"program exit!", \
+				__LINE__, result);
 			g_continue_flag = false;
 			break;
 		}

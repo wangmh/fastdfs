@@ -1,5 +1,5 @@
 
-Version 1.25  2010-01-27
+Version 1.25  2010-01-30
  * storage_sync.c if source file not exist when sync a file, change from 
    logWarning to logDebug
  * filename buff size change from 64 to 128
