@@ -11,7 +11,7 @@ int main()
 }
 EOF
 
-gcc -o a.out $tmp_src_filename
+gcc -D_FILE_OFFSET_BITS=64 -o a.out $tmp_src_filename
 output=`./a.out`
 
 if [ -f /bin/expr ]; then
