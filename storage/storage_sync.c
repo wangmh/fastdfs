@@ -1480,6 +1480,7 @@ static int storage_write_to_mark_file(BinLogReader *pReader)
 		MARK_ITEM_UNTIL_TIMESTAMP, (int)pReader->until_timestamp, \
 		MARK_ITEM_SCAN_ROW_COUNT, pReader->scan_row_count, \
 		MARK_ITEM_SYNC_ROW_COUNT, pReader->sync_row_count);
+
 	if ((result=storage_write_to_fd(pReader->mark_fd, \
 		get_mark_filename_by_reader, pReader, buff, len)) == 0)
 	{

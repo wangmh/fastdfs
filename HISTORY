@@ -1,5 +1,5 @@
 
-Version 1.25  2010-01-30
+Version 1.25  2010-02-04
  * storage_sync.c if source file not exist when sync a file, change from 
    logWarning to logDebug
  * filename buff size change from 64 to 128
@@ -21,6 +21,7 @@ Version 1.25  2010-01-30
    fdfs_trackerd and fdfs_storage quit very quickly when recv kill signal
  * remove compile warning info of logError
  * tracker server start more quickly with many groups and storage servers
+ * bug fixed: correct off_t printf format
 
 Version 1.24  2010-01-06
  * call php_fdfs_close with TSRMLS_CC as php_fdfs_close(i_obj TSRMLS_CC)
