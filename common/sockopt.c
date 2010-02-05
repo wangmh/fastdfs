@@ -901,10 +901,12 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 	int result;
 	int flags;
 #ifdef USE_SENDFILE
+   #if defined(OS_FREEBSD) || defined(OS_LINUX)
 	off_t offset;
 	#ifdef OS_LINUX
 	int64_t remain_bytes;
 	#endif
+   #endif
 #else
 	int64_t remain_bytes;
 #endif
