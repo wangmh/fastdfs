@@ -1,4 +1,7 @@
 
+Version 1.26  2010-02-05
+ * remove compile warning of logError
+
 Version 1.25  2010-02-04
  * storage_sync.c if source file not exist when sync a file, change from 
    logWarning to logDebug

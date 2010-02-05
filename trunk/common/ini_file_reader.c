@@ -82,8 +82,8 @@ int iniLoadItems(const char *szFilename, IniItemContext *pContext)
 	if (pContext->items == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %ld bytes fail", __LINE__, \
-			sizeof(IniItemInfo) * alloc_items);
+			"malloc %d bytes fail", __LINE__, \
+			(int)sizeof(IniItemInfo) * alloc_items);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -168,8 +168,8 @@ int iniLoadItemsFromBuffer(char *content, IniItemContext *pContext)
 	if (pContext->items == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %ld bytes fail", __LINE__, \
-			sizeof(IniItemInfo) * alloc_items);
+			"malloc %d bytes fail", __LINE__, \
+			(int)sizeof(IniItemInfo) * alloc_items);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -225,8 +225,8 @@ static int iniDoLoadItemsFromBuffer(char *content, IniItemContext *pContext, \
 			if (pIncludeFilename == NULL)
 			{
 				logError("file: "__FILE__", line: %d, " \
-					"strdup %ld bytes fail", __LINE__, \
-					strlen(pLine + 9) + 1);
+					"strdup %d bytes fail", __LINE__, \
+					(int)strlen(pLine + 9) + 1);
 				result = errno != 0 ? errno : ENOMEM;
 				break;
 			}
@@ -289,8 +289,8 @@ static int iniDoLoadItemsFromBuffer(char *content, IniItemContext *pContext, \
 			if (pContext->items == NULL)
 			{
 				logError("file: "__FILE__", line: %d, " \
-					"realloc %ld bytes fail", __LINE__, \
-					sizeof(IniItemInfo) * (*nAllocItems));
+					"realloc %d bytes fail", __LINE__, \
+					(int)sizeof(IniItemInfo)*(*nAllocItems));
 				result = errno != 0 ? errno : ENOMEM;
 				break;
 			}
