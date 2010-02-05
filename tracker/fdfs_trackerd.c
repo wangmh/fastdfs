@@ -38,9 +38,11 @@
 
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
 #include "linux_stack_trace.h"
+
+static bool bSegmentFault = false;
 #endif
 
-bool bTerminateFlag = false;
+static bool bTerminateFlag = false;
 
 static void sigQuitHandler(int sig);
 static void sigHupHandler(int sig);
@@ -263,6 +265,15 @@ int main(int argc, char *argv[])
 
 	while ((g_tracker_thread_count != 0) || g_schedule_flag)
 	{
+
+#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+		if (bSegmentFault)
+		{
+			sleep(5);
+			break;
+		}
+#endif
+
 		usleep(50000);
 	}
 	
@@ -280,6 +291,8 @@ int main(int argc, char *argv[])
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
 static void sigSegvHandler(int signum, siginfo_t *info, void *ptr)
 {
+	bSegmentFault = true;
+
 	if (!bTerminateFlag)
 	{
 		bTerminateFlag = true;
