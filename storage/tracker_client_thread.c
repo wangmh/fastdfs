@@ -993,10 +993,10 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
 			"recv body length: "INT64_PRINTF_FORMAT" is invalid, " \
-			"expect body length: %ld", \
+			"expect body length: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
-			sizeof(syncReqbody));
+			(int)sizeof(syncReqbody));
 		return EINVAL;
 	}
 
@@ -1049,10 +1049,10 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
 			"recv body length: "INT64_PRINTF_FORMAT" is invalid, " \
-			"expect body length: %ld", \
+			"expect body length: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
-			sizeof(syncReqbody));
+			(int)sizeof(syncReqbody));
 		return EINVAL;
 	}
 
@@ -1119,10 +1119,10 @@ static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer)
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
 			"recv body length: "INT64_PRINTF_FORMAT" is invalid, " \
-			"expect body length: %ld", \
+			"expect body length: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
-			sizeof(syncReqbody));
+			(int)sizeof(syncReqbody));
 		return EINVAL;
 	}
 
@@ -1573,9 +1573,9 @@ int tracker_report_thread_start()
 	if (report_tids == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %ld bytes fail, " \
+			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, sizeof(pthread_t) * \
+			__LINE__, (int)sizeof(pthread_t) * \
 			g_tracker_group.server_count, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
@@ -1587,9 +1587,9 @@ int tracker_report_thread_start()
 	if (src_storage_status == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %ld bytes fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, sizeof(int)*g_tracker_group.server_count, \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			(int)sizeof(int) * g_tracker_group.server_count, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}

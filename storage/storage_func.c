@@ -666,8 +666,8 @@ static int storage_load_paths(IniItemContext *pItemContext)
 	if (g_store_paths == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %ld bytes fail, errno: %d, error info: %s", \
-			__LINE__, sizeof(char *) *g_path_count, \
+			"malloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(char *) *g_path_count, \
 			errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -682,8 +682,8 @@ static int storage_load_paths(IniItemContext *pItemContext)
 	if (g_store_paths[0] == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc %ld bytes fail, errno: %d, error info: %s", \
-			__LINE__, strlen(pPath), errno, strerror(errno));
+			"malloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, (int)strlen(pPath), errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -719,9 +719,9 @@ static int storage_load_paths(IniItemContext *pItemContext)
 		if (g_store_paths[i] == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"malloc %ld bytes fail, " \
+				"malloc %d bytes fail, " \
 				"errno: %d, error info: %s", __LINE__, \
-				strlen(pPath), errno, strerror(errno));
+				(int)strlen(pPath), errno, strerror(errno));
 			return errno != 0 ? errno : ENOMEM;
 		}
 	}
