@@ -37,7 +37,7 @@ HEADER_FILES = ../common/common_define.h ../common/fdfs_define.h \
 
 ALL_OBJS = $(STATIC_OBJS) $(SHARED_OBJS)
 
-ALL_PRGS = fdfs_monitor fdfs_test fdfs_test1
+ALL_PRGS = batch_cmd fdfs_monitor fdfs_test fdfs_test1
 ALL_LIBS = libfdfsclient.so.1
 
 all: $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS)

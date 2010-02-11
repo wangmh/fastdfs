@@ -352,6 +352,10 @@ static int iniDoLoadItemsFromBuffer(char *content, IniContext *pContext)
 						strerror(result));
 					break;
 				}
+				else
+				{
+					result = 0;
+				}
 			}
 
 			pContext->current_section = pSection;
