@@ -78,12 +78,12 @@ bool fileExists(const char *filename);
 bool isDir(const char *filename);
 bool isFile(const char *filename);
 bool is_filename_secure(const char *filename, const int len);
-void load_log_level(IniItemContext *pItemContext);
+void load_log_level(IniContext *pIniContext);
 void set_log_level(char *pLogLevel);
-int load_allow_hosts(IniItemContext *pItemContext, \
+int load_allow_hosts(IniContext *pIniContext, \
 		in_addr_t **allow_ip_addrs, int *allow_ip_count);
 
-int get_time_item_from_conf(IniItemContext *pItemContext, \
+int get_time_item_from_conf(IniContext *pIniContext, \
 		const char *item_name, TimeInfo *pTimeInfo, \
 		const byte default_hour, const byte default_minute);
 

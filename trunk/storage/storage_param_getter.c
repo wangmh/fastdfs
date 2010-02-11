@@ -73,7 +73,7 @@ static int storage_do_parameter_req(TrackerServerInfo *pTrackerServer, \
 }
 
 static int storage_do_get_params_from_tracker( \
-		IniItemContext *itemContexts, int *count)
+		IniContext *iniContext, int *count)
 {
 	TrackerServerInfo *pGlobalServer;
 	TrackerServerInfo *pTServer;
@@ -144,8 +144,8 @@ static int storage_do_get_params_from_tracker( \
 						sizeof(in_buff));
 		if (result == 0)
 		{
-			result = iniLoadItemsFromBuffer(in_buff, \
-					itemContexts + (*count));
+			result = iniLoadFromBuffer(in_buff, \
+					iniContext + (*count));
 			if (result != 0)
 			{
 				close(pTServer->sock);
@@ -171,15 +171,15 @@ static int storage_do_get_params_from_tracker( \
 
 int storage_get_params_from_tracker()
 {
-	IniItemContext *itemContexts;
+	IniContext *iniContext;
 	int context_count;
 	int bytes;
 	int i;
 	int result;
 
-	bytes = sizeof(IniItemContext) * g_tracker_group.server_count;
-	itemContexts = (IniItemContext *)malloc(bytes);
-	if (itemContexts == NULL)
+	bytes = sizeof(IniContext) * g_tracker_group.server_count;
+	iniContext = (IniContext *)malloc(bytes);
+	if (iniContext == NULL)
 	{
 		result = errno != 0 ? errno : ENOMEM;
 		logError("file: "__FILE__", line: %d, " \
@@ -189,26 +189,26 @@ int storage_get_params_from_tracker()
 		return result;
 	}
 
-	memset(itemContexts, 0, bytes);
+	memset(iniContext, 0, bytes);
 	result = storage_do_get_params_from_tracker( \
-                	itemContexts, &context_count);
+                	iniContext, &context_count);
 	if (result != 0)
 	{
-		free(itemContexts);
+		free(iniContext);
 		return result;
 	}
 
 	if (context_count == 0)
 	{
-		free(itemContexts);
+		free(iniContext);
 		return ENOENT;
 	}
 
 	for (i=0; i<context_count; i++)
 	{
-		g_storage_ip_changed_auto_adjust = iniGetBoolValue( \
+		g_storage_ip_changed_auto_adjust = iniGetBoolValue(NULL, \
 				"storage_ip_changed_auto_adjust", \
-				itemContexts + i, false);
+				iniContext + i, false);
 		if (g_storage_ip_changed_auto_adjust)
 		{
 			break;
@@ -217,9 +217,9 @@ int storage_get_params_from_tracker()
 
 	for (i=0; i<context_count; i++)
 	{
-		iniFreeItems(itemContexts + i);
+		iniFreeContext(iniContext + i);
 	}
-	free(itemContexts);
+	free(iniContext);
 
 	logInfo("file: "__FILE__", line: %d, " \
 		"storage_ip_changed_auto_adjust=%d", __LINE__, \

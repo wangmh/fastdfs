@@ -1283,9 +1283,9 @@ bool is_filename_secure(const char *filename, const int len)
 	return (strstr(filename, "/../") == NULL);
 }
 
-void load_log_level(IniItemContext *pItemContext)
+void load_log_level(IniContext *pIniContext)
 {
-	set_log_level(iniGetStrValue("log_level", pItemContext));
+	set_log_level(iniGetStrValue(NULL, "log_level", pIniContext));
 }
 
 void set_log_level(char *pLogLevel)
@@ -1412,13 +1412,13 @@ int set_run_by(const char *group_name, const char *username)
 	return 0;
 }
 
-int load_allow_hosts(IniItemContext *pItemContext, \
+int load_allow_hosts(IniContext *pIniContext, \
 		in_addr_t **allow_ip_addrs, int *allow_ip_count)
 {
 	int count;
-	IniItemInfo *pItem;
-	IniItemInfo *pItemStart;
-	IniItemInfo *pItemEnd;
+	IniItem *pItem;
+	IniItem *pItemStart;
+	IniItem *pItemEnd;
 	char *pItemValue;
 	char *pStart;
 	char *pEnd;
@@ -1430,8 +1430,8 @@ int load_allow_hosts(IniItemContext *pItemContext, \
 	in_addr_t addr;
 	char hostname[256];
 
-	if ((pItemStart=iniGetValuesEx("allow_hosts", \
-		pItemContext, &count)) == NULL)
+	if ((pItemStart=iniGetValuesEx(NULL, "allow_hosts", \
+		pIniContext, &count)) == NULL)
 	{
 		*allow_ip_count = -1; /* -1 means match any ip address */
 		*allow_ip_addrs = NULL;
@@ -1820,7 +1820,7 @@ int set_rand_seed()
 	return 0;
 }
 
-int get_time_item_from_conf(IniItemContext *pItemContext, \
+int get_time_item_from_conf(IniContext *pIniContext, \
 		const char *item_name, TimeInfo *pTimeInfo, \
 		const byte default_hour, const byte default_minute)
 {
@@ -1828,7 +1828,7 @@ int get_time_item_from_conf(IniItemContext *pItemContext, \
 	int hour;
 	int minute;
 
-	pValue = iniGetStrValue(item_name, pItemContext);
+	pValue = iniGetStrValue(NULL, item_name, pIniContext);
 	if (pValue == NULL)
 	{
 		pTimeInfo->hour = default_hour;

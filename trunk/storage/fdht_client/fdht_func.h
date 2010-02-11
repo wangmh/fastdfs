@@ -32,10 +32,10 @@ extern "C" {
 
 int fdht_split_ids(const char *szIds, int **ppIds, int *id_count);
 
-#define fdht_load_groups(pItemContext, pGroupArray) \
-	fdht_load_groups_ex(pItemContext, pGroupArray, true)
+#define fdht_load_groups(pIniContext, pGroupArray) \
+	fdht_load_groups_ex(pIniContext, pGroupArray, true)
 
-int fdht_load_groups_ex(IniItemContext *pItemContext, \
+int fdht_load_groups_ex(IniContext *pIniContext, \
 		GroupArray *pGroupArray, const bool bLoadProxyParams);
 
 int fdht_copy_group_array(GroupArray *pDestGroupArray, \

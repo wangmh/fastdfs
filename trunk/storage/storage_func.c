@@ -146,13 +146,13 @@ int storage_write_to_fd(int fd, get_filename_func filename_func, \
 static int storage_open_storage_stat()
 {
 	char full_filename[MAX_PATH_SIZE];
-	IniItemContext itemContext;
+	IniContext iniContext;
 	int result;
 
 	get_storage_stat_filename(NULL, full_filename);
 	if (fileExists(full_filename))
 	{
-		if ((result=iniLoadItems(full_filename, &itemContext)) \
+		if ((result=iniLoadFromFile(full_filename, &iniContext)) \
 			 != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -162,75 +162,75 @@ static int storage_open_storage_stat()
 			return result;
 		}
 
-		if (itemContext.count < 12)
+		if (iniContext.global.count < 12)
 		{
-			iniFreeItems(&itemContext);
+			iniFreeContext(&iniContext);
 			logError("file: "__FILE__", line: %d, " \
 				"in stat file \"%s\", item count: %d < 12", \
-				__LINE__, full_filename, itemContext.count);
+				__LINE__, full_filename, iniContext.global.count);
 			return ENOENT;
 		}
 
-		g_storage_stat.total_upload_count = iniGetInt64Value( \
+		g_storage_stat.total_upload_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_TOTAL_UPLOAD, \
-				&itemContext, 0);
-		g_storage_stat.success_upload_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.success_upload_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_SUCCESS_UPLOAD, \
-				&itemContext, 0);
-		g_storage_stat.total_download_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.total_download_count = iniGetInt64Value(NULL,  \
 				STAT_ITEM_TOTAL_DOWNLOAD, \
-				&itemContext, 0);
-		g_storage_stat.success_download_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.success_download_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_SUCCESS_DOWNLOAD, \
-				&itemContext, 0);
-		g_storage_stat.last_source_update = iniGetIntValue( \
+				&iniContext, 0);
+		g_storage_stat.last_source_update = iniGetIntValue(NULL, \
 				STAT_ITEM_LAST_SOURCE_UPD, \
-				&itemContext, 0);
-		g_storage_stat.last_sync_update = iniGetIntValue( \
+				&iniContext, 0);
+		g_storage_stat.last_sync_update = iniGetIntValue(NULL, \
 				STAT_ITEM_LAST_SYNC_UPD, \
-				&itemContext, 0);
-		g_storage_stat.total_set_meta_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.total_set_meta_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_TOTAL_SET_META, \
-				&itemContext, 0);
-		g_storage_stat.success_set_meta_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.success_set_meta_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_SUCCESS_SET_META, \
-				&itemContext, 0);
-		g_storage_stat.total_delete_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.total_delete_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_TOTAL_DELETE, \
-				&itemContext, 0);
-		g_storage_stat.success_delete_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.success_delete_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_SUCCESS_DELETE, \
-				&itemContext, 0);
-		g_storage_stat.total_get_meta_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.total_get_meta_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_TOTAL_GET_META, \
-				&itemContext, 0);
-		g_storage_stat.success_get_meta_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.success_get_meta_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_SUCCESS_GET_META, \
-				&itemContext, 0);
-		g_storage_stat.total_create_link_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.total_create_link_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_TOTAL_CREATE_LINK, \
-				&itemContext, 0);
-		g_storage_stat.success_create_link_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.success_create_link_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_SUCCESS_CREATE_LINK, \
-				&itemContext, 0);
-		g_storage_stat.total_delete_link_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.total_delete_link_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_TOTAL_DELETE_LINK, \
-				&itemContext, 0);
-		g_storage_stat.success_delete_link_count = iniGetInt64Value( \
+				&iniContext, 0);
+		g_storage_stat.success_delete_link_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_SUCCESS_DELETE_LINK, \
-				&itemContext, 0);
+				&iniContext, 0);
 
-		g_dist_path_index_high = iniGetIntValue( \
+		g_dist_path_index_high = iniGetIntValue(NULL, \
 				STAT_ITEM_DIST_PATH_INDEX_HIGH, \
-				&itemContext, 0);
-		g_dist_path_index_low = iniGetIntValue( \
+				&iniContext, 0);
+		g_dist_path_index_low = iniGetIntValue(NULL, \
 				STAT_ITEM_DIST_PATH_INDEX_LOW, \
-				&itemContext, 0);
-		g_dist_write_file_count = iniGetIntValue( \
+				&iniContext, 0);
+		g_dist_write_file_count = iniGetIntValue(NULL, \
 				STAT_ITEM_DIST_WRITE_FILE_COUNT, \
-				&itemContext, 0);
+				&iniContext, 0);
 
-		iniFreeItems(&itemContext);
+		iniFreeContext(&iniContext);
 	}
 	else
 	{
@@ -384,10 +384,10 @@ static int storage_check_and_make_data_dirs()
 			data_path, DATA_DIR_INITED_FILENAME);
 	if (fileExists(full_filename))
 	{
-		IniItemContext itemContext;
+		IniContext iniContext;
 		char *pValue;
 
-		if ((result=iniLoadItems(full_filename, &itemContext)) != 0)
+		if ((result=iniLoadFromFile(full_filename, &iniContext)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"load from file \"%s/%s\" fail, " \
@@ -397,11 +397,11 @@ static int storage_check_and_make_data_dirs()
 			return result;
 		}
 		
-		pValue = iniGetStrValue(INIT_ITEM_STORAGE_JOIN_TIME, \
-				&itemContext);
+		pValue = iniGetStrValue(NULL, INIT_ITEM_STORAGE_JOIN_TIME, \
+				&iniContext);
 		if (pValue == NULL)
 		{
-			iniFreeItems(&itemContext);
+			iniFreeContext(&iniContext);
 			logError("file: "__FILE__", line: %d, " \
 				"in file \"%s/%s\", item \"%s\" not exists", \
 				__LINE__, data_path, full_filename, \
@@ -410,11 +410,11 @@ static int storage_check_and_make_data_dirs()
 		}
 		g_storage_join_time = atoi(pValue);
 
-		pValue = iniGetStrValue(INIT_ITEM_SYNC_OLD_DONE, \
-				&itemContext);
+		pValue = iniGetStrValue(NULL, INIT_ITEM_SYNC_OLD_DONE, \
+				&iniContext);
 		if (pValue == NULL)
 		{
-			iniFreeItems(&itemContext);
+			iniFreeContext(&iniContext);
 			logError("file: "__FILE__", line: %d, " \
 				"in file \"%s/%s\", item \"%s\" not exists", \
 				__LINE__, data_path, full_filename, \
@@ -423,11 +423,11 @@ static int storage_check_and_make_data_dirs()
 		}
 		g_sync_old_done = atoi(pValue);
 
-		pValue = iniGetStrValue(INIT_ITEM_SYNC_SRC_SERVER, \
-				&itemContext);
+		pValue = iniGetStrValue(NULL, INIT_ITEM_SYNC_SRC_SERVER, \
+				&iniContext);
 		if (pValue == NULL)
 		{
-			iniFreeItems(&itemContext);
+			iniFreeContext(&iniContext);
 			logError("file: "__FILE__", line: %d, " \
 				"in file \"%s/%s\", item \"%s\" not exists", \
 				__LINE__, data_path, full_filename, \
@@ -437,19 +437,19 @@ static int storage_check_and_make_data_dirs()
 		snprintf(g_sync_src_ip_addr, sizeof(g_sync_src_ip_addr), \
 				"%s", pValue);
 
-		g_sync_until_timestamp = iniGetIntValue( \
+		g_sync_until_timestamp = iniGetIntValue(NULL, \
 				INIT_ITEM_SYNC_UNTIL_TIMESTAMP, \
-				&itemContext, 0);
+				&iniContext, 0);
 
-		pValue = iniGetStrValue(INIT_ITEM_LAST_IP_ADDRESS, \
-				&itemContext);
+		pValue = iniGetStrValue(NULL, INIT_ITEM_LAST_IP_ADDRESS, \
+				&iniContext);
 		if (pValue != NULL)
 		{
 			snprintf(g_last_storage_ip, sizeof(g_last_storage_ip), \
 				"%s", pValue);
 		}
 
-		iniFreeItems(&itemContext);
+		iniFreeContext(&iniContext);
 
 		/*
 		printf("g_sync_old_done = %d\n", g_sync_old_done);
@@ -622,13 +622,13 @@ static int init_fsync_pthread_cond()
 }
 */
 
-static int storage_load_paths(IniItemContext *pItemContext)
+static int storage_load_paths(IniContext *pItemContext)
 {
 	char item_name[64];
 	char *pPath;
 	int i;
 
-	pPath = iniGetStrValue("base_path", pItemContext);
+	pPath = iniGetStrValue(NULL, "base_path", pItemContext);
 	if (pPath == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -653,7 +653,7 @@ static int storage_load_paths(IniItemContext *pItemContext)
 		return ENOTDIR;
 	}
 
-	g_path_count = iniGetIntValue("store_path_count", pItemContext, 1);
+	g_path_count = iniGetIntValue(NULL, "store_path_count", pItemContext,1);
 	if (g_path_count <= 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -673,7 +673,7 @@ static int storage_load_paths(IniItemContext *pItemContext)
 	}
 	memset(g_store_paths, 0, sizeof(char *) * g_path_count);
 
-	pPath = iniGetStrValue("store_path0", pItemContext);
+	pPath = iniGetStrValue(NULL, "store_path0", pItemContext);
 	if (pPath == NULL)
 	{
 		pPath = g_base_path;
@@ -690,7 +690,7 @@ static int storage_load_paths(IniItemContext *pItemContext)
 	for (i=1; i<g_path_count; i++)
 	{
 		sprintf(item_name, "store_path%d", i);
-		pPath = iniGetStrValue(item_name, pItemContext);
+		pPath = iniGetStrValue(NULL, item_name, pItemContext);
 		if (pPath == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -738,7 +738,7 @@ int storage_func_init(const char *filename, \
 	char *pRunByUser;
 	char *pFsyncAfterWrittenBytes;
 	char *pThreadStackSize;
-	IniItemContext itemContext;
+	IniContext iniContext;
 	int result;
 	int64_t fsync_after_written_bytes;
 	int64_t thread_stack_size;
@@ -750,7 +750,7 @@ int storage_func_init(const char *filename, \
 	}
 	*/
 
-	if ((result=iniLoadItems(filename, &itemContext)) != 0)
+	if ((result=iniLoadFromFile(filename, &iniContext)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"load conf file \"%s\" fail, ret code: %d", \
@@ -760,7 +760,7 @@ int storage_func_init(const char *filename, \
 
 	do
 	{
-		if (iniGetBoolValue("disabled", &itemContext, false))
+		if (iniGetBoolValue(NULL, "disabled", &iniContext, false))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"conf file \"%s\" disabled=true, exit", \
@@ -769,8 +769,9 @@ int storage_func_init(const char *filename, \
 			break;
 		}
 
-		g_subdir_count_per_path=iniGetIntValue("subdir_count_per_path",
-			 &itemContext, DEFAULT_DATA_DIR_COUNT_PER_PATH);
+		g_subdir_count_per_path=iniGetIntValue(NULL, \
+				"subdir_count_per_path", &iniContext, \
+				DEFAULT_DATA_DIR_COUNT_PER_PATH);
 		if (g_subdir_count_per_path <= 0 || \
 		    g_subdir_count_per_path > 256)
 		{
@@ -781,47 +782,49 @@ int storage_func_init(const char *filename, \
 			break;
 		}
 
-		if ((result=storage_load_paths(&itemContext)) != 0)
+		if ((result=storage_load_paths(&iniContext)) != 0)
 		{
 			break;
 		}
 
-		load_log_level(&itemContext);
+		load_log_level(&iniContext);
 		if ((result=log_set_prefix(g_base_path, \
 				STORAGE_ERROR_LOG_FILENAME)) != 0)
 		{
 			break;
 		}
 
-		g_network_timeout = iniGetIntValue("network_timeout", \
-				&itemContext, DEFAULT_NETWORK_TIMEOUT);
+		g_network_timeout = iniGetIntValue(NULL, "network_timeout", \
+				&iniContext, DEFAULT_NETWORK_TIMEOUT);
 		if (g_network_timeout <= 0)
 		{
 			g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 		}
 
-		g_server_port = iniGetIntValue("port", &itemContext, \
+		g_server_port = iniGetIntValue(NULL, "port", &iniContext, \
 					FDFS_STORAGE_SERVER_DEF_PORT);
 		if (g_server_port <= 0)
 		{
 			g_server_port = FDFS_STORAGE_SERVER_DEF_PORT;
 		}
 
-		g_heart_beat_interval = iniGetIntValue("heart_beat_interval", \
-			&itemContext, STORAGE_BEAT_DEF_INTERVAL);
+		g_heart_beat_interval = iniGetIntValue(NULL, \
+				"heart_beat_interval", &iniContext, \
+				STORAGE_BEAT_DEF_INTERVAL);
 		if (g_heart_beat_interval <= 0)
 		{
 			g_heart_beat_interval = STORAGE_BEAT_DEF_INTERVAL;
 		}
 
-		g_stat_report_interval = iniGetIntValue("stat_report_interval",\
-			 &itemContext, STORAGE_REPORT_DEF_INTERVAL);
+		g_stat_report_interval = iniGetIntValue(NULL, \
+				"stat_report_interval", &iniContext, \
+				STORAGE_REPORT_DEF_INTERVAL);
 		if (g_stat_report_interval <= 0)
 		{
 			g_stat_report_interval = STORAGE_REPORT_DEF_INTERVAL;
 		}
 
-		pBindAddr = iniGetStrValue("bind_addr", &itemContext);
+		pBindAddr = iniGetStrValue(NULL, "bind_addr", &iniContext);
 		if (pBindAddr == NULL)
 		{
 			*bind_addr = '\0';
@@ -831,10 +834,10 @@ int storage_func_init(const char *filename, \
 			snprintf(bind_addr, addr_size, "%s", pBindAddr);
 		}
 
-		g_client_bind_addr = iniGetBoolValue("client_bind", \
-					&itemContext, true);
+		g_client_bind_addr = iniGetBoolValue(NULL, "client_bind", \
+					&iniContext, true);
 
-		pGroupName = iniGetStrValue("group_name", &itemContext);
+		pGroupName = iniGetStrValue(NULL, "group_name", &iniContext);
 		if (pGroupName == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -866,34 +869,34 @@ int storage_func_init(const char *filename, \
 		}
 
 		result = fdfs_load_tracker_group_ex(&g_tracker_group, \
-				filename, &itemContext);
+				filename, &iniContext);
 		if (result != 0)
 		{
 			break;
 		}
 
-		g_sync_wait_usec = iniGetIntValue("sync_wait_msec",\
-			 &itemContext, STORAGE_DEF_SYNC_WAIT_MSEC);
+		g_sync_wait_usec = iniGetIntValue(NULL, "sync_wait_msec",\
+			 &iniContext, STORAGE_DEF_SYNC_WAIT_MSEC);
 		if (g_sync_wait_usec <= 0)
 		{
 			g_sync_wait_usec = STORAGE_DEF_SYNC_WAIT_MSEC;
 		}
 		g_sync_wait_usec *= 1000;
 
-		g_sync_interval = iniGetIntValue("sync_interval",\
-			 &itemContext, 0);
+		g_sync_interval = iniGetIntValue(NULL, "sync_interval",\
+			 &iniContext, 0);
 		if (g_sync_interval < 0)
 		{
 			g_sync_interval = 0;
 		}
 		g_sync_interval *= 1000;
 
-		if ((result=get_time_item_from_conf(&itemContext, \
+		if ((result=get_time_item_from_conf(&iniContext, \
 			"sync_start_time", &g_sync_start_time, 0, 0)) != 0)
 		{
 			break;
 		}
-		if ((result=get_time_item_from_conf(&itemContext, \
+		if ((result=get_time_item_from_conf(&iniContext, \
 			"sync_end_time", &g_sync_end_time, 23, 59)) != 0)
 		{
 			break;
@@ -904,8 +907,8 @@ int storage_func_init(const char *filename, \
 				(g_sync_end_time.hour == 23 && \
 				g_sync_end_time.minute == 59));
 
-		g_max_connections = iniGetIntValue("max_connections", \
-				&itemContext, DEFAULT_MAX_CONNECTONS);
+		g_max_connections = iniGetIntValue(NULL, "max_connections", \
+				&iniContext, DEFAULT_MAX_CONNECTONS);
 		if (g_max_connections <= 0)
 		{
 			g_max_connections = DEFAULT_MAX_CONNECTONS;
@@ -915,8 +918,8 @@ int storage_func_init(const char *filename, \
 			break;
 		}
 	
-		pRunByGroup = iniGetStrValue("run_by_group", &itemContext);
-		pRunByUser = iniGetStrValue("run_by_user", &itemContext);
+		pRunByGroup = iniGetStrValue(NULL, "run_by_group", &iniContext);
+		pRunByUser = iniGetStrValue(NULL, "run_by_user", &iniContext);
 		if (pRunByGroup == NULL)
 		{
 			*g_run_by_group = '\0';
@@ -937,17 +940,17 @@ int storage_func_init(const char *filename, \
 				"%s", pRunByUser);
 		}
 
-		if ((result=load_allow_hosts(&itemContext, \
+		if ((result=load_allow_hosts(&iniContext, \
                 	 &g_allow_ip_addrs, &g_allow_ip_count)) != 0)
 		{
 			return result;
 		}
 
-		g_file_distribute_path_mode = iniGetIntValue( \
-			"file_distribute_path_mode", &itemContext, \
+		g_file_distribute_path_mode = iniGetIntValue(NULL, \
+			"file_distribute_path_mode", &iniContext, \
 			FDFS_FILE_DIST_PATH_ROUND_ROBIN);
-		g_file_distribute_rotate_count = iniGetIntValue( \
-			"file_distribute_rotate_count", &itemContext, \
+		g_file_distribute_rotate_count = iniGetIntValue(NULL, \
+			"file_distribute_rotate_count", &iniContext, \
 			FDFS_FILE_DIST_DEFAULT_ROTATE_COUNT);
 		if (g_file_distribute_rotate_count <= 0)
 		{
@@ -955,8 +958,8 @@ int storage_func_init(const char *filename, \
 				FDFS_FILE_DIST_DEFAULT_ROTATE_COUNT;
 		}
 
-		pFsyncAfterWrittenBytes = iniGetStrValue( \
-			"fsync_after_written_bytes", &itemContext);
+		pFsyncAfterWrittenBytes = iniGetStrValue(NULL, \
+			"fsync_after_written_bytes", &iniContext);
 		if (pFsyncAfterWrittenBytes == NULL)
 		{
 			fsync_after_written_bytes = 0;
@@ -968,24 +971,24 @@ int storage_func_init(const char *filename, \
 		}
 		g_fsync_after_written_bytes = fsync_after_written_bytes;
 
-		g_sync_log_buff_interval = iniGetIntValue( \
-				"sync_log_buff_interval", &itemContext, \
+		g_sync_log_buff_interval = iniGetIntValue(NULL, \
+				"sync_log_buff_interval", &iniContext, \
 				SYNC_LOG_BUFF_DEF_INTERVAL);
 		if (g_sync_log_buff_interval <= 0)
 		{
 			g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
 		}
 
-		g_sync_binlog_buff_interval = iniGetIntValue( \
-				"sync_binlog_buff_interval", &itemContext,\
+		g_sync_binlog_buff_interval = iniGetIntValue(NULL, \
+				"sync_binlog_buff_interval", &iniContext,\
 				SYNC_BINLOG_BUFF_DEF_INTERVAL);
 		if (g_sync_binlog_buff_interval <= 0)
 		{
 			g_sync_binlog_buff_interval=SYNC_BINLOG_BUFF_DEF_INTERVAL;
 		}
 
-		pThreadStackSize = iniGetStrValue( \
-			"thread_stack_size", &itemContext);
+		pThreadStackSize = iniGetStrValue(NULL, \
+			"thread_stack_size", &iniContext);
 		if (pThreadStackSize == NULL)
 		{
 			thread_stack_size = 512 * 1024;
@@ -1007,17 +1010,17 @@ int storage_func_init(const char *filename, \
 			break;
 		}
 
-		g_upload_priority = iniGetIntValue( \
-				"upload_priority", &itemContext, \
+		g_upload_priority = iniGetIntValue(NULL, \
+				"upload_priority", &iniContext, \
 				DEFAULT_UPLOAD_PRIORITY);
 
-		g_check_file_duplicate = iniGetBoolValue("check_file_duplicate",
-					&itemContext, false);
+		g_check_file_duplicate = iniGetBoolValue(NULL, \
+				"check_file_duplicate", &iniContext, false);
 		if (g_check_file_duplicate)
 		{
 			char *pKeyNamespace;
-			pKeyNamespace = iniGetStrValue( \
-				"key_namespace", &itemContext);
+			pKeyNamespace = iniGetStrValue(NULL, \
+				"key_namespace", &iniContext);
 			if (pKeyNamespace == NULL || *pKeyNamespace == '\0')
 			{
 				logError("file: "__FILE__", line: %d, " \
@@ -1035,14 +1038,14 @@ int storage_func_init(const char *filename, \
 			memcpy(g_key_namespace, pKeyNamespace, g_namespace_len);
 			*(g_key_namespace + g_namespace_len) = '\0';
 
-			if ((result=fdht_load_groups(&itemContext, \
+			if ((result=fdht_load_groups(&iniContext, \
 					&g_group_array)) != 0)
 			{
 				break;
 			}
 
-			g_keep_alive = iniGetBoolValue("keep_alive", \
-					&itemContext, false);
+			g_keep_alive = iniGetBoolValue(NULL, "keep_alive", \
+					&iniContext, false);
 		}
  
 #ifdef WITH_HTTPD
@@ -1050,14 +1053,14 @@ int storage_func_init(const char *filename, \
 		char *pHttpTrunkSize;
 		int64_t http_trunk_size;
 
-		if ((result=fdfs_http_params_load(&itemContext, \
+		if ((result=fdfs_http_params_load(&iniContext, \
 				filename, &g_http_params)) != 0)
 		{
 			break;
 		}
 
-		pHttpTrunkSize = iniGetStrValue( \
-			"http.trunk_size", &itemContext);
+		pHttpTrunkSize = iniGetStrValue(NULL, \
+			"http.trunk_size", &iniContext);
 		if (pHttpTrunkSize == NULL)
 		{
 			http_trunk_size = 64 * 1024;
@@ -1134,7 +1137,7 @@ int storage_func_init(const char *filename, \
 
 	} while (0);
 
-	iniFreeItems(&itemContext);
+	iniFreeContext(&iniContext);
 
 	if (result != 0)
 	{

@@ -29,7 +29,7 @@ void log_it(const int priority, const char* format, ...);
 void log_it_ex(const int priority, const char *text, const int text_len);
 int log_sync_func(void *args);
 
-#define LOG_FORMAT_CHECK
+//#define LOG_FORMAT_CHECK
 
 #ifdef LOG_FORMAT_CHECK  /*only for format check*/
 
