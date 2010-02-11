@@ -1,6 +1,7 @@
 
-Version 1.26  2010-02-05
+Version 1.26  2010-02-11
  * remove compile warning of logError
+ * ini file reader support section
 
 Version 1.25  2010-02-04
  * storage_sync.c if source file not exist when sync a file, change from 

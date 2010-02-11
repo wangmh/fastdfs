@@ -1253,7 +1253,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 			BinLogReader *pReader)
 {
 	char full_filename[MAX_PATH_SIZE];
-	IniItemContext itemContext;
+	IniContext iniContext;
 	int result;
 	bool bFileExist;
 	bool bNeedSyncOld;
@@ -1297,8 +1297,8 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 
 	if (bFileExist)
 	{
-		memset(&itemContext, 0, sizeof(IniItemContext));
-		if ((result=iniLoadItems(full_filename, &itemContext)) \
+		memset(&iniContext, 0, sizeof(IniContext));
+		if ((result=iniLoadFromFile(full_filename, &iniContext)) \
 			 != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -1308,23 +1308,23 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 			return result;
 		}
 
-		if (itemContext.count < 7)
+		if (iniContext.global.count < 7)
 		{
-			iniFreeItems(&itemContext);
+			iniFreeContext(&iniContext);
 			logError("file: "__FILE__", line: %d, " \
 				"in mark file \"%s\", item count: %d < 7", \
-				__LINE__, full_filename, itemContext.count);
+				__LINE__, full_filename, iniContext.global.count);
 			return ENOENT;
 		}
 
-		bNeedSyncOld = iniGetBoolValue(  \
+		bNeedSyncOld = iniGetBoolValue(NULL,  \
 				MARK_ITEM_NEED_SYNC_OLD, \
-				&itemContext, false);
+				&iniContext, false);
 		if (pStorage->status == FDFS_STORAGE_STATUS_SYNCING)
 		{
 			if ((result=storage_reader_sync_init_req(pReader)) != 0)
 			{
-				iniFreeItems(&itemContext);
+				iniFreeContext(&iniContext);
 				return result;
 			}
 
@@ -1344,28 +1344,28 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 
 		if (bFileExist)
 		{
-			pReader->binlog_index = iniGetIntValue( \
+			pReader->binlog_index = iniGetIntValue(NULL, \
 					MARK_ITEM_BINLOG_FILE_INDEX, \
-					&itemContext, -1);
-			pReader->binlog_offset = iniGetInt64Value( \
+					&iniContext, -1);
+			pReader->binlog_offset = iniGetInt64Value(NULL, \
 					MARK_ITEM_BINLOG_FILE_OFFSET, \
-					&itemContext, -1);
-			pReader->sync_old_done = iniGetBoolValue(  \
+					&iniContext, -1);
+			pReader->sync_old_done = iniGetBoolValue(NULL,  \
 					MARK_ITEM_SYNC_OLD_DONE, \
-					&itemContext, false);
-			pReader->until_timestamp = iniGetIntValue( \
+					&iniContext, false);
+			pReader->until_timestamp = iniGetIntValue(NULL, \
 					MARK_ITEM_UNTIL_TIMESTAMP, \
-					&itemContext, -1);
-			pReader->scan_row_count = iniGetInt64Value( \
+					&iniContext, -1);
+			pReader->scan_row_count = iniGetInt64Value(NULL, \
 					MARK_ITEM_SCAN_ROW_COUNT, \
-					&itemContext, 0);
-			pReader->sync_row_count = iniGetInt64Value( \
+					&iniContext, 0);
+			pReader->sync_row_count = iniGetInt64Value(NULL, \
 					MARK_ITEM_SYNC_ROW_COUNT, \
-					&itemContext, 0);
+					&iniContext, 0);
 
 			if (pReader->binlog_index < 0)
 			{
-				iniFreeItems(&itemContext);
+				iniFreeContext(&iniContext);
 				logError("file: "__FILE__", line: %d, " \
 					"in mark file \"%s\", " \
 					"binlog_index: %d < 0", \
@@ -1375,7 +1375,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 			}
 			if (pReader->binlog_offset < 0)
 			{
-				iniFreeItems(&itemContext);
+				iniFreeContext(&iniContext);
 				logError("file: "__FILE__", line: %d, " \
 					"in mark file \"%s\", binlog_offset: "\
 					OFF_PRINTF_FORMAT" < 0", \
@@ -1385,7 +1385,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 			}
 		}
 
-		iniFreeItems(&itemContext);
+		iniFreeContext(&iniContext);
 	}
 
 	pReader->last_write_row_count = pReader->scan_row_count;

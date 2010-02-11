@@ -21,19 +21,59 @@
 #define _LINE_BUFFER_SIZE	512
 #define _ALLOC_ITEMS_ONCE	8
 
-static int iniDoLoadItemsFromFile(const char *szFilename, \
-		IniItemContext *pContext, int *nAllocItems);
+static int iniDoLoadFromFile(const char *szFilename, \
+		IniContext *pContext);
 static int iniDoLoadItemsFromBuffer(char *content, \
-		IniItemContext *pContext, int *nAllocItems);
+		IniContext *pContext);
 
-int compareByItemName(const void *p1, const void *p2)
+static int iniCompareByItemName(const void *p1, const void *p2)
 {
-	return strcmp(((IniItemInfo *)p1)->name, ((IniItemInfo *)p2)->name);
+	return strcmp(((IniItem *)p1)->name, ((IniItem *)p2)->name);
 }
 
-int iniLoadItems(const char *szFilename, IniItemContext *pContext)
+static int iniInitContext(IniContext *pContext)
 {
-	int alloc_items;
+	int result;
+
+	memset(pContext, 0, sizeof(IniContext));
+	pContext->current_section = &pContext->global;
+	if ((result=hash_init(&pContext->sections, PJWHash, 10, 0.75)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"hash_init fail, errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	return result;
+}
+
+static int iniSortHashData(const int index, const HashData *data, void *args)
+{
+	IniSection *pSection;
+
+	pSection = (IniSection *)data->value;
+	if (pSection->count > 1)
+	{
+		qsort(pSection->items, pSection->count, \
+			sizeof(IniItem), iniCompareByItemName);
+	}
+
+	return 0;
+}
+
+static void iniSortItems(IniContext *pContext)
+{
+	if (pContext->global.count > 1)
+	{
+		qsort(pContext->global.items, pContext->global.count, \
+			sizeof(IniItem), iniCompareByItemName);
+	}
+
+	hash_walk(&pContext->sections, iniSortHashData, NULL);
+}
+
+int iniLoadFromFile(const char *szFilename, IniContext *pContext)
+{
 	int result;
 	char *pLast;
 	char old_cwd[MAX_PATH_SIZE];
@@ -76,32 +116,19 @@ int iniLoadItems(const char *szFilename, IniItemContext *pContext)
 		}
 	}
 
-	pContext->count = 0;
-	alloc_items = _ALLOC_ITEMS_ONCE;
-	pContext->items = (IniItemInfo *)malloc(sizeof(IniItemInfo) * alloc_items);
-	if (pContext->items == NULL)
+	if ((result=iniInitContext(pContext)) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail", __LINE__, \
-			(int)sizeof(IniItemInfo) * alloc_items);
-		return errno != 0 ? errno : ENOMEM;
+		return result;
 	}
 
-	memset(pContext->items, 0, sizeof(IniItemInfo) * alloc_items);
-	result = iniDoLoadItemsFromFile(szFilename, pContext, &alloc_items);
-	if (result != 0)
+	result = iniDoLoadFromFile(szFilename, pContext);
+	if (result == 0)
 	{
-		if (pContext->items != NULL)
-		{
-			free(pContext->items);
-			pContext->items = NULL;
-		}
-		pContext->count = 0;
+		iniSortItems(pContext);
 	}
 	else
 	{
-		qsort(pContext->items, pContext->count, sizeof(IniItemInfo), \
-			compareByItemName);
+		iniFreeContext(pContext);
 	}
 
 	if (*old_cwd != '\0' && chdir(old_cwd) != 0)
@@ -116,8 +143,8 @@ int iniLoadItems(const char *szFilename, IniItemContext *pContext)
 	return result;
 }
 
-static int iniDoLoadItemsFromFile(const char *szFilename, \
-		IniItemContext *pContext, int *nAllocItems)
+static int iniDoLoadFromFile(const char *szFilename, \
+		IniContext *pContext)
 {
 	char *content;
 	int result;
@@ -151,63 +178,59 @@ static int iniDoLoadItemsFromFile(const char *szFilename, \
 		}
 	}
 
-	result = iniDoLoadItemsFromBuffer(content, pContext, nAllocItems);
+	result = iniDoLoadItemsFromBuffer(content, pContext);
 	free(content);
 
 	return result;
 }
 
-int iniLoadItemsFromBuffer(char *content, IniItemContext *pContext)
+int iniLoadFromBuffer(char *content, IniContext *pContext)
 {
-	int alloc_items;
 	int result;
 
-	pContext->count = 0;
-	alloc_items = _ALLOC_ITEMS_ONCE;
-	pContext->items = (IniItemInfo *)malloc(sizeof(IniItemInfo) * alloc_items);
-	if (pContext->items == NULL)
+	if ((result=iniInitContext(pContext)) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail", __LINE__, \
-			(int)sizeof(IniItemInfo) * alloc_items);
-		return errno != 0 ? errno : ENOMEM;
+		return result;
 	}
 
-	memset(pContext->items, 0, sizeof(IniItemInfo) * alloc_items);
-	result = iniDoLoadItemsFromBuffer(content, pContext, &alloc_items);
-	if (result != 0)
+	result = iniDoLoadItemsFromBuffer(content, pContext);
+	if (result == 0)
 	{
-		if (pContext->items != NULL)
-		{
-			free(pContext->items);
-			pContext->items = NULL;
-		}
-		pContext->count = 0;
+		iniSortItems(pContext);
 	}
 	else
 	{
-		qsort(pContext->items, pContext->count, sizeof(IniItemInfo), \
-			compareByItemName);
+		iniFreeContext(pContext);
 	}
 
 	return result;
 }
 
-static int iniDoLoadItemsFromBuffer(char *content, IniItemContext *pContext, \
-		int *nAllocItems)
+static int iniDoLoadItemsFromBuffer(char *content, IniContext *pContext)
 {
-	IniItemInfo *pItem;
+	IniSection *pSection;
+	IniItem *pItem;
 	char *pLine;
 	char *pLastEnd;
 	char *pEqualChar;
 	char *pIncludeFilename;
+	int nLineLen;
 	int nNameLen;
 	int nValueLen;
 	int result;
 
 	result = 0;
 	pLastEnd = content - 1;
-	pItem = pContext->items + pContext->count;
+	pSection = pContext->current_section;
+	if (pSection->count > 0)
+	{
+		pItem = pSection->items + pSection->count;
+	}
+	else
+	{
+		pItem = pSection->items;
+	}
+
 	while (pLastEnd != NULL)
 	{
 		pLine = pLastEnd + 1;
@@ -244,15 +267,24 @@ static int iniDoLoadItemsFromBuffer(char *content, IniItemContext *pContext, \
 				break;
 			}
 
-			result = iniDoLoadItemsFromFile(pIncludeFilename, \
-					pContext, nAllocItems);
+			result = iniDoLoadFromFile(pIncludeFilename, \
+					pContext);
 			if (result != 0)
 			{
 				free(pIncludeFilename);
 				break;
 			}
 
-			pItem = pContext->items + pContext->count;  //must re-asign
+			pSection = pContext->current_section;
+			if (pSection->count > 0)
+			{
+				pItem = pSection->items + pSection->count;  //must re-asign
+			}
+			else
+			{
+				pItem = pSection->items;
+			}
+
 			free(pIncludeFilename);
 			continue;
 		}
@@ -260,6 +292,77 @@ static int iniDoLoadItemsFromBuffer(char *content, IniItemContext *pContext, \
 		trim(pLine);
 		if (*pLine == '#' || *pLine == '\0')
 		{
+			continue;
+		}
+
+		nLineLen = strlen(pLine);
+		if (*pLine == '[' && *(pLine + (nLineLen - 1)) == ']') //section
+		{
+			char *section_name;
+			int section_len;
+
+			*(pLine + (nLineLen - 1)) = '\0';
+			section_name = pLine + 1; //skip [
+
+			trim(section_name);
+			if (*section_name == '\0') //global section
+			{
+				pContext->current_section = &pContext->global;
+				pSection = pContext->current_section;
+				if (pSection->count > 0)
+				{
+					pItem = pSection->items + pSection->count;
+				}
+				else
+				{
+					pItem = pSection->items;
+				}
+				continue;
+			}
+
+			section_len = strlen(section_name);
+			pSection = (IniSection *)hash_find(&pContext->sections,\
+					section_name, section_len);
+			if (pSection == NULL)
+			{
+				pSection = (IniSection *)malloc(sizeof(IniSection));
+				if (pSection == NULL)
+				{
+					result = errno != 0 ? errno : ENOMEM;
+					logError("file: "__FILE__", line: %d, "\
+						"malloc %d bytes fail, " \
+						"errno: %d, error info: %s", \
+						__LINE__, \
+						(int)sizeof(IniSection), \
+						result, strerror(result));
+					
+					break;
+				}
+
+				memset(pSection, 0, sizeof(IniSection));
+				result = hash_insert(&pContext->sections, \
+					  section_name, section_len, pSection);
+				if (result < 0)
+				{
+					result *= -1;
+					logError("file: "__FILE__", line: %d, "\
+						"insert into hash table fail, "\
+						"errno: %d, error info: %s", \
+						__LINE__, result, \
+						strerror(result));
+					break;
+				}
+			}
+
+			pContext->current_section = pSection;
+			if (pSection->count > 0)
+			{
+				pItem = pSection->items + pSection->count;
+			}
+			else
+			{
+				pItem = pSection->items;
+			}
 			continue;
 		}
 		
@@ -281,23 +384,24 @@ static int iniDoLoadItemsFromBuffer(char *content, IniItemContext *pContext, \
 			nValueLen = INI_ITEM_VALUE_LEN;
 		}
 	
-		if (pContext->count >= *nAllocItems)
+		if (pSection->count >= pSection->alloc_count)
 		{
-			(*nAllocItems) += _ALLOC_ITEMS_ONCE;
-			pContext->items=(IniItemInfo *)realloc(pContext->items, 
-				sizeof(IniItemInfo) * (*nAllocItems));
-			if (pContext->items == NULL)
+			pSection->alloc_count += _ALLOC_ITEMS_ONCE;
+			pSection->items=(IniItem *)realloc(pSection->items, 
+				sizeof(IniItem) * pSection->alloc_count);
+			if (pSection->items == NULL)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"realloc %d bytes fail", __LINE__, \
-					(int)sizeof(IniItemInfo)*(*nAllocItems));
+					(int)sizeof(IniItem) * \
+					pSection->alloc_count);
 				result = errno != 0 ? errno : ENOMEM;
 				break;
 			}
 
-			pItem = pContext->items + pContext->count;
-			memset(pItem, 0, sizeof(IniItemInfo) * \
-				((*nAllocItems) - pContext->count));
+			pItem = pSection->items + pSection->count;
+			memset(pItem, 0, sizeof(IniItem) * \
+				(pSection->alloc_count - pSection->count));
 		}
 
 		memcpy(pItem->name, pLine, nNameLen);
@@ -306,52 +410,104 @@ static int iniDoLoadItemsFromBuffer(char *content, IniItemContext *pContext, \
 		trim(pItem->name);
 		trim(pItem->value);
 		
-		pContext->count++;
+		pSection->count++;
 		pItem++;
 	}
 
 	return result;
 }
 
-void iniFreeItems(IniItemContext *pContext)
+static int iniFreeHashData(const int index, const HashData *data, void *args)
 {
-	if (pContext != NULL && pContext->items != NULL)
+	IniSection *pSection;
+
+	pSection = (IniSection *)data->value;
+	if (pSection == NULL)
 	{
-		free(pContext->items);
-		pContext->items = NULL;
-		pContext->count = 0;
+		return 0;
 	}
+
+	if (pSection->items != NULL)
+	{
+		free(pSection->items);
+		memset(pSection, 0, sizeof(IniSection));
+	}
+
+	free(pSection);
+	((HashData *)data)->value = NULL;
+	return 0;
 }
 
-char *iniGetStrValue(const char *szName, IniItemContext *pContext)
+void iniFreeContext(IniContext *pContext)
 {
-	IniItemInfo targetItem;
-	void *pResult;
-	
-	if (pContext->count <= 0)
+	if (pContext == NULL)
 	{
-		return NULL;
+		return;
 	}
-	
-	snprintf(targetItem.name, sizeof(targetItem.name), "%s", szName);
-	pResult = bsearch(&targetItem, pContext->items, pContext->count, \
-			sizeof(IniItemInfo), compareByItemName);
-	if (pResult == NULL)
+
+	if (pContext->global.items != NULL)
+	{
+		free(pContext->global.items);
+		memset(&pContext->global, 0, sizeof(IniSection));
+	}
+
+	hash_walk(&pContext->sections, iniFreeHashData, NULL);
+	hash_destroy(&pContext->sections);
+}
+
+
+#define INI_FIND_ITEM(szSectionName, szItemName, pContext, pSection, \
+			targetItem, pItem, return_val) \
+	if (szSectionName == NULL || *szSectionName == '\0') \
+	{ \
+		pSection = &pContext->global; \
+	} \
+	else \
+	{ \
+		pSection = (IniSection *)hash_find(&pContext->sections, \
+				szSectionName, strlen(szSectionName)); \
+		if (pSection == NULL) \
+		{ \
+			return return_val; \
+		} \
+	} \
+	\
+	if (pSection->count <= 0) \
+	{ \
+		return return_val; \
+	} \
+	\
+	snprintf(targetItem.name, sizeof(targetItem.name), "%s", szItemName); \
+	pItem = (IniItem *)bsearch(&targetItem, pSection->items, \
+			pSection->count, sizeof(IniItem), iniCompareByItemName);
+
+
+char *iniGetStrValue(const char *szSectionName, const char *szItemName, \
+		IniContext *pContext)
+{
+	IniItem targetItem;
+	IniSection *pSection;
+	IniItem *pItem;
+
+	INI_FIND_ITEM(szSectionName, szItemName, pContext, pSection, \
+			targetItem, pItem, NULL)
+
+	if (pItem == NULL)
 	{
 		return NULL;
 	}
 	else
 	{
-		return ((IniItemInfo *)pResult)->value;
+		return pItem->value;
 	}
 }
 
-int64_t iniGetInt64Value(const char *szName, IniItemContext *pContext, \
-			const int64_t nDefaultValue)
+int64_t iniGetInt64Value(const char *szSectionName, const char *szItemName, \
+		IniContext *pContext, const int64_t nDefaultValue)
 {
 	char *pValue;
 	
-	pValue = iniGetStrValue(szName, pContext);
+	pValue = iniGetStrValue(szSectionName, szItemName, pContext);
 	if (pValue == NULL)
 	{
 		return nDefaultValue;
@@ -362,12 +518,12 @@ int64_t iniGetInt64Value(const char *szName, IniItemContext *pContext, \
 	}
 }
 
-int iniGetIntValue(const char *szName, IniItemContext *pContext, \
-		const int nDefaultValue)
+int iniGetIntValue(const char *szSectionName, const char *szItemName, \
+		IniContext *pContext, const int nDefaultValue)
 {
 	char *pValue;
 	
-	pValue = iniGetStrValue(szName, pContext);
+	pValue = iniGetStrValue(szSectionName, szItemName, pContext);
 	if (pValue == NULL)
 	{
 		return nDefaultValue;
@@ -378,12 +534,12 @@ int iniGetIntValue(const char *szName, IniItemContext *pContext, \
 	}
 }
 
-double iniGetDoubleValue(const char *szName, IniItemContext *pContext, \
-			const double dbDefaultValue)
+double iniGetDoubleValue(const char *szSectionName, const char *szItemName, \
+		IniContext *pContext, const double dbDefaultValue)
 {
 	char *pValue;
 	
-	pValue = iniGetStrValue(szName, pContext);
+	pValue = iniGetStrValue(szSectionName, szItemName, pContext);
 	if (pValue == NULL)
 	{
 		return dbDefaultValue;
@@ -394,12 +550,12 @@ double iniGetDoubleValue(const char *szName, IniItemContext *pContext, \
 	}
 }
 
-bool iniGetBoolValue(const char *szName, IniItemContext *pContext, \
-		const bool bDefaultValue)
+bool iniGetBoolValue(const char *szSectionName, const char *szItemName, \
+		IniContext *pContext, const bool bDefaultValue)
 {
 	char *pValue;
 	
-	pValue = iniGetStrValue(szName, pContext);
+	pValue = iniGetStrValue(szSectionName, szItemName, pContext);
 	if (pValue == NULL)
 	{
 		return bDefaultValue;
@@ -413,23 +569,23 @@ bool iniGetBoolValue(const char *szName, IniItemContext *pContext, \
 	}
 }
 
-int iniGetValues(const char *szName, IniItemContext *pContext, \
-			char **szValues, const int max_values)
+int iniGetValues(const char *szSectionName, const char *szItemName, \
+		IniContext *pContext, char **szValues, const int max_values)
 {
-	IniItemInfo targetItem;
-	IniItemInfo *pFound;
-	IniItemInfo *pItem;
-	IniItemInfo *pItemEnd;
+	IniItem targetItem;
+	IniSection *pSection;
+	IniItem *pFound;
+	IniItem *pItem;
+	IniItem *pItemEnd;
 	char **ppValues;
-	
-	if (pContext->count <= 0 || max_values <= 0)
+
+	if (max_values <= 0)
 	{
 		return 0;
 	}
 	
-	snprintf(targetItem.name, sizeof(targetItem.name), "%s", szName);
-	pFound = (IniItemInfo *)bsearch(&targetItem, pContext->items, \
-		pContext->count, sizeof(IniItemInfo), compareByItemName);
+	INI_FIND_ITEM(szSectionName, szItemName, pContext, pSection, \
+			targetItem, pFound, 0)
 	if (pFound == NULL)
 	{
 		return 0;
@@ -437,9 +593,9 @@ int iniGetValues(const char *szName, IniItemContext *pContext, \
 
 	ppValues = szValues;
 	*ppValues++ = pFound->value;
-	for (pItem=pFound-1; pItem>=pContext->items; pItem--)
+	for (pItem=pFound-1; pItem>=pSection->items; pItem--)
 	{
-		if (strcmp(pItem->name, szName) != 0)
+		if (strcmp(pItem->name, szItemName) != 0)
 		{
 			break;
 		}
@@ -450,10 +606,10 @@ int iniGetValues(const char *szName, IniItemContext *pContext, \
 		}
 	}
 
-	pItemEnd = pContext->items + pContext->count;
+	pItemEnd = pSection->items + pSection->count;
 	for (pItem=pFound+1; pItem<pItemEnd; pItem++)
 	{
-		if (strcmp(pItem->name, szName) != 0)
+		if (strcmp(pItem->name, szItemName) != 0)
 		{
 			break;
 		}
@@ -467,34 +623,28 @@ int iniGetValues(const char *szName, IniItemContext *pContext, \
 	return ppValues - szValues;
 }
 
-IniItemInfo *iniGetValuesEx(const char *szName, IniItemContext *pContext, \
-		int *nTargetCount)
+IniItem *iniGetValuesEx(const char *szSectionName, const char *szItemName, \
+		IniContext *pContext, int *nTargetCount)
 {
-	IniItemInfo targetItem;
-	IniItemInfo *pFound;
-	IniItemInfo *pItem;
-	IniItemInfo *pItemEnd;
-	IniItemInfo *pItemStart;
+	IniItem targetItem;
+	IniSection *pSection;
+	IniItem *pFound;
+	IniItem *pItem;
+	IniItem *pItemEnd;
+	IniItem *pItemStart;
 	
-	if (pContext->count <= 0)
-	{
-		*nTargetCount = 0;
-		return NULL;
-	}
-	
-	snprintf(targetItem.name, sizeof(targetItem.name), "%s", szName);
-	pFound = (IniItemInfo *)bsearch(&targetItem, pContext->items, \
-		pContext->count, sizeof(IniItemInfo), compareByItemName);
+	*nTargetCount = 0;
+	INI_FIND_ITEM(szSectionName, szItemName, pContext, pSection, \
+			targetItem, pFound, NULL)
 	if (pFound == NULL)
 	{
-		*nTargetCount = 0;
 		return NULL;
 	}
 
 	*nTargetCount = 1;
-	for (pItem=pFound-1; pItem>=pContext->items; pItem--)
+	for (pItem=pFound-1; pItem>=pSection->items; pItem--)
 	{
-		if (strcmp(pItem->name, szName) != 0)
+		if (strcmp(pItem->name, szItemName) != 0)
 		{
 			break;
 		}
@@ -503,10 +653,10 @@ IniItemInfo *iniGetValuesEx(const char *szName, IniItemContext *pContext, \
 	}
 	pItemStart = pFound - (*nTargetCount) + 1;
 
-	pItemEnd = pContext->items + pContext->count;
+	pItemEnd = pSection->items + pSection->count;
 	for (pItem=pFound+1; pItem<pItemEnd; pItem++)
 	{
-		if (strcmp(pItem->name, szName) != 0)
+		if (strcmp(pItem->name, szItemName) != 0)
 		{
 			break;
 		}
@@ -517,17 +667,63 @@ IniItemInfo *iniGetValuesEx(const char *szName, IniItemContext *pContext, \
 	return pItemStart;
 }
 
-void iniPrintItems(IniItemContext *pContext)
+static int iniPrintHashData(const int index, const HashData *data, void *args)
 {
-	IniItemInfo *pItem;
-	IniItemInfo *pItemEnd;
+	IniSection *pSection;
+	IniItem *pItem;
+	IniItem *pItemEnd;
+	char section_name[256];
+	int section_len;
 	int i;
 
-	i = 0;
-	pItemEnd = pContext->items + pContext->count;
-	for (pItem=pContext->items; pItem<pItemEnd; pItem++)
+	pSection = (IniSection *)data->value;
+	if (pSection == NULL)
 	{
-		printf("%d. %s=%s\n", ++i, pItem->name, pItem->value);	
+		return 0;
 	}
+
+	section_len = data->key_len;
+	if (section_len >= sizeof(section_name))
+	{
+		section_len = sizeof(section_name) - 1;
+	}
+
+	memcpy(section_name, data->key, section_len);
+	*(section_name + section_len) = '\0';
+
+	printf("section: %s, item count: %d\n", section_name, pSection->count);
+	if (pSection->count > 0)
+	{
+		i = 0;
+		pItemEnd = pSection->items + pSection->count;
+		for (pItem=pSection->items; pItem<pItemEnd; pItem++)
+		{
+			printf("%d. %s=%s\n", ++i, pItem->name, pItem->value);
+		}
+	}
+	printf("\n");
+
+	return 0;
+}
+
+void iniPrintItems(IniContext *pContext)
+{
+	IniItem *pItem;
+	IniItem *pItemEnd;
+	int i;
+
+	printf("global section, item count: %d\n", pContext->global.count);
+	if (pContext->global.count > 0)
+	{
+		i = 0;
+		pItemEnd = pContext->global.items + pContext->global.count;
+		for (pItem=pContext->global.items; pItem<pItemEnd; pItem++)
+		{
+			printf("%d. %s=%s\n", ++i, pItem->name, pItem->value);
+		}
+	}
+	printf("\n");
+
+	hash_walk(&pContext->sections, iniPrintHashData, NULL);
 }
 

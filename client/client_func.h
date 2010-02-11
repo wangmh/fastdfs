@@ -61,7 +61,7 @@ int fdfs_load_tracker_group(TrackerServerGroup *pTrackerGroup, \
 * return: 0 success, !=0 fail, return the error code
 **/
 int fdfs_load_tracker_group_ex(TrackerServerGroup *pTrackerGroup, \
-		const char *conf_filename, IniItemContext *pItemContext);
+		const char *conf_filename, IniContext *pIniContext);
 
 /**
 * copy tracker server group

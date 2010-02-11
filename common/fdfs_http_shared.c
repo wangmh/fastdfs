@@ -94,7 +94,7 @@ int fdfs_http_get_content_type_by_extname(FDFSHTTPParams *pParams, \
 }
 
 
-int fdfs_http_params_load(IniItemContext *pItemContext, \
+int fdfs_http_params_load(IniContext *pIniContext, \
 		const char *conf_filename, FDFSHTTPParams *pParams)
 {
 	int result;
@@ -108,15 +108,15 @@ int fdfs_http_params_load(IniItemContext *pItemContext, \
 
 	memset(pParams, 0, sizeof(FDFSHTTPParams));
 
-	pParams->disabled = iniGetBoolValue("http.disabled", \
-					pItemContext, false);
+	pParams->disabled = iniGetBoolValue(NULL, "http.disabled", \
+					pIniContext, false);
 	if (pParams->disabled)
 	{
 		return 0;
 	}
 
-	pParams->server_port = iniGetIntValue("http.server_port", \
-					pItemContext, 0);
+	pParams->server_port = iniGetIntValue(NULL, "http.server_port", \
+					pIniContext, 0);
 	if (pParams->server_port <= 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -125,8 +125,8 @@ int fdfs_http_params_load(IniItemContext *pItemContext, \
 		return EINVAL;
 	}
 
-	mime_types_filename = iniGetStrValue("http.mime_types_filename", \
-                                        pItemContext);
+	mime_types_filename = iniGetStrValue(NULL, "http.mime_types_filename", \
+                                        pIniContext);
 	if (mime_types_filename == NULL || *mime_types_filename == '\0')
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -182,9 +182,9 @@ int fdfs_http_params_load(IniItemContext *pItemContext, \
 		return result;
 	}
 
-	default_content_type = iniGetStrValue( \
+	default_content_type = iniGetStrValue(NULL, \
 			"http.default_content_type", \
-			pItemContext);
+			pIniContext);
 	if (default_content_type == NULL || *default_content_type == '\0')
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -204,17 +204,17 @@ int fdfs_http_params_load(IniItemContext *pItemContext, \
 	memcpy(pParams->default_content_type, default_content_type, \
 			def_content_type_len);
 
-	pParams->anti_steal_token = iniGetBoolValue( \
+	pParams->anti_steal_token = iniGetBoolValue(NULL, \
 				"http.anti_steal.check_token", \
-				pItemContext, false);
+				pIniContext, false);
 	if (!pParams->anti_steal_token)
 	{
 		return 0;
 	}
 
-	pParams->token_ttl = iniGetIntValue( \
+	pParams->token_ttl = iniGetIntValue(NULL, \
 				"http.anti_steal.token_ttl", \
-				pItemContext, 600);
+				pIniContext, 600);
 	if (pParams->token_ttl <= 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -223,9 +223,9 @@ int fdfs_http_params_load(IniItemContext *pItemContext, \
 		return EINVAL;
 	}
 
-	anti_steal_secret_key = iniGetStrValue( \
+	anti_steal_secret_key = iniGetStrValue(NULL, \
 			"http.anti_steal.secret_key", \
-			pItemContext);
+			pIniContext);
 	if (anti_steal_secret_key == NULL || *anti_steal_secret_key == '\0')
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -236,9 +236,9 @@ int fdfs_http_params_load(IniItemContext *pItemContext, \
 
 	buffer_strcpy(&pParams->anti_steal_secret_key, anti_steal_secret_key);
 
-	token_check_fail_filename = iniGetStrValue( \
+	token_check_fail_filename = iniGetStrValue(NULL, \
 			"http.anti_steal.token_check_fail", \
-			pItemContext);
+			pIniContext);
 	if (token_check_fail_filename == NULL || \
 		*token_check_fail_filename == '\0')
 	{

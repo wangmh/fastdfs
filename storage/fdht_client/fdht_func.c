@@ -334,11 +334,11 @@ static void fdht_insert_sorted_servers(GroupArray *pGroupArray, \
 	memcpy(pCurrent,  pInsertedServer, sizeof(FDHTServerInfo));
 }
 
-int fdht_load_groups_ex(IniItemContext *pItemContext, \
+int fdht_load_groups_ex(IniContext *pIniContext, \
 		GroupArray *pGroupArray, const bool bLoadProxyParams)
 {
-	IniItemInfo *pItemInfo;
-	IniItemInfo *pItemEnd;
+	IniItem *pItemInfo;
+	IniItem *pItemEnd;
 	int group_id;
 	char item_name[32];
 	ServerArray *pServerArray;
@@ -352,8 +352,8 @@ int fdht_load_groups_ex(IniItemContext *pItemContext, \
 	char *ip_port[2];
 	char *pProxyIpAddr;
 
-	pGroupArray->group_count = iniGetIntValue("group_count", \
-			pItemContext, 0);
+	pGroupArray->group_count = iniGetIntValue(NULL, "group_count", \
+			pIniContext, 0);
 	if (pGroupArray->group_count <= 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -404,7 +404,7 @@ int fdht_load_groups_ex(IniItemContext *pItemContext, \
 	for (group_id=0; group_id<pGroupArray->group_count; group_id++)
 	{
 		sprintf(item_name, "group%d", group_id);
-		pItemInfo = iniGetValuesEx(item_name, pItemContext, \
+		pItemInfo = iniGetValuesEx(NULL, item_name, pIniContext, \
 					&(pServerArray->count));
 		if (pItemInfo == NULL || pServerArray->count <= 0)
 		{
@@ -595,15 +595,15 @@ int fdht_load_groups_ex(IniItemContext *pItemContext, \
 		return 0;
 	}
 
-	pGroupArray->use_proxy = iniGetBoolValue("use_proxy", \
-			pItemContext, false);
+	pGroupArray->use_proxy = iniGetBoolValue(NULL, "use_proxy", \
+			pIniContext, false);
 	if (!pGroupArray->use_proxy)
 	{
 		return 0;
 	}
 
-	pProxyIpAddr = iniGetStrValue("proxy_addr", \
-			pItemContext);
+	pProxyIpAddr = iniGetStrValue(NULL, "proxy_addr", \
+			pIniContext);
 	if (pProxyIpAddr == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -615,8 +615,8 @@ int fdht_load_groups_ex(IniItemContext *pItemContext, \
 		sizeof(pGroupArray->proxy_server.ip_addr), \
 		"%s", pProxyIpAddr);
 
-	pGroupArray->proxy_server.port = iniGetIntValue("proxy_port", \
-		pItemContext, FDHT_DEFAULT_PROXY_PORT);
+	pGroupArray->proxy_server.port = iniGetIntValue(NULL, "proxy_port", \
+		pIniContext, FDHT_DEFAULT_PROXY_PORT);
 	if (pGroupArray->proxy_server.port <= 0 || \
 		pGroupArray->proxy_server.port > 65535)
 	{
