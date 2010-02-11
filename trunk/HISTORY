@@ -2,6 +2,7 @@
 Version 1.26  2010-02-11
  * remove compile warning of logError
  * ini file reader support section
+ * add client/batch_cmd.c: exec command to multi-servers using ssh
 
 Version 1.25  2010-02-04
  * storage_sync.c if source file not exist when sync a file, change from 
