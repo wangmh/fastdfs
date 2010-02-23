@@ -2596,8 +2596,10 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 					continue;
 				}
 
-				if ((*ppFound)->status == \
-					FDFS_STORAGE_STATUS_OFFLINE)
+				if (pServer->status == \
+					FDFS_STORAGE_STATUS_DELETED
+				 || pServer->status == \
+					FDFS_STORAGE_STATUS_IP_CHANGED)
 				{
 					(*ppFound)->status = pServer->status;
 					pGroup->chg_count++;
