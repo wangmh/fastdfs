@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/ioctl.h>
 #include "shared_func.h"
 #include "logger.h"
 #include "ini_file_reader.h"
@@ -53,6 +54,26 @@ int main(int argc,char* argv[])
 		printf("Usage: %s <group_name> <comand line>\n", argv[0]);
 		return 1;
 	}
+
+	/*
+	int tty_fd;
+	printf("ttyname(0)=%s\n", ttyname(0));
+	printf("ttyname(1)=%s\n", ttyname(1));
+	printf("ttyname(2)=%s\n", ttyname(2));
+
+	tty_fd = open("/dev/tty", O_WRONLY);
+	if (tty_fd < 0)
+	{
+		perror("open");
+		return errno;
+	}
+
+	char buff[32];
+	int buff_len;
+
+	buff_len = sprintf(buff, "%s", "yq54321\n");
+	printf("fd=%d, write bytes: %d\n", tty_fd, write(tty_fd, buff, buff_len));
+	*/
 
 	log_init();
 	if ((result=iniLoadFromFile(CONF_FILE, &iniContext)) != 0)
@@ -345,7 +366,7 @@ static int proccess_io()
 
 	while (out_count > 0 || err_count > 0)
 	{
-	sleep(1);
+	sleep(2);
 
 	for (pHost=hosts, i=0; pHost<pHostEnd; pHost++, i++)
 	{
@@ -379,7 +400,7 @@ static int proccess_io()
 			{
 				*(stderr_buff[i].buff + stderr_buff[i].length \
 					+ bytes) = '\0';
-				printf("%s", stderr_buff[i].buff + \
+				printf("err=%s", stderr_buff[i].buff + \
 					stderr_buff[i].length);
 			}
 
@@ -416,13 +437,25 @@ static int proccess_io()
 			{
 				*(stdout_buff[i].buff + stdout_buff[i].length \
 					+ bytes) = '\0';
-				printf("%s", stdout_buff[i].buff + \
+				printf("out=%s", stdout_buff[i].buff + \
 						stdout_buff[i].length);
 			}
 
 			stdout_buff[i].length += bytes;
 		}
 
+	if (in_count++ < 2)
+	{
+	ioctl(0, TIOCSTI, "y");
+	ioctl(0, TIOCSTI, "q");
+	ioctl(0, TIOCSTI, "5");
+	ioctl(0, TIOCSTI, "4");
+	ioctl(0, TIOCSTI, "3");
+	ioctl(0, TIOCSTI, "2");
+	ioctl(0, TIOCSTI, "1");
+	ioctl(0, TIOCSTI, "\n");
+	}
+			/*
 		while (in_count > 0)
 		{
 			bytes = read(STDIN_FILENO, stdin_buff, sizeof(stdin_buff));
@@ -458,6 +491,7 @@ static int proccess_io()
 				}
 			}
 		}
+			*/
 	}
 	}
 

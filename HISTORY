@@ -1,8 +1,8 @@
 
-Version 1.26  2010-02-11
+Version 1.26  2010-02-23
  * remove compile warning of logError
  * ini file reader support section
- * add client/batch_cmd.c: exec command to multi-servers using ssh
+ * bug fixed: tracker/tracker_mem.c sync storage server status
 
 Version 1.25  2010-02-04
  * storage_sync.c if source file not exist when sync a file, change from 
