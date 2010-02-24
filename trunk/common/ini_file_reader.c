@@ -76,6 +76,7 @@ int iniLoadFromFile(const char *szFilename, IniContext *pContext)
 {
 	int result;
 	char *pLast;
+	char full_filename[MAX_PATH_SIZE];
 	char old_cwd[MAX_PATH_SIZE];
 
 	memset(old_cwd, 0, sizeof(old_cwd));
@@ -97,23 +98,37 @@ int iniLoadFromFile(const char *szFilename, IniContext *pContext)
 			}
 
 			len = pLast - szFilename;
-			if (len >= sizeof(path))
-			{
-				len = sizeof(path) - 1;
-			}
 
-			memcpy(path, szFilename, len);
-			*(path + len) = '\0';
-			if (chdir(path) != 0)
+			if (len > 0)
 			{
-				logError("file: "__FILE__", line: %d, " \
-					"chdir to the path of conf file: " \
-					"%s fail, errno: %d, error info: %s", \
-					__LINE__, szFilename, \
-					errno, strerror(errno));
-				return errno != 0 ? errno : ENOENT;
+				if (len >= sizeof(path))
+				{
+					len = sizeof(path) - 1;
+				}
+				memcpy(path, szFilename, len);
+				*(path + len) = '\0';
+				if (chdir(path) != 0)
+				{
+					logError("file: "__FILE__", line: %d, "\
+						"chdir to the path of conf " \
+						"file: %s fail, errno: %d, " \
+						"error info: %s", \
+						__LINE__, szFilename, \
+						errno, strerror(errno));
+					return errno != 0 ? errno : ENOENT;
+				}
 			}
 		}
+	}
+
+	if (*szFilename != '/' && *old_cwd != '\0')
+	{
+		snprintf(full_filename, sizeof(full_filename), "%s/%s", \
+			old_cwd, szFilename);
+	}
+	else
+	{
+		snprintf(full_filename, sizeof(full_filename),"%s",szFilename);
 	}
 
 	if ((result=iniInitContext(pContext)) != 0)
@@ -121,7 +136,7 @@ int iniLoadFromFile(const char *szFilename, IniContext *pContext)
 		return result;
 	}
 
-	result = iniDoLoadFromFile(szFilename, pContext);
+	result = iniDoLoadFromFile(full_filename, pContext);
 	if (result == 0)
 	{
 		iniSortItems(pContext);
