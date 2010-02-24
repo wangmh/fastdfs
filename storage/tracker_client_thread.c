@@ -1181,11 +1181,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, const bool sync_old_d
 	snprintf(pReqBody->version, sizeof(pReqBody->version), "%d.%d", \
 		g_version.major, g_version.minor);
 	long2buff(g_server_port, pReqBody->storage_port);
-
-#ifdef WITH_HTTPD
-	long2buff(g_http_params.server_port, pReqBody->storage_http_port);
-#endif
-
+	long2buff(g_http_port, pReqBody->storage_http_port);
 	long2buff(g_path_count, pReqBody->store_path_count);
 	long2buff(g_subdir_count_per_path, pReqBody->subdir_count_per_path);
 	long2buff(g_upload_priority, pReqBody->upload_priority);

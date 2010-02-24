@@ -1,8 +1,9 @@
 
-Version 1.26  2010-02-23
+Version 1.26  2010-02-24
  * remove compile warning of logError
  * ini file reader support section
  * bug fixed: tracker/tracker_mem.c sync storage server status
+ * use storage server http server port anyway
 
 Version 1.25  2010-02-04
  * storage_sync.c if source file not exist when sync a file, change from 

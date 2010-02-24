@@ -1047,6 +1047,16 @@ int storage_func_init(const char *filename, \
 			g_keep_alive = iniGetBoolValue(NULL, "keep_alive", \
 					&iniContext, false);
 		}
+
+		g_http_port = iniGetIntValue(NULL, "http.server_port", \
+                                        &iniContext, 80);
+		if (g_http_port <= 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"invalid param \"http.server_port\": %d", \
+				__LINE__, g_http_port);
+			return EINVAL;
+		}
  
 #ifdef WITH_HTTPD
 		{
@@ -1093,7 +1103,7 @@ int storage_func_init(const char *filename, \
 			"thread_stack_size=%d KB, upload_priority=%d, " \
 			"check_file_duplicate=%d, FDHT group count=%d, " \
 			"FDHT server count=%d, FDHT key_namespace=%s, " \
-			"FDHT keep_alive=%d", \
+			"FDHT keep_alive=%d, HTTP server port=%d", \
 			g_version.major, g_version.minor, \
 			g_base_path, g_path_count, g_subdir_count_per_path, \
 			g_group_name, g_network_timeout, \
@@ -1110,7 +1120,7 @@ int storage_func_init(const char *filename, \
 			g_sync_binlog_buff_interval, g_thread_stack_size/1024, \
 			g_upload_priority, g_check_file_duplicate, \
 			g_group_array.group_count, g_group_array.server_count, \
-			g_key_namespace, g_keep_alive);
+			g_key_namespace, g_keep_alive, g_http_port);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)
