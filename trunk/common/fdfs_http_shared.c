@@ -116,7 +116,7 @@ int fdfs_http_params_load(IniContext *pIniContext, \
 	}
 
 	pParams->server_port = iniGetIntValue(NULL, "http.server_port", \
-					pIniContext, 0);
+					pIniContext, 80);
 	if (pParams->server_port <= 0)
 	{
 		logError("file: "__FILE__", line: %d, " \

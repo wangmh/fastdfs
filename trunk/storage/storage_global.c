@@ -18,6 +18,7 @@ int g_path_count = 0;
 int g_subdir_count_per_path = DEFAULT_DATA_DIR_COUNT_PER_PATH;
 
 int g_server_port = FDFS_STORAGE_SERVER_DEF_PORT;
+int g_http_port = 80;
 int g_max_connections = DEFAULT_MAX_CONNECTONS;
 //int g_max_write_thread_count = 2;
 int g_file_distribute_path_mode = FDFS_FILE_DIST_PATH_ROUND_ROBIN;

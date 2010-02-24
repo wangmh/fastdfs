@@ -51,6 +51,7 @@ extern int g_path_count;   //store path count
 extern int g_subdir_count_per_path;
 
 extern int g_server_port;
+extern int g_http_port;  //http server port
 extern int g_max_connections;
 extern int g_file_distribute_path_mode;
 extern int g_file_distribute_rotate_count;
