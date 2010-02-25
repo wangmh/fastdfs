@@ -53,6 +53,7 @@ extern int g_thread_stack_size;
 extern FDFSHTTPParams g_http_params;
 extern int g_http_check_interval;
 extern char g_http_check_uri[128];
+extern bool g_http_servers_dirty;
 #endif
 
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)

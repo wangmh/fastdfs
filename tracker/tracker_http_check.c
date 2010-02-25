@@ -22,15 +22,59 @@ static void *http_check_entrance(void *arg)
 	FDFSGroupInfo *pGroupEnd;
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppServerEnd;
+	char url[256];
+	char *content;
+	int content_len;
+	int http_status;
+	int server_count;
 	int result;
 
-	pGroupEnd = g_groups.groups + g_groups.count;
-	for (pGroup=g_groups.groups; pGroup<pGroupEnd; pGroup++)
-        {
-	ppServerEnd = pGroup->active_servers + pGroup->active_count;
-	for (ppServer=pGroup->active_servers; ppServer<ppServerEnd; ppServer++)
+	g_http_servers_dirty = false;
+	while (g_continue_flag)
 	{
-		(*ppServer)
+	if (g_http_servers_dirty)
+	{
+		g_http_servers_dirty = false;
+	}
+	else
+	{
+		sleep(g_http_check_interval);
+	}
+
+	pGroupEnd = g_groups.groups + g_groups.count;
+	for (pGroup=g_groups.groups; g_continue_flag && (!g_http_servers_dirty)\
+		&& pGroup<pGroupEnd; pGroup++)
+        {
+	server_count = 0;
+	ppServerEnd = pGroup->active_servers + pGroup->active_count;
+	for (ppServer=pGroup->active_servers; g_continue_flag && \
+		(!g_http_servers_dirty) && ppServer<ppServerEnd; ppServer++)
+	{
+		sprintf(url, "http://%s:%d%s", (*ppServer)->ip_addr, \
+			pGroup->storage_http_port, g_http_check_uri);
+
+		result = get_url_content(url, g_network_timeout, http_status, \
+        			&content, &content_len);
+
+		logInfo("file: "__FILE__", line: %d, " \
+			"url=%s, result=%d, http_status=%d", \
+			__LINE__, url, result, http_status);
+
+		if (result == 0 && http_status == 200)
+		{
+			*(pGroup->http_servers + server_count) = *ppServer;
+			server_count++;
+		}
+	}
+
+	if (pGroup->http_server_count != server_count)
+	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"HTTP server count change from %d to %d", \
+			__LINE__, pGroup->http_server_count, server_count);
+
+		pGroup->http_server_count = server_count;
+	}
 	}
 	}
 
@@ -58,7 +102,7 @@ int tracker_http_check_start()
 	return 0;
 }
 
-int tracker_http_check_kill()
+int tracker_http_check_stop()
 {
 	if (g_http_check_interval <= 0)
 	{

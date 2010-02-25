@@ -34,6 +34,7 @@ int g_thread_stack_size = 64 * 1024;
 FDFSHTTPParams g_http_params;
 int g_http_check_interval = 30;
 char g_http_check_uri[128] = {0};
+bool g_http_servers_dirty = false;
 #endif
 
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)

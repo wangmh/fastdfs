@@ -191,6 +191,15 @@ int main(int argc, char *argv[])
 				__LINE__);
 			return result;
 		}
+
+	}
+
+	if ((result=tracker_http_check_start()) != 0)
+	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"tracker_http_check_start fail, " \
+			"program exit!", __LINE__);
+		return result;
 	}
 #endif
 
@@ -258,6 +267,10 @@ int main(int argc, char *argv[])
 			}
 			kill_work_threads(tids, g_max_connections);
 			g_thread_kill_done = true;
+
+#ifdef WITH_HTTPD
+			tracker_http_check_stop();
+#endif
 
 			break;
 		}
