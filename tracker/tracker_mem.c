@@ -1396,6 +1396,13 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 	memset(pGroup->active_servers, 0, \
 		sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
 
+#ifdef WITH_HTTPD
+	if (g_http_check_interval <= 0)
+	{
+		pGroup->http_servers = pGroup->active_servers;
+	}
+#endif
+
 	ref_count = (int *)malloc(sizeof(int));
 	if (ref_count == NULL)
 	{
@@ -1806,6 +1813,13 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 	pGroup->last_sync_timestamps = new_last_sync_timestamps;
 
 	tracker_mem_find_store_server(pGroup);
+
+#ifdef WITH_HTTPD
+	if (g_http_check_interval <= 0)
+	{
+		pGroup->http_servers = pGroup->active_servers;
+	}
+#endif
 
 	nStorageSyncSize = 0;
 	nStorageSyncCount = 0;
@@ -2710,14 +2724,14 @@ int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
 
 		pGroup->active_count--;
 		pGroup->chg_count++;
-		if (pGroup->current_write_server >= pGroup->active_count)
+
+#ifdef WITH_HTTPD
+		if (g_http_check_interval <= 0)
 		{
-			pGroup->current_write_server = 0;
+			pGroup->http_server_count = pGroup->active_count;
 		}
-		if (pGroup->current_read_server >= pGroup->active_count)
-		{
-			pGroup->current_read_server = 0;
-		}
+#endif
+
 	}
 
 	tracker_mem_find_store_server(pGroup);
@@ -2792,6 +2806,13 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 			pGroup->active_count);
 		pGroup->active_count++;
 		pGroup->chg_count++;
+
+#ifdef WITH_HTTPD
+		if (g_http_check_interval <= 0)
+		{
+			pGroup->http_server_count = pGroup->active_count;
+		}
+#endif
 
 		logDebug("file: "__FILE__", line: %d, " \
 			"storage server %s::%s now active", \
