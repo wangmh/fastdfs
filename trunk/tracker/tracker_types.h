@@ -185,13 +185,19 @@ typedef struct
 	int64_t free_mb;  //free disk storage in MB
 	int alloc_size;
 	int count;    //total server count
-	int active_count; //current active server count
+	int active_count; //active server count
 	int storage_port;
 	int storage_http_port; //storage http server port
 	FDFSStorageDetail *all_servers;
 	FDFSStorageDetail **sorted_servers;  //order by ip addr
 	FDFSStorageDetail **active_servers;  //order by ip addr
 	FDFSStorageDetail *pStoreServer;  //for upload priority mode
+
+#ifdef WITH_HTTPD
+	FDFSStorageDetail **http_servers;  //order by ip addr
+	int http_server_count; //http server count
+	int current_http_server;
+#endif
 
 	int current_read_server;
 	int current_write_server;

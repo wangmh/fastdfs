@@ -100,6 +100,9 @@ int tracker_load_from_conf_file(const char *filename, \
 	char *pRunByGroup;
 	char *pRunByUser;
 	char *pThreadStackSize;
+#ifdef WITH_HTTPD
+	char *pHttpCheckUri;
+#endif
 	IniContext iniContext;
 	int result;
 	int64_t storage_reserved;
@@ -335,6 +338,22 @@ int tracker_load_from_conf_file(const char *filename, \
 		{
 			return result;
 		}
+
+		g_http_check_interval = iniGetIntValue(NULL, \
+			"http.check_active_interval", &iniContext, 30);
+
+		pHttpCheckUri = iniGetStrValue(NULL, \
+			"http.check_active_uri", &iniContext);
+
+		if (pHttpCheckUri == NULL)
+		{
+			*g_http_check_uri = '\0';
+		}
+		else
+		{
+			snprintf(g_http_check_uri, sizeof(g_http_check_uri), \
+				"%s", pHttpCheckUri);
+		}
 #endif
 
 		logInfo("FastDFS v%d.%d, base_path=%s, " \
@@ -369,14 +388,17 @@ int tracker_load_from_conf_file(const char *filename, \
 				"token_ttl=%ds, " \
 				"anti_steal_secret_key length=%d, "  \
 				"token_check_fail content_type=%s, " \
-				"token_check_fail buff length=%d",  \
+				"token_check_fail buff length=%d, "  \
+				"check_active_interval=%d, " \
+				"check_active_uri=%s",  \
 				g_http_params.server_port, \
 				g_http_params.default_content_type, \
 				g_http_params.anti_steal_token, \
 				g_http_params.token_ttl, \
 				g_http_params.anti_steal_secret_key.length, \
 				g_http_params.token_check_fail_content_type, \
-				g_http_params.token_check_fail_buff.length);
+				g_http_params.token_check_fail_buff.length, \
+				g_http_check_interval, g_http_check_uri);
 		}
 #endif
 

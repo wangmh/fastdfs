@@ -51,6 +51,8 @@ extern int g_thread_stack_size;
 
 #ifdef WITH_HTTPD
 extern FDFSHTTPParams g_http_params;
+extern int g_http_check_interval;
+extern char g_http_check_uri[128];
 #endif
 
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
