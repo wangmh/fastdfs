@@ -88,7 +88,7 @@ fi
 if [ "$WITH_HTTPD" = "1" ]; then
   CFLAGS="$CFLAGS -DWITH_HTTPD"
   LIBS="$LIBS -levent"
-  TRACKER_HTTPD_OBJS='tracker_httpd.o ../common/mime_file_parser.o ../common/fdfs_http_shared.o'
+  TRACKER_HTTPD_OBJS='tracker_httpd.o tracker_http_check.o ../common/mime_file_parser.o ../common/fdfs_http_shared.o'
   STORAGE_HTTPD_OBJS='storage_httpd.o ../common/mime_file_parser.o ../common/fdfs_http_shared.o'
 else
   TRACKER_HTTPD_OBJS=''
