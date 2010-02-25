@@ -34,6 +34,7 @@
 
 #ifdef WITH_HTTPD
 #include "tracker_httpd.h"
+#include "tracker_http_check.h"
 #endif
 
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
