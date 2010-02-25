@@ -11,6 +11,7 @@
 #include <event.h>
 #include <evhttp.h>
 #include "logger.h"
+#include "fdfs_global.h"
 #include "shared_func.h"
 #include "http_func.h"
 #include "storage_func.h"
@@ -263,7 +264,7 @@ static void *httpd_entrance(void *arg)
 	}
 
 	http_start_status = 0;
-	void evhttp_set_cb(httpd, "/status.html", status_handler, NULL);
+	evhttp_set_cb(httpd, "/status.html", status_handler, NULL);
 	evhttp_set_gencb(httpd, generic_handler, NULL);
 
 	event_dispatch();

@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include "logger.h"
+#include "fdfs_global.h"
 #include "tracker_global.h"
 #include "tracker_mem.h"
 #include "tracker_proto.h"
@@ -53,7 +54,7 @@ static void *http_check_entrance(void *arg)
 		sprintf(url, "http://%s:%d%s", (*ppServer)->ip_addr, \
 			pGroup->storage_http_port, g_http_check_uri);
 
-		result = get_url_content(url, g_network_timeout, http_status, \
+		result = get_url_content(url, g_network_timeout, &http_status, \
         			&content, &content_len);
 
 		logInfo("file: "__FILE__", line: %d, " \
