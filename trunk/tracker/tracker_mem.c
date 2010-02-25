@@ -1763,6 +1763,10 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 
 		memset(new_http_servers,0,sizeof(FDFSStorageDetail *)*new_size);
 	}
+	else
+	{
+		new_http_servers = NULL;
+	}
 #endif
 
 	memset(new_servers, 0, sizeof(FDFSStorageDetail) * new_size);
