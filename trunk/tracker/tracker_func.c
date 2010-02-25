@@ -340,10 +340,10 @@ int tracker_load_from_conf_file(const char *filename, \
 		}
 
 		g_http_check_interval = iniGetIntValue(NULL, \
-			"http.check_active_interval", &iniContext, 30);
+			"http.check_alive_interval", &iniContext, 30);
 
 		pHttpCheckUri = iniGetStrValue(NULL, \
-			"http.check_active_uri", &iniContext);
+			"http.check_alive_uri", &iniContext);
 
 		if (pHttpCheckUri == NULL)
 		{

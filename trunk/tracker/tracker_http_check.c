@@ -46,6 +46,12 @@ static void *http_check_entrance(void *arg)
 	for (pGroup=g_groups.groups; g_continue_flag && (!g_http_servers_dirty)\
 		&& pGroup<pGroupEnd; pGroup++)
         {
+
+	if (pGroup->storage_http_port <= 0)
+	{
+		continue;
+	}
+
 	server_count = 0;
 	ppServerEnd = pGroup->active_servers + pGroup->active_count;
 	for (ppServer=pGroup->active_servers; g_continue_flag && \
@@ -61,10 +67,15 @@ static void *http_check_entrance(void *arg)
 			"url=%s, result=%d, http_status=%d", \
 			__LINE__, url, result, http_status);
 
-		if (result == 0 && http_status == 200)
+		if (result == 0)
 		{
-			*(pGroup->http_servers + server_count) = *ppServer;
-			server_count++;
+			if (http_status == 200)
+			{
+				*(pGroup->http_servers+server_count)=*ppServer;
+				server_count++;
+			}
+
+			free(content);
 		}
 	}
 
