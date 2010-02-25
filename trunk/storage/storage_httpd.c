@@ -234,6 +234,12 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	close(fd);
 	evhttp_send_reply_end(req);
 }
+ 
+static void status_handler(struct evhttp_request *req, void *arg)
+{
+	evbuffer_add(ev_buf, "OK", 2);
+	evhttp_send_reply(req, HTTP_OK, "OK", ev_buf);
+}
 
 static void *httpd_entrance(void *arg)
 {
@@ -257,6 +263,7 @@ static void *httpd_entrance(void *arg)
 	}
 
 	http_start_status = 0;
+	void evhttp_set_cb(httpd, "/status.html", status_handler, NULL);
 	evhttp_set_gencb(httpd, generic_handler, NULL);
 
 	event_dispatch();
