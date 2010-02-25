@@ -1401,6 +1401,22 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 	{
 		pGroup->http_servers = pGroup->active_servers;
 	}
+	else
+	{
+		pGroup->http_servers = (FDFSStorageDetail **) \
+			malloc(sizeof(FDFSStorageDetail *)*pGroup->alloc_size);
+		if (pGroup->http_servers == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", __LINE__, \
+				(int)sizeof(FDFSStorageDetail *) * \
+				pGroup->alloc_size);
+			return errno != 0 ? errno : ENOMEM;
+		}
+		memset(pGroup->http_servers, 0, \
+			sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
+		g_http_servers_dirty = true;
+	}
 #endif
 
 	ref_count = (int *)malloc(sizeof(int));
@@ -1674,6 +1690,10 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 	FDFSStorageDetail *new_servers;
 	FDFSStorageDetail **new_sorted_servers;
 	FDFSStorageDetail **new_active_servers;
+#ifdef WITH_HTTPD
+	FDFSStorageDetail **old_http_servers;
+	FDFSStorageDetail **new_http_servers;
+#endif
 	int **new_last_sync_timestamps;
 	int *new_ref_count;
 	int old_size;
@@ -1724,6 +1744,27 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 		return errno != 0 ? errno : ENOMEM;
 	}
 
+#ifdef WITH_HTTPD
+	if (g_http_check_interval > 0)
+	{
+		new_http_servers = (FDFSStorageDetail **) \
+			malloc(sizeof(FDFSStorageDetail *) * new_size);
+		if (new_http_servers == NULL)
+		{
+			free(new_servers);
+			free(new_sorted_servers);
+			free(new_active_servers);
+
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", __LINE__, \
+				(int)sizeof(FDFSStorageDetail *) * new_size);
+			return errno != 0 ? errno : ENOMEM;
+		}
+
+		memset(new_http_servers,0,sizeof(FDFSStorageDetail *)*new_size);
+	}
+#endif
+
 	memset(new_servers, 0, sizeof(FDFSStorageDetail) * new_size);
 	memset(new_sorted_servers, 0, sizeof(FDFSStorageDetail *) * new_size);
 	memset(new_active_servers, 0, sizeof(FDFSStorageDetail *) * new_size);
@@ -1762,6 +1803,20 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 		*ppDestServer++ = new_servers + 
 				  (*ppSrcServer - pGroup->all_servers);
 	}
+
+#ifdef WITH_HTTPD
+	if (g_http_check_interval > 0)
+	{
+	ppServerEnd = pGroup->http_servers + pGroup->http_server_count;
+	ppDestServer = new_http_servers;
+	for (ppSrcServer=pGroup->http_servers; ppSrcServer<ppServerEnd;
+		ppSrcServer++)
+	{
+		*ppDestServer++ = new_servers + 
+				  (*ppSrcServer - pGroup->all_servers);
+	}
+	}
+#endif
 
 	new_ref_count = (int *)malloc(sizeof(int));
 	if (new_ref_count == NULL)
@@ -1817,7 +1872,14 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 #ifdef WITH_HTTPD
 	if (g_http_check_interval <= 0)
 	{
+		old_http_servers = NULL;
 		pGroup->http_servers = pGroup->active_servers;
+	}
+	else
+	{
+		old_http_servers = pGroup->http_servers;
+		pGroup->http_servers = new_http_servers;
+		g_http_servers_dirty = true;
 	}
 #endif
 
@@ -1889,6 +1951,14 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 	
 	free(old_sorted_servers);
 	free(old_active_servers);
+
+#ifdef WITH_HTTPD
+	if (old_http_servers != NULL)
+	{
+		free(old_http_servers);
+	}
+#endif
+
 	tracker_free_last_sync_timestamps(old_last_sync_timestamps, \
 				old_size);
 

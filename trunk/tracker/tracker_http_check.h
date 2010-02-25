@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 int tracker_http_check_start();
-int tracker_http_check_kill();
+int tracker_http_check_stop();
 
 #ifdef __cplusplus
 }

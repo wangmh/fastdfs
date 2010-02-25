@@ -347,13 +347,20 @@ int tracker_load_from_conf_file(const char *filename, \
 
 		if (pHttpCheckUri == NULL)
 		{
-			*g_http_check_uri = '\0';
+			*g_http_check_uri = '/';
+			*(g_http_check_uri+1) = '\0';
 		}
-		else
+		else if (*pHttpCheckUri == '/')
 		{
 			snprintf(g_http_check_uri, sizeof(g_http_check_uri), \
 				"%s", pHttpCheckUri);
 		}
+		else
+		{
+			snprintf(g_http_check_uri, sizeof(g_http_check_uri), \
+				"/%s", pHttpCheckUri);
+		}
+
 #endif
 
 		logInfo("FastDFS v%d.%d, base_path=%s, " \
