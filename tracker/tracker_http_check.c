@@ -27,6 +27,7 @@ static void *http_check_entrance(void *arg)
 	char *content;
 	int content_len;
 	int http_status;
+	int sock;
 	int server_count;
 	int result;
 
@@ -57,15 +58,57 @@ static void *http_check_entrance(void *arg)
 	for (ppServer=pGroup->active_servers; g_continue_flag && \
 		(!g_http_servers_dirty) && ppServer<ppServerEnd; ppServer++)
 	{
+		if (g_http_check_type == FDFS_HTTP_CHECK_ALIVE_TYPE_TCP)
+		{
+			sock = socket(AF_INET, SOCK_STREAM, 0);
+			if(sock < 0)
+			{
+				result = errno != 0 ? errno : EPERM;
+				logError("file: "__FILE__", line: %d, " \
+					"socket create failed, errno: %d, " \
+					"error info: %s.", \
+					__LINE__, result, strerror(result));
+				sleep(1);
+				continue;
+			}
+
+			result = connectserverbyip(sock, (*ppServer)->ip_addr, \
+						pGroup->storage_http_port));
+			close(sock);
+
+			if (result == 0)
+			{
+				*(pGroup->http_servers+server_count)=*ppServer;
+				server_count++;
+			}
+			else
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"http check alive, connect to http " \
+					"server %s:%d fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, (*ppServer)->ip_addr, \
+					pGroup->storage_http_port, result, \
+					strerror(result));
+			}
+		}
+		else  //http
+		{
 		sprintf(url, "http://%s:%d%s", (*ppServer)->ip_addr, \
 			pGroup->storage_http_port, g_http_check_uri);
 
 		result = get_url_content(url, g_network_timeout, &http_status, \
         			&content, &content_len);
 
-		logInfo("file: "__FILE__", line: %d, " \
-			"url=%s, result=%d, http_status=%d", \
-			__LINE__, url, result, http_status);
+		if (g_http_servers_dirty)
+		{
+			if (result == 0)
+			{
+				free(content);
+			}
+
+			break;
+		}
 
 		if (result == 0)
 		{
@@ -74,9 +117,22 @@ static void *http_check_entrance(void *arg)
 				*(pGroup->http_servers+server_count)=*ppServer;
 				server_count++;
 			}
+			else
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"http check alive, url=%s, " \
+					"http_status=%d", \
+					__LINE__, url, http_status);
+			}
 
 			free(content);
 		}
+		}
+	}
+
+	if (g_http_servers_dirty)
+	{
+		break;
 	}
 
 	if (pGroup->http_server_count != server_count)

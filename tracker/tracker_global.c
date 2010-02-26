@@ -33,6 +33,7 @@ int g_thread_stack_size = 64 * 1024;
 #ifdef WITH_HTTPD
 FDFSHTTPParams g_http_params;
 int g_http_check_interval = 30;
+int g_http_check_type = FDFS_HTTP_CHECK_ALIVE_TYPE_TCP;
 char g_http_check_uri[128] = {0};
 bool g_http_servers_dirty = false;
 #endif
