@@ -52,6 +52,7 @@ extern int g_thread_stack_size;
 #ifdef WITH_HTTPD
 extern FDFSHTTPParams g_http_params;
 extern int g_http_check_interval;
+extern int g_http_check_type;
 extern char g_http_check_uri[128];
 extern bool g_http_servers_dirty;
 #endif

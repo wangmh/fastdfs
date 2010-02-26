@@ -102,6 +102,7 @@ int tracker_load_from_conf_file(const char *filename, \
 	char *pThreadStackSize;
 #ifdef WITH_HTTPD
 	char *pHttpCheckUri;
+	char *pHttpCheckType;
 #endif
 	IniContext iniContext;
 	int result;
@@ -342,9 +343,20 @@ int tracker_load_from_conf_file(const char *filename, \
 		g_http_check_interval = iniGetIntValue(NULL, \
 			"http.check_alive_interval", &iniContext, 30);
 
+		pHttpCheckType = iniGetStrValue(NULL, \
+			"http.check_alive_type", &iniContext);
+		if (pHttpCheckType != NULL && \
+			strcasecmp(pHttpCheckType, "http") == 0)
+		{
+			g_http_check_type = FDFS_HTTP_CHECK_ALIVE_TYPE_HTTP;
+		}
+		else
+		{
+			g_http_check_type = FDFS_HTTP_CHECK_ALIVE_TYPE_TCP;
+		}
+
 		pHttpCheckUri = iniGetStrValue(NULL, \
 			"http.check_alive_uri", &iniContext);
-
 		if (pHttpCheckUri == NULL)
 		{
 			*g_http_check_uri = '/';
@@ -360,6 +372,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			snprintf(g_http_check_uri, sizeof(g_http_check_uri), \
 				"/%s", pHttpCheckUri);
 		}
+
 
 #endif
 
@@ -397,6 +410,7 @@ int tracker_load_from_conf_file(const char *filename, \
 				"token_check_fail content_type=%s, " \
 				"token_check_fail buff length=%d, "  \
 				"check_active_interval=%d, " \
+				"check_active_type=%s, " \
 				"check_active_uri=%s",  \
 				g_http_params.server_port, \
 				g_http_params.default_content_type, \
@@ -405,7 +419,9 @@ int tracker_load_from_conf_file(const char *filename, \
 				g_http_params.anti_steal_secret_key.length, \
 				g_http_params.token_check_fail_content_type, \
 				g_http_params.token_check_fail_buff.length, \
-				g_http_check_interval, g_http_check_uri);
+				g_http_check_interval, g_http_check_type == \
+				FDFS_HTTP_CHECK_ALIVE_TYPE_TCP ? "tcp":"http",\
+				g_http_check_uri);
 		}
 #endif
 
