@@ -23,7 +23,7 @@
 #include "shared_func.h"
 
 int get_url_content(const char *url, const int timeout, int *http_status, \
-	char **content, int *content_len)
+	char **content, int *content_len, char *error_info)
 {
 	char domain_name[256];
 	char ip_addr[IP_ADDRESS_SIZE];
@@ -49,7 +49,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 	url_len = strlen(url);
 	if (url_len <= 7 || strncasecmp(url, "http://", 7) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"invalid url.", __LINE__);
 		return EINVAL;
 	}
@@ -68,7 +68,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 
 	if (domain_len >= sizeof(domain_name))
 	{
-		logError("file: "__FILE__", line: %d, " \
+		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"domain is too large, exceed %d.", \
 			__LINE__, (int)sizeof(domain_name));
 		return EINVAL;
@@ -90,7 +90,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 	if (getIpaddrByName(domain_name, ip_addr, \
 		sizeof(ip_addr)) == INADDR_NONE)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"resolve domain \"%s\" fail.", \
 			__LINE__, domain_name);
 		return EINVAL;
@@ -99,7 +99,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock < 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"socket create failed, errno: %d, " \
 			"error info: %s", __LINE__, \
 			errno, strerror(errno));
@@ -110,7 +110,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 	{
 		close(sock);
 
-		logError("file: "__FILE__", line: %d, " \
+		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"connect to %s:%d fail, errno: %d, " \
 			"error info: %s", __LINE__, domain_name, \
 			port, result, strerror(result));
@@ -127,7 +127,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 	{
 		close(sock);
 
-		logError("file: "__FILE__", line: %d, " \
+		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"send data to %s:%d fail, errno: %d, " \
 			"error info: %s", __LINE__, domain_name, \
 			port, result, strerror(result));
@@ -142,7 +142,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 		close(sock);
 		result = errno != 0 ? errno : ENOMEM;
 
-		logError("file: "__FILE__", line: %d, " \
+		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, " \
 			"error info: %s", __LINE__, alloc_size + 1, \
 			result, strerror(result));
@@ -162,7 +162,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 				close(sock);
 				result = errno != 0 ? errno : ENOMEM;
 
-				logError("file: "__FILE__", line: %d, " \
+				sprintf(error_info, "file: "__FILE__", line: %d, " \
 					"realloc %d bytes fail, errno: %d, " \
 					"error info: %s", __LINE__, \
 					alloc_size + 1, \
@@ -187,7 +187,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 		*content = NULL;
 		*content_len = 0;
 
-		logError("file: "__FILE__", line: %d, " \
+		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"recv data from %s:%d fail, errno: %d, " \
 			"error info: %s", __LINE__, domain_name, \
 			port, result, strerror(result));
@@ -204,7 +204,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 		*content = NULL;
 		*content_len = 0;
 
-		logError("file: "__FILE__", line: %d, " \
+		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"response data from %s:%d is invalid", \
 			__LINE__, domain_name, port);
 
@@ -220,7 +220,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 		*content = NULL;
 		*content_len = 0;
 
-		logError("file: "__FILE__", line: %d, " \
+		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"response data from %s:%d is invalid", \
 			__LINE__, domain_name, port);
 
@@ -234,6 +234,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 
 	close(sock);
 
+	*error_info = '\0';
 	return 0;
 }
 

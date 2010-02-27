@@ -71,6 +71,9 @@
 #define FDFS_HTTP_CHECK_ALIVE_TYPE_TCP  0  //tcp
 #define FDFS_HTTP_CHECK_ALIVE_TYPE_HTTP 1  //http
 
+#define FDFS_DOWNLOAD_TYPE_TCP	0  //tcp
+#define FDFS_DOWNLOAD_TYPE_HTTP	1  //http
+
 #define FDFS_FILE_DIST_DEFAULT_ROTATE_COUNT   100
 
 typedef struct

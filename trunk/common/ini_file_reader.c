@@ -166,12 +166,16 @@ static int iniDoLoadFromFile(const char *szFilename, \
 	int http_status;
 	int content_len;
 	int64_t file_size;
+	char error_info[512];
 
 	if (strncasecmp(szFilename, "http://", 7) == 0)
 	{
 		if ((result=get_url_content(szFilename, 60, &http_status, \
-				&content, &content_len)) != 0)
+				&content, &content_len, error_info)) != 0)
 		{
+			logError("file: "__FILE__", line: %d, " \
+				"get_url_content fail, error info: %s", \
+				__LINE__, error_info);
 			return result;
 		}
 

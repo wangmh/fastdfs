@@ -13,6 +13,7 @@
 #include "tracker_mem.h"
 #include "tracker_proto.h"
 #include "http_func.h"
+#include "sockopt.h"
 #include "tracker_http_check.h"
 
 static pthread_t http_check_tid;
@@ -73,7 +74,7 @@ static void *http_check_entrance(void *arg)
 			}
 
 			result = connectserverbyip(sock, (*ppServer)->ip_addr, \
-						pGroup->storage_http_port));
+						pGroup->storage_http_port);
 			close(sock);
 
 			if (result == 0)
