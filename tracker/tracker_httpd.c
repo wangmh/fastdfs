@@ -150,7 +150,8 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	filename_len = strlen(filename);
 	if (tracker_mem_get_storage_by_filename( \
 			TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE, \
-			group_name, filename, filename_len, &pGroup, \
+			FDFS_DOWNLOAD_TYPE_HTTP, group_name, filename, \
+			filename_len, &pGroup, \
 			ppStoreServers, &server_count) != 0)
 	{
 		evhttp_send_reply(req, HTTP_BADREQUEST, "Bad request", ev_buf);

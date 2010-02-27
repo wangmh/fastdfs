@@ -70,9 +70,18 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 
 FDFSStorageDetail *tracker_get_writable_storage(FDFSGroupInfo *pStoreGroup);
 
-int tracker_mem_get_storage_by_filename(const byte cmd, const char *group_name,\
-	const char *filename, const int filename_len, FDFSGroupInfo **ppGroup, \
-	FDFSStorageDetail **ppStoreServers, int *server_count);
+#ifdef WITH_HTTPD
+#define FDFS_DOWNLOAD_TYPE_PARAM  	const int download_type, 
+#define FDFS_DOWNLOAD_TYPE_CALL		FDFS_DOWNLOAD_TYPE_TCP, 
+#else
+#define FDFS_DOWNLOAD_TYPE_PARAM 
+#define FDFS_DOWNLOAD_TYPE_CALL 
+#endif
+
+int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
+	const char *group_name, const char *filename, const int filename_len, \
+	FDFSGroupInfo **ppGroup, FDFSStorageDetail **ppStoreServers, \
+	int *server_count);
 
 int tracker_mem_check_alive(void *arg);
 

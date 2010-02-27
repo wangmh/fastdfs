@@ -1230,6 +1230,7 @@ static int tracker_deal_service_query_fetch_update( \
 		filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
 
 		pResp->status = tracker_mem_get_storage_by_filename(cmd, \
+			FDFS_DOWNLOAD_TYPE_CALL \
 			group_name, filename, filename_len, &pGroup, \
 			ppStoreServers, &server_count);
 	} while (0);
