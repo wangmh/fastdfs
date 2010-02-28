@@ -174,8 +174,9 @@ static int iniDoLoadFromFile(const char *szFilename, \
 				&content, &content_len, error_info)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"get_url_content fail, error info: %s", \
-				__LINE__, error_info);
+				"get_url_content fail, " \
+				"url: %s, error info: %s", \
+				__LINE__, szFilename, error_info);
 			return result;
 		}
 
@@ -183,7 +184,7 @@ static int iniDoLoadFromFile(const char *szFilename, \
 		{
 			free(content);
 			logError("file: "__FILE__", line: %d, " \
-				"HTTP status code: %d != 200, url=%s", \
+				"HTTP status code: %d != 200, url: %s", \
 				__LINE__, http_status, szFilename);
 			return EINVAL;
 		}

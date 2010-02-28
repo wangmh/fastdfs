@@ -37,12 +37,17 @@ int load_mime_types_from_file(HashArray *pHash, const char *mime_filename)
 	int http_status;
 	int content_len;
 	int64_t file_size;
+	char error_info[512];
 
 	if (strncasecmp(mime_filename, "http://", 7) == 0)
 	{
 		if ((result=get_url_content(mime_filename, 60, &http_status, \
-				&content, &content_len)) != 0)
+				&content, &content_len, error_info)) != 0)
 		{
+			logError("file: "__FILE__", line: %d, " \
+				"get_url_content fail, " \
+				"url: %s, error info: %s", \
+				__LINE__, mime_filename, error_info);
 			return result;
 		}
 
@@ -50,7 +55,7 @@ int load_mime_types_from_file(HashArray *pHash, const char *mime_filename)
 		{
 			free(content);
 			logError("file: "__FILE__", line: %d, " \
-				"HTTP status code: %d != 200, url=%s", \
+				"HTTP status code: %d != 200, url: %s", \
 				__LINE__, http_status, mime_filename);
 			return EINVAL;
 		}
