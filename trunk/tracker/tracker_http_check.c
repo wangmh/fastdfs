@@ -24,7 +24,10 @@ static void *http_check_entrance(void *arg)
 	FDFSGroupInfo *pGroupEnd;
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppServerEnd;
-	char url[256];
+	FDFSStorageDetail *pServer;
+	FDFSStorageDetail *pServerEnd;
+	char url[512];
+	char error_info[512];
 	char *content;
 	int content_len;
 	int http_status;
@@ -77,20 +80,49 @@ static void *http_check_entrance(void *arg)
 						pGroup->storage_http_port);
 			close(sock);
 
+			if (g_http_servers_dirty)
+			{
+				break;
+			}
+
 			if (result == 0)
 			{
 				*(pGroup->http_servers+server_count)=*ppServer;
 				server_count++;
+				if ((*ppServer)->http_check_fail_count > 0)
+				{
+					logInfo("file: "__FILE__", line: %d, " \
+						"http check alive success " \
+						"after %d times, server: %s:%d",
+						__LINE__, \
+						(*ppServer)->http_check_fail_count, 
+						(*ppServer)->ip_addr, \
+						pGroup->storage_http_port);
+					(*ppServer)->http_check_fail_count = 0;
+				}
 			}
 			else
 			{
-				logError("file: "__FILE__", line: %d, " \
+				if (result != (*ppServer)->http_last_check_errno)
+				{
+				sprintf((*ppServer)->http_check_error_info, 
 					"http check alive, connect to http " \
 					"server %s:%d fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, (*ppServer)->ip_addr, \
+					(*ppServer)->ip_addr, \
 					pGroup->storage_http_port, result, \
 					strerror(result));
+
+				logError("file: "__FILE__", line: %d, %s" \
+					__LINE__, \
+					(*ppServer)->http_check_error_info));
+				(*ppServer)->http_last_check_errno = result;
+				(*ppServer)->http_check_fail_count = 1;
+				}
+				else
+				{
+					(*ppServer)->http_check_fail_count++;
+				}
 			}
 		}
 		else  //http
@@ -99,7 +131,7 @@ static void *http_check_entrance(void *arg)
 			pGroup->storage_http_port, g_http_check_uri);
 
 		result = get_url_content(url, g_network_timeout, &http_status, \
-        			&content, &content_len);
+        			&content, &content_len, error_info);
 
 		if (g_http_servers_dirty)
 		{
@@ -117,16 +149,58 @@ static void *http_check_entrance(void *arg)
 			{
 				*(pGroup->http_servers+server_count)=*ppServer;
 				server_count++;
+
+				if ((*ppServer)->http_check_fail_count > 0)
+				{
+					logInfo("file: "__FILE__", line: %d, " \
+						"http check alive success " \
+						"after %d times, url: %s",\
+						__LINE__, \
+						(*ppServer)->http_check_fail_count, 
+						url);
+					(*ppServer)->http_check_fail_count = 0;
+				}
 			}
 			else
 			{
-				logError("file: "__FILE__", line: %d, " \
-					"http check alive, url=%s, " \
-					"http_status=%d", \
-					__LINE__, url, http_status);
+			if (http_status != (*ppServer)->http_last_check_status)
+			{
+				sprintf((*ppServer)->http_check_error_info, \
+					"http check alive fail, url: %s, " \
+					"http_status=%d", url, http_status);
+
+				logError("file: "__FILE__", line: %d, %s" \
+					__LINE__, \
+					(*ppServer)->http_check_error_info));
+				(*ppServer)->http_last_check_status = http_status;
+				(*ppServer)->http_check_fail_count = 1;
+			}
+			else
+			{
+				(*ppServer)->http_check_fail_count++;
+			}
 			}
 
 			free(content);
+		}
+		else
+		{
+			if (result != (*ppServer)->http_last_check_errno)
+			{
+				sprintf((*ppServer)->http_check_error_info, \
+					"http check alive fail, " \
+					"error info: %s", error_info);
+
+				logError("file: "__FILE__", line: %d, %s" \
+					__LINE__, \
+					(*ppServer)->http_check_error_info));
+				(*ppServer)->http_last_check_errno = result;
+				(*ppServer)->http_check_fail_count = 1;
+			}
+			else
+			{
+				(*ppServer)->http_check_fail_count++;
+			}
 		}
 		}
 	}
@@ -144,6 +218,25 @@ static void *http_check_entrance(void *arg)
 
 		pGroup->http_server_count = server_count;
 	}
+	}
+	}
+
+	pGroupEnd = g_groups.groups + g_groups.count;
+	for (pGroup=g_groups.groups; pGroup<pGroupEnd; pGroup++)
+	{
+	pServerEnd = pGroup->all_servers + pGroup->count;
+	for (pServer=pGroup->all_servers; pServer<pServerEnd; pServer++)
+	{
+		if (pServer->http_check_fail_count > 1)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"http check alive fail " \
+				"after %d times, storage server: %s:%d, " \
+				"error info: %s", \
+				__LINE__, pServer->http_check_fail_count, \
+				pServer->ip_addr, pGroup->storage_http_port, \
+				pServer->http_check_error_info));
+		}
 	}
 	}
 

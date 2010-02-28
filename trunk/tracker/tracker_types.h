@@ -183,6 +183,13 @@ typedef struct StructFDFSStorageDetail
 	int *ref_count;   //group/storage servers referer count
 	int chg_count;    //current server changed counter
 	FDFSStorageStat stat;
+
+#ifdef WITH_HTTPD
+	int http_check_last_errno;
+	int http_check_last_status;
+	int http_check_fail_count;
+	char http_check_error_info[256];
+#endif
 } FDFSStorageDetail;
 
 typedef struct
