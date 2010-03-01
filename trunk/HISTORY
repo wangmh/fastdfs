@@ -1,5 +1,5 @@
 
-Version 1.26  2010-02-27
+Version 1.26  2010-02-28
  * remove compile warning of logError
  * ini reader support section
  * bug fixed: tracker/tracker_mem.c sync storage server status
