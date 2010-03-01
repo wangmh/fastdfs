@@ -2491,7 +2491,9 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				pClientInfo->storage_http_port, \
 				pClientInfo->group_name, \
 				pClientInfo->pGroup->storage_http_port);
+#ifdef WITH_HTTPD
 			return EINVAL;
+#endif
 		}
 	}
 	

@@ -103,7 +103,7 @@ static void *http_check_entrance(void *arg)
 			}
 			else
 			{
-				if (result != (*ppServer)->http_last_check_errno)
+				if (result != (*ppServer)->http_check_last_errno)
 				{
 				sprintf((*ppServer)->http_check_error_info, 
 					"http check alive, connect to http " \
@@ -113,10 +113,10 @@ static void *http_check_entrance(void *arg)
 					pGroup->storage_http_port, result, \
 					strerror(result));
 
-				logError("file: "__FILE__", line: %d, %s" \
+				logError("file: "__FILE__", line: %d, %s", \
 					__LINE__, \
-					(*ppServer)->http_check_error_info));
-				(*ppServer)->http_last_check_errno = result;
+					(*ppServer)->http_check_error_info);
+				(*ppServer)->http_check_last_errno = result;
 				(*ppServer)->http_check_fail_count = 1;
 				}
 				else
@@ -163,16 +163,16 @@ static void *http_check_entrance(void *arg)
 			}
 			else
 			{
-			if (http_status != (*ppServer)->http_last_check_status)
+			if (http_status != (*ppServer)->http_check_last_status)
 			{
 				sprintf((*ppServer)->http_check_error_info, \
 					"http check alive fail, url: %s, " \
 					"http_status=%d", url, http_status);
 
-				logError("file: "__FILE__", line: %d, %s" \
+				logError("file: "__FILE__", line: %d, %s", \
 					__LINE__, \
-					(*ppServer)->http_check_error_info));
-				(*ppServer)->http_last_check_status = http_status;
+					(*ppServer)->http_check_error_info);
+				(*ppServer)->http_check_last_status = http_status;
 				(*ppServer)->http_check_fail_count = 1;
 			}
 			else
@@ -185,16 +185,16 @@ static void *http_check_entrance(void *arg)
 		}
 		else
 		{
-			if (result != (*ppServer)->http_last_check_errno)
+			if (result != (*ppServer)->http_check_last_errno)
 			{
 				sprintf((*ppServer)->http_check_error_info, \
 					"http check alive fail, " \
 					"error info: %s", error_info);
 
-				logError("file: "__FILE__", line: %d, %s" \
+				logError("file: "__FILE__", line: %d, %s", \
 					__LINE__, \
-					(*ppServer)->http_check_error_info));
-				(*ppServer)->http_last_check_errno = result;
+					(*ppServer)->http_check_error_info);
+				(*ppServer)->http_check_last_errno = result;
 				(*ppServer)->http_check_fail_count = 1;
 			}
 			else
@@ -213,8 +213,9 @@ static void *http_check_entrance(void *arg)
 	if (pGroup->http_server_count != server_count)
 	{
 		logDebug("file: "__FILE__", line: %d, " \
-			"HTTP server count change from %d to %d", \
-			__LINE__, pGroup->http_server_count, server_count);
+			"group: %s, HTTP server count change from %d to %d", \
+			__LINE__, pGroup->group_name, \
+			pGroup->http_server_count, server_count);
 
 		pGroup->http_server_count = server_count;
 	}
@@ -235,7 +236,7 @@ static void *http_check_entrance(void *arg)
 				"error info: %s", \
 				__LINE__, pServer->http_check_fail_count, \
 				pServer->ip_addr, pGroup->storage_http_port, \
-				pServer->http_check_error_info));
+				pServer->http_check_error_info);
 		}
 	}
 	}
