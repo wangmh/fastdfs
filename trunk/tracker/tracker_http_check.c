@@ -105,6 +105,19 @@ static void *http_check_entrance(void *arg)
 			{
 				if (result != (*ppServer)->http_check_last_errno)
 				{
+				if ((*ppServer)->http_check_fail_count > 1)
+				{
+					logError("file: "__FILE__", line: %d, "\
+						"http check alive fail after " \
+						"%d times, storage server: " \
+						"%s:%d, error info: %s", \
+						__LINE__, \
+						(*ppServer)->http_check_fail_count, \
+						(*ppServer)->ip_addr, \
+						pGroup->storage_http_port, \
+						(*ppServer)->http_check_error_info);
+				}
+
 				sprintf((*ppServer)->http_check_error_info, 
 					"http check alive, connect to http " \
 					"server %s:%d fail, " \
@@ -165,6 +178,19 @@ static void *http_check_entrance(void *arg)
 			{
 			if (http_status != (*ppServer)->http_check_last_status)
 			{
+				if ((*ppServer)->http_check_fail_count > 1)
+				{
+					logError("file: "__FILE__", line: %d, "\
+						"http check alive fail after " \
+						"%d times, storage server: " \
+						"%s:%d, error info: %s", \
+						__LINE__, \
+						(*ppServer)->http_check_fail_count, \
+						(*ppServer)->ip_addr, \
+						pGroup->storage_http_port, \
+						(*ppServer)->http_check_error_info);
+				}
+
 				sprintf((*ppServer)->http_check_error_info, \
 					"http check alive fail, url: %s, " \
 					"http_status=%d", url, http_status);
@@ -187,6 +213,19 @@ static void *http_check_entrance(void *arg)
 		{
 			if (result != (*ppServer)->http_check_last_errno)
 			{
+				if ((*ppServer)->http_check_fail_count > 1)
+				{
+					logError("file: "__FILE__", line: %d, "\
+						"http check alive fail after " \
+						"%d times, storage server: " \
+						"%s:%d, error info: %s", \
+						__LINE__, \
+						(*ppServer)->http_check_fail_count, \
+						(*ppServer)->ip_addr, \
+						pGroup->storage_http_port, \
+						(*ppServer)->http_check_error_info);
+				}
+
 				sprintf((*ppServer)->http_check_error_info, \
 					"http check alive fail, " \
 					"error info: %s", error_info);
