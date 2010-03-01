@@ -3237,7 +3237,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 				}
 				else
 				{
-				ppStoreServers[0] = (*ppGroup)->http_servers;
+				ppStoreServers[0] = *((*ppGroup)->http_servers);
 				}
 				}
 #else
