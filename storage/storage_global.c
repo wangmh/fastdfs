@@ -156,6 +156,10 @@ void load_local_host_ip_addrs()
 	{
 		alias_count = splitEx(g_if_alias_prefix, ',', \
 			if_alias_prefixes, STORAGE_MAX_ALIAS_PREFIX_COUNT);
+		for (k=0; k<alias_count; k++)
+		{
+			trim(if_alias_prefixes[k]);
+		}
 	}
 
 	if (gethostaddrs(if_alias_prefixes, alias_count, ip_addresses, \
