@@ -11,6 +11,7 @@
 #include <errno.h>
 #include "logger.h"
 #include "sockopt.h"
+#include "shared_func.h"
 #include "storage_global.h"
 
 char **g_store_paths = NULL;
@@ -77,6 +78,7 @@ char g_bind_addr[IP_ADDRESS_SIZE] = {0};
 bool g_client_bind_addr = true;
 bool g_storage_ip_changed_auto_adjust = false;
 bool g_thread_kill_done = false;
+char g_if_alias_prefix[STORAGE_IF_ALIAS_PREFIX_MAX_SIZE] = {0};
 
 int g_thread_stack_size = 512 * 1024;
 int g_upload_priority = DEFAULT_UPLOAD_PRIORITY;
@@ -136,12 +138,28 @@ int insert_into_local_host_ip(const char *client_ip)
 
 void load_local_host_ip_addrs()
 {
+#define STORAGE_MAX_ALIAS_PREFIX_COUNT   4
 	char ip_addresses[STORAGE_MAX_LOCAL_IP_ADDRS][IP_ADDRESS_SIZE];
 	int count;
 	int k;
+	char *if_alias_prefixes[STORAGE_MAX_ALIAS_PREFIX_COUNT];
+	int alias_count;
 
 	insert_into_local_host_ip("127.0.0.1");
-	if (gethostaddrs(ip_addresses, STORAGE_MAX_LOCAL_IP_ADDRS, &count) != 0)
+
+	memset(if_alias_prefixes, 0, sizeof(if_alias_prefixes));
+	if (*g_if_alias_prefix == '\0')
+	{
+		alias_count = 0;
+	}
+	else
+	{
+		alias_count = splitEx(g_if_alias_prefix, ',', \
+			if_alias_prefixes, STORAGE_MAX_ALIAS_PREFIX_COUNT);
+	}
+
+	if (gethostaddrs(if_alias_prefixes, alias_count, ip_addresses, \
+			STORAGE_MAX_LOCAL_IP_ADDRS, &count) != 0)
 	{
 		return;
 	}
@@ -150,6 +168,8 @@ void load_local_host_ip_addrs()
 	{
 		insert_into_local_host_ip(ip_addresses[k]);
 	}
+
+	//print_local_host_ip_addrs();
 }
 
 void print_local_host_ip_addrs()

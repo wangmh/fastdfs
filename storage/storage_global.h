@@ -32,7 +32,8 @@
 #define DEFAULT_DATA_DIR_COUNT_PER_PATH	 256
 #define DEFAULT_UPLOAD_PRIORITY           10
 
-#define STORAGE_MAX_LOCAL_IP_ADDRS	4
+#define STORAGE_MAX_LOCAL_IP_ADDRS	  4
+#define STORAGE_IF_ALIAS_PREFIX_MAX_SIZE 32
 
 #ifdef __cplusplus
 extern "C" {
@@ -112,6 +113,7 @@ extern bool g_thread_kill_done;
 extern int g_thread_stack_size;
 extern int g_upload_priority;
 extern time_t g_up_time;
+extern char g_if_alias_prefix[STORAGE_IF_ALIAS_PREFIX_MAX_SIZE];
 
 #ifdef WITH_HTTPD
 extern FDFSHTTPParams g_http_params;
