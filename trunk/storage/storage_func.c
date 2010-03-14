@@ -738,6 +738,7 @@ int storage_func_init(const char *filename, \
 	char *pRunByUser;
 	char *pFsyncAfterWrittenBytes;
 	char *pThreadStackSize;
+	char *pIfAliasPrefix;
 	IniContext iniContext;
 	int result;
 	int64_t fsync_after_written_bytes;
@@ -1014,6 +1015,18 @@ int storage_func_init(const char *filename, \
 				"upload_priority", &iniContext, \
 				DEFAULT_UPLOAD_PRIORITY);
 
+		pIfAliasPrefix = iniGetStrValue(NULL, \
+			"if_alias_prefix", &iniContext);
+		if (pIfAliasPrefix == NULL)
+		{
+			*g_if_alias_prefix = '\0';
+		}
+		else
+		{
+			snprintf(g_if_alias_prefix, sizeof(g_if_alias_prefix), 
+				"%s", pIfAliasPrefix);
+		}
+
 		g_check_file_duplicate = iniGetBoolValue(NULL, \
 				"check_file_duplicate", &iniContext, false);
 		if (g_check_file_duplicate)
@@ -1101,6 +1114,7 @@ int storage_func_init(const char *filename, \
 			"sync_log_buff_interval=%ds, " \
 			"sync_binlog_buff_interval=%ds, " \
 			"thread_stack_size=%d KB, upload_priority=%d, " \
+			"if_alias_prefix=%s, " \
 			"check_file_duplicate=%d, FDHT group count=%d, " \
 			"FDHT server count=%d, FDHT key_namespace=%s, " \
 			"FDHT keep_alive=%d, HTTP server port=%d", \
@@ -1118,9 +1132,10 @@ int storage_func_init(const char *filename, \
 			g_file_distribute_rotate_count, \
 			g_fsync_after_written_bytes, g_sync_log_buff_interval, \
 			g_sync_binlog_buff_interval, g_thread_stack_size/1024, \
-			g_upload_priority, g_check_file_duplicate, \
-			g_group_array.group_count, g_group_array.server_count, \
-			g_key_namespace, g_keep_alive, g_http_port);
+			g_upload_priority, g_if_alias_prefix, \
+			g_check_file_duplicate, g_group_array.group_count, \
+			g_group_array.server_count, g_key_namespace, \
+			g_keep_alive, g_http_port);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)

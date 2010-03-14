@@ -77,8 +77,8 @@ int tcprecvfile_ex(int sock, const char *filename, const int64_t file_bytes, \
 
 int tcpdiscard(int sock, const int bytes, const int timeout);
 
-int gethostaddrs(char ip_addrs[][IP_ADDRESS_SIZE], \
-	const int max_count, int *count);
+int gethostaddrs(char **if_alias_prefixes, const int prefix_count, \
+	char ip_addrs[][IP_ADDRESS_SIZE], const int max_count, int *count);
 
 #ifdef __cplusplus
 }
