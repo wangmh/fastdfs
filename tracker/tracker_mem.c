@@ -2508,6 +2508,9 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	pStorageServer->up_time = pJoinBody->up_time;
 	snprintf(pStorageServer->version, sizeof(pStorageServer->version), \
 		"%s", pJoinBody->version);
+	snprintf(pStorageServer->domain_name, \
+		sizeof(pStorageServer->domain_name), \
+		"%s", pJoinBody->domain_name);
 
 	if (pClientInfo->pGroup->store_path_count == 0)
 	{
