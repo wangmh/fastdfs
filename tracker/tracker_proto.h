@@ -88,6 +88,7 @@ typedef struct
 	char upload_priority[FDFS_PROTO_PKG_LEN_SIZE];
 	char up_time[FDFS_PROTO_PKG_LEN_SIZE];   //storage service started timestamp
 	char version[FDFS_VERSION_SIZE];   //storage version
+	char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE];
 	char init_flag;
 } TrackerStorageJoinBody;
 
@@ -108,6 +109,7 @@ typedef struct
 {
 	char status;
 	char ip_addr[IP_ADDRESS_SIZE];
+	char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE];
 	char src_ip_addr[IP_ADDRESS_SIZE];
 	char version[FDFS_VERSION_SIZE];
 	char sz_up_time[8];

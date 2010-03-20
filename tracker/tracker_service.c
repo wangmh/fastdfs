@@ -564,11 +564,8 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 				const int64_t nInPackLen)
 {
 	TrackerStorageJoinBody body;
-	int store_path_count;
-	int subdir_count_per_path;
-	int upload_priority;
+	FDFSStorageJoinBody joinBody;
 	int status;
-	time_t up_time;
 
 	do
 	{
@@ -617,44 +614,51 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 		break;
 	}
 
-	pClientInfo->storage_http_port = (int)buff2long(body.storage_http_port);
-	if (pClientInfo->storage_http_port < 0)
+	joinBody.storage_http_port = (int)buff2long(body.storage_http_port);
+	if (joinBody.storage_http_port < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, invalid http port: %d", \
 			__LINE__, pClientInfo->ip_addr, \
-			pClientInfo->storage_http_port);
+			joinBody.storage_http_port);
 		status = EINVAL;
 		break;
 	}
 
-	store_path_count = (int)buff2long(body.store_path_count);
-	if (store_path_count <= 0 || store_path_count > 256)
+	joinBody.store_path_count = (int)buff2long(body.store_path_count);
+	if (joinBody.store_path_count <= 0 || joinBody.store_path_count > 256)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, invalid store_path_count: %d", \
-			__LINE__, pClientInfo->ip_addr, store_path_count);
+			__LINE__, pClientInfo->ip_addr, \
+			joinBody.store_path_count);
 		status = EINVAL;
 		break;
 	}
 
-	subdir_count_per_path = (int)buff2long(body.subdir_count_per_path);
-	if (subdir_count_per_path <= 0 || subdir_count_per_path > 256)
+	joinBody.subdir_count_per_path = (int)buff2long(body.subdir_count_per_path);
+	if (joinBody.subdir_count_per_path <= 0 || \
+	    joinBody.subdir_count_per_path > 256)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, invalid subdir_count_per_path: %d", \
-			__LINE__, pClientInfo->ip_addr, subdir_count_per_path);
+			__LINE__, pClientInfo->ip_addr, \
+			joinBody.subdir_count_per_path);
 		status = EINVAL;
 		break;
 	}
 
-	upload_priority = (int)buff2long(body.upload_priority);
-	up_time = (time_t)buff2long(body.up_time);
+	joinBody.upload_priority = (int)buff2long(body.upload_priority);
+	joinBody.up_time = (time_t)buff2long(body.up_time);
+
+	*(body.version + (sizeof(body.version) - 1)) = '\0';
+	*(body.domain_name + (sizeof(body.domain_name) - 1)) = '\0';
+	strcpy(joinBody.version, body.version);
+	strcpy(joinBody.domain_name, body.domain_name);
+	joinBody.init_flag = body.init_flag;
 
 	status = tracker_mem_add_group_and_storage(pClientInfo, \
-			store_path_count, subdir_count_per_path, \
-			upload_priority, up_time, body.version, \
-			true, body.init_flag);
+			&joinBody, true);
 	} while (0);
 
 	return tracker_check_and_sync(pClientInfo, status);
@@ -1064,6 +1068,7 @@ static int tracker_deal_server_list_group_storages( \
 					IP_ADDRESS_SIZE);
 			}
 
+			strcpy(pDest->domain_name, (*ppServer)->domain_name);
 			strcpy(pDest->version, (*ppServer)->version);
 			long2buff((*ppServer)->up_time, pDest->sz_up_time);
 			long2buff((*ppServer)->total_mb, pDest->sz_total_mb);
