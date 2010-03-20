@@ -53,6 +53,7 @@ extern int g_subdir_count_per_path;
 
 extern int g_server_port;
 extern int g_http_port;  //http server port
+extern char g_http_domain[FDFS_DOMAIN_NAME_MAX_SIZE];  //http server domain name
 extern int g_max_connections;
 extern int g_file_distribute_path_mode;
 extern int g_file_distribute_rotate_count;

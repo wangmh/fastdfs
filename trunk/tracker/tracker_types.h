@@ -76,6 +76,8 @@
 
 #define FDFS_FILE_DIST_DEFAULT_ROTATE_COUNT   100
 
+#define FDFS_DOMAIN_NAME_MAX_SIZE	128
+
 typedef struct
 {
 	char status;
@@ -161,6 +163,7 @@ typedef struct StructFDFSStorageDetail
 	char status;
 	bool dirty;
 	char ip_addr[IP_ADDRESS_SIZE];
+	char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE];
 	char version[FDFS_VERSION_SIZE];
 
 	struct StructFDFSStorageDetail *psync_src_server;
@@ -258,7 +261,6 @@ typedef struct
 {
 	int sock;
 	int storage_port;
-	int storage_http_port;
 	char ip_addr[IP_ADDRESS_SIZE];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	FDFSGroupInfo *pGroup;
@@ -286,6 +288,19 @@ typedef struct
 	char ip_addr[IP_ADDRESS_SIZE];
 	char sync_src_ip_addr[IP_ADDRESS_SIZE];
 } FDFSStorageSync;
+
+typedef struct
+{
+	int storage_port;
+	int storage_http_port;
+	int store_path_count;
+	int subdir_count_per_path;
+	int upload_priority;
+	int up_time;   //storage service started timestamp
+        char version[FDFS_VERSION_SIZE];   //storage version
+        char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE];
+        char init_flag;
+} FDFSStorageJoinBody;
 
 #endif
 

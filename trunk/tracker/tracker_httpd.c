@@ -25,7 +25,8 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	char *url;
 	char *file_id;
 	char uri[256];
-	char redirect_url[256+32];
+	char szPortPart[16];
+	char redirect_url[512];
 	int url_len;
 	int uri_len;
 	int domain_len;
@@ -158,8 +159,19 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 		return;
 	}
 
-	domain_len = sprintf(redirect_url, "http://%s:%d", \
-			ppStoreServers[0]->ip_addr, pGroup->storage_http_port);
+	if (pGroup->storage_http_port == 80)
+	{
+		*szPortPart = '\0';
+	}
+	else
+	{
+		sprintf(szPortPart, ":%d", pGroup->storage_http_port);
+	}
+
+	domain_len = sprintf(redirect_url, "http://%s%s", \
+		*(ppStoreServers[0]->domain_name) != '\0' ? \
+		ppStoreServers[0]->domain_name : ppStoreServers[0]->ip_addr, \
+		szPortPart);
 	memcpy(redirect_url + domain_len, uri, uri_len);
 	*(redirect_url + domain_len + uri_len) = '\0';
 

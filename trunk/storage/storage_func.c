@@ -739,6 +739,7 @@ int storage_func_init(const char *filename, \
 	char *pFsyncAfterWrittenBytes;
 	char *pThreadStackSize;
 	char *pIfAliasPrefix;
+	char *pHttpDomain;
 	IniContext iniContext;
 	int result;
 	int64_t fsync_after_written_bytes;
@@ -1071,6 +1072,18 @@ int storage_func_init(const char *filename, \
 			return EINVAL;
 		}
  
+		pHttpDomain = iniGetStrValue(NULL, \
+			"http.domain_name", &iniContext);
+		if (pHttpDomain == NULL)
+		{
+			*g_http_domain = '\0';
+		}
+		else
+		{
+			snprintf(g_http_domain, sizeof(g_http_domain), \
+				"%s", pHttpDomain);
+		}
+
 #ifdef WITH_HTTPD
 		{
 		char *pHttpTrunkSize;
@@ -1117,7 +1130,8 @@ int storage_func_init(const char *filename, \
 			"if_alias_prefix=%s, " \
 			"check_file_duplicate=%d, FDHT group count=%d, " \
 			"FDHT server count=%d, FDHT key_namespace=%s, " \
-			"FDHT keep_alive=%d, HTTP server port=%d", \
+			"FDHT keep_alive=%d, HTTP server port=%d, " \
+			"domain name=%s", \
 			g_version.major, g_version.minor, \
 			g_base_path, g_path_count, g_subdir_count_per_path, \
 			g_group_name, g_network_timeout, \
@@ -1135,7 +1149,7 @@ int storage_func_init(const char *filename, \
 			g_upload_priority, g_if_alias_prefix, \
 			g_check_file_duplicate, g_group_array.group_count, \
 			g_group_array.server_count, g_key_namespace, \
-			g_keep_alive, g_http_port);
+			g_keep_alive, g_http_port, g_http_domain);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)

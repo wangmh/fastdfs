@@ -21,6 +21,7 @@ typedef struct
 	char status;
 	char ip_addr[IP_ADDRESS_SIZE];
 	char src_ip_addr[IP_ADDRESS_SIZE];
+	char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE]; //http domain name
 	char version[FDFS_VERSION_SIZE];
 	int total_mb;  //total disk storage in MB
 	int free_mb;  //free disk storage in MB
