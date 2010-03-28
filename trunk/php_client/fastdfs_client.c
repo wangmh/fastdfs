@@ -4138,8 +4138,20 @@ static int load_config_files()
 {
 	#define ITEM_NAME_CONF_COUNT "fastdfs_client.tracker_group_count"
 	#define ITEM_NAME_CONF_FILE  "fastdfs_client.tracker_group"
+	#define ITEM_NAME_BASE_PATH  	 "fastdfs_client.base_path"
+	#define ITEM_NAME_NETWOK_TIMEOUT "fastdfs_client.network_timeout"
+	#define ITEM_NAME_LOG_LEVEL      "fastdfs_client.log_level"
+	#define ITEM_NAME_LOG_FILENAME   "fastdfs_client.log_filename"
+	#define ITEM_NAME_ANTI_STEAL_SECRET_KEY "fastdfs_client.http.anti_steal_secret_key"
+
 	zval conf_c;
+	zval base_path;
+	zval network_timeout;
+	zval log_level;
+	zval anti_steal_secret_key;
+	zval log_filename;
 	zval conf_filename;
+	char *pAntiStealSecretKey;
 	char szItemName[sizeof(ITEM_NAME_CONF_FILE) + 10];
 	int nItemLen;
 	FDFSConfigInfo *pConfigInfo;
@@ -4162,6 +4174,75 @@ static int load_config_files()
 	{
 		 config_count = 1;
 	}
+
+	if (zend_get_configuration_directive(ITEM_NAME_BASE_PATH, \
+			sizeof(ITEM_NAME_BASE_PATH), &base_path) != SUCCESS)
+	{
+		fprintf(stderr, "file: "__FILE__", line: %d, " \
+			"fastdht_client.ini must have item " \
+			"\"base_path\"!", __LINE__);
+		return ENOENT;
+	}
+
+	snprintf(g_base_path, sizeof(g_base_path), "%s", \
+		base_path.value.str.val);
+	chopPath(g_base_path);
+	if (!fileExists(g_base_path))
+	{
+		logError("\"%s\" can't be accessed, error info: %s", \
+			g_base_path, strerror(errno));
+		return errno != 0 ? errno : ENOENT;
+	}
+	if (!isDir(g_base_path))
+	{
+		logError("\"%s\" is not a directory!", g_base_path);
+		return ENOTDIR;
+	}
+
+	if (zend_get_configuration_directive(ITEM_NAME_NETWOK_TIMEOUT, \
+			sizeof(ITEM_NAME_NETWOK_TIMEOUT), \
+			&network_timeout) == SUCCESS)
+	{
+		g_network_timeout = atoi(network_timeout.value.str.val);
+		if (g_network_timeout <= 0)
+		{
+			g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
+		}
+	}
+	else
+	{
+		g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
+	}
+
+	if (zend_get_configuration_directive(ITEM_NAME_LOG_LEVEL, \
+			sizeof(ITEM_NAME_LOG_LEVEL), \
+			&log_level) == SUCCESS)
+	{
+		set_log_level(log_level.value.str.val);
+	}
+
+
+	if (zend_get_configuration_directive(ITEM_NAME_LOG_FILENAME, \
+			sizeof(ITEM_NAME_LOG_FILENAME), \
+			&log_filename) == SUCCESS)
+	{
+		if (log_filename.value.str.len > 0)
+		{
+			log_set_prefix(g_base_path, log_filename.value.str.val);
+		}
+	}
+
+	if (zend_get_configuration_directive(ITEM_NAME_ANTI_STEAL_SECRET_KEY, \
+			sizeof(ITEM_NAME_ANTI_STEAL_SECRET_KEY), \
+			&anti_steal_secret_key) == SUCCESS)
+	{
+		pAntiStealSecretKey = anti_steal_secret_key.value.str.val;
+	}
+	else
+	{
+		pAntiStealSecretKey = "";
+	}
+	buffer_strcpy(&g_anti_steal_secret_key, pAntiStealSecretKey);
 
 	config_list = (FDFSConfigInfo *)malloc(sizeof(FDFSConfigInfo) * \
 			config_count);
@@ -4206,11 +4287,6 @@ static int load_config_files()
 		if (pConfigInfo == config_list) //first config file
 		{
 			pConfigInfo->pTrackerGroup = &g_tracker_group;
-			result = fdfs_client_init(conf_filename.value.str.val);
-			if (result != 0)
-			{
-				return result;
-			}
 		}
 		else
 		{
@@ -4223,19 +4299,19 @@ static int load_config_files()
 					__LINE__, (int)sizeof(TrackerServerGroup));
 				return errno != 0 ? errno : ENOMEM;
 			}
+		}
 
-			if ((result=fdfs_load_tracker_group(\
-				pConfigInfo->pTrackerGroup, 
+		if ((result=fdfs_load_tracker_group(pConfigInfo->pTrackerGroup, 
 				conf_filename.value.str.val)) != 0)
-			{
-				return result;
-			}
+		{
+			return result;
 		}
 	}
 
 	logInfo("base_path=%s, network_timeout=%d, " \
+		"anti_steal_secret_key length=%d, " \
 		"tracker_group_count=%d, first tracker group server_count=%d", \
-		g_base_path, g_network_timeout, \
+		g_base_path, g_network_timeout, strlen(pAntiStealSecretKey), \
 		config_count, g_tracker_group.server_count);
 
 	return 0;

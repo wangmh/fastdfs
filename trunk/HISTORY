@@ -1,8 +1,9 @@
 
-Version 1.27  2010-03-20
+Version 1.27  2010-03-28
  * storage.conf: add if_alias_prefix parameter to get the ip address of the 
    local host
  * storage http support domain name
+ * php extension add some parameters in fastdfs_client.ini
 
 Version 1.26  2010-02-28
  * remove compile warning of logError
