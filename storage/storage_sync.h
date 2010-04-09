@@ -43,7 +43,7 @@ typedef struct
 	int mark_fd;
 	int binlog_index;
 	int binlog_fd;
-	off_t binlog_offset;
+	int64_t binlog_offset;
 	int64_t scan_row_count;
 	int64_t sync_row_count;
 	int64_t last_write_row_count;

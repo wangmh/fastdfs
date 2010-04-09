@@ -172,7 +172,7 @@ typedef struct StructFDFSStorageDetail
 	time_t up_time;
 	int64_t total_mb;  //total disk storage in MB
 	int64_t free_mb;  //free disk storage in MB
-	off_t changelog_offset;  //changelog file offset
+	int64_t changelog_offset;  //changelog file offset
 
 	int64_t *path_total_mbs; //total disk storage in MB
 	int64_t *path_free_mbs;  //free disk storage in MB

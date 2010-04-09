@@ -31,7 +31,7 @@
 static pthread_mutex_t mem_thread_lock;
 static pthread_mutex_t mem_file_lock;
 
-off_t g_changelog_fsize = 0; //storage server change log file size
+int64_t g_changelog_fsize = 0; //storage server change log file size
 static int changelog_fd = -1;  //storage server change log fd for write
 
 static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup);
@@ -1024,7 +1024,7 @@ int tracker_save_storages()
 				INT64_PRINTF_FORMAT"%c" \
 				"%d%c" \
 				"%d%c" \
-				OFF_PRINTF_FORMAT"\n", \
+				INT64_PRINTF_FORMAT"\n", \
 				(*ppGroup)->group_name, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
 				pStorage->ip_addr, \
