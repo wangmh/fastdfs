@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-extern off_t g_changelog_fsize; //storage server change log file size
+extern int64_t g_changelog_fsize; //storage server change log file size
 
 int tracker_mem_init();
 int tracker_mem_destroy();

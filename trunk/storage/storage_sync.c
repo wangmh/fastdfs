@@ -52,7 +52,7 @@
 
 int g_binlog_fd = -1;
 int g_binlog_index = 0;
-static off_t binlog_file_size = 0;
+static int64_t binlog_file_size = 0;
 
 int g_storage_sync_thread_count = 0;
 static pthread_mutex_t sync_thread_lock;
@@ -992,7 +992,7 @@ static int storage_open_readable_binlog(BinLogReader *pReader)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"seek binlog file \"%s\" fail, file offset=" \
-			OFF_PRINTF_FORMAT", errno: %d, error info: %s", \
+			INT64_PRINTF_FORMAT", errno: %d, error info: %s", \
 			__LINE__, full_filename, pReader->binlog_offset, \
 			errno, strerror(errno));
 
@@ -1378,7 +1378,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 				iniFreeContext(&iniContext);
 				logError("file: "__FILE__", line: %d, " \
 					"in mark file \"%s\", binlog_offset: "\
-					OFF_PRINTF_FORMAT" < 0", \
+					INT64_PRINTF_FORMAT" < 0", \
 					__LINE__, full_filename, \
 					pReader->binlog_offset);
 				return EINVAL;
@@ -1467,7 +1467,7 @@ static int storage_write_to_mark_file(BinLogReader *pReader)
 
 	len = sprintf(buff, \
 		"%s=%d\n"  \
-		"%s="OFF_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
@@ -1496,7 +1496,7 @@ static int rewind_to_prev_rec_end(BinLogReader *pReader)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"seek binlog file \"%s\"fail, " \
-			"file offset: "OFF_PRINTF_FORMAT", " \
+			"file offset: "INT64_PRINTF_FORMAT", " \
 			"errno: %d, error info: %s", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset, \
@@ -1541,7 +1541,7 @@ static int storage_binlog_preread(BinLogReader *pReader)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"read from binlog file \"%s\" fail, " \
-			"file offset: "OFF_PRINTF_FORMAT", " \
+			"file offset: "INT64_PRINTF_FORMAT", " \
 			"error no: %d, error info: %s", __LINE__, \
 			get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset + pReader->binlog_buff.length, \
@@ -1580,7 +1580,7 @@ static int storage_binlog_do_line_read(BinLogReader *pReader, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"read from binlog file \"%s\" fail, " \
-			"file offset: "OFF_PRINTF_FORMAT", " \
+			"file offset: "INT64_PRINTF_FORMAT", " \
 			"line buffer size: %d is too small! " \
 			"<= line length: %d", __LINE__, \
 			get_binlog_readable_filename(pReader, NULL), \
@@ -1649,7 +1649,7 @@ static int storage_binlog_read(BinLogReader *pReader, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"binlog file \"%s\" not ended by \\n, " \
-				"file offset: "OFF_PRINTF_FORMAT, __LINE__, \
+				"file offset: "INT64_PRINTF_FORMAT, __LINE__, \
 				get_binlog_readable_filename(pReader, NULL), \
 				pReader->binlog_offset);
 			return EINVAL;
@@ -1672,7 +1672,7 @@ static int storage_binlog_read(BinLogReader *pReader, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"read data from binlog file \"%s\" fail, " \
-			"file offset: "OFF_PRINTF_FORMAT", " \
+			"file offset: "INT64_PRINTF_FORMAT", " \
 			"read item count: %d < 3", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset, result);
@@ -1687,7 +1687,7 @@ static int storage_binlog_read(BinLogReader *pReader, \
 		logError("file: "__FILE__", line: %d, " \
 			"item \"filename\" in binlog " \
 			"file \"%s\" is invalid, file offset: " \
-			OFF_PRINTF_FORMAT", filename length: %d > %d", \
+			INT64_PRINTF_FORMAT", filename length: %d > %d", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset, \
 			pRecord->filename_len, (int)sizeof(pRecord->filename)-1);

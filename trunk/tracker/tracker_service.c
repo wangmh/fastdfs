@@ -132,8 +132,8 @@ static int tracker_changelog_response(TrackerClientInfo *pClientInfo, \
 	TrackerHeader resp;
 	char buff[FDFS_CHANGELOG_BUFFER_SIZE];
 	char filename[MAX_PATH_SIZE];
-	off_t changelog_fsize;
-	off_t remain_bytes;
+	int64_t changelog_fsize;
+	int64_t remain_bytes;
 	int send_bytes;
 	int chg_len;
 	int result;
