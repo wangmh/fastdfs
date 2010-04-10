@@ -118,6 +118,16 @@ int main(int argc, char *argv[])
 	daemon_init(true);
 	umask(0);
 	
+	if (dup2(g_log_fd, STDOUT_FILENO) < 0 || \
+		dup2(g_log_fd, STDERR_FILENO) < 0)
+	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"call dup2 fail, errno: %d, error info: %s, " \
+			"program exit!", __LINE__, errno, strerror(errno));
+		g_continue_flag = false;
+		return errno;
+	}
+
 	if ((result=tracker_service_init()) != 0)
 	{
 		return result;

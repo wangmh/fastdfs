@@ -11,7 +11,7 @@ Chinese language: http://www.csource.org/
 # if you use HTTP to download file, please download libevent 1.4.x and install it
 tar xzf FastDFS_v1.x.tar.gz
 #for example:
-tar xzf FastDFS_v1.25.tar.gz
+tar xzf FastDFS_v1.27.tar.gz
 
 #step 2. enter the FastDFS dir
 cd FastDFS
