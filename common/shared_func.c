@@ -405,14 +405,14 @@ void daemon_init(bool bCloseFiles)
 	pid_t pid;
 	int i;
 	
-	if((pid=fork())!=0)
+	if((pid=fork()) != 0)
 	{
 		exit(0);
 	}
 	
 	setsid();
 	
-	if((pid=fork())!=0)
+	if((pid=fork()) != 0)
 	{
 		exit(0);
 	}
