@@ -86,8 +86,11 @@ count=`/bin/sh -c "$cmd"`
 if [ $count -eq 0 ]; then
   /bin/echo "starting $program ..."
   exec $1 $param
+  exit $?
 else
-  /bin/ps auxww | $grep_cmd | $GREP -v grep | $GREP -v $0
+  cmd="/bin/ps auxww | $grep_cmd | $GREP -v grep | $GREP -v $0"
+  /bin/sh -c "$cmd"
   /bin/echo "already running $program count: $count, restart aborted!"
+  exit 16
 fi
 

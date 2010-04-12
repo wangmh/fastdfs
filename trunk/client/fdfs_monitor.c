@@ -181,7 +181,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 		printf( "\tHost %d:\n" \
 			"\t\tip_addr = %s%s  %s\n" \
 			"\t\thttp domain = %s\n" \
-			"\t\tverson = %s\n" \
+			"\t\tversion = %s\n" \
 			"\t\tup time = %s\n" \
 			"\t\ttotal storage = %dGB\n" \
 			"\t\tfree storage = %dGB\n" \

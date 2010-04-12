@@ -643,6 +643,15 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				pStorage->up_time);
 
 			add_assoc_stringl_ex(server_info_array, \
+				"http_domain", sizeof("http_domain"), \
+				pStorage->domain_name, \
+				strlen(pStorage->domain_name), 1);
+
+			add_assoc_stringl_ex(server_info_array, \
+				"version", sizeof("version"), \
+				pStorage->version, strlen(pStorage->version), 1);
+
+			add_assoc_stringl_ex(server_info_array, \
 				"src_ip_addr", sizeof("src_ip_addr"), \
 				pStorage->src_ip_addr, \
 				strlen(pStorage->src_ip_addr), 1);
