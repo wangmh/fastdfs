@@ -4,6 +4,7 @@
  $file_id = $group_name . FDFS_FILE_ID_SEPERATOR . $remote_filename;
 
  echo 'fastdfs_tracker_make_all_connections result: ' . fastdfs_tracker_make_all_connections() . "\n";
+ var_dump(fastdfs_tracker_list_groups());
 
  $tracker = fastdfs_tracker_get_connection();
  var_dump($tracker);
