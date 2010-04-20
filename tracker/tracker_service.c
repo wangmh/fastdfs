@@ -1418,12 +1418,8 @@ static int tracker_deal_service_query_storage( \
 						g_storage_reserved_mb)
 					{
 					pStoreGroup = *ppGroup;
-					if (g_groups.store_lookup == \
-						FDFS_STORE_LOOKUP_LOAD_BALANCE)
-					{
-						g_groups.current_write_group = \
+					g_groups.current_write_group = \
 						ppGroup-g_groups.sorted_groups;
-					}
 					break;
 					}
 				}
@@ -1443,12 +1439,8 @@ static int tracker_deal_service_query_storage( \
 						g_storage_reserved_mb)
 					{
 					pStoreGroup = *ppGroup;
-					if (g_groups.store_lookup == \
-						FDFS_STORE_LOOKUP_LOAD_BALANCE)
-					{
-						g_groups.current_write_group = \
+					g_groups.current_write_group = \
 						ppGroup-g_groups.sorted_groups;
-					}
 					break;
 					}
 				}
