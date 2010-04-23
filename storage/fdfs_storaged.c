@@ -141,8 +141,8 @@ int main(int argc, char *argv[])
 	daemon_init(true);
 	umask(0);
 
-	if (dup2(g_log_fd, STDOUT_FILENO) < 0 || \
-		dup2(g_log_fd, STDERR_FILENO) < 0)
+	if (dup2(g_log_context.log_fd, STDOUT_FILENO) < 0 || \
+		dup2(g_log_context.log_fd, STDERR_FILENO) < 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"call dup2 fail, errno: %d, error info: %s, " \
@@ -240,7 +240,7 @@ int main(int argc, char *argv[])
 	scheduleEntries[0].time_base.minute = TIME_NONE;
 	scheduleEntries[0].interval = g_sync_log_buff_interval;
 	scheduleEntries[0].task_func = log_sync_func;
-	scheduleEntries[0].func_args = NULL;
+	scheduleEntries[0].func_args = &g_log_context;
 
 	scheduleEntries[1].id = 2;
 	scheduleEntries[1].time_base.hour = TIME_NONE;

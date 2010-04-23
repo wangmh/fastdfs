@@ -28,14 +28,9 @@
 
 #define LOG_BUFF_SIZE    64 * 1024
 
-int g_log_level = LOG_INFO;
-int g_log_fd = STDERR_FILENO;
-static pthread_mutex_t log_thread_lock;
-static bool log_to_cache = false;
-static char *log_buff = NULL;
-static char *pcurrent_log_buff = NULL;
+LogContext g_log_context = {LOG_INFO, STDERR_FILENO};
 
-static int log_fsync(const bool bNeedLock);
+static int log_fsync(LogContext *pContext, const bool bNeedLock);
 
 static int check_and_mk_log_dir(const char *base_path)
 {
@@ -56,21 +51,21 @@ static int check_and_mk_log_dir(const char *base_path)
 	return 0;
 }
 
-int log_init()
+int log_init_ex(LogContext *pContext)
 {
 	int result;
 
-	log_buff = (char *)malloc(LOG_BUFF_SIZE);
-	if (log_buff == NULL)
+	pContext->log_buff = (char *)malloc(LOG_BUFF_SIZE);
+	if (pContext->log_buff == NULL)
 	{
 		fprintf(stderr, "malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
 			LOG_BUFF_SIZE, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
-	pcurrent_log_buff = log_buff;
+	pContext->pcurrent_buff = pContext->log_buff;
 
-	if ((result=init_pthread_lock(&log_thread_lock)) != 0)
+	if ((result=init_pthread_lock(&pContext->log_thread_lock)) != 0)
 	{
 		return result;
 	}
@@ -78,7 +73,8 @@ int log_init()
 	return 0;
 }
 
-int log_set_prefix(const char *base_path, const char *filename_prefix)
+int log_set_prefix_ex(LogContext *pContext, const char *base_path, \
+		const char *filename_prefix)
 {
 	int result;
 	char logfile[MAX_PATH_SIZE];
@@ -91,61 +87,83 @@ int log_set_prefix(const char *base_path, const char *filename_prefix)
 	snprintf(logfile, MAX_PATH_SIZE, "%s/logs/%s.log", \
 		base_path, filename_prefix);
 
-	if ((g_log_fd = open(logfile, O_WRONLY | O_CREAT | O_APPEND, 0644)) < 0)
+	if ((pContext->log_fd = open(logfile, O_WRONLY | O_CREAT | O_APPEND, \
+					0644)) < 0)
 	{
 		fprintf(stderr, "open log file \"%s\" to write fail, " \
 			"errno: %d, error info: %s", \
 			logfile, errno, strerror(errno));
-		g_log_fd = STDERR_FILENO;
+		pContext->log_fd = STDERR_FILENO;
 		return errno != 0 ? errno : EACCES;
 	}
 
 	return 0;
 }
 
-void log_set_cache(const bool bLogCache)
+int log_set_filename_ex(LogContext *pContext, const char *log_filename)
 {
-	log_to_cache = bLogCache;
-}
-
-void log_destory()
-{
-	if (g_log_fd >= 0 && g_log_fd != STDERR_FILENO)
+	if ((pContext->log_fd = open(log_filename, O_WRONLY | O_CREAT | \
+				O_APPEND, 0644)) < 0)
 	{
-		log_fsync(true);
-
-		close(g_log_fd);
-		g_log_fd = STDERR_FILENO;
-
-		pthread_mutex_destroy(&log_thread_lock);
+		fprintf(stderr, "open log file \"%s\" to write fail, " \
+			"errno: %d, error info: %s", \
+			log_filename, errno, strerror(errno));
+		pContext->log_fd = STDERR_FILENO;
+		return errno != 0 ? errno : EACCES;
 	}
 
-	if (log_buff != NULL)
+	return 0;
+}
+
+void log_set_cache_ex(LogContext *pContext, const bool bLogCache)
+{
+	pContext->log_to_cache = bLogCache;
+}
+
+void log_destory_ex(LogContext *pContext)
+{
+	if (pContext->log_fd >= 0 && pContext->log_fd != STDERR_FILENO)
 	{
-		free(log_buff);
-		log_buff = NULL;
-		pcurrent_log_buff = NULL;
+		log_fsync(pContext, true);
+
+		close(pContext->log_fd);
+		pContext->log_fd = STDERR_FILENO;
+
+		pthread_mutex_destroy(&pContext->log_thread_lock);
+	}
+
+	if (pContext->log_buff != NULL)
+	{
+		free(pContext->log_buff);
+		pContext->log_buff = NULL;
+		pContext->pcurrent_buff = NULL;
 	}
 }
 
 int log_sync_func(void *args)
 {
-	return log_fsync(true);
+	if (args == NULL)
+	{
+		return EINVAL;
+	}
+
+	return log_fsync((LogContext *)args, true);
 }
 
-static int log_fsync(const bool bNeedLock)
+static int log_fsync(LogContext *pContext, const bool bNeedLock)
 {
 	int result;
 	int write_bytes;
 
-	write_bytes = pcurrent_log_buff - log_buff;
+	write_bytes = pContext->pcurrent_buff - pContext->log_buff;
 	if (write_bytes == 0)
 	{
 		return 0;
 	}
 
 	result = 0;
-	if (bNeedLock && (result=pthread_mutex_lock(&log_thread_lock)) != 0)
+	if (bNeedLock && (result=pthread_mutex_lock( \
+			&pContext->log_thread_lock)) != 0)
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -153,8 +171,9 @@ static int log_fsync(const bool bNeedLock)
 			__LINE__, result, strerror(result));
 	}
 
-	write_bytes = pcurrent_log_buff - log_buff;
-	if (write(g_log_fd, log_buff, write_bytes) != write_bytes)
+	write_bytes = pContext->pcurrent_buff - pContext->log_buff;
+	if (write(pContext->log_fd, pContext->log_buff, write_bytes) != \
+		write_bytes)
 	{
 		result = errno != 0 ? errno : EIO;
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
@@ -162,9 +181,9 @@ static int log_fsync(const bool bNeedLock)
 			 __LINE__, result, strerror(result));
 	}
 
-	if (g_log_fd != STDERR_FILENO)
+	if (pContext->log_fd != STDERR_FILENO)
 	{
-		if (fsync(g_log_fd) != 0)
+		if (fsync(pContext->log_fd) != 0)
 		{
 			result = errno != 0 ? errno : EIO;
 			fprintf(stderr, "file: "__FILE__", line: %d, " \
@@ -173,8 +192,9 @@ static int log_fsync(const bool bNeedLock)
 		}
 	}
 
-	pcurrent_log_buff = log_buff;
-	if (bNeedLock && (result=pthread_mutex_unlock(&log_thread_lock)) != 0)
+	pContext->pcurrent_buff = pContext->log_buff;
+	if (bNeedLock && (result=pthread_mutex_unlock( \
+			&pContext->log_thread_lock)) != 0)
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
@@ -185,8 +205,8 @@ static int log_fsync(const bool bNeedLock)
 	return result;
 }
 
-static void doLog(const char *caption, const char *text, const int text_len, \
-		const bool bNeedSync)
+static void doLog(LogContext *pContext, const char *caption, \
+		const char *text, const int text_len, const bool bNeedSync)
 {
 	time_t t;
 	struct tm tm;
@@ -195,7 +215,7 @@ static void doLog(const char *caption, const char *text, const int text_len, \
 
 	t = time(NULL);
 	localtime_r(&t, &tm);
-	if ((result=pthread_mutex_lock(&log_thread_lock)) != 0)
+	if ((result=pthread_mutex_lock(&pContext->log_thread_lock)) != 0)
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -208,30 +228,31 @@ static void doLog(const char *caption, const char *text, const int text_len, \
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"log buff size: %d < log text length: %d ", \
 			__LINE__, LOG_BUFF_SIZE, text_len + 64);
-		pthread_mutex_unlock(&log_thread_lock);
+		pthread_mutex_unlock(&pContext->log_thread_lock);
 		return;
 	}
 
-	if ((pcurrent_log_buff - log_buff) + text_len + 64 > LOG_BUFF_SIZE)
+	if ((pContext->pcurrent_buff - pContext->log_buff) + text_len + 64 \
+			> LOG_BUFF_SIZE)
 	{
-		log_fsync(false);
+		log_fsync(pContext, false);
 	}
 
-	buff_len = sprintf(pcurrent_log_buff, \
+	buff_len = sprintf(pContext->pcurrent_buff, \
 			"[%04d-%02d-%02d %02d:%02d:%02d] %s - ", \
 			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
 			tm.tm_hour, tm.tm_min, tm.tm_sec, caption);
-	pcurrent_log_buff += buff_len;
-	memcpy(pcurrent_log_buff, text, text_len);
-	pcurrent_log_buff += text_len;
-	*pcurrent_log_buff++ = '\n';
+	pContext->pcurrent_buff += buff_len;
+	memcpy(pContext->pcurrent_buff, text, text_len);
+	pContext->pcurrent_buff += text_len;
+	*pContext->pcurrent_buff++ = '\n';
 
-	if (!log_to_cache || bNeedSync)
+	if (!pContext->log_to_cache || bNeedSync)
 	{
-		log_fsync(false);
+		log_fsync(pContext, false);
 	}
 
-	if ((result=pthread_mutex_unlock(&log_thread_lock)) != 0)
+	if ((result=pthread_mutex_unlock(&pContext->log_thread_lock)) != 0)
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
@@ -240,7 +261,8 @@ static void doLog(const char *caption, const char *text, const int text_len, \
 	}
 }
 
-void log_it_ex(const int priority, const char *text, const int text_len)
+void log_it_ex1(LogContext *pContext, const int priority, \
+		const char *text, const int text_len)
 {
 	bool bNeedSync;
 	char *caption;
@@ -285,10 +307,10 @@ void log_it_ex(const int priority, const char *text, const int text_len)
 			break;
 	}
 
-	doLog(caption, text, text_len, bNeedSync);
+	doLog(pContext, caption, text, text_len, bNeedSync);
 }
 
-void log_it(const int priority, const char* format, ...)
+void log_it_ex(LogContext *pContext, const int priority, const char* format, ...)
 {
 	bool bNeedSync;
 	char text[LINE_MAX];
@@ -340,17 +362,15 @@ void log_it(const int priority, const char* format, ...)
 			break;
 	}
 
-	doLog(caption, text, len, bNeedSync);
+	doLog(pContext, caption, text, len, bNeedSync);
 }
 
 
-#ifndef LOG_FORMAT_CHECK
-
-#define _DO_LOG(priority, caption, bNeedSync) \
+#define _DO_LOG(pContext, priority, caption, bNeedSync) \
 	char text[LINE_MAX]; \
 	int len; \
 \
-	if (g_log_level < priority) \
+	if (pContext->log_level < priority) \
 	{ \
 		return; \
 	} \
@@ -362,47 +382,89 @@ void log_it(const int priority, const char* format, ...)
 	va_end(ap); \
 	} \
 \
-	doLog(caption, text, len, bNeedSync); \
+	doLog(pContext, caption, text, len, bNeedSync); \
 
+
+void logEmergEx(LogContext *pContext, const char* format, ...)
+{
+	_DO_LOG(pContext, LOG_EMERG, "EMERG", true)
+}
+
+void logAlertEx(LogContext *pContext, const char* format, ...)
+{
+	_DO_LOG(pContext, LOG_ALERT, "ALERT", true)
+}
+
+void logCritEx(LogContext *pContext, const char* format, ...)
+{
+	_DO_LOG(pContext, LOG_CRIT, "CRIT", true)
+}
+
+void logErrorEx(LogContext *pContext, const char *format, ...)
+{
+	_DO_LOG(pContext, LOG_ERR, "ERROR", false)
+}
+
+void logWarningEx(LogContext *pContext, const char *format, ...)
+{
+	_DO_LOG(pContext, LOG_WARNING, "WARNING", false)
+}
+
+void logNoticeEx(LogContext *pContext, const char* format, ...)
+{
+	_DO_LOG(pContext, LOG_NOTICE, "NOTICE", false)
+}
+
+void logInfoEx(LogContext *pContext, const char *format, ...)
+{
+	_DO_LOG(pContext, LOG_INFO, "INFO", true)
+}
+
+void logDebugEx(LogContext *pContext, const char* format, ...)
+{
+	_DO_LOG(pContext, LOG_DEBUG, "DEBUG", true)
+}
+
+#ifndef LOG_FORMAT_CHECK
 
 void logEmerg(const char* format, ...)
 {
-	_DO_LOG(LOG_EMERG, "EMERG", true)
+	_DO_LOG((&g_log_context), LOG_EMERG, "EMERG", true)
 }
 
 void logAlert(const char* format, ...)
 {
-	_DO_LOG(LOG_ALERT, "ALERT", true)
+	_DO_LOG((&g_log_context), LOG_ALERT, "ALERT", true)
 }
 
 void logCrit(const char* format, ...)
 {
-	_DO_LOG(LOG_CRIT, "CRIT", true)
+	_DO_LOG((&g_log_context), LOG_CRIT, "CRIT", true)
 }
 
 void logError(const char *format, ...)
 {
-	_DO_LOG(LOG_ERR, "ERROR", false)
+	_DO_LOG((&g_log_context), LOG_ERR, "ERROR", false)
 }
 
 void logWarning(const char *format, ...)
 {
-	_DO_LOG(LOG_WARNING, "WARNING", false)
+	_DO_LOG((&g_log_context), LOG_WARNING, "WARNING", false)
 }
 
 void logNotice(const char* format, ...)
 {
-	_DO_LOG(LOG_NOTICE, "NOTICE", false)
+	_DO_LOG((&g_log_context), LOG_NOTICE, "NOTICE", false)
 }
 
 void logInfo(const char *format, ...)
 {
-	_DO_LOG(LOG_INFO, "INFO", true)
+	_DO_LOG((&g_log_context), LOG_INFO, "INFO", true)
 }
 
 void logDebug(const char* format, ...)
 {
-	_DO_LOG(LOG_DEBUG, "DEBUG", true)
+	_DO_LOG((&g_log_context), LOG_DEBUG, "DEBUG", true)
 }
 
 #endif

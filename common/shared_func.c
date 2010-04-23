@@ -1296,42 +1296,42 @@ void set_log_level(char *pLogLevel)
 		if ( strncmp(pLogLevel, "DEBUG", 5) == 0 || \
 		     strcmp(pLogLevel, "LOG_DEBUG") == 0)
 		{
-			g_log_level = LOG_DEBUG;
+			g_log_context.log_level = LOG_DEBUG;
 		}
 		else if ( strncmp(pLogLevel, "INFO", 4) == 0 || \
 		     strcmp(pLogLevel, "LOG_INFO") == 0)
 		{
-			g_log_level = LOG_INFO;
+			g_log_context.log_level = LOG_INFO;
 		}
 		else if ( strncmp(pLogLevel, "NOTICE", 6) == 0 || \
 		     strcmp(pLogLevel, "LOG_NOTICE") == 0)
 		{
-			g_log_level = LOG_NOTICE;
+			g_log_context.log_level = LOG_NOTICE;
 		}
 		else if ( strncmp(pLogLevel, "WARN", 4) == 0 || \
 		     strcmp(pLogLevel, "LOG_WARNING") == 0)
 		{
-			g_log_level = LOG_WARNING;
+			g_log_context.log_level = LOG_WARNING;
 		}
 		else if ( strncmp(pLogLevel, "ERR", 3) == 0 || \
 		     strcmp(pLogLevel, "LOG_ERR") == 0)
 		{
-			g_log_level = LOG_ERR;
+			g_log_context.log_level = LOG_ERR;
 		}
 		else if ( strncmp(pLogLevel, "CRIT", 4) == 0 || \
 		     strcmp(pLogLevel, "LOG_CRIT") == 0)
 		{
-			g_log_level = LOG_CRIT;
+			g_log_context.log_level = LOG_CRIT;
 		}
 		else if ( strncmp(pLogLevel, "ALERT", 5) == 0 || \
 		     strcmp(pLogLevel, "LOG_ALERT") == 0)
 		{
-			g_log_level = LOG_ALERT;
+			g_log_context.log_level = LOG_ALERT;
 		}
 		else if ( strncmp(pLogLevel, "EMERG", 5) == 0 || \
 		     strcmp(pLogLevel, "LOG_EMERG") == 0)
 		{
-			g_log_level = LOG_EMERG;
+			g_log_context.log_level = LOG_EMERG;
 		}
 	}
 }
