@@ -61,8 +61,8 @@ void signal_stack_trace_print(int signum, siginfo_t *info, void *ptr)
 	int i, f = 0;
 	ucontext_t *ucontext;
 	Dl_info dlinfo;
-	void **bp = 0;
-	void *ip = 0;
+	void **bp = NULL;
+	void *ip = NULL;
 	char cmd[256];
 	char buff[256];
 	char output[8 * 1024];
@@ -158,6 +158,6 @@ void signal_stack_trace_print(int signum, siginfo_t *info, void *ptr)
 	pCurrent += sprintf(pCurrent, "\tNot printing stack strace.\n");
 #endif
 
-	log_it_ex(LOG_CRIT, output, pCurrent - output);
+	log_it_ex(&g_log_context, LOG_CRIT, output, pCurrent - output);
 }
 

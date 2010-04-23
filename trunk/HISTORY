@@ -1,7 +1,8 @@
 
-Version 1.28  2010-04-17
+Version 1.28  2010-04-23
  * tracker_servive.c: set current_write_group anyway when current group
    out of space
+ * logger support context (multi instance)
 
 Version 1.27  2010-04-10
  * storage.conf: add if_alias_prefix parameter to get the ip address of the 

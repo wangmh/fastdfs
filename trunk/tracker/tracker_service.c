@@ -2597,9 +2597,10 @@ data buff (struct)
 				log_level = LOG_ERR;
 			}
 
-			if (log_level <= g_log_level)
+			if (log_level <= g_log_context.log_level)
 			{
-			log_it(log_level, "file: "__FILE__", line: %d, " \
+			log_it_ex(&g_log_context, log_level, \
+				"file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, client_info.ip_addr, \
