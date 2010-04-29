@@ -1,8 +1,10 @@
 
-Version 1.28  2010-04-23
+Version 1.28  2010-04-29
  * tracker_servive.c: set current_write_group anyway when current group
    out of space
  * logger support context (multi instance)
+ * get storage servers by filename: if the file created one day ago (the create 
+   times of the file < current_time - 86400), any active storage server matches
 
 Version 1.27  2010-04-10
  * storage.conf: add if_alias_prefix parameter to get the ip address of the 

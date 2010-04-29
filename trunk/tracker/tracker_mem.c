@@ -27,6 +27,7 @@
 #include "shared_func.h"
 
 #define TRACKER_MEM_ALLOC_ONCE	2
+#define FDFS_ONE_DAY_SECONDS  (24 * 60 * 60)
 
 static pthread_mutex_t mem_thread_lock;
 static pthread_mutex_t mem_file_lock;
@@ -3142,10 +3143,13 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 		 */
 		do
 		{
-			if ((ppStoreServers[0]->stat.last_synced_timestamp > \
+			current_time = time(NULL);
+			if ((file_timestamp < current_time - \
+				FDFS_ONE_DAY_SECONDS) || \
+			(ppStoreServers[0]->stat.last_synced_timestamp > \
 				file_timestamp) || \
 			(ppStoreServers[0]->stat.last_synced_timestamp + 1 == \
-			 file_timestamp&&time(NULL)-file_timestamp>60)\
+			 file_timestamp && current_time - file_timestamp > 60)\
 			|| (storage_ip == INADDR_NONE \
 			&& g_groups.store_server == FDFS_STORE_SERVER_ROUND_ROBIN))
 			{
@@ -3316,10 +3320,12 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 		for (ppServer=(*ppGroup)->active_servers; \
 				ppServer<ppServerEnd; ppServer++)
 		{
-			if (((*ppServer)->stat.last_synced_timestamp > \
+			if ((file_timestamp < current_time - \
+				FDFS_ONE_DAY_SECONDS) || \
+			((*ppServer)->stat.last_synced_timestamp > \
 				file_timestamp) || \
-			((*ppServer)->stat.last_synced_timestamp + 1 ==\
-			 file_timestamp&&current_time-file_timestamp>60)\
+			((*ppServer)->stat.last_synced_timestamp + 1 == \
+			 file_timestamp && current_time - file_timestamp > 60)\
 				|| (storage_ip == INADDR_NONE \
 					&& g_groups.store_server == \
 					FDFS_STORE_SERVER_ROUND_ROBIN)
