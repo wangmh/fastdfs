@@ -20,6 +20,7 @@
 #include <sys/file.h>
 #include <pthread.h>
 #include "shared_func.h"
+#include "pthread_func.h"
 #include "logger.h"
 
 #ifndef LINE_MAX

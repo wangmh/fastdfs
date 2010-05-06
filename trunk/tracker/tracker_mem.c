@@ -25,6 +25,7 @@
 #include "tracker_proto.h"
 #include "tracker_mem.h"
 #include "shared_func.h"
+#include "pthread_func.h"
 
 #define TRACKER_MEM_ALLOC_ONCE	2
 #define FDFS_ONE_DAY_SECONDS  (24 * 60 * 60)
