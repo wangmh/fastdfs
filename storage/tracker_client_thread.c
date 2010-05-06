@@ -23,6 +23,7 @@
 #include "fdfs_global.h"
 #include "sockopt.h"
 #include "shared_func.h"
+#include "pthread_func.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
 #include "tracker_client_thread.h"

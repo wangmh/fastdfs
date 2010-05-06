@@ -11,6 +11,7 @@ STATIC_OBJS = ../common/hash.o ../common/chain.o \
               ../common/fdfs_base64.o ../common/sched_thread.o \
               ../common/http_func.o ../common/mime_file_parser.o \
               ../common/fdfs_http_shared.o ../common/md5.o \
+              ../common/pthread_func.o \
               ../tracker/tracker_proto.o tracker_client.o client_func.o \
               client_global.o storage_client.o
 
@@ -20,6 +21,7 @@ SHARED_OBJS = ../common/hash.lo ../common/chain.lo \
               ../common/fdfs_base64.lo ../common/sched_thread.lo \
               ../common/http_func.lo ../common/mime_file_parser.lo \
               ../common/fdfs_http_shared.lo ../common/md5.lo \
+              ../common/pthread_func.lo \
               ../tracker/tracker_proto.lo tracker_client.lo client_func.lo \
               client_global.lo storage_client.lo
 
@@ -31,6 +33,7 @@ HEADER_FILES = ../common/common_define.h ../common/fdfs_define.h \
                ../common/sockopt.h ../common/sched_thread.h \
                ../common/http_func.h ../common/mime_file_parser.h \
                ../common/fdfs_http_shared.h ../common/md5.h \
+               ../common/pthread_func.h \
                ../tracker/tracker_types.h ../tracker/tracker_proto.h \
                tracker_client.h storage_client.h storage_client1.h \
                client_func.h client_global.h fdfs_client.h

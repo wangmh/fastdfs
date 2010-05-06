@@ -24,6 +24,7 @@
 #include "fdfs_global.h"
 #include "sockopt.h"
 #include "shared_func.h"
+#include "pthread_func.h"
 #include "tracker_types.h"
 #include "tracker_global.h"
 #include "tracker_mem.h"

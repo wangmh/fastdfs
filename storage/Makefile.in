@@ -9,7 +9,7 @@ SHARED_OBJS = ../common/hash.o ../common/chain.o \
               ../common/shared_func.o ../common/ini_file_reader.o \
               ../common/logger.o ../common/sockopt.o ../common/fdfs_global.o \
               ../common/fdfs_base64.o ../common/sched_thread.o \
-              ../common/http_func.o ../common/md5.o \
+              ../common/http_func.o ../common/md5.o ../common/pthread_func.o \
               ../tracker/tracker_proto.o tracker_client_thread.o \
               storage_global.o storage_func.o storage_service.o storage_sync.o \
               storage_ip_changed_dealer.o storage_param_getter.o \

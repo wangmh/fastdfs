@@ -12,6 +12,7 @@
 #include <errno.h>
 #include "sched_thread.h"
 #include "shared_func.h"
+#include "pthread_func.h"
 #include "logger.h"
 
 bool g_schedule_flag = false;

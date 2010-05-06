@@ -26,6 +26,7 @@
 #include "fdfs_global.h"
 #include "sockopt.h"
 #include "shared_func.h"
+#include "pthread_func.h"
 #include "ini_file_reader.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"

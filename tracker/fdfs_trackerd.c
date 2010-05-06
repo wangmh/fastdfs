@@ -21,6 +21,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include "shared_func.h"
+#include "pthread_func.h"
 #include "logger.h"
 #include "fdfs_global.h"
 #include "fdfs_base64.h"
