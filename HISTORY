@@ -7,6 +7,7 @@ Version 1.28  2010-05-07
    timestamp of the file < current_time - 86400), any active storage server matches
  * add files: common/pthread.h and common/pthread.c
  * common/sched_thread.h, remove statement: extern bool g_continue_flag;
+ * client add libfast
 
 Version 1.27  2010-04-10
  * storage.conf: add if_alias_prefix parameter to get the ip address of the 
