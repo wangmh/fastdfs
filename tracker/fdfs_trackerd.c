@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
 	scheduleEntries[1].task_func = tracker_mem_check_alive;
 	scheduleEntries[1].func_args = NULL;
 	if ((result=sched_start(&scheduleArray, &schedule_tid, \
-		g_thread_stack_size)) != 0)
+		g_thread_stack_size, &g_continue_flag)) != 0)
 	{
 		return result;
 	}

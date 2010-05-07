@@ -29,17 +29,17 @@ typedef struct
 {
 	ScheduleEntry *entries;
 	int count;
+	bool *pcontinue_flag;
 } ScheduleArray;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern bool g_continue_flag;
 extern bool g_schedule_flag;
 
 int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid, \
-		const int stack_size);
+		const int stack_size, bool *pcontinue_flag);
 
 #ifdef __cplusplus
 }

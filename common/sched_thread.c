@@ -138,7 +138,7 @@ static void *sched_thread_entrance(void *args)
 
 	pHead = pScheduleArray->entries;
 	pTail = pScheduleArray->entries + (pScheduleArray->count - 1);
-	while (g_continue_flag)
+	while (*(pScheduleArray->pcontinue_flag))
 	{
 		current_time = time(NULL);
 		sleep_time = pHead->next_call_time - current_time;
@@ -155,8 +155,8 @@ static void *sched_thread_entrance(void *args)
 		current_time = time(NULL);
 		exec_count = 0;
 		pCurrent = pHead;
-		while (g_continue_flag && (pCurrent != NULL && \
-			pCurrent->next_call_time <= current_time))
+		while (*(pScheduleArray->pcontinue_flag) && (pCurrent != NULL \
+			&& pCurrent->next_call_time <= current_time))
 		{
 			//fprintf(stderr, "exec task id=%d\n", pCurrent->id);
 			pCurrent->task_func(pCurrent->func_args);
@@ -223,7 +223,7 @@ static void *sched_thread_entrance(void *args)
 }
 
 int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid, \
-		const int stack_size)
+		const int stack_size, bool *pcontinue_flag)
 {
 	int result;
 	pthread_attr_t thread_attr;
@@ -233,6 +233,7 @@ int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid, \
 		return result;
 	}
 
+	pScheduleArray->pcontinue_flag = pcontinue_flag;
 	if ((result=pthread_create(ptid, &thread_attr, \
 		sched_thread_entrance, pScheduleArray)) != 0)
 	{
