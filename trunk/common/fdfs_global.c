@@ -20,10 +20,9 @@
 #include "logger.h"
 #include "fdfs_global.h"
 
-bool g_continue_flag = true;
-int g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
-char g_base_path[MAX_PATH_SIZE];
-Version g_version = {1, 28};
+int g_fdfs_network_timeout = DEFAULT_NETWORK_TIMEOUT;
+char g_fdfs_base_path[MAX_PATH_SIZE];
+Version g_fdfs_version = {1, 28};
 
 /*
 data filename format:

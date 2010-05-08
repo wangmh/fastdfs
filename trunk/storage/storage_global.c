@@ -14,6 +14,7 @@
 #include "shared_func.h"
 #include "storage_global.h"
 
+bool g_continue_flag = true;
 char **g_store_paths = NULL;
 int g_path_count = 0;
 int g_subdir_count_per_path = DEFAULT_DATA_DIR_COUNT_PER_PATH;

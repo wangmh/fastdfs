@@ -423,7 +423,7 @@ static int tracker_locate_storage_sync_server(FDFSStorageSync *pStorageSyncs, \
 			{
 				snprintf(buff, sizeof(buff), \
 					"in the file \"%s/data/%s\", ", \
-					g_base_path, \
+					g_fdfs_base_path, \
 					STORAGE_SERVERS_LIST_FILENAME);
 			}
 			else
@@ -862,7 +862,7 @@ static int tracker_load_data()
 	char data_path[MAX_PATH_SIZE];
 	int result;
 
-	snprintf(data_path, sizeof(data_path), "%s/data", g_base_path);
+	snprintf(data_path, sizeof(data_path), "%s/data", g_fdfs_base_path);
 	if (!fileExists(data_path))
 	{
 		if (mkdir(data_path, 0755) != 0)
@@ -925,7 +925,7 @@ static int tracker_save_groups()
 	tracker_mem_file_lock();
 
 	snprintf(filename, sizeof(filename), "%s/data/%s", \
-		g_base_path, STORAGE_GROUPS_LIST_FILENAME);
+		g_fdfs_base_path, STORAGE_GROUPS_LIST_FILENAME);
 	if ((fd=open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		tracker_mem_file_unlock();
@@ -981,7 +981,7 @@ int tracker_save_storages()
 	tracker_mem_file_lock();
 
 	snprintf(filename, sizeof(filename), "%s/data/%s", \
-		g_base_path, STORAGE_SERVERS_LIST_FILENAME);
+		g_fdfs_base_path, STORAGE_SERVERS_LIST_FILENAME);
 	if ((fd=open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		tracker_mem_file_unlock();
@@ -1098,7 +1098,7 @@ int tracker_save_sync_timestamps()
 	int result;
 
 	snprintf(filename, sizeof(filename), "%s/data/%s", \
-		g_base_path, STORAGE_SYNC_TIMESTAMP_FILENAME);
+		g_fdfs_base_path, STORAGE_SYNC_TIMESTAMP_FILENAME);
 	if ((fd=open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1166,7 +1166,7 @@ static int tracker_open_changlog_file()
 	char data_path[MAX_PATH_SIZE];
 	char filename[MAX_PATH_SIZE];
 
-	snprintf(data_path, sizeof(data_path), "%s/data", g_base_path);
+	snprintf(data_path, sizeof(data_path), "%s/data", g_fdfs_base_path);
 	if (!fileExists(data_path))
 	{
 		if (mkdir(data_path, 0755) != 0)
@@ -1180,7 +1180,7 @@ static int tracker_open_changlog_file()
 	}
 
 	snprintf(filename, sizeof(filename), "%s/data/%s", \
-		g_base_path, STORAGE_SERVERS_CHANGELOG_FILENAME);
+		g_fdfs_base_path, STORAGE_SERVERS_CHANGELOG_FILENAME);
 	changelog_fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
 	if (changelog_fd < 0)
 	{

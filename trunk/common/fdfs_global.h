@@ -21,10 +21,9 @@
 extern "C" {
 #endif
 
-extern bool g_continue_flag;
-extern int g_network_timeout;
-extern char g_base_path[MAX_PATH_SIZE];
-extern Version g_version;
+extern int g_fdfs_network_timeout;
+extern char g_fdfs_base_path[MAX_PATH_SIZE];
+extern Version g_fdfs_version;
 
 int fdfs_check_data_filename(const char *filename, const int len);
 int fdfs_gen_slave_filename(const char *master_filename, \

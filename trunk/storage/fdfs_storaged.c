@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	if ((result=tcpsetserveropt(sock, g_network_timeout)) != 0)
+	if ((result=tcpsetserveropt(sock, g_fdfs_network_timeout)) != 0)
 	{
 		return result;
 	}

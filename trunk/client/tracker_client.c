@@ -255,7 +255,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	pHeader->cmd = TRACKER_PROTO_CMD_SERVER_LIST_STORAGE;
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + ip_len, \
-		g_network_timeout)) != 0)
+		g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -387,7 +387,7 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	header.cmd = TRACKER_PROTO_CMD_SERVER_LIST_GROUP;
 	header.status = 0;
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, \
-			sizeof(header), g_network_timeout)) != 0)
+			sizeof(header), g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -493,7 +493,7 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 	pHeader->cmd = cmd;
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
-		filename_len, g_network_timeout)) != 0)
+		filename_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -572,7 +572,7 @@ int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
 	pHeader->cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ALL;
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
-		filename_len, g_network_timeout)) != 0)
+		filename_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -664,7 +664,7 @@ int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 	memset(&header, 0, sizeof(header));
 	header.cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITHOUT_GROUP;
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, \
-			sizeof(header), g_network_timeout)) != 0)
+			sizeof(header), g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -741,7 +741,7 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 	pHeader->cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP;
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
-			g_network_timeout)) != 0)
+			g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to tracker server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -865,7 +865,7 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 
 		if ((result=tcpsenddata_nb(tracker_server.sock, out_buff, \
 			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
-			ipaddr_len, g_network_timeout)) != 0)
+			ipaddr_len, g_fdfs_network_timeout)) != 0)
 		{
 			logError("send data to tracker server %s:%d fail, " \
 				"errno: %d, error info: %s", \

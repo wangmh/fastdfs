@@ -29,7 +29,7 @@ int fdfs_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes)
 	int result;
 
 	if ((result=tcprecvdata_nb(pTrackerServer->sock, &resp, \
-		sizeof(resp), g_network_timeout)) != 0)
+		sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"server: %s:%d, recv data fail, " \
@@ -112,7 +112,7 @@ int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
 	}
 
 	if ((result=tcprecvdata_nb(pTrackerServer->sock, *buff, \
-		*in_bytes, g_network_timeout)) != 0)
+		*in_bytes, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server: %s:%d, recv data fail, " \
@@ -140,7 +140,7 @@ int fdfs_quit(TrackerServerInfo *pTrackerServer)
 	memset(&header, 0, sizeof(header));
 	header.cmd = FDFS_PROTO_CMD_QUIT;
 	result = tcpsenddata_nb(pTrackerServer->sock, &header, \
-			sizeof(header), g_network_timeout);
+			sizeof(header), g_fdfs_network_timeout);
 	if(result != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
