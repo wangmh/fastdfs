@@ -27,18 +27,18 @@ FDFS_SHARED_OBJS = ../common/fdfs_global.lo ../common/fdfs_http_shared.lo \
                    tracker_client.lo client_func.lo \
                    client_global.lo storage_client.lo
 
-HEADER_FILES = ../common/common_define.h ../common/fdfs_define.h \
-               ../common/hash.h ../common/chain.h \
-               ../common/fdfs_global.h ../common/logger.h \
-               ../common/fdfs_base64.h ../common/shared_func.h \
-               ../common/ini_file_reader.h ../common/_os_bits.h \
-               ../common/sockopt.h ../common/sched_thread.h \
-               ../common/http_func.h ../common/mime_file_parser.h \
-               ../common/fdfs_http_shared.h ../common/md5.h \
-               ../common/pthread_func.h \
-               ../tracker/tracker_types.h ../tracker/tracker_proto.h \
-               tracker_client.h storage_client.h storage_client1.h \
-               client_func.h client_global.h fdfs_client.h
+FAST_HEADER_FILES = ../common/common_define.h ../common/hash.h \
+                    ../common/chain.h ../common/logger.h \
+                    ../common/fdfs_base64.h ../common/shared_func.h \
+                    ../common/pthread_func.h ../common/ini_file_reader.h \
+                    ../common/sockopt.h ../common/sched_thread.h \
+                    ../common/http_func.h ../common/md5.h ../common/_os_bits.h
+
+FDFS_HEADER_FILES = ../common/fdfs_define.h ../common/fdfs_global.h \
+                    ../common/mime_file_parser.h ../common/fdfs_http_shared.h \
+                    ../tracker/tracker_types.h ../tracker/tracker_proto.h \
+                    tracker_client.h storage_client.h storage_client1.h \
+                    client_func.h client_global.h fdfs_client.h
 
 ALL_OBJS = $(STATIC_OBJS) $(FAST_SHARED_OBJS) $(FDFS_SHARED_OBJS)
 
@@ -61,7 +61,10 @@ libfdfsclient.so.1:
 install:
 	cp -f $(ALL_PRGS) $(TARGET_PATH)
 	cp -f $(ALL_LIBS) /usr/local/lib/
-	cp -f $(HEADER_FILES) /usr/local/include/
+	mkdir -p /usr/local/include/fastcommon
+	mkdir -p /usr/local/include/fastdfs
+	cp -f $(FAST_HEADER_FILES) /usr/local/include/fastcommon
+	cp -f $(FDFS_HEADER_FILES) /usr/local/include/fastdfs
 	ln -fs /usr/local/lib/libfastcommon.so.1 /usr/local/lib/libfastcommon.so
 	ln -fs /usr/local/lib/libfastcommon.so.1 /usr/lib/libfastcommon.so
 	ln -fs /usr/local/lib/libfdfsclient.so.1 /usr/local/lib/libfdfsclient.so
