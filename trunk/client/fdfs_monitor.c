@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	char *conf_filename;
 	int result;
 	char *op_type;
-	
+
 	if (argc < 2)
 	{
 		printf("Usage: %s <config_file> [list|delete <group_name> " \

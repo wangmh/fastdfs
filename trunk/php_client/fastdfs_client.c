@@ -4193,18 +4193,18 @@ static int load_config_files()
 		return ENOENT;
 	}
 
-	snprintf(g_base_path, sizeof(g_base_path), "%s", \
+	snprintf(g_fdfs_base_path, sizeof(g_fdfs_base_path), "%s", \
 		base_path.value.str.val);
-	chopPath(g_base_path);
-	if (!fileExists(g_base_path))
+	chopPath(g_fdfs_base_path);
+	if (!fileExists(g_fdfs_base_path))
 	{
 		logError("\"%s\" can't be accessed, error info: %s", \
-			g_base_path, strerror(errno));
+			g_fdfs_base_path, strerror(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
-	if (!isDir(g_base_path))
+	if (!isDir(g_fdfs_base_path))
 	{
-		logError("\"%s\" is not a directory!", g_base_path);
+		logError("\"%s\" is not a directory!", g_fdfs_base_path);
 		return ENOTDIR;
 	}
 
@@ -4212,15 +4212,15 @@ static int load_config_files()
 			sizeof(ITEM_NAME_NETWOK_TIMEOUT), \
 			&network_timeout) == SUCCESS)
 	{
-		g_network_timeout = atoi(network_timeout.value.str.val);
-		if (g_network_timeout <= 0)
+		g_fdfs_network_timeout = atoi(network_timeout.value.str.val);
+		if (g_fdfs_network_timeout <= 0)
 		{
-			g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
+			g_fdfs_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 		}
 	}
 	else
 	{
-		g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
+		g_fdfs_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 	}
 
 	if (zend_get_configuration_directive(ITEM_NAME_LOG_LEVEL, \
@@ -4237,7 +4237,7 @@ static int load_config_files()
 	{
 		if (log_filename.value.str.len > 0)
 		{
-			log_set_prefix(g_base_path, log_filename.value.str.val);
+			log_set_prefix(g_fdfs_base_path, log_filename.value.str.val);
 		}
 	}
 
@@ -4320,7 +4320,7 @@ static int load_config_files()
 	logInfo("base_path=%s, network_timeout=%d, " \
 		"anti_steal_secret_key length=%d, " \
 		"tracker_group_count=%d, first tracker group server_count=%d", \
-		g_base_path, g_network_timeout, strlen(pAntiStealSecretKey), \
+		g_fdfs_base_path, g_fdfs_network_timeout, strlen(pAntiStealSecretKey), \
 		config_count, g_tracker_group.server_count);
 
 	return 0;
