@@ -21,7 +21,7 @@
 #include "fdfs_define.h"
 #include "logger.h"
 #include "fdfs_global.h"
-#include "fdfs_base64.h"
+#include "base64.h"
 #include "sockopt.h"
 #include "shared_func.h"
 #include "ini_file_reader.h"

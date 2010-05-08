@@ -33,7 +33,7 @@
 #include "storage_func.h"
 #include "storage_sync.h"
 #include "storage_service.h"
-#include "fdfs_base64.h"
+#include "base64.h"
 #include "sched_thread.h"
 
 #ifdef WITH_HTTPD

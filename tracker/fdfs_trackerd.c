@@ -24,7 +24,7 @@
 #include "pthread_func.h"
 #include "logger.h"
 #include "fdfs_global.h"
-#include "fdfs_base64.h"
+#include "base64.h"
 #include "sockopt.h"
 #include "sched_thread.h"
 #include "tracker_types.h"

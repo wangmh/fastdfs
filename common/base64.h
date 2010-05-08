@@ -6,10 +6,10 @@
 * Please visit the FastDFS Home Page http://www.csource.org/ for more detail.
 **/
 
-//fdfs_base64.h
+//base64.h
 
-#ifndef _FDFS_BASE64_H
-#define _FDFS_BASE64_H
+#ifndef _BASE64_H
+#define _BASE64_H
 
 #include "common_define.h"
 

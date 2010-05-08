@@ -8,7 +8,7 @@ TARGET_PATH = $(TARGET_PATH)
 STATIC_OBJS = ../common/hash.o ../common/chain.o \
               ../common/shared_func.o ../common/ini_file_reader.o \
               ../common/logger.o ../common/sockopt.o ../common/fdfs_global.o \
-              ../common/fdfs_base64.o ../common/sched_thread.o \
+              ../common/base64.o ../common/sched_thread.o \
               ../common/http_func.o ../common/mime_file_parser.o \
               ../common/fdfs_http_shared.o ../common/md5.o \
               ../common/pthread_func.o \
@@ -18,7 +18,7 @@ STATIC_OBJS = ../common/hash.o ../common/chain.o \
 FAST_SHARED_OBJS = ../common/hash.lo ../common/chain.lo \
                    ../common/shared_func.lo ../common/ini_file_reader.lo \
                    ../common/logger.lo ../common/sockopt.lo \
-                   ../common/fdfs_base64.lo ../common/sched_thread.lo \
+                   ../common/base64.lo ../common/sched_thread.lo \
                    ../common/http_func.lo ../common/md5.lo \
                    ../common/pthread_func.lo \
 
@@ -29,7 +29,7 @@ FDFS_SHARED_OBJS = ../common/fdfs_global.lo ../common/fdfs_http_shared.lo \
 
 FAST_HEADER_FILES = ../common/common_define.h ../common/hash.h \
                     ../common/chain.h ../common/logger.h \
-                    ../common/fdfs_base64.h ../common/shared_func.h \
+                    ../common/base64.h ../common/shared_func.h \
                     ../common/pthread_func.h ../common/ini_file_reader.h \
                     ../common/sockopt.h ../common/sched_thread.h \
                     ../common/http_func.h ../common/md5.h ../common/_os_bits.h
@@ -61,10 +61,12 @@ libfdfsclient.so.1:
 install:
 	cp -f $(ALL_PRGS) $(TARGET_PATH)
 	cp -f $(ALL_LIBS) /usr/local/lib/
+
 	mkdir -p /usr/local/include/fastcommon
 	mkdir -p /usr/local/include/fastdfs
 	cp -f $(FAST_HEADER_FILES) /usr/local/include/fastcommon
 	cp -f $(FDFS_HEADER_FILES) /usr/local/include/fastdfs
+
 	ln -fs /usr/local/lib/libfastcommon.so.1 /usr/local/lib/libfastcommon.so
 	ln -fs /usr/local/lib/libfastcommon.so.1 /usr/lib/libfastcommon.so
 	ln -fs /usr/local/lib/libfdfsclient.so.1 /usr/local/lib/libfdfsclient.so

@@ -16,7 +16,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
-#include "fdfs_base64.h"
+#include "base64.h"
 
 /**
 * Marker value for chars we just ignore, e.g. \n \r high ascii

@@ -19,7 +19,7 @@
 #include <time.h>
 #include <fcntl.h>
 #include "fdfs_define.h"
-#include "fdfs_base64.h"
+#include "base64.h"
 #include "logger.h"
 #include "fdfs_global.h"
 #include "sockopt.h"
