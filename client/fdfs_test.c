@@ -46,7 +46,7 @@ int uploadFileCallback(void *arg, const int64_t file_size, int sock)
 	}
 
 	filename = (char *)arg;
-	return tcpsendfile(sock, filename, file_size, g_network_timeout);
+	return tcpsendfile(sock, filename, file_size, g_fdfs_network_timeout);
 }
 
 int main(int argc, char *argv[])
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 "Public License V3, which may be found in the FastDFS source kit.\n" \
 "Please visit the FastDFS Home Page http://www.csource.org/ \n" \
 "for more detail.\n\n" \
-, g_version.major, g_version.minor);
+, g_fdfs_version.major, g_fdfs_version.minor);
 
 	if (argc < 3)
 	{

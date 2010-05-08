@@ -22,7 +22,7 @@
 #include "fdht_types.h"
 #include "fdht_proto.h"
 
-extern int g_network_timeout;
+extern int g_fdht_network_timeout;
 
 int fdht_recv_header(FDHTServerInfo *pServer, fdht_pkg_size_t *in_bytes)
 {
@@ -30,7 +30,7 @@ int fdht_recv_header(FDHTServerInfo *pServer, fdht_pkg_size_t *in_bytes)
 	int result;
 
 	if ((result=tcprecvdata_nb(pServer->sock, &resp, \
-		sizeof(resp), g_network_timeout)) != 0)
+		sizeof(resp), g_fdht_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"server: %s:%d, recv data fail, " \
@@ -113,7 +113,7 @@ int fdht_recv_response(FDHTServerInfo *pServer, \
 	}
 
 	if ((result=tcprecvdata_nb(pServer->sock, *buff, \
-		*in_bytes, g_network_timeout)) != 0)
+		*in_bytes, g_fdht_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"server: %s:%d, recv data fail, " \
@@ -141,7 +141,7 @@ int fdht_quit(FDHTServerInfo *pServer)
 	memset(&header, 0, sizeof(header));
 	header.cmd = FDHT_PROTO_CMD_QUIT;
 	result = tcpsenddata_nb(pServer->sock, &header, sizeof(header), \
-				g_network_timeout);
+				g_fdht_network_timeout);
 	if(result != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -249,7 +249,7 @@ int fdht_client_set(FDHTServerInfo *pServer, const char keep_alive, \
 		memcpy(p, pValue, value_len);
 		p += value_len;
 		if ((result=tcpsenddata_nb(pServer->sock, buff, p - buff, \
-					g_network_timeout)) != 0)
+					g_fdht_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"send data to server %s:%d fail, " \
@@ -262,7 +262,7 @@ int fdht_client_set(FDHTServerInfo *pServer, const char keep_alive, \
 	else
 	{
 		if ((result=tcpsenddata_nb(pServer->sock, buff, p - buff, \
-					g_network_timeout)) != 0)
+					g_fdht_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"send data to server %s:%d fail, " \
@@ -273,7 +273,7 @@ int fdht_client_set(FDHTServerInfo *pServer, const char keep_alive, \
 		}
 
 		if ((result=tcpsenddata_nb(pServer->sock, (char *)pValue, \
-					value_len, g_network_timeout)) != 0)
+					value_len, g_fdht_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"send data to server %s:%d fail, " \
@@ -340,7 +340,7 @@ int fdht_client_delete(FDHTServerInfo *pServer, const char keep_alive, \
 	PACK_BODY_UNTIL_KEY(pKeyInfo, p)
 
 	if ((result=tcpsenddata_nb(pServer->sock, buff, p - buff, \
-		g_network_timeout)) != 0)
+		g_fdht_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"send data to server %s:%d fail, " \
@@ -395,7 +395,7 @@ int fdht_client_heart_beat(FDHTServerInfo *pServer)
 	header.keep_alive = 1;
 
 	if ((result=tcpsenddata_nb(pServer->sock, &header, \
-		sizeof(header), g_network_timeout)) != 0)
+		sizeof(header), g_fdht_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"send data to server %s:%d fail, " \

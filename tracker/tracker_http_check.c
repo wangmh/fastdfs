@@ -143,7 +143,7 @@ static void *http_check_entrance(void *arg)
 		sprintf(url, "http://%s:%d%s", (*ppServer)->ip_addr, \
 			pGroup->storage_http_port, g_http_check_uri);
 
-		result = get_url_content(url, g_network_timeout, &http_status, \
+		result = get_url_content(url, g_fdfs_network_timeout, &http_status, \
         			&content, &content_len, error_info);
 
 		if (g_http_servers_dirty)

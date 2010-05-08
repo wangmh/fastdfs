@@ -84,7 +84,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 	pClientInfo->pGroup->chg_count == pClientInfo->pStorage->chg_count)
 	{
 		if ((result=tcpsenddata_nb(pClientInfo->sock, \
-			out_buff, sizeof(TrackerHeader), g_network_timeout))!=0)
+			out_buff, sizeof(TrackerHeader), g_fdfs_network_timeout))!=0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, send data fail, " \
@@ -112,7 +112,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 	out_len = sizeof(FDFSStorageBrief) * pClientInfo->pGroup->count;
 	long2buff(out_len, pHeader->pkg_len);
 	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
-		sizeof(TrackerHeader) + out_len, g_network_timeout)) != 0)
+		sizeof(TrackerHeader) + out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -152,7 +152,7 @@ static int tracker_changelog_response(TrackerClientInfo *pClientInfo, \
 
 	long2buff(chg_len, resp.pkg_len);
 	if ((result=tcpsenddata_nb(pClientInfo->sock, &resp, \
-		sizeof(TrackerHeader), g_network_timeout)) != 0)
+		sizeof(TrackerHeader), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -167,7 +167,7 @@ static int tracker_changelog_response(TrackerClientInfo *pClientInfo, \
 		return resp.status;
 	}
 
-	snprintf(filename, sizeof(filename), "%s/data/%s", g_base_path,\
+	snprintf(filename, sizeof(filename), "%s/data/%s", g_fdfs_base_path,\
 		 STORAGE_SERVERS_CHANGELOG_FILENAME);
 	fd = open(filename, O_RDONLY);
 	if (fd < 0)
@@ -219,7 +219,7 @@ static int tracker_changelog_response(TrackerClientInfo *pClientInfo, \
 		}
 
 		if ((result=tcpsenddata_nb(pClientInfo->sock, buff, \
-			send_bytes, g_network_timeout)) != 0)
+			send_bytes, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, send data fail, " \
@@ -288,7 +288,7 @@ static int tracker_deal_changelog_req(TrackerClientInfo *pClientInfo, \
 		}
 
 		if ((result=tcprecvdata_nb(pClientInfo->sock, group_name, \
-			FDFS_GROUP_NAME_MAX_LEN, g_network_timeout)) != 0)
+			FDFS_GROUP_NAME_MAX_LEN, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip addr: %s, recv data fail, " \
@@ -331,7 +331,7 @@ static int tracker_deal_changelog_req(TrackerClientInfo *pClientInfo, \
 		resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 		resp.status = result;
 		if ((result=tcpsenddata_nb(pClientInfo->sock, &resp, \
-			sizeof(TrackerHeader), g_network_timeout)) != 0)
+			sizeof(TrackerHeader), g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, send data fail, " \
@@ -382,7 +382,7 @@ static int tracker_deal_parameter_req(TrackerClientInfo *pClientInfo, \
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
 			sizeof(TrackerHeader) + body_len, \
-			g_network_timeout)) != 0)
+			g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -463,7 +463,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, briefServers, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip addr: %s, recv data fail, " \
@@ -479,7 +479,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -519,7 +519,7 @@ static int tracker_deal_storage_report_status(TrackerClientInfo *pClientInfo, \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip addr: %s, recv data fail, " \
@@ -548,7 +548,7 @@ static int tracker_deal_storage_report_status(TrackerClientInfo *pClientInfo, \
 
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -583,7 +583,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	}
 
 	if ((status=tcprecvdata_nb(pClientInfo->sock, &body, \
-		nInPackLen, g_network_timeout)) != 0)
+		nInPackLen, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, recv data fail, " \
@@ -705,7 +705,7 @@ static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
@@ -734,7 +734,7 @@ static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
 
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -775,7 +775,7 @@ static int tracker_deal_storage_report_ip_changed( \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
@@ -821,7 +821,7 @@ static int tracker_deal_storage_report_ip_changed( \
 
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -857,7 +857,7 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 	}
 
 	if ((status=tcprecvdata_nb(pClientInfo->sock, &body, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, recv data fail, " \
@@ -962,7 +962,7 @@ static int tracker_check_logined(TrackerClientInfo *pClientInfo)
 	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
 	resp.status = EACCES;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, &resp, sizeof(resp), \
-		g_network_timeout)) != 0)
+		g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1018,7 +1018,7 @@ static int tracker_deal_server_list_group_storages( \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
@@ -1131,7 +1131,7 @@ static int tracker_deal_server_list_group_storages( \
 	long2buff(out_len, resp.pkg_len);
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1147,7 +1147,7 @@ static int tracker_deal_server_list_group_storages( \
 	}
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		stats, out_len, g_network_timeout)) != 0)
+		stats, out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1219,7 +1219,7 @@ static int tracker_deal_service_query_fetch_update( \
 		}
 
 		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
@@ -1277,7 +1277,7 @@ static int tracker_deal_service_query_fetch_update( \
 	}
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
-		sizeof(TrackerHeader) + out_len, g_network_timeout)) != 0)
+		sizeof(TrackerHeader) + out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1346,7 +1346,7 @@ static int tracker_deal_service_query_storage( \
 		{
 			if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
 					group_name, nInPackLen, \
-					g_network_timeout)) != 0)
+					g_fdfs_network_timeout)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"client ip: %s, recv data fail, " \
@@ -1584,7 +1584,7 @@ static int tracker_deal_service_query_storage( \
 	}
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		out_buff, sizeof(resp) + out_len, g_network_timeout)) != 0)
+		out_buff, sizeof(resp) + out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1653,7 +1653,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 	long2buff(out_len, resp.pkg_len);
 	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1669,7 +1669,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 	}
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		groupStats, out_len, g_network_timeout)) != 0)
+		groupStats, out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1716,7 +1716,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 		}
 
 		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, \
-			in_buff, nInPackLen, g_network_timeout)) != 0)
+			in_buff, nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip addr: %s, recv data fail, " \
@@ -1786,7 +1786,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		out_buff, out_len, g_network_timeout)) != 0)
+		out_buff, out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1886,7 +1886,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		out_buff, out_len, g_network_timeout)) != 0)
+		out_buff, out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1910,7 +1910,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 	}
 
 	if ((result=tcprecvdata_nb(pClientInfo->sock, pResp, \
-		sizeof(TrackerHeader), g_network_timeout)) != 0)
+		sizeof(TrackerHeader), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip addr: %s, recv data fail, " \
@@ -1997,7 +1997,7 @@ static int tracker_deal_storage_sync_dest_query(TrackerClientInfo *pClientInfo,\
 	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
 	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		out_buff, out_len, g_network_timeout)) != 0)
+		out_buff, out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -2093,7 +2093,7 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 		}
 
 		if ((status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip addr: %s, recv data fail, " \
@@ -2280,7 +2280,7 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 			}
 		}
 		if ((status=tcprecvdata_nb(pClientInfo->sock, pBuff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip addr: %s, recv data fail, " \
@@ -2405,7 +2405,7 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 		}
 
 		if ((status=tcprecvdata_nb(pClientInfo->sock, &statBuff, \
-			sizeof(FDFSStorageStatBuff), g_network_timeout)) != 0)
+			sizeof(FDFSStorageStatBuff), g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip addr: %s, recv data fail, " \
@@ -2581,7 +2581,7 @@ data buff (struct)
 	while (g_continue_flag)
 	{
 		result = tcprecvdata_nb_ex(client_info.sock, &header, \
-			sizeof(header), g_network_timeout, &recv_bytes);
+			sizeof(header), g_fdfs_network_timeout, &recv_bytes);
 		if (result == ETIMEDOUT && count > 0)
 		{
 			continue;

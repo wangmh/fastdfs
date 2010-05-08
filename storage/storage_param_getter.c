@@ -41,7 +41,7 @@ static int storage_do_parameter_req(TrackerServerInfo *pTrackerServer, \
 	pHeader = (TrackerHeader *)out_buff;
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_PARAMETER_REQ;
 	if((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
-		sizeof(TrackerHeader), g_network_timeout)) != 0)
+		sizeof(TrackerHeader), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \

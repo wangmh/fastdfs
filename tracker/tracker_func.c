@@ -141,37 +141,37 @@ int tracker_load_from_conf_file(const char *filename, \
 			break;
 		}
 
-		snprintf(g_base_path, sizeof(g_base_path), "%s", pBasePath);
-		chopPath(g_base_path);
-		if (!fileExists(g_base_path))
+		snprintf(g_fdfs_base_path, sizeof(g_fdfs_base_path), "%s", pBasePath);
+		chopPath(g_fdfs_base_path);
+		if (!fileExists(g_fdfs_base_path))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"\"%s\" can't be accessed, error info: %s", \
-				__LINE__, g_base_path, strerror(errno));
+				__LINE__, g_fdfs_base_path, strerror(errno));
 			result = errno != 0 ? errno : ENOENT;
 			break;
 		}
-		if (!isDir(g_base_path))
+		if (!isDir(g_fdfs_base_path))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"\"%s\" is not a directory!", \
-				__LINE__, g_base_path);
+				__LINE__, g_fdfs_base_path);
 			result = ENOTDIR;
 			break;
 		}
 
 		load_log_level(&iniContext);
-		if ((result=log_set_prefix(g_base_path, \
+		if ((result=log_set_prefix(g_fdfs_base_path, \
 				TRACKER_ERROR_LOG_FILENAME)) != 0)
 		{
 			break;
 		}
 
-		g_network_timeout = iniGetIntValue(NULL, "network_timeout", \
+		g_fdfs_network_timeout = iniGetIntValue(NULL, "network_timeout", \
 				&iniContext, DEFAULT_NETWORK_TIMEOUT);
-		if (g_network_timeout <= 0)
+		if (g_fdfs_network_timeout <= 0)
 		{
-			g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
+			g_fdfs_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 		}
 
 		g_server_port = iniGetIntValue(NULL, "port", &iniContext, \
@@ -388,8 +388,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			"check_active_interval=%ds, " \
 			"thread_stack_size=%d KB, " \
 			"storage_ip_changed_auto_adjust=%d",  \
-			g_version.major, g_version.minor,  \
-			g_base_path, g_network_timeout, \
+			g_fdfs_version.major, g_fdfs_version.minor,  \
+			g_fdfs_base_path, g_fdfs_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_groups.store_lookup, g_groups.store_group, \
 			g_groups.store_server, g_groups.store_path, \

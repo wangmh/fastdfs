@@ -145,7 +145,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		p += pRecord->filename_len;
 
 		if((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
-			p - out_buff, g_network_timeout)) != 0)
+			p - out_buff, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"sync data to storage server %s:%d fail, " \
@@ -159,7 +159,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 
 		if((stat_buf.st_size > 0) && ((result=tcpsendfile( \
 			pStorageServer->sock, full_filename, \
-			stat_buf.st_size, g_network_timeout)) != 0))
+			stat_buf.st_size, g_fdfs_network_timeout)) != 0))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"sync data to storage server %s:%d fail, " \
@@ -246,7 +246,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		sizeof(TrackerHeader) + 4 + FDFS_GROUP_NAME_MAX_LEN + \
-		pRecord->filename_len, g_network_timeout)) != 0)
+		pRecord->filename_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("FILE: "__FILE__", line: %d, " \
 			"send data to storage server %s:%d fail, " \
@@ -287,7 +287,7 @@ static int storage_report_client_ip(TrackerServerInfo *pStorageServer)
 	strcpy(out_buff + sizeof(TrackerHeader), g_tracker_client_ip);
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		sizeof(TrackerHeader) + IP_ADDRESS_SIZE, \
-		g_network_timeout)) != 0)
+		g_fdfs_network_timeout)) != 0)
 	{
 		logError("FILE: "__FILE__", line: %d, " \
 			"send data to storage server %s:%d fail, " \
@@ -461,7 +461,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	pHeader->cmd = STORAGE_PROTO_CMD_SYNC_CREATE_LINK;
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
-		sizeof(TrackerHeader) + out_body_len, g_network_timeout)) != 0)
+		sizeof(TrackerHeader) + out_body_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("FILE: "__FILE__", line: %d, " \
 			"send data to storage server %s:%d fail, " \
@@ -552,7 +552,7 @@ static int write_to_binlog_index()
 	int len;
 
 	snprintf(full_filename, sizeof(full_filename), \
-			"%s/data/"SYNC_DIR_NAME"/%s", g_base_path, \
+			"%s/data/"SYNC_DIR_NAME"/%s", g_fdfs_base_path, \
 			SYNC_BINLOG_INDEX_FILENAME);
 	if ((fd=open(full_filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
@@ -592,7 +592,7 @@ static char *get_writable_binlog_filename(char *full_filename)
 	snprintf(full_filename, MAX_PATH_SIZE, \
 			"%s/data/"SYNC_DIR_NAME"/"SYNC_BINLOG_FILE_PREFIX"" \
 			SYNC_BINLOG_FILE_EXT_FMT, \
-			g_base_path, g_binlog_index);
+			g_fdfs_base_path, g_binlog_index);
 	return full_filename;
 }
 
@@ -648,7 +648,7 @@ int storage_sync_init()
 	int result;
 	int fd;
 
-	snprintf(data_path, sizeof(data_path), "%s/data", g_base_path);
+	snprintf(data_path, sizeof(data_path), "%s/data", g_fdfs_base_path);
 	if (!fileExists(data_path))
 	{
 		if (mkdir(data_path, 0755) != 0)
@@ -963,7 +963,7 @@ static char *get_binlog_readable_filename(BinLogReader *pReader, \
 	snprintf(full_filename, MAX_PATH_SIZE, \
 			"%s/data/"SYNC_DIR_NAME"/"SYNC_BINLOG_FILE_PREFIX"" \
 			SYNC_BINLOG_FILE_EXT_FMT, \
-			g_base_path, pReader->binlog_index);
+			g_fdfs_base_path, pReader->binlog_index);
 	return full_filename;
 }
 
@@ -1018,7 +1018,7 @@ static char *get_mark_filename_by_reader(const void *pArg, \
 	}
 
 	snprintf(full_filename, MAX_PATH_SIZE, \
-			"%s/data/"SYNC_DIR_NAME"/%s_%d%s", g_base_path, \
+			"%s/data/"SYNC_DIR_NAME"/%s_%d%s", g_fdfs_base_path, \
 			pReader->ip_addr, g_server_port, SYNC_MARK_FILE_EXT);
 	return full_filename;
 }
@@ -1027,7 +1027,7 @@ static char *get_mark_filename_by_ip(const char *ip_addr, char *full_filename, \
 		const int filename_size)
 {
 	snprintf(full_filename, filename_size, \
-			"%s/data/"SYNC_DIR_NAME"/%s_%d%s", g_base_path, \
+			"%s/data/"SYNC_DIR_NAME"/%s_%d%s", g_fdfs_base_path, \
 			ip_addr, g_server_port, SYNC_MARK_FILE_EXT);
 	return full_filename;
 }

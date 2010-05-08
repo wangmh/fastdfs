@@ -225,27 +225,27 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 			break;
 		}
 
-		snprintf(g_base_path, sizeof(g_base_path), "%s", pBasePath);
-		chopPath(g_base_path);
-		if (!fileExists(g_base_path))
+		snprintf(g_fdfs_base_path, sizeof(g_fdfs_base_path), "%s", pBasePath);
+		chopPath(g_fdfs_base_path);
+		if (!fileExists(g_fdfs_base_path))
 		{
 			logError("\"%s\" can't be accessed, error info: %s", \
-				g_base_path, strerror(errno));
+				g_fdfs_base_path, strerror(errno));
 			result = errno != 0 ? errno : ENOENT;
 			break;
 		}
-		if (!isDir(g_base_path))
+		if (!isDir(g_fdfs_base_path))
 		{
-			logError("\"%s\" is not a directory!", g_base_path);
+			logError("\"%s\" is not a directory!", g_fdfs_base_path);
 			result = ENOTDIR;
 			break;
 		}
 
-		g_network_timeout = iniGetIntValue(NULL, "network_timeout", \
+		g_fdfs_network_timeout = iniGetIntValue(NULL, "network_timeout", \
 				&iniContext, DEFAULT_NETWORK_TIMEOUT);
-		if (g_network_timeout <= 0)
+		if (g_fdfs_network_timeout <= 0)
 		{
-			g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
+			g_fdfs_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 		}
 
 		result = fdfs_load_tracker_group_ex(pTrackerGroup, \
@@ -293,7 +293,7 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 			"tracker_server_count=%d, " \
 			"anti_steal_token=%d, " \
 			"anti_steal_secret_key length=%d\n", \
-			g_base_path, g_network_timeout, \
+			g_fdfs_base_path, g_fdfs_network_timeout, \
 			pTrackerGroup->server_count, g_anti_steal_token, \
 			g_anti_steal_secret_key.length);
 #endif

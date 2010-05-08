@@ -1,5 +1,5 @@
 
-Version 1.28  2010-05-07
+Version 1.28  2010-05-08
  * tracker_servive.c: set current_write_group anyway when current group
    out of space
  * logger support context (multi instance)
@@ -8,6 +8,8 @@ Version 1.28  2010-05-07
  * add files: common/pthread.h and common/pthread.c
  * common/sched_thread.h, remove statement: extern bool g_continue_flag;
  * client add libfast
+ * global variables: g_base_path, g_network_timeout, g_version change to 
+   g_fdfs_base_path, g_fdfs_network_timeout, g_fdfs_version
 
 Version 1.27  2010-04-10
  * storage.conf: add if_alias_prefix parameter to get the ip address of the 

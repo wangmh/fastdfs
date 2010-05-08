@@ -257,7 +257,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
-			filename_len, g_network_timeout)) != 0)
+			filename_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -350,7 +350,7 @@ int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
-			filename_len, g_network_timeout)) != 0)
+			filename_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -453,7 +453,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
-		filename_len, g_network_timeout)) != 0)
+		filename_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -554,7 +554,7 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 	pHeader->cmd = STORAGE_PROTO_CMD_DOWNLOAD_FILE;
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
-		out_bytes, g_network_timeout)) != 0)
+		out_bytes, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -574,7 +574,7 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 
 		if ((result=tcprecvfile(pStorageServer->sock, \
 				*file_buff, in_bytes, 0, \
-				g_network_timeout)) != 0)
+				g_fdfs_network_timeout)) != 0)
 		{
 			break;
 		}
@@ -615,7 +615,7 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 			}
 
 			if ((result=tcprecvdata_nb(pStorageServer->sock, buff, \
-				recv_bytes, g_network_timeout)) != 0)
+				recv_bytes, g_fdfs_network_timeout)) != 0)
 			{
 				logError("recv data from storage server " \
 					"%s:%d fail, " \
@@ -975,7 +975,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	pHeader->status = 0;
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, pOutBuff, \
-		p - pOutBuff, g_network_timeout)) != 0)
+		p - pOutBuff, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -988,7 +988,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	if (upload_type == FDFS_UPLOAD_BY_FILE)
 	{
 		if ((result=tcpsendfile(pStorageServer->sock, file_buff, \
-			file_size, g_network_timeout)) != 0)
+			file_size, g_fdfs_network_timeout)) != 0)
 		{
 			break;
 		}
@@ -996,7 +996,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	else if (upload_type == FDFS_UPLOAD_BY_BUFF)
 	{
 		if ((result=tcpsenddata_nb(pStorageServer->sock, \
-			(char *)file_buff, file_size, g_network_timeout)) != 0)
+			(char *)file_buff, file_size, g_fdfs_network_timeout)) != 0)
 		{
 			logError("send data to storage server %s:%d fail, " \
 				"errno: %d, error info: %s", \
@@ -1257,7 +1257,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	pHeader->cmd = STORAGE_PROTO_CMD_SET_METADATA;
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
-			p - out_buff, g_network_timeout)) != 0)
+			p - out_buff, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -1269,7 +1269,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	}
 
 	if (meta_bytes > 0 && (result=tcpsenddata_nb(pStorageServer->sock, \
-			meta_buff, meta_bytes, g_network_timeout)) != 0)
+			meta_buff, meta_bytes, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -1482,7 +1482,7 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		pHeader->pkg_len);
 	pHeader->cmd = STORAGE_PROTO_CMD_CREATE_LINK;
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
-		p - out_buff, g_network_timeout)) != 0)
+		p - out_buff, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -1493,7 +1493,7 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	}
 
 	if (meta_size > 0 && (result=tcpsenddata_nb(pStorageServer->sock, \
-		meta_buff, meta_size, g_network_timeout)) != 0)
+		meta_buff, meta_size, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \

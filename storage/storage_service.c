@@ -363,7 +363,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			if ((result=tcprecvfile_ex(pClientInfo->sock, 
 				full_filename, file_size, \
 				g_fsync_after_written_bytes, \
-				file_hash_codes, g_network_timeout)) != 0)
+				file_hash_codes, g_fdfs_network_timeout)) != 0)
 			{
 				*filename = '\0';
 				*filename_len = 0;
@@ -554,7 +554,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			if ((result=tcprecvfile(pClientInfo->sock, 
 				full_filename, file_size, \
 				g_fsync_after_written_bytes, \
-				g_network_timeout)) != 0)
+				g_fdfs_network_timeout)) != 0)
 			{
 				*filename = '\0';
 				*filename_len = 0;
@@ -990,7 +990,7 @@ static int storage_server_set_metadata(StorageClientInfo *pClientInfo, \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -1106,7 +1106,7 @@ static int storage_server_set_metadata(StorageClientInfo *pClientInfo, \
 	}
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, (void *)&resp, \
-		sizeof(resp), g_network_timeout)) != 0)
+		sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1148,7 +1148,7 @@ static int storage_server_report_client_ip(StorageClientInfo *pClientInfo, \
 		}
 
 		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, \
-			tracker_client_ip, nInPackLen, g_network_timeout)) != 0)
+			tracker_client_ip, nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -1171,7 +1171,7 @@ static int storage_server_report_client_ip(StorageClientInfo *pClientInfo, \
 	pResp->cmd = STORAGE_PROTO_CMD_RESP;
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, (void *)out_buff, \
-		sizeof(TrackerHeader), g_network_timeout)) != 0)
+		sizeof(TrackerHeader), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1239,7 +1239,7 @@ static int storage_server_query_file_info(StorageClientInfo *pClientInfo, \
 		}
 
 		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -1319,7 +1319,7 @@ static int storage_server_query_file_info(StorageClientInfo *pClientInfo, \
 	pResp->cmd = STORAGE_PROTO_CMD_RESP;
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, (void *)out_buff, \
-		out_len, g_network_timeout)) != 0)
+		out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1382,7 +1382,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			1+2*FDFS_PROTO_PKG_LEN_SIZE+FDFS_FILE_EXT_NAME_MAX_LEN,\
-			g_network_timeout)) != 0)
+			g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -1449,7 +1449,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 			}
 
 			if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
-				pMetaData, meta_bytes, g_network_timeout)) != 0)
+				pMetaData, meta_bytes, g_fdfs_network_timeout)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"client ip:%s, recv data fail, " \
@@ -1520,7 +1520,7 @@ static int storage_upload_file(StorageClientInfo *pClientInfo, \
 	}
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
-		sizeof(resp) + out_len, g_network_timeout)) != 0)
+		sizeof(resp) + out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1592,7 +1592,7 @@ static int storage_upload_slave_file(StorageClientInfo *pClientInfo, \
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			3*FDFS_PROTO_PKG_LEN_SIZE+FDFS_FILE_PREFIX_MAX_LEN + \
-			FDFS_FILE_EXT_NAME_MAX_LEN, g_network_timeout)) != 0)
+			FDFS_FILE_EXT_NAME_MAX_LEN, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -1656,7 +1656,7 @@ static int storage_upload_slave_file(StorageClientInfo *pClientInfo, \
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
 			master_filename, master_filename_len, \
-			g_network_timeout)) != 0)
+			g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -1730,7 +1730,7 @@ static int storage_upload_slave_file(StorageClientInfo *pClientInfo, \
 			}
 
 			if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
-				pMetaData, meta_bytes, g_network_timeout)) != 0)
+				pMetaData, meta_bytes, g_fdfs_network_timeout)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"client ip:%s, recv data fail, " \
@@ -1800,7 +1800,7 @@ static int storage_upload_slave_file(StorageClientInfo *pClientInfo, \
 	}
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
-		sizeof(resp) + out_len, g_network_timeout)) != 0)
+		sizeof(resp) + out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -1857,7 +1857,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			2*FDFS_PROTO_PKG_LEN_SIZE+4+FDFS_GROUP_NAME_MAX_LEN, \
-			g_network_timeout)) != 0)
+			g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
@@ -1924,7 +1924,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, filename, \
-			filename_len, g_network_timeout)) != 0)
+			filename_len, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv filename fail, " \
@@ -1958,7 +1958,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 				pClientInfo->ip_addr, full_filename);
 
 			if ((resp.status=tcpdiscard(pClientInfo->sock, \
-					file_bytes, g_network_timeout)) != 0)
+					file_bytes, g_fdfs_network_timeout)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"client ip: %s, discard buff fail, " \
@@ -1973,7 +1973,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		else if ((resp.status=tcprecvfile(pClientInfo->sock, 
 				full_filename, file_bytes, \
 				g_fsync_after_written_bytes, \
-				g_network_timeout)) != 0)
+				g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv file buff fail, " \
@@ -2001,7 +2001,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -2072,7 +2072,7 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
@@ -2214,7 +2214,7 @@ static int storage_sync_link_file(StorageClientInfo *pClientInfo, \
 
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -2280,7 +2280,7 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -2336,7 +2336,7 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	long2buff(file_bytes, resp.pkg_len);
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -2365,7 +2365,7 @@ static int storage_server_get_metadata(StorageClientInfo *pClientInfo, \
 	if (file_buff != NULL)
 	{
 		result = tcpsenddata_nb(pClientInfo->sock, \
-			file_buff, file_bytes, g_network_timeout);
+			file_buff, file_bytes, g_fdfs_network_timeout);
 		free(file_buff);
 		if(result != 0)
 		{
@@ -2439,7 +2439,7 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-				nInPackLen, g_network_timeout)) != 0)
+				nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -2550,7 +2550,7 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 		long2buff(download_bytes, resp.pkg_len);
 	}
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -2566,7 +2566,7 @@ static int storage_server_download_file(StorageClientInfo *pClientInfo, \
 	}
 
 	result = tcpsendfile_ex(pClientInfo->sock, full_filename, \
-			file_offset, download_bytes, g_network_timeout);
+			file_offset, download_bytes, g_fdfs_network_timeout);
 	if(result != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -2632,7 +2632,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -2702,7 +2702,7 @@ static int storage_sync_delete_file(StorageClientInfo *pClientInfo, \
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -2777,7 +2777,7 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_network_timeout)) != 0)
+			nInPackLen, g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -3076,7 +3076,7 @@ static int storage_server_delete_file(StorageClientInfo *pClientInfo, \
 	resp.cmd = STORAGE_PROTO_CMD_RESP;
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_network_timeout)) != 0)
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -3164,7 +3164,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
 			4*FDFS_PROTO_PKG_LEN_SIZE+FDFS_GROUP_NAME_MAX_LEN+\
 			FDFS_FILE_PREFIX_MAX_LEN+FDFS_FILE_EXT_NAME_MAX_LEN, \
-			g_network_timeout)) != 0)
+			g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, recv data fail, " \
@@ -3267,7 +3267,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 		}
 
 		if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
-			in_buff, len, g_network_timeout))!=0)
+			in_buff, len, g_fdfs_network_timeout))!=0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv data fail, " \
@@ -3426,7 +3426,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 			}
 
 			if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
-				pMetaData, meta_bytes, g_network_timeout)) != 0)
+				pMetaData, meta_bytes, g_fdfs_network_timeout)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"client ip:%s, recv data fail, " \
@@ -3496,7 +3496,7 @@ static int storage_create_link(StorageClientInfo *pClientInfo, \
 	}
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
-		sizeof(resp) + out_len, g_network_timeout)) != 0)
+		sizeof(resp) + out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, send data fail, " \
@@ -3707,7 +3707,7 @@ data buff (struct)
 	while (g_continue_flag)
 	{
 		result = tcprecvdata_nb_ex(client_info.sock, &header, \
-			sizeof(header), g_network_timeout, &recv_bytes);
+			sizeof(header), g_fdfs_network_timeout, &recv_bytes);
 		if (result == ETIMEDOUT)
 		{
 			continue;

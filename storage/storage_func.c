@@ -32,6 +32,7 @@
 #include "storage_func.h"
 #include "storage_param_getter.h"
 #include "storage_ip_changed_dealer.h"
+#include "fdht_global.h"
 #include "fdht_func.h"
 #include "fdht_client.h"
 #include "client_func.h"
@@ -93,7 +94,7 @@ static char *get_storage_stat_filename(const void *pArg, char *full_filename)
 	}
 
 	snprintf(full_filename, MAX_PATH_SIZE, \
-			"%s/data/%s", g_base_path, STORAGE_STAT_FILENAME);
+			"%s/data/%s", g_fdfs_base_path, STORAGE_STAT_FILENAME);
 	return full_filename;
 }
 
@@ -334,7 +335,7 @@ int storage_write_to_sync_ini_file()
 	int len;
 
 	snprintf(full_filename, sizeof(full_filename), \
-		"%s/data/%s", g_base_path, DATA_DIR_INITED_FILENAME);
+		"%s/data/%s", g_fdfs_base_path, DATA_DIR_INITED_FILENAME);
 	if ((fd=open(full_filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -379,7 +380,7 @@ static int storage_check_and_make_data_dirs()
 	char full_filename[MAX_PATH_SIZE];
 
 	snprintf(data_path, sizeof(data_path), "%s/data", \
-			g_base_path);
+			g_fdfs_base_path);
 	snprintf(full_filename, sizeof(full_filename), "%s/%s", \
 			data_path, DATA_DIR_INITED_FILENAME);
 	if (fileExists(full_filename))
@@ -636,20 +637,20 @@ static int storage_load_paths(IniContext *pItemContext)
 		return ENOENT;
 	}
 
-	snprintf(g_base_path, sizeof(g_base_path), "%s", pPath);
-	chopPath(g_base_path);
-	if (!fileExists(g_base_path))
+	snprintf(g_fdfs_base_path, sizeof(g_fdfs_base_path), "%s", pPath);
+	chopPath(g_fdfs_base_path);
+	if (!fileExists(g_fdfs_base_path))
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"\"%s\" can't be accessed, error info: %s", \
-			__LINE__, strerror(errno), g_base_path);
+			__LINE__, strerror(errno), g_fdfs_base_path);
 		return errno != 0 ? errno : ENOENT;
 	}
-	if (!isDir(g_base_path))
+	if (!isDir(g_fdfs_base_path))
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"\"%s\" is not a directory!", \
-			__LINE__, g_base_path);
+			__LINE__, g_fdfs_base_path);
 		return ENOTDIR;
 	}
 
@@ -676,7 +677,7 @@ static int storage_load_paths(IniContext *pItemContext)
 	pPath = iniGetStrValue(NULL, "store_path0", pItemContext);
 	if (pPath == NULL)
 	{
-		pPath = g_base_path;
+		pPath = g_fdfs_base_path;
 	}
 	g_store_paths[0] = strdup(pPath);
 	if (g_store_paths[0] == NULL)
@@ -790,17 +791,17 @@ int storage_func_init(const char *filename, \
 		}
 
 		load_log_level(&iniContext);
-		if ((result=log_set_prefix(g_base_path, \
+		if ((result=log_set_prefix(g_fdfs_base_path, \
 				STORAGE_ERROR_LOG_FILENAME)) != 0)
 		{
 			break;
 		}
 
-		g_network_timeout = iniGetIntValue(NULL, "network_timeout", \
+		g_fdfs_network_timeout = iniGetIntValue(NULL, "network_timeout", \
 				&iniContext, DEFAULT_NETWORK_TIMEOUT);
-		if (g_network_timeout <= 0)
+		if (g_fdfs_network_timeout <= 0)
 		{
-			g_network_timeout = DEFAULT_NETWORK_TIMEOUT;
+			g_fdfs_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 		}
 
 		g_server_port = iniGetIntValue(NULL, "port", &iniContext, \
@@ -1033,6 +1034,10 @@ int storage_func_init(const char *filename, \
 		if (g_check_file_duplicate)
 		{
 			char *pKeyNamespace;
+
+			strcpy(g_fdht_base_path, g_fdfs_base_path);
+			g_fdht_network_timeout = g_fdfs_network_timeout;
+
 			pKeyNamespace = iniGetStrValue(NULL, \
 				"key_namespace", &iniContext);
 			if (pKeyNamespace == NULL || *pKeyNamespace == '\0')
@@ -1132,9 +1137,9 @@ int storage_func_init(const char *filename, \
 			"FDHT server count=%d, FDHT key_namespace=%s, " \
 			"FDHT keep_alive=%d, HTTP server port=%d, " \
 			"domain name=%s", \
-			g_version.major, g_version.minor, \
-			g_base_path, g_path_count, g_subdir_count_per_path, \
-			g_group_name, g_network_timeout, \
+			g_fdfs_version.major, g_fdfs_version.minor, \
+			g_fdfs_base_path, g_path_count, g_subdir_count_per_path, \
+			g_group_name, g_fdfs_network_timeout, \
 			g_server_port, bind_addr, g_client_bind_addr, \
 			g_max_connections, \
 			g_heart_beat_interval, g_stat_report_interval, \
@@ -1512,7 +1517,7 @@ int recv_file_serialized(int sock, const char *filename, \
 		}
 
 		if ((result=tcprecvdata_nb(sock, buff, recv_bytes, \
-				g_network_timeout)) != 0)
+				g_fdfs_network_timeout)) != 0)
 		{
 			close(fd);
 			unlink(filename);
