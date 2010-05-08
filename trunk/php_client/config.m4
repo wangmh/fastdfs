@@ -12,7 +12,8 @@ if test "$PHP_FASTDFS_CLIENT" != "no"; then
 
 dnl  CC=$ROOT/bin/gcc
 
-  PHP_ADD_INCLUDE($ROOT/include)
+  PHP_ADD_INCLUDE($ROOT/include/fastcommon)
+  PHP_ADD_INCLUDE($ROOT/include/fastdfs)
 
   PHP_ADD_LIBRARY_WITH_PATH(fastcommon, $ROOT/lib, FASTDFS_CLIENT_SHARED_LIBADD)
   PHP_ADD_LIBRARY_WITH_PATH(fdfsclient, $ROOT/lib, FASTDFS_CLIENT_SHARED_LIBADD)
