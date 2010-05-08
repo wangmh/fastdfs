@@ -29,7 +29,7 @@
 #include "tracker_client.h"
 #include "storage_client.h"
 #include "client_global.h"
-#include "fdfs_base64.h"
+#include "base64.h"
 
 #define FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id) \
 	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \

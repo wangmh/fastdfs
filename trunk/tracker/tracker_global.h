@@ -16,7 +16,7 @@
 #include <string.h>
 #include "fdfs_define.h"
 #include "tracker_types.h"
-#include "fdfs_base64.h"
+#include "base64.h"
 
 #ifdef WITH_HTTPD
 #include "fdfs_http_shared.h"

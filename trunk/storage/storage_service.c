@@ -32,7 +32,7 @@
 #include "storage_func.h"
 #include "storage_sync.h"
 #include "storage_global.h"
-#include "fdfs_base64.h"
+#include "base64.h"
 #include "hash.h"
 #include "fdht_client.h"
 #include "fdfs_global.h"

@@ -13,7 +13,6 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
-#include "fdfs_base64.h"
 #include "sockopt.h"
 #include "logger.h"
 #include "hash.h"

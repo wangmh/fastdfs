@@ -5,7 +5,7 @@ INC_PATH = -I../common -I/usr/local/include
 LIB_PATH = -L/usr/local/lib $(LIBS)
 TARGET_PATH = $(TARGET_PATH)
 
-SHARED_OBJS = ../common/hash.o ../common/chain.o ../common/fdfs_base64.o \
+SHARED_OBJS = ../common/hash.o ../common/chain.o ../common/base64.o \
               ../common/shared_func.o ../common/ini_file_reader.o \
               ../common/logger.o ../common/sockopt.o ../common/fdfs_global.o \
               ../common/sched_thread.o ../common/http_func.o \

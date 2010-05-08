@@ -19,7 +19,7 @@
 #include "tracker_types.h"
 #include "client_global.h"
 #include "fdht_types.h"
-#include "fdfs_base64.h"
+#include "base64.h"
 
 #ifdef WITH_HTTPD
 #include "fdfs_http_shared.h"

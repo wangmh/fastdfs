@@ -16,7 +16,7 @@
 #include <sys/stat.h>
 #include "fdfs_client.h"
 #include "fdfs_global.h"
-#include "fdfs_base64.h"
+#include "base64.h"
 #include "fdfs_http_shared.h"
 #include "sockopt.h"
 #include "logger.h"
