@@ -22,47 +22,214 @@
 extern "C" {
 #endif
 
+/** lowercase the string
+ *  parameters:
+ *  	src: input string, will be changed
+ *  return: lowercased string
+*/
 char *toLowercase(char *src);
+
+/** uppercase the string
+ *  parameters:
+ *  	src: input string, will be changed
+ *  return: uppercased string
+*/
 char *toUppercase(char *src);
 
+
+/** date format to string
+ *  parameters:
+ *  	nTime: unix timestamp
+ *  	szDateFormat: date format, more detail man strftime
+ *  	buff: store the formated result, can be NULL
+ *  	buff_size: buffer size, max bytes can contain
+ *  return: formated date string
+*/
 char *formatDatetime(const time_t nTime, \
 	const char *szDateFormat, \
 	char *buff, const int buff_size);
 
+/** get character count, only support GB charset
+ *  parameters:
+ *  	s: the string
+ *  return: character count
+*/
 int getCharLen(const char *s);
+
+/** replace \r and \n to space
+ *  parameters:
+ *  	s: the string
+ *  return: replaced string
+*/
 char *replaceCRLF2Space(char *s);
 
-char *getExeAbsolutePath(const char *exeName, char *szAbsPath, \
+/** get the filename absolute path
+ *  parameters:
+ *  	fileame: the filename
+ *  	szAbsPath: store the absolute path
+ *  	pathSize: max bytes to contain
+ *  return: absolute path, NULL for fail
+*/
+char *getAbsolutePath(const char *fileame, char *szAbsPath, \
 				const int pathSize);
-char *getExeAbsoluteFilename(const char *exeFilename, char *szAbsFilename, \
-		const int nameSize);
 
+/** get the executable file absolute filename
+ *  parameters:
+ *  	exeFilename: the executable filename
+ *  	szAbsFilename: store the absolute filename
+ *  	maxSize: max bytes to contain
+ *  return: absolute filename, NULL for fail
+*/
+char *getExeAbsoluteFilename(const char *exeFilename, char *szAbsFilename, \
+		const int maxSize);
+
+/** get running process count by program name such as fdfs_trackerd
+ *  parameters:
+ *  	progName: the program name
+ * 	bAllOwners: false for only get my proccess count
+ *  return: proccess count, >= 0 success, < 0 fail
+*/
 int getProccessCount(const char *progName, const bool bAllOwners);
 
+/** get running process ids by program name such as fdfs_trackerd
+ *  parameters:
+ *  	progName: the program name
+ * 	bAllOwners: false for only get my proccess count
+ * 	pids: store the pids
+ * 	arrSize: max pids
+ *  return: proccess count, >= 0 success, < 0 fail
+*/
 int getUserProcIds(const char *progName, const bool bAllOwners, \
 			int pids[], const int arrSize);
+
+/** execute program, get it's output
+ *  parameters:
+ *  	command: the program
+ * 	output: store ouput result
+ * 	buff_size: output max size (bytes)
+ *  return: error no, 0 success, != 0 fail
+*/
 int getExecResult(const char *command, char *output, const int buff_size);
 
+/** daemon init
+ *  parameters:
+ *  	bCloseFiles: if close the stdin, stdout and stderr
+ *  return: none
+*/
 void daemon_init(bool bCloseFiles);
 
+/** convert buffer content to hex string such as 0B82A1
+ *  parameters:
+ *  	s: the buffer
+ *  	len: the buffer length
+ *  	szHexBuff: store the hex string (must have enough space)
+ *  return: hex string (szHexBuff)
+*/
 char *bin2hex(const char *s, const int len, char *szHexBuff);
-char *hex2bin(const char *s, char *szBinBuff, int *nDestLen);
-void printBuffHex(const char *s, const int len);
-char int2base62(const int i);
 
+/** parse hex string to binary content
+ *  parameters:
+ *  	s: the hex string such as 8B04CD
+ *  	szBinBuff: store the converted binary content(must have enough space)
+ *  	nDestLen: store the converted content length
+ *  return: converted binary content (szBinBuff)
+*/
+char *hex2bin(const char *s, char *szBinBuff, int *nDestLen);
+
+/** print binary buffer as hex string
+ *  parameters:
+ *  	s: the buffer
+ *  	len: the buffer length
+ *  return: none
+*/
+void printBuffHex(const char *s, const int len);
+
+/** 32 bits int convert to buffer (big-endian)
+ *  parameters:
+ *  	n: 32 bits int value
+ *  	buff: the buffer, at least 4 bytes space, no tail \0
+ *  return: none
+*/
 void int2buff(const int n, char *buff);
+
+/** buffer convert to 32 bits int
+ *  parameters:
+ *  	buff: big-endian 4 bytes buffer
+ *  return: 32 bits int value
+*/
 int buff2int(const char *buff);
+
+/** long (64 bits) convert to buffer (big-endian)
+ *  parameters:
+ *  	n: 64 bits int value
+ *  	buff: the buffer, at least 8 bytes space, no tail \0
+ *  return: none
+*/
 void long2buff(int64_t n, char *buff);
+
+/** buffer convert to 64 bits int
+ *  parameters:
+ *  	buff: big-endian 8 bytes buffer
+ *  return: 64 bits int value
+*/
 int64_t buff2long(const char *buff);
 
+/** trim leading spaces ( \t\r\n)
+ *  parameters:
+ *  	pStr: the string to trim
+ *  return: trimed string porinter as pStr
+*/
 char *trim_left(char *pStr);
+
+/** trim tail spaces ( \t\r\n)
+ *  parameters:
+ *  	pStr: the string to trim
+ *  return: trimed string porinter as pStr
+*/
 char *trim_right(char *pStr);
+
+/** trim leading and tail spaces ( \t\r\n)
+ *  parameters:
+ *  	pStr: the string to trim
+ *  return: trimed string porinter as pStr
+*/
 char *trim(char *pStr);
 
+/** copy string to BufferInfo
+ *  parameters:
+ *  	pBuff: the dest buffer
+ *  	str: source string
+ *  return: error no, 0 success, != 0 fail
+*/
 int buffer_strcpy(BufferInfo *pBuff, const char *str);
+
+/** copy binary buffer to BufferInfo
+ *  parameters:
+ *  	pBuff: the dest buffer
+ *  	buff: source buffer
+ *  	len: source buffer length
+ *  return: error no, 0 success, != 0 fail
+*/
 int buffer_memcpy(BufferInfo *pBuff, const char *buff, const int len);
 
+/** url encode
+ *  parameters:
+ *  	src: the source stirng to encode
+ *  	src_len: source string length
+ *  	dest: store dest string
+ *  	dest_len: store the dest string length
+ *  return: error no, 0 success, != 0 fail
+*/
 char *urlencode(const char *src, const int src_len, char *dest, int *dest_len);
+
+/** url decode
+ *  parameters:
+ *  	src: the source stirng to decode
+ *  	src_len: source string length
+ *  	dest: store dest string
+ *  	dest_len: store the dest string length
+ *  return: error no, 0 success, != 0 fail
+*/
 char *urldecode(const char *src, const int src_len, char *dest, int *dest_len);
 
 int getOccurCount(const char *src, const char seperator);

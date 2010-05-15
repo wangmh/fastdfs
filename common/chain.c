@@ -277,7 +277,7 @@ int deleteNode(ChainList *pList, void *data, bool bDeleteAll)
 
 	if (pList == NULL || pList->compareFunc == NULL)
 	{
-		return EINVAL;
+		return -EINVAL;
 	}
 
 	nCount = 0;

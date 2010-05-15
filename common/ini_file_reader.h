@@ -43,28 +43,118 @@ typedef struct
 extern "C" {
 #endif
 
+/** load ini items from file
+ *  parameters:
+ *           szFilename: the filename, can be an URL
+ *           pContext: the ini context
+ *  return: error no, 0 for success, != 0 fail
+*/
 int iniLoadFromFile(const char *szFilename, IniContext *pContext);
+
+/** load ini items from string buffer
+ *  parameters:
+ *           content: the string buffer to parse
+ *           pContext: the ini context
+ *  return: error no, 0 for success, != 0 fail
+*/
 int iniLoadFromBuffer(char *content, IniContext *pContext);
 
+/** free ini context
+ *  parameters:
+ *           pContext: the ini context
+ *  return: none
+*/
 void iniFreeContext(IniContext *pContext);
 
+/** get item string value
+ *  parameters:
+ *           szSectionName: the section name, NULL or empty string for 
+ *                          global section
+ *           szItemName: the item name
+ *           pContext:   the ini context
+ *  return: item value, return NULL when the item not exist
+*/
 char *iniGetStrValue(const char *szSectionName, const char *szItemName, \
 		IniContext *pContext);
+
+/** get item string value
+ *  parameters:
+ *           szSectionName: the section name, NULL or empty string for 
+ *                          global section
+ *           szItemName: the item name
+ *           pContext:   the ini context
+ *           szValues:   string array to store the values
+ *           max_values: max string array elements
+ *  return: item value count
+*/
 int iniGetValues(const char *szSectionName, const char *szItemName, \
 		IniContext *pContext, char **szValues, const int max_values);
 
+/** get item int value (32 bits)
+ *  parameters:
+ *           szSectionName: the section name, NULL or empty string for 
+ *                          global section
+ *           szItemName: the item name
+ *           pContext:   the ini context
+ *           nDefaultValue: the default value
+ *  return: item value, return nDefaultValue when the item not exist
+*/
 int iniGetIntValue(const char *szSectionName, const char *szItemName, \
 		IniContext *pContext, const int nDefaultValue);
+
+/** get item string value array
+ *  parameters:
+ *           szSectionName: the section name, NULL or empty string for 
+ *                          global section
+ *           szItemName: the item name
+ *           pContext:   the ini context
+ *           nTargetCount: store the item value count
+ *  return: item value array, return NULL when the item not exist
+*/
 IniItem *iniGetValuesEx(const char *szSectionName, const char *szItemName, \
 		IniContext *pContext, int *nTargetCount);
 
+/** get item int64 value (64 bits)
+ *  parameters:
+ *           szSectionName: the section name, NULL or empty string for 
+ *                          global section
+ *           szItemName: the item name
+ *           pContext:   the ini context
+ *           nDefaultValue: the default value
+ *  return: int64 value, return nDefaultValue when the item not exist
+*/
 int64_t iniGetInt64Value(const char *szSectionName, const char *szItemName, \
 		IniContext *pContext, const int64_t nDefaultValue);
+
+/** get item boolean value
+ *  parameters:
+ *           szSectionName: the section name, NULL or empty string for 
+ *                          global section
+ *           szItemName: the item name
+ *           pContext:   the ini context
+ *           bDefaultValue: the default value
+ *  return: item boolean value, return bDefaultValue when the item not exist
+*/
 bool iniGetBoolValue(const char *szSectionName, const char *szItemName, \
 		IniContext *pContext, const bool bDefaultValue);
+
+/** get item double value
+ *  parameters:
+ *           szSectionName: the section name, NULL or empty string for 
+ *                          global section
+ *           szItemName: the item name
+ *           pContext:   the ini context
+ *           dbDefaultValue: the default value
+ *  return: item value, return dbDefaultValue when the item not exist
+*/
 double iniGetDoubleValue(const char *szSectionName, const char *szItemName, \
 		IniContext *pContext, const double dbDefaultValue);
 
+/** print all items
+ *  parameters:
+ *           pContext:   the ini context
+ *  return: none
+*/
 void iniPrintItems(IniContext *pContext);
 
 #ifdef __cplusplus

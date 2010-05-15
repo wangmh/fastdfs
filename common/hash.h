@@ -75,12 +75,13 @@ typedef struct tagHashStat
 	int bucket_max_length;
 } HashStat;
 
-/*
-hash walk function
-index: item index based 0
-data: hash data, including key and value
-args: passed by hash_walk function
-return 0 for success, != 0 for error
+/**
+ * hash walk function
+ * parameters:
+ *         index: item index based 0
+ *         data: hash data, including key and value
+ *         args: passed by hash_walk function
+ * return 0 for success, != 0 for error
 */
 typedef int (*HashWalkFunc)(const int index, const HashData *data, void *args);
 
@@ -90,22 +91,113 @@ typedef int (*HashWalkFunc)(const int index, const HashData *data, void *args);
 #define hash_insert(pHash, key, key_len, value) \
 	hash_insert_ex(pHash, key, key_len, value, 0)
 
+/**
+ * hash init function
+ * parameters:
+ *         pHash: the hash table
+ *         hash_func: hash function
+ *         capacity: init capacity
+ *         load_factor: hash load factor, such as 0.75
+ *         max_bytes:  max memory can be used (bytes)
+ *         bMallocValue: if need malloc value buffer
+ * return 0 for success, != 0 for error
+*/
 int hash_init_ex(HashArray *pHash, HashFunc hash_func, \
 		const unsigned int capacity, const double load_factor, \
 		const int64_t max_bytes, const bool bMallocValue);
 
+/**
+ * hash destroy function
+ * parameters:
+ *         pHash: the hash table
+ * return none
+*/
 void hash_destroy(HashArray *pHash);
+
+/**
+ * hash insert key
+ * parameters:
+ *         pHash: the hash table
+ *         key: the key to insert
+ *         key_len: length of th key 
+ *         value: the value
+ *         value_len: length of the value
+ * return >= 0 for success, 0 for key already exist (update), 
+ *        1 for new key (insert), < 0 for error
+*/
 int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
 		void *value, const int value_len);
 
+/**
+ * hash find key
+ * parameters:
+ *         pHash: the hash table
+ *         key: the key to find
+ *         key_len: length of th key 
+ * return user data, return NULL when the key not exist
+*/
 void *hash_find(HashArray *pHash, const void *key, const int key_len);
+
+/**
+ * hash find key
+ * parameters:
+ *         pHash: the hash table
+ *         key: the key to find
+ *         key_len: length of th key 
+ * return hash data, return NULL when the key not exist
+*/
 HashData *hash_find_ex(HashArray *pHash, const void *key, const int key_len);
 
+/**
+ * hash delete key
+ * parameters:
+ *         pHash: the hash table
+ *         key: the key to delete
+ *         key_len: length of th key 
+ * return 0 for success, != 0 fail (errno)
+*/
 int hash_delete(HashArray *pHash, const void *key, const int key_len);
+
+/**
+ * hash walk (iterator)
+ * parameters:
+ *         pHash: the hash table
+ *         walkFunc: walk (interator) function
+ *         args: extra args which will be passed to walkFunc
+ * return 0 for success, != 0 fail (errno)
+*/
 int hash_walk(HashArray *pHash, HashWalkFunc walkFunc, void *args);
+
+/**
+ * hash best optimize
+ * parameters:
+ *         pHash: the hash table
+ *         suggest_capacity: suggest init capacity for speed
+ * return >0 for success, < 0 fail (errno)
+*/
 int hash_best_op(HashArray *pHash, const int suggest_capacity);
+
+/**
+ * hash stat
+ * parameters:
+ *         pHash: the hash table
+ *         pStat: return stat info
+ *         stat_by_lens: return stats array by bucket length
+ *              stat_by_lens[0] empty buckets count
+ *              stat_by_lens[1] contain 1 key buckets count
+ *              stat_by_lens[2] contain 2 key buckets count, etc
+ *         stat_size: stats array size (contain max elments)
+ * return 0 for success, != 0 fail (errno)
+*/
 int hash_stat(HashArray *pHash, HashStat *pStat, \
 		int *stat_by_lens, const int stat_size);
+
+/**
+ * print hash stat info
+ * parameters:
+ *         pHash: the hash table
+ * return none
+*/
 void hash_stat_print(HashArray *pHash);
 
 int RSHash(const void *key, const int key_len);

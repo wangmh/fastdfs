@@ -329,7 +329,7 @@ int main(int argc, char *argv[])
 	free(tids);
 
 	logInfo("exit nomally.\n");
-	log_destory();
+	log_destroy();
 	
 	return 0;
 }
