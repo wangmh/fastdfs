@@ -30,10 +30,10 @@ char *formatDatetime(const time_t nTime, \
 	char *buff, const int buff_size)
 {
 	static char szDateBuff[128];
-	struct tm *tmTime;
+	struct tm tmTime;
 	int size;
 
-	tmTime = localtime(&nTime);
+	localtime_r(&nTime, &tmTime);
 	if (buff == NULL)
 	{
 		buff = szDateBuff;
@@ -44,8 +44,8 @@ char *formatDatetime(const time_t nTime, \
 		size = buff_size;
 	}
 
-	buff[0] = '\0';
-	strftime(buff, size, szDateFormat, tmTime);
+	*buff = '\0';
+	strftime(buff, size, szDateFormat, &tmTime);
 	
 	return buff;
 }
@@ -93,32 +93,31 @@ char *replaceCRLF2Space(char *s)
 	return s;
 }
 
-char *getExeAbsolutePath(const char *exeName, char *szAbsPath, \
+char *getAbsolutePath(const char *filename, char *szAbsPath, \
 		const int pathSize)
 {
 	char *p;
-	char *szPath;
 	int nPathLen;
+	char szPath[1024];
 	char cwd[256];
 	
-	szPath = (char *)malloc(strlen(exeName) + 1);
-	if (szPath == NULL)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail", __LINE__, \
-			(int)strlen(exeName) + 1);
-		return NULL;
-	}
-	
-	p = strrchr(exeName, '/');
+	p = strrchr(filename, '/');
 	if (p == NULL)
 	{
 		szPath[0] = '\0';
 	}
 	else
 	{
-		nPathLen = p - exeName;
-		memcpy(szPath, exeName, nPathLen);
+		nPathLen = p - filename;
+		if (nPathLen >= sizeof(szPath))
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"filename length: %d is too long, exceeds %d",\
+				__LINE__, nPathLen, (int)sizeof(szPath));
+			return NULL;
+		}
+	
+		memcpy(szPath, filename, nPathLen);
 		szPath[nPathLen] = '\0';
 	}
 	
@@ -128,9 +127,11 @@ char *getExeAbsolutePath(const char *exeName, char *szAbsPath, \
 	}
 	else
 	{
-		if (getcwd(cwd, 256) == NULL)
+		if (getcwd(cwd, sizeof(cwd)) == NULL)
 		{
-			free(szPath);
+			logError("file: "__FILE__", line: %d, " \
+				"call getcwd fail, errno: %d, error info: %s", \
+				__LINE__, errno, strerror(errno));
 			return NULL;
 		}
 		
@@ -150,20 +151,18 @@ char *getExeAbsolutePath(const char *exeName, char *szAbsPath, \
 		}
 	}
 	
-	free(szPath);
-	
 	return szAbsPath;
 }
 
 char *getExeAbsoluteFilename(const char *exeFilename, char *szAbsFilename, \
-		const int nameSize)
+		const int maxSize)
 {
-	const char *exeName;
+	const char *filename;
 	const char *p;
 	int nFileLen;
 	int nPathLen;
 	char cwd[256];
-	char szPath[256];
+	char szPath[1024];
 	
 	nFileLen = strlen(exeFilename);
 	if (nFileLen >= sizeof(szPath))
@@ -181,11 +180,11 @@ char *getExeAbsoluteFilename(const char *exeFilename, char *szAbsFilename, \
 		char *search_paths[] = {"/bin", "/usr/bin", "/usr/local/bin"};
 
 		*szPath = '\0';
-		exeName = exeFilename;
+		filename = exeFilename;
 		for (i=0; i<3; i++)
 		{
 			snprintf(cwd, sizeof(cwd), "%s/%s", \
-				search_paths[i], exeName);
+				search_paths[i], filename);
 			if (fileExists(cwd))
 			{
 				strcpy(szPath, search_paths[i]);
@@ -195,24 +194,24 @@ char *getExeAbsoluteFilename(const char *exeFilename, char *szAbsFilename, \
 
 		if (*szPath == '\0')
 		{
-			if (!fileExists(exeName))
+			if (!fileExists(filename))
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"can't find exe file %s!", __LINE__, \
-					exeName);
+					filename);
 				return NULL;
 			}
 		}
 		else
 		{
-			snprintf(szAbsFilename, nameSize, "%s/%s", \
-				szPath, exeName);
+			snprintf(szAbsFilename, maxSize, "%s/%s", \
+				szPath, filename);
 			return szAbsFilename;
 		}
 	}
 	else
 	{
-		exeName = p + 1;
+		filename = p + 1;
 		nPathLen = p - exeFilename;
 		memcpy(szPath, exeFilename, nPathLen);
 		szPath[nPathLen] = '\0';
@@ -220,7 +219,7 @@ char *getExeAbsoluteFilename(const char *exeFilename, char *szAbsFilename, \
 	
 	if (*szPath == '/')
 	{
-		snprintf(szAbsFilename, nameSize, "%s/%s", szPath, exeName);
+		snprintf(szAbsFilename, maxSize, "%s/%s", szPath, filename);
 	}
 	else
 	{
@@ -240,13 +239,13 @@ char *getExeAbsoluteFilename(const char *exeFilename, char *szAbsFilename, \
 		
 		if (*szPath != '\0')
 		{
-			snprintf(szAbsFilename, nameSize, "%s/%s/%s", \
-				cwd, szPath, exeName);
+			snprintf(szAbsFilename, maxSize, "%s/%s/%s", \
+				cwd, szPath, filename);
 		}
 		else
 		{
-			snprintf(szAbsFilename, nameSize, "%s/%s", \
-				cwd, exeName);
+			snprintf(szAbsFilename, maxSize, "%s/%s", \
+				cwd, filename);
 		}
 	}
 	
@@ -262,14 +261,14 @@ int getProccessCount(const char *progName, const bool bAllOwners)
 int getUserProcIds(const char *progName, const bool bAllOwners, \
 		int pids[], const int arrSize)
 {
-	char path[80]="/proc";
-	char fullpath[80];
+	char path[128]="/proc";
+	char fullpath[128];
 	struct stat statbuf;
 	struct dirent *dirp;
 	DIR  *dp;
 	int  myuid=getuid();
 	int  fd;
-	char filepath[80];
+	char filepath[128];
 	char buf[256];
 	char *ptr;
 	int  nbytes;
@@ -495,7 +494,6 @@ void printBuffHex(const char *s, const int len)
 
 char *trim_left(char *pStr)
 {
-	char *pTemp;
 	char *p;
 	char *pEnd;
 	int nDestLen;
@@ -515,17 +513,8 @@ char *trim_left(char *pStr)
 	}
 	
 	nDestLen = (pEnd - p) + 1; //including \0
-	pTemp = (char *)malloc(nDestLen);
-	if (pTemp == NULL)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail", __LINE__, nDestLen);
-		return p;
-	}
+	memmove(pStr, p, nDestLen);
 
-	memcpy(pTemp, p, nDestLen);
-	memcpy(pStr, pTemp, nDestLen);
-	free(pTemp);
 	return pStr;
 }
 
@@ -568,9 +557,14 @@ char *trim(char *pStr)
 char *formatDateYYYYMMDDHHMISS(const time_t t, char *szDateBuff, const int nSize)
 {
 	time_t timer = t;
-	struct tm *tm = localtime(&timer);
+	struct tm tm;
+
+	localtime_r(&timer, &tm);
 	
-	snprintf(szDateBuff, nSize, "%04d%02d%02d%02d%02d%02d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+	snprintf(szDateBuff, nSize, "%04d%02d%02d%02d%02d%02d", \
+		tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
+		tm.tm_hour, tm.tm_min, tm.tm_sec);
+
 	return szDateBuff;
 }
 
@@ -852,26 +846,6 @@ int str_replace(const char *s, const int src_len, const char *replaced,
 	}
 	*pDest = '\0';
 	return pDest - dest;
-}
-
-char int2base62(const int i)
-{
-  #define _BASE62_COUNT  62
-  static char base62[_BASE62_COUNT] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-                     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
-                     'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-                     'U', 'V', 'W', 'X', 'Y', 'Z',
-                     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
-                     'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-                     'u', 'v', 'w', 'x', 'y', 'z'
-                    };
-
-  if (i < 0 || i >= _BASE62_COUNT)
-  {
-    return ' ';
-  }
-
-  return base62[i];
 }
 
 bool fileExists(const char *filename)

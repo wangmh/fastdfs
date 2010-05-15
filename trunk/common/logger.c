@@ -56,6 +56,10 @@ int log_init_ex(LogContext *pContext)
 {
 	int result;
 
+	pContext->log_level = LOG_INFO;
+	pContext->log_fd = STDERR_FILENO;
+	pContext->log_to_cache = true;
+
 	pContext->log_buff = (char *)malloc(LOG_BUFF_SIZE);
 	if (pContext->log_buff == NULL)
 	{
@@ -121,7 +125,7 @@ void log_set_cache_ex(LogContext *pContext, const bool bLogCache)
 	pContext->log_to_cache = bLogCache;
 }
 
-void log_destory_ex(LogContext *pContext)
+void log_destroy_ex(LogContext *pContext)
 {
 	if (pContext->log_fd >= 0 && pContext->log_fd != STDERR_FILENO)
 	{
@@ -311,7 +315,7 @@ void log_it_ex1(LogContext *pContext, const int priority, \
 	doLog(pContext, caption, text, text_len, bNeedSync);
 }
 
-void log_it_ex(LogContext *pContext, const int priority, const char* format, ...)
+void log_it_ex(LogContext *pContext, const int priority, const char *format, ...)
 {
 	bool bNeedSync;
 	char text[LINE_MAX];
@@ -386,17 +390,17 @@ void log_it_ex(LogContext *pContext, const int priority, const char* format, ...
 	doLog(pContext, caption, text, len, bNeedSync); \
 
 
-void logEmergEx(LogContext *pContext, const char* format, ...)
+void logEmergEx(LogContext *pContext, const char *format, ...)
 {
 	_DO_LOG(pContext, LOG_EMERG, "EMERG", true)
 }
 
-void logAlertEx(LogContext *pContext, const char* format, ...)
+void logAlertEx(LogContext *pContext, const char *format, ...)
 {
 	_DO_LOG(pContext, LOG_ALERT, "ALERT", true)
 }
 
-void logCritEx(LogContext *pContext, const char* format, ...)
+void logCritEx(LogContext *pContext, const char *format, ...)
 {
 	_DO_LOG(pContext, LOG_CRIT, "CRIT", true)
 }
@@ -411,7 +415,7 @@ void logWarningEx(LogContext *pContext, const char *format, ...)
 	_DO_LOG(pContext, LOG_WARNING, "WARNING", false)
 }
 
-void logNoticeEx(LogContext *pContext, const char* format, ...)
+void logNoticeEx(LogContext *pContext, const char *format, ...)
 {
 	_DO_LOG(pContext, LOG_NOTICE, "NOTICE", false)
 }
@@ -421,24 +425,24 @@ void logInfoEx(LogContext *pContext, const char *format, ...)
 	_DO_LOG(pContext, LOG_INFO, "INFO", true)
 }
 
-void logDebugEx(LogContext *pContext, const char* format, ...)
+void logDebugEx(LogContext *pContext, const char *format, ...)
 {
 	_DO_LOG(pContext, LOG_DEBUG, "DEBUG", true)
 }
 
 #ifndef LOG_FORMAT_CHECK
 
-void logEmerg(const char* format, ...)
+void logEmerg(const char *format, ...)
 {
 	_DO_LOG((&g_log_context), LOG_EMERG, "EMERG", true)
 }
 
-void logAlert(const char* format, ...)
+void logAlert(const char *format, ...)
 {
 	_DO_LOG((&g_log_context), LOG_ALERT, "ALERT", true)
 }
 
-void logCrit(const char* format, ...)
+void logCrit(const char *format, ...)
 {
 	_DO_LOG((&g_log_context), LOG_CRIT, "CRIT", true)
 }
@@ -453,7 +457,7 @@ void logWarning(const char *format, ...)
 	_DO_LOG((&g_log_context), LOG_WARNING, "WARNING", false)
 }
 
-void logNotice(const char* format, ...)
+void logNotice(const char *format, ...)
 {
 	_DO_LOG((&g_log_context), LOG_NOTICE, "NOTICE", false)
 }
@@ -463,7 +467,7 @@ void logInfo(const char *format, ...)
 	_DO_LOG((&g_log_context), LOG_INFO, "INFO", true)
 }
 
-void logDebug(const char* format, ...)
+void logDebug(const char *format, ...)
 {
 	_DO_LOG((&g_log_context), LOG_DEBUG, "DEBUG", true)
 }
