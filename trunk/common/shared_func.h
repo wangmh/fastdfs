@@ -214,7 +214,7 @@ int buffer_memcpy(BufferInfo *pBuff, const char *buff, const int len);
 
 /** url encode
  *  parameters:
- *  	src: the source stirng to encode
+ *  	src: the source string to encode
  *  	src_len: source string length
  *  	dest: store dest string
  *  	dest_len: store the dest string length
@@ -224,7 +224,7 @@ char *urlencode(const char *src, const int src_len, char *dest, int *dest_len);
 
 /** url decode
  *  parameters:
- *  	src: the source stirng to decode
+ *  	src: the source string to decode
  *  	src_len: source string length
  *  	dest: store dest string
  *  	dest_len: store the dest string length
@@ -232,40 +232,197 @@ char *urlencode(const char *src, const int src_len, char *dest, int *dest_len);
 */
 char *urldecode(const char *src, const int src_len, char *dest, int *dest_len);
 
+/** get char occurs count
+ *  parameters:
+ *  	src: the source string
+ *  	seperator: find this char occurs times
+ *  return: char occurs count
+*/
 int getOccurCount(const char *src, const char seperator);
+
+/** split string
+ *  parameters:
+ *  	src: the source string, will be modified by this function
+ *  	seperator: seperator char
+ *  	nMaxCols: max columns (max split count)
+ *  	nColCount: store the columns (array elements) count
+ *  return: string array, should call freeSplit to free, return NULL when fail
+*/
 char **split(char *src, const char seperator, const int nMaxCols, \
 		int *nColCount);
+
+/** free split results
+ *  parameters:
+ *  	p: return by function split
+ *  return: none
+*/
 void freeSplit(char **p);
 
+
+/** split string
+ *  parameters:
+ *  	src: the source string, will be modified by this function
+ *  	seperator: seperator char
+ *  	pCols: store split strings
+ *  	nMaxCols: max columns (max split count)
+ *  return: string array / column count
+*/
 int splitEx(char *src, const char seperator, char **pCols, const int nMaxCols);
+
+/** split string
+ *  parameters:
+ *  	src: the source string, will be modified by this function
+ *  	seperator: seperator char
+ *  	pCols: store split strings
+ *  	nMaxCols: max columns (max split count)
+ *  return: string array / column count
+*/
 int my_strtok(char *src, const char *delim, char **pCols, const int nMaxCols);
 
+/** check file exist
+ *  parameters:
+ *  	filename: the filename
+ *  return: true if file exists, otherwise false
+*/
 bool fileExists(const char *filename);
+
+/** check if a directory
+ *  parameters:
+ *  	filename: the filename
+ *  return: true for directory
+*/
 bool isDir(const char *filename);
+
+/** check if a regular file
+ *  parameters:
+ *  	filename: the filename
+ *  return: true for regular file
+*/
 bool isFile(const char *filename);
+
+/** check if filename securty, /../ ocur in filename not allowed
+ *  parameters:
+ *  	filename: the filename
+ *  	len: filename length
+ *  return: true for regular file
+*/
 bool is_filename_secure(const char *filename, const int len);
+
+/** load log_level from config context
+ *  parameters:
+ *  	pIniContext: the config context
+ *  return: none
+*/
 void load_log_level(IniContext *pIniContext);
+
+/** set global log level
+ *  parameters:
+ *  	pLogLevel: log level string value
+ *  return: none
+*/
 void set_log_level(char *pLogLevel);
+
+/** load allow hosts from config context
+ *  parameters:
+ *  	pIniContext: the config context
+ *  	allow_ip_addrs: store allow ip addresses
+ *  	allow_ip_count: store allow ip address count
+ *  return: error no , 0 success, != 0 fail
+*/
 int load_allow_hosts(IniContext *pIniContext, \
 		in_addr_t **allow_ip_addrs, int *allow_ip_count);
 
+/** get time item from config context
+ *  parameters:
+ *  	pIniContext: the config context
+ *  	item_name: item name in config file, time format: hour:minute, such as 15:25
+ *  	pTimeInfo: store time info
+ *  	default_hour: default hour value
+ *  	default_minute: default minute value
+ *  return: error no , 0 success, != 0 fail
+*/
 int get_time_item_from_conf(IniContext *pIniContext, \
 		const char *item_name, TimeInfo *pTimeInfo, \
 		const byte default_hour, const byte default_minute);
 
+/** trim path tail char /
+ *  parameters:
+ *  	filePath: the file path to chop
+ *  return: none
+*/
 void chopPath(char *filePath);
+
+/** get file content
+ *  parameters:
+ *  	filename: the filename
+ *  	buff: return the buff, must be freed
+ *  	file_size: store the file size
+ *  return: error no , 0 success, != 0 fail
+*/
 int getFileContent(const char *filename, char **buff, int64_t *file_size);
+
+/** write to file
+ *  parameters:
+ *  	filename: the filename
+ *  	buff: the buffer to write
+ *  	file_size: the file size
+ *  return: error no , 0 success, != 0 fail
+*/
 int writeToFile(const char *filename, const char *buff, const int file_size);
+
+/** get a line from file
+ *  parameters:
+ *  	fd: the fd to read
+ *  	buff: the buffer to store the line
+ *  	size: the buffer max size
+ *  	once_bytes: the file size
+ *  return: error no , 0 success, != 0 fail
+*/
 int fd_gets(int fd, char *buff, const int size, int once_bytes);
 
+/** set unix rlimit
+ *  parameters:
+ *  	resource: resource id, please see sys/resource.h
+ *  	value: the value to set
+ *  return: error no , 0 success, != 0 fail
+*/
 int set_rlimit(int resource, const rlim_t value);
+
+/** set non block mode
+ *  parameters:
+ *  	fd: the fd to set
+ *  return: error no , 0 success, != 0 fail
+*/
 int set_nonblock(int fd);
 
+/** set run by group and user
+ *  parameters:
+ *  	group_name: the group name, can be NULL or empty
+ *  	username: the username, can be NULL or empty
+ *  return: error no , 0 success, != 0 fail
+*/
 int set_run_by(const char *group_name, const char *username);
+
+/** compare ip address, type is (in_addr_t *)
+ *  parameters:
+ *  	p1: the first ip address
+ *  	p2: the second ip address
+ *  return: > 0 when p1 > p2, 0 when p1 == p2, < 0 when p1 < p2
+*/
 int cmp_by_ip_addr_t(const void *p1, const void *p2);
 
+/** parse bytes
+ *  parameters:
+ *  	pStr: the string to parse
+ *  	default_unit_bytes: default unit if not specified the unit like MB etc.
+ *  	bytes: store the parsed bytes
+ *  return: error no , 0 success, != 0 fail
+*/
 int parse_bytes(char *pStr, const int default_unit_bytes, int64_t *bytes);
 
+/** set rand seed
+ *  return: error no , 0 success, != 0 fail
+*/
 int set_rand_seed();
 
 #ifdef __cplusplus
@@ -273,3 +430,4 @@ int set_rand_seed();
 #endif
 
 #endif
+

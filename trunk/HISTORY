@@ -1,5 +1,5 @@
 
-Version 1.28  2010-05-08
+Version 1.28  2010-05-23
  * tracker_servive.c: set current_write_group anyway when current group
    out of space
  * logger support context (multi instance)
@@ -11,6 +11,7 @@ Version 1.28  2010-05-08
  * global variables: g_base_path, g_network_timeout, g_version change to 
    g_fdfs_base_path, g_fdfs_network_timeout, g_fdfs_version
  * common/fdfs_base64.h/c change name to common/base64.h/c
+ * make.sh use TARGET_PREFIX instead of TARGET_PATH
 
 Version 1.27  2010-04-10
  * storage.conf: add if_alias_prefix parameter to get the ip address of the 

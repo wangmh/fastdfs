@@ -705,7 +705,6 @@ int my_strtok(char *src, const char *delim, char **pCols, const int nMaxCols)
     p = src;
     pCurrent = pCols;
     
-    //跳过前导分隔符
     while (*p != '\0')
     {
         if (strchr(delim, *p) == NULL)
@@ -752,7 +751,7 @@ int my_strtok(char *src, const char *delim, char **pCols, const int nMaxCols)
             }
         }
         
-        p++;    //跳过分隔符
+        p++;
     }
 
     return count;
