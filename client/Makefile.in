@@ -3,7 +3,9 @@
 COMPILE = $(CC) $(CFLAGS)
 INC_PATH = -I../common -I../tracker -I/usr/local/include
 LIB_PATH = -L/usr/local/lib $(LIBS)
-TARGET_PATH = $(TARGET_PATH)
+TARGET_PATH = $(TARGET_PREFIX)/bin
+TARGET_LIB = $(TARGET_PREFIX)/lib
+TARGET_INC = $(TARGET_PREFIX)/include
 
 STATIC_OBJS = ../common/hash.o ../common/chain.o \
               ../common/shared_func.o ../common/ini_file_reader.o \
@@ -59,17 +61,20 @@ libfdfsclient.so.1:
 .c.lo:
 	$(COMPILE) -c -fPIC -o $@ $<  $(INC_PATH)
 install:
+	mkdir -p $(TARGET_PATH)
+	mkdir -p $(TARGET_LIB)
 	cp -f $(ALL_PRGS) $(TARGET_PATH)
-	cp -f $(ALL_LIBS) /usr/local/lib/
+	cp -f $(ALL_LIBS) $(TARGET_LIB)
 
-	mkdir -p /usr/local/include/fastcommon
-	mkdir -p /usr/local/include/fastdfs
-	cp -f $(FAST_HEADER_FILES) /usr/local/include/fastcommon
-	cp -f $(FDFS_HEADER_FILES) /usr/local/include/fastdfs
+	mkdir -p $(TARGET_INC)
+	mkdir -p $(TARGET_INC)/fastcommon
+	mkdir -p $(TARGET_INC)/fastdfs
+	cp -f $(FAST_HEADER_FILES) $(TARGET_INC)/fastcommon
+	cp -f $(FDFS_HEADER_FILES) $(TARGET_INC)/fastdfs
 
-	ln -fs /usr/local/lib/libfastcommon.so.1 /usr/local/lib/libfastcommon.so
-	ln -fs /usr/local/lib/libfastcommon.so.1 /usr/lib/libfastcommon.so
-	ln -fs /usr/local/lib/libfdfsclient.so.1 /usr/local/lib/libfdfsclient.so
-	ln -fs /usr/local/lib/libfdfsclient.so.1 /usr/lib/libfdfsclient.so
+	ln -fs $(TARGET_LIB)/libfastcommon.so.1 $(TARGET_LIB)/libfastcommon.so
+	ln -fs $(TARGET_LIB)/libfdfsclient.so.1 $(TARGET_LIB)/libfdfsclient.so
+	ln -fs $(TARGET_LIB)/libfastcommon.so.1 /usr/lib/libfastcommon.so
+	ln -fs $(TARGET_LIB)/libfdfsclient.so.1 /usr/lib/libfdfsclient.so
 clean:
 	rm -f $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS)

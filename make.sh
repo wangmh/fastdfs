@@ -56,7 +56,7 @@ cat <<EOF > common/_os_bits.h
 #endif
 EOF
 
-TARGET_PATH=/usr/local/bin
+TARGET_PREFIX=/usr/local
 
 #WITH_HTTPD=1
 #WITH_LINUX_SERVICE=1
@@ -114,7 +114,7 @@ cd tracker
 cp Makefile.in Makefile
 perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
-perl -pi -e "s#\\\$\(TARGET_PATH\)#$TARGET_PATH#g" Makefile
+perl -pi -e "s#\\\$\(TARGET_PREFIX\)#$TARGET_PREFIX#g" Makefile
 perl -pi -e "s#\\\$\(TRACKER_HTTPD_OBJS\)#$TRACKER_HTTPD_OBJS#g" Makefile
 make $1 $2
 
@@ -122,7 +122,7 @@ cd ../storage
 cp Makefile.in Makefile
 perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
-perl -pi -e "s#\\\$\(TARGET_PATH\)#$TARGET_PATH#g" Makefile
+perl -pi -e "s#\\\$\(TARGET_PREFIX\)#$TARGET_PREFIX#g" Makefile
 perl -pi -e "s#\\\$\(STORAGE_HTTPD_OBJS\)#$STORAGE_HTTPD_OBJS#g" Makefile
 make $1 $2
 
@@ -130,20 +130,20 @@ cd ../client
 cp Makefile.in Makefile
 perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
-perl -pi -e "s#\\\$\(TARGET_PATH\)#$TARGET_PATH#g" Makefile
+perl -pi -e "s#\\\$\(TARGET_PREFIX\)#$TARGET_PREFIX#g" Makefile
 make $1 $2
 
 cd test
 cp Makefile.in Makefile
 perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
-perl -pi -e "s#\\\$\(TARGET_PATH\)#$TARGET_PATH#g" Makefile
+perl -pi -e "s#\\\$\(TARGET_PREFIX\)#$TARGET_PREFIX#g" Makefile
 cd ..
 
 if [ "$1" = "install" ]; then
   cd ..
-  cp -f restart.sh $TARGET_PATH
-  cp -f stop.sh $TARGET_PATH
+  cp -f restart.sh $TARGET_PREFIX/bin
+  cp -f stop.sh $TARGET_PREFIX/bin
 
   if [ "$uname" = "Linux" ]; then
     if [ "$WITH_LINUX_SERVICE" = "1" ]; then
