@@ -747,6 +747,43 @@ static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
 	return resp.status;
 }
 
+static int tracker_deal_active_test(TrackerClientInfo *pClientInfo, \
+				const int64_t nInPackLen)
+{
+	TrackerHeader resp;
+	int result;
+
+	memset(&resp, 0, sizeof(resp));
+	do
+	{
+		if (nInPackLen != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip: %s, package size " \
+				INT64_PRINTF_FORMAT" is not correct, " \
+				"expect length 0", __LINE__, \
+				FDFS_PROTO_CMD_ACTIVE_TEST, \
+				pClientInfo->ip_addr,  nInPackLen);
+			resp.status = EINVAL;
+			break;
+		}
+	} while (0);
+
+	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+	if ((result=tcpsenddata_nb(pClientInfo->sock, \
+		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			result, strerror(result));
+		return result;
+	}
+
+	return resp.status;
+}
+
 static int tracker_deal_storage_report_ip_changed( \
 		TrackerClientInfo *pClientInfo, const int64_t nInPackLen)
 {
@@ -2723,6 +2760,10 @@ data buff (struct)
 			break;
 		case FDFS_PROTO_CMD_QUIT:
 			result = ECONNRESET;  //for quit loop
+			break;
+		case FDFS_PROTO_CMD_ACTIVE_TEST:
+			result = tracker_deal_active_test(&client_info, \
+				nInPackLen);
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "  \

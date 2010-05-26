@@ -606,6 +606,18 @@ int main(int argc, char *argv[])
 		return EINVAL;
 	}
 
+	/* for test only */
+	if ((result=fdfs_active_test(pTrackerServer)) != 0)
+	{
+		printf("active_test to tracker server fail, errno: %d\n", result);
+	}
+
+	/* for test only */
+	if ((result=fdfs_active_test(&storageServer)) != 0)
+	{
+		printf("active_test to storage server fail, errno: %d\n", result);
+	}
+
 	fdfs_quit(&storageServer);
 	tracker_disconnect_server(&storageServer);
 
