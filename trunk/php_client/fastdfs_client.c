@@ -79,7 +79,8 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 
 // Every user visible function must have an entry in fastdfs_client_functions[].
 	function_entry fastdfs_client_functions[] = {
-		ZEND_FE(fastdfs_connect_server, NULL)
+		ZEND_FE(fastdfs_active_test, NULL)
+		ZEND_FE(fastdfs_disconnect_server, NULL)
 		ZEND_FE(fastdfs_disconnect_server, NULL)
 		ZEND_FE(fastdfs_get_last_error_no, NULL)
 		ZEND_FE(fastdfs_get_last_error_info, NULL)
@@ -490,6 +491,51 @@ static int php_fdfs_get_server_from_hash(HashTable *tracker_hash, \
 
 	pTrackerServer->sock = (*data)->value.lval;
 	return 0;
+}
+
+static void php_fastdfs_active_test_impl(INTERNAL_FUNCTION_PARAMETERS, \
+		FDFSPhpContext *pContext)
+{
+	int argc;
+	zval *server_info;
+	HashTable *tracker_hash;
+	TrackerServerInfo server;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc != 1)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"fastdfs_active_test parameters count: %d != 1", \
+			__LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a", \
+				&server_info) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	tracker_hash = Z_ARRVAL_P(server_info);
+
+	if ((pContext->err_no=php_fdfs_get_server_from_hash(tracker_hash, \
+		&server)) != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	if ((pContext->err_no=fdfs_active_test(&server)) != 0)
+	{
+		RETURN_BOOL(false);
+	}
+	else
+	{
+		RETURN_BOOL(true);
+	}
 }
 
 static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
@@ -2757,6 +2803,16 @@ ZEND_FUNCTION(fastdfs_disconnect_server)
 }
 
 /*
+boolean fastdfs_active_test(array serverInfo)
+return true for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_active_test)
+{
+	php_fastdfs_active_test_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&php_context);
+}
+
+/*
 long fastdfs_get_last_error_no()
 return last error no
 */
@@ -3286,6 +3342,20 @@ PHP_METHOD(FastDFS, disconnect_server)
 }
 
 /*
+boolean FastDFS::active_test(array serverInfo)
+return true for success, false for error
+*/
+PHP_METHOD(FastDFS, active_test)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fastdfs_active_test_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context));
+}
+
+/*
 array FastDFS::tracker_list_groups([string group_name, array tracker_server])
 return array for success, false for error
 */
@@ -3805,6 +3875,10 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_disconnect_server, 0, 0, 1)
 ZEND_ARG_INFO(0, server_info)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_active_test, 0, 0, 1)
+ZEND_ARG_INFO(0, server_info)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_tracker_list_groups, 0, 0, 0)
 ZEND_ARG_INFO(0, tracker_server)
 ZEND_ARG_INFO(0, group_name)
@@ -4036,6 +4110,7 @@ static zend_function_entry fdfs_class_methods[] = {
     FDFS_ME(tracker_get_connection,   arginfo_tracker_get_connection)
     FDFS_ME(tracker_make_all_connections, arginfo_tracker_make_all_connections)
     FDFS_ME(tracker_close_all_connections,arginfo_tracker_close_all_connections)
+    FDFS_ME(active_test,   arginfo_active_test)
     FDFS_ME(connect_server,   arginfo_connect_server)
     FDFS_ME(disconnect_server,   arginfo_disconnect_server)
     FDFS_ME(tracker_list_groups,   arginfo_tracker_list_groups)
@@ -4399,7 +4474,7 @@ PHP_MSHUTDOWN_FUNCTION(fastdfs_client)
 	}
 
 	fdfs_client_destroy();
-	log_destory();
+	log_destroy();
 
 	return SUCCESS;
 }
