@@ -154,6 +154,47 @@ int fdfs_quit(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
+int fdfs_active_test(TrackerServerInfo *pTrackerServer)
+{
+	TrackerHeader header;
+	int result;
+	int64_t in_bytes;
+
+	memset(&header, 0, sizeof(header));
+	header.cmd = FDFS_PROTO_CMD_ACTIVE_TEST;
+	result = tcpsenddata_nb(pTrackerServer->sock, &header, \
+			sizeof(header), g_fdfs_network_timeout);
+	if(result != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server ip: %s, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pTrackerServer->ip_addr, \
+			result, strerror(result));
+		return result;
+	}
+
+	result = fdfs_recv_header(pTrackerServer, &in_bytes);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	if (in_bytes == 0)
+	{
+		return 0;
+	}
+	else
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server ip: %s, " \
+			"expect body length 0, but received: " \
+			INT64_PRINTF_FORMAT, __LINE__, \
+			pTrackerServer->ip_addr, in_bytes);
+		return EINVAL;
+	}
+}
+
 int fdfs_validate_group_name(const char *group_name)
 {
 	const char *p;

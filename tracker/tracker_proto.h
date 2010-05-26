@@ -15,7 +15,7 @@
 
 #define TRACKER_PROTO_CMD_STORAGE_JOIN              81
 #define FDFS_PROTO_CMD_QUIT			    82
-#define TRACKER_PROTO_CMD_STORAGE_BEAT              83  //heart beat
+#define TRACKER_PROTO_CMD_STORAGE_BEAT              83  //storage heart beat
 #define TRACKER_PROTO_CMD_STORAGE_REPORT_DISK_USAGE 84  //report disk usage
 #define TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG       85  //repl new storage servers
 #define TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ      86  //src storage require sync
@@ -39,6 +39,7 @@
 #define TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP	104
 #define TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ALL		105
 #define TRACKER_PROTO_CMD_SERVICE_RESP				100
+#define FDFS_PROTO_CMD_ACTIVE_TEST				111  //active test, tracker and storage both support since V1.28
 
 #define STORAGE_PROTO_CMD_REPORT_CLIENT_IP	 9   //ip as tracker client
 #define STORAGE_PROTO_CMD_UPLOAD_FILE		11
@@ -146,6 +147,8 @@ int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
 		char **buff, const int buff_size, \
 		int64_t *in_bytes);
 int fdfs_quit(TrackerServerInfo *pTrackerServer);
+
+int fdfs_active_test(TrackerServerInfo *pTrackerServer);
 
 #define fdfs_split_metadata(meta_buff, meta_count, err_no) \
 		fdfs_split_metadata_ex(meta_buff, FDFS_RECORD_SEPERATOR, \
