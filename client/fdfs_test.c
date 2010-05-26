@@ -640,13 +640,15 @@ int main(int argc, char *argv[])
 	/* for test only */
 	if ((result=fdfs_active_test(pTrackerServer)) != 0)
 	{
-		printf("active_test to tracker server fail, errno: %d\n", result);
+		printf("active_test to tracker server %s:%d fail, errno: %d\n", \
+			pTrackerServer->ip_addr, pTrackerServer->port, result);
 	}
 
 	/* for test only */
 	if ((result=fdfs_active_test(&storageServer)) != 0)
 	{
-		printf("active_test to storage server fail, errno: %d\n", result);
+		printf("active_test to storage server %s:%d fail, errno: %d\n", \
+			storageServer.ip_addr, storageServer.port, result);
 	}
 
 	fdfs_quit(&storageServer);
