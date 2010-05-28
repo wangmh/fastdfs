@@ -6,6 +6,12 @@
  echo 'fastdfs_tracker_make_all_connections result: ' . fastdfs_tracker_make_all_connections() . "\n";
  var_dump(fastdfs_tracker_list_groups());
 
+ if (!fastdfs_active_test($tracker))
+ {
+	error_log("errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
+	exit(1);
+ }
+
  $tracker = fastdfs_tracker_get_connection();
  var_dump($tracker);
 
@@ -16,6 +22,23 @@
 
 
  $storage = fastdfs_tracker_query_storage_store();
+ if (!$storage)
+ {
+	error_log("errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
+	exit(1);
+ }
+ 
+ $storage = fastdfs_connect_server($storage['ip_addr'], $storage['port']);
+ if (!$storage)
+ {
+        error_log("errno1: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
+        exit(1);
+ }
+ if (!fastdfs_active_test($storage))
+ {
+	error_log("errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
+	exit(1);
+ }
 
  //var_dump(fastdfs_tracker_list_groups($tracker));
 
@@ -351,5 +374,7 @@
 
         echo "delete file $file_id return: " . $fdfs->storage_delete_file1($file_id) . "\n";
  }
+
+ var_dump($fdfs->active_test($tracker));
  echo 'tracker_close_all_connections result: ' . $fdfs->tracker_close_all_connections() . "\n";
 ?>
