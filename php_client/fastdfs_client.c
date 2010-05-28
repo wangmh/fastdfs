@@ -80,7 +80,7 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 // Every user visible function must have an entry in fastdfs_client_functions[].
 	function_entry fastdfs_client_functions[] = {
 		ZEND_FE(fastdfs_active_test, NULL)
-		ZEND_FE(fastdfs_disconnect_server, NULL)
+		ZEND_FE(fastdfs_connect_server, NULL)
 		ZEND_FE(fastdfs_disconnect_server, NULL)
 		ZEND_FE(fastdfs_get_last_error_no, NULL)
 		ZEND_FE(fastdfs_get_last_error_info, NULL)
@@ -345,6 +345,7 @@ static void php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	snprintf(server_info.ip_addr, sizeof(server_info.ip_addr), \
 		"%s", ip_addr);
 	server_info.port = port;
+	server_info.sock = -1;
 
 	if ((pContext->err_no=tracker_connect_server(&server_info)) == 0)
 	{
