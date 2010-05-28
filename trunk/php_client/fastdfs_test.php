@@ -6,14 +6,14 @@
  echo 'fastdfs_tracker_make_all_connections result: ' . fastdfs_tracker_make_all_connections() . "\n";
  var_dump(fastdfs_tracker_list_groups());
 
+ $tracker = fastdfs_tracker_get_connection();
+ var_dump($tracker);
+
  if (!fastdfs_active_test($tracker))
  {
 	error_log("errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
 	exit(1);
  }
-
- $tracker = fastdfs_tracker_get_connection();
- var_dump($tracker);
 
  $server = fastdfs_connect_server($tracker['ip_addr'], $tracker['port']); 
  var_dump($server);
