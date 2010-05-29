@@ -1240,7 +1240,8 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 		fdfs_quit(pTServer);
 		close(pTServer->sock);
 
-	} while (0);
+		break;
+	} while (1);
 
 	free(pTrackerServers);
 
