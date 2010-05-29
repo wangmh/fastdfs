@@ -24,7 +24,7 @@ int tracker_report_thread_start();
 int kill_tracker_report_threads();
 
 int tracker_report_join(TrackerServerInfo *pTrackerServer, \
-		const bool sync_old_done);
+		const int tracker_index, const bool sync_old_done);
 int tracker_report_storage_status(TrackerServerInfo *pTrackerServer, \
 		FDFSStorageBrief *briefServer);
 int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \

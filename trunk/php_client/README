@@ -402,6 +402,14 @@ parameters:
 return true for success, false for error
 
 
+boolean fastdfs_active_test(array server_info)
+send ACTIVE_TEST cmd to the server
+parameters:
+	server_info: the assoc array including elements:
+                     ip_addr, port and sock, sock must be connected
+return true for success, false for error
+
+
 array fastdfs_tracker_get_connection()
 get a connected tracker server
 return assoc array for success, false for error
@@ -883,6 +891,14 @@ array FastDFS::tracker_get_connection()
 get a connected tracker server
 return assoc array for success, false for error
        the assoc array including elements: ip_addr, port and sock
+
+
+boolean FastDFS::active_test(array server_info)
+send ACTIVE_TEST cmd to the server
+parameters:
+	server_info: the assoc array including elements:
+                     ip_addr, port and sock, sock must be connected
+return true for success, false for error
 
 
 boolean FastDFS::tracker_make_all_connections()
