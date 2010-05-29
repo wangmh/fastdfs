@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
 	if ((result=tracker_load_from_conf_file(conf_filename, \
 			bind_addr, sizeof(bind_addr))) != 0)
 	{
+		log_destroy();
 		return result;
 	}
 
@@ -102,17 +103,20 @@ int main(int argc, char *argv[])
 
 	if ((result=tracker_mem_init()) != 0)
 	{
+		log_destroy();
 		return result;
 	}
 	
 	sock = socketServer(bind_addr, g_server_port, &result);
 	if (sock < 0)
 	{
+		log_destroy();
 		return result;
 	}
 
 	if ((result=tcpsetserveropt(sock, g_fdfs_network_timeout)) != 0)
 	{
+		log_destroy();
 		return result;
 	}
 
@@ -131,6 +135,7 @@ int main(int argc, char *argv[])
 
 	if ((result=tracker_service_init()) != 0)
 	{
+		log_destroy();
 		return result;
 	}
 	
@@ -143,7 +148,7 @@ int main(int argc, char *argv[])
 	if(sigaction(SIGUSR1, &act, NULL) < 0 || \
 		sigaction(SIGUSR2, &act, NULL) < 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno;
@@ -152,7 +157,7 @@ int main(int argc, char *argv[])
 	act.sa_handler = sigHupHandler;
 	if(sigaction(SIGHUP, &act, NULL) < 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno;
@@ -161,7 +166,7 @@ int main(int argc, char *argv[])
 	act.sa_handler = SIG_IGN;
 	if(sigaction(SIGPIPE, &act, NULL) < 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno;
@@ -173,7 +178,7 @@ int main(int argc, char *argv[])
 		sigaction(SIGABRT, &act, NULL) < 0 || \
 		sigaction(SIGQUIT, &act, NULL) < 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno;
@@ -186,7 +191,7 @@ int main(int argc, char *argv[])
         if (sigaction(SIGSEGV, &act, NULL) < 0 || \
         	sigaction(SIGABRT, &act, NULL) < 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno;
@@ -217,6 +222,7 @@ int main(int argc, char *argv[])
 
 	if ((result=set_run_by(g_run_by_group, g_run_by_user)) != 0)
 	{
+		log_destroy();
 		return result;
 	}
 
@@ -246,7 +252,7 @@ int main(int argc, char *argv[])
 	tids = (pthread_t *)malloc(sizeof(pthread_t) * g_max_connections);
 	if (tids == NULL)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		logCrit("file: "__FILE__", line: %d, " \
 			"malloc fail, errno: %d, error info: %s", \
 			__LINE__, errno, strerror(errno));
 		return errno;
@@ -258,6 +264,7 @@ int main(int argc, char *argv[])
 		g_thread_stack_size)) != 0)
 	{
 		free(tids);
+		log_destroy();
 		return result;
 	}
 
