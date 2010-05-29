@@ -80,6 +80,7 @@ int main(int argc, char *argv[])
 	if (getExeAbsoluteFilename(argv[0], g_exe_name, \
 		sizeof(g_exe_name)) == NULL)
 	{
+		log_destroy();
 		return errno != 0 ? errno : ENOENT;
 	}
 #endif
@@ -246,6 +247,7 @@ int main(int argc, char *argv[])
 	if ((result=sched_start(&scheduleArray, &schedule_tid, \
 		g_thread_stack_size, &g_continue_flag)) != 0)
 	{
+		log_destroy();
 		return result;
 	}
 

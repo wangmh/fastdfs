@@ -213,6 +213,8 @@ static void *tracker_report_thread_entrance(void *arg)
 			socketBind(pTrackerServer->sock, g_bind_addr, 0);
 		}
 
+		tcpsetserveropt(pTrackerServer->sock, g_fdfs_network_timeout);
+
 		if ((result=connectserverbyip(pTrackerServer->sock, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port)) != 0)
@@ -300,10 +302,6 @@ static void *tracker_report_thread_entrance(void *arg)
 			continue;
 		}
 
-		/*
-  		#### to do, need to deal multi tracker server !!
-  		*/
-
 		if (!sync_old_done)
 		{
 			if ((result=pthread_mutex_lock(&reporter_thread_lock)) \
@@ -343,6 +341,17 @@ static void *tracker_report_thread_entrance(void *arg)
 					pthread_mutex_unlock( \
 						&reporter_thread_lock);
 
+					fdfs_quit(pTrackerServer);
+					sleep(g_heart_beat_interval);
+					continue;
+				}
+			}
+			else
+			{
+				if (tracker_sync_notify(pTrackerServer) != 0)
+				{
+					pthread_mutex_unlock( \
+						&reporter_thread_lock);
 					fdfs_quit(pTrackerServer);
 					sleep(g_heart_beat_interval);
 					continue;
@@ -1258,7 +1267,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, const bool sync_old_d
 		return EINVAL;
 	}
 
-	if (respBody.inserted && sync_old_done)
+	if (*(respBody.src_ip_addr) == '\0' && *g_sync_src_ip_addr != '\0')
 	{
 		return tracker_sync_notify(pTrackerServer);
 	}

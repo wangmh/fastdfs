@@ -96,7 +96,7 @@ typedef struct
 
 typedef struct
 {
-	char inserted;
+	char src_ip_addr[IP_ADDRESS_SIZE];
 } TrackerStorageJoinBodyResp;
 
 typedef struct
