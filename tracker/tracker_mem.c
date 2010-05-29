@@ -623,6 +623,7 @@ static int tracker_load_storages(const char *data_path)
 			IP_ADDRESS_SIZE, "%s", psync_src_ip_addr);
 
 		nStorageSyncCount++;
+
 	}
 
 	fclose(fp);
@@ -2062,71 +2063,67 @@ int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 	FDFSGroupInfo *pGroup;
 	int result;
 
-	*bInserted = false;
-	pGroup = tracker_mem_get_group(pClientInfo->group_name);
-	if (pGroup != NULL)
+	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
 	{
-		//printf("g_groups.count=%d, found %s\n", g_groups.count, pClientInfo->group_name);
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
 	}
-	else
-	{
-		if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
+
+	do
+	{	
+		result = 0;
+		*bInserted = false;
+		pGroup = tracker_mem_get_group(pClientInfo->group_name);
+		if (pGroup != NULL)
 		{
-			logError("file: "__FILE__", line: %d, " \
-				"call pthread_mutex_lock fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, result, strerror(result));
-			return result;
+			break;
 		}
 
-		result = 0;
-		do
+		if (g_groups.count >= g_groups.alloc_size)
 		{
-			if (g_groups.count >= g_groups.alloc_size)
-			{
-				result = tracker_mem_realloc_groups(bIncRef);
-				if (result != 0)
-				{
-					break;
-				}
-			}
-
-			pGroup = g_groups.groups + g_groups.count;
-			result = tracker_mem_init_group(pGroup);
+			result = tracker_mem_realloc_groups(bIncRef);
 			if (result != 0)
 			{
 				break;
 			}
+		}
 
-			strcpy(pGroup->group_name, pClientInfo->group_name);
-			tracker_mem_insert_into_sorted_groups(pGroup);
-			g_groups.count++;
+		pGroup = g_groups.groups + g_groups.count;
+		result = tracker_mem_init_group(pGroup);
+		if (result != 0)
+		{
+			break;
+		}
 
-			if ((g_groups.store_lookup == \
+		strcpy(pGroup->group_name, pClientInfo->group_name);
+		tracker_mem_insert_into_sorted_groups(pGroup);
+		g_groups.count++;
+
+		if ((g_groups.store_lookup == \
 				FDFS_STORE_LOOKUP_SPEC_GROUP) && \
 				(g_groups.pStoreGroup == NULL) && \
 				(strcmp(g_groups.store_group, \
 					pGroup->group_name) == 0))
-			{
-				g_groups.pStoreGroup = pGroup;
-			}
-
-		} while (0);
-
-		if (pthread_mutex_unlock(&mem_thread_lock) != 0)
 		{
-			logError("file: "__FILE__", line: %d, " \
-				"call pthread_mutex_unlock fail", \
-				__LINE__);
-			return result;
-		}
-
-		if (result != 0)
-		{
-			return result;
+			g_groups.pStoreGroup = pGroup;
 		}
 
 		*bInserted = true;
+	} while (0);
+
+	if (pthread_mutex_unlock(&mem_thread_lock) != 0)
+	{
+		logError("file: "__FILE__", line: %d, "   \
+			"call pthread_mutex_unlock fail", \
+			__LINE__);
+	}
+
+	if (result != 0)
+	{
+		return result;
 	}
 
 	if (bIncRef)
@@ -2351,69 +2348,68 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 	FDFSStorageDetail *pStorageServer;
 	int result;
 
-	*bInserted = false;
-	pStorageServer = tracker_mem_get_storage(pClientInfo->pGroup, \
-				pClientInfo->ip_addr);
-	if (pStorageServer != NULL)
+	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
 	{
-		if (pStorageServer->status == FDFS_STORAGE_STATUS_DELETED \
-		 || pStorageServer->status == FDFS_STORAGE_STATUS_IP_CHANGED)
-		{
-		 	pStorageServer->status = FDFS_STORAGE_STATUS_INIT;
-		}
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
 	}
-	else
-	{
-		//printf("pGroup->count=%d, not found %s\n", pClientInfo->pGroup->count, pClientInfo->ip_addr);
-		if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"call pthread_mutex_lock fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, result, strerror(result));
-			return result;
-		}
 
+	do
+	{
 		result = 0;
-		do
+		*bInserted = false;
+		pStorageServer = tracker_mem_get_storage(pClientInfo->pGroup, \
+					pClientInfo->ip_addr);
+		if (pStorageServer != NULL)
 		{
-			if (pClientInfo->pGroup->count >= \
-				pClientInfo->pGroup->alloc_size)
+			if (pStorageServer->status==FDFS_STORAGE_STATUS_DELETED \
+			 || pStorageServer->status==FDFS_STORAGE_STATUS_IP_CHANGED)
 			{
-				result = tracker_mem_realloc_store_servers( \
-						pClientInfo->pGroup, 1, bIncRef);
-				if (result != 0)
-				{
-					break;
-				}
+			 	pStorageServer->status = FDFS_STORAGE_STATUS_INIT;
 			}
 
-			pStorageServer = pClientInfo->pGroup->all_servers \
+			break;
+		}
+
+		if (pClientInfo->pGroup->count >= \
+				pClientInfo->pGroup->alloc_size)
+		{
+			result = tracker_mem_realloc_store_servers( \
+						pClientInfo->pGroup, 1, bIncRef);
+			if (result != 0)
+			{
+				break;
+			}
+		}
+
+		pStorageServer = pClientInfo->pGroup->all_servers \
 					 + pClientInfo->pGroup->count;
-			memcpy(pStorageServer->ip_addr, pClientInfo->ip_addr,
+		memcpy(pStorageServer->ip_addr, pClientInfo->ip_addr,
 				IP_ADDRESS_SIZE);
 
-			tracker_mem_insert_into_sorted_servers( \
+		tracker_mem_insert_into_sorted_servers( \
 				pStorageServer, \
 				pClientInfo->pGroup->sorted_servers, \
 				pClientInfo->pGroup->count);
-			pClientInfo->pGroup->count++;
-			pClientInfo->pGroup->chg_count++;
-		} while (0);
-
-		if (pthread_mutex_unlock(&mem_thread_lock) != 0)
-		{
-			logError("file: "__FILE__", line: %d, "   \
-				"call pthread_mutex_unlock fail", \
-				__LINE__);
-		}
-
-		if (result != 0)
-		{
-			return result;
-		}
+		pClientInfo->pGroup->count++;
+		pClientInfo->pGroup->chg_count++;
 
 		*bInserted = true;
+	} while (0);
+
+	if (pthread_mutex_unlock(&mem_thread_lock) != 0)
+	{
+		logError("file: "__FILE__", line: %d, "   \
+			"call pthread_mutex_unlock fail", \
+			__LINE__);
+	}
+
+	if (result != 0)
+	{
+		return result;
 	}
 
 	if (bIncRef)

@@ -300,7 +300,7 @@ typedef struct
         char version[FDFS_VERSION_SIZE];   //storage version
         char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE];
         char init_flag;
-	char status;
+	signed char status;
 } FDFSStorageJoinBody;
 
 #endif
