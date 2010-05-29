@@ -300,6 +300,10 @@ static void *tracker_report_thread_entrance(void *arg)
 			continue;
 		}
 
+		/*
+  		#### to do, need to deal multi tracker server !!
+  		*/
+
 		if (!sync_old_done)
 		{
 			if ((result=pthread_mutex_lock(&reporter_thread_lock)) \
@@ -713,7 +717,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 					if ((result=storage_sync_thread_start( \
 						&((*ppFound)->server))) != 0)
 					{
-							return result;
+						return result;
 					}
 				}
 			}
@@ -1170,7 +1174,13 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, const bool sync_old_d
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageJoinBody)];
 	TrackerHeader *pHeader;
 	TrackerStorageJoinBody *pReqBody;
+	TrackerStorageJoinBodyResp respBody;
+	char *pInBuff;
+	FDFSStorageServer *pTargetServer;
+	FDFSStorageServer **ppFound;
+	FDFSStorageServer targetServer;
 	int result;
+	int64_t in_bytes;
 
 	pHeader = (TrackerHeader *)out_buff;
 	pReqBody = (TrackerStorageJoinBody *)(out_buff+sizeof(TrackerHeader));
@@ -1190,6 +1200,32 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, const bool sync_old_d
 	long2buff(g_up_time, pReqBody->up_time);
 	pReqBody->init_flag = sync_old_done ? 0 : 1;
 
+	memset(&targetServer, 0, sizeof(targetServer));
+	pTargetServer = &targetServer;
+
+	strcpy(targetServer.server.ip_addr, g_tracker_client_ip);
+	ppFound = (FDFSStorageServer **)bsearch(&pTargetServer, \
+			g_sorted_storages, g_storage_count, \
+			sizeof(FDFSStorageServer *), storage_cmp_by_ip_addr);
+	if (ppFound != NULL)
+	{
+		pReqBody->status = (*ppFound)->server.status;
+	}
+	else
+	{
+		if (g_tracker_group.server_count > 1)
+		{
+			pReqBody->status = -1;
+		}
+		else
+		{
+			pReqBody->status = FDFS_STORAGE_STATUS_INIT;
+		}
+	}
+
+	logInfo("tracker server %s:%d, my status: %d", pTrackerServer->ip_addr, \
+			pTrackerServer->port, pReqBody->status);
+
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
 	{
@@ -1202,7 +1238,34 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, const bool sync_old_d
 		return result;
 	}
 
-	return tracker_check_response(pTrackerServer);
+        pInBuff = (char *)&respBody;
+	result = fdfs_recv_response(pTrackerServer, \
+			&pInBuff, sizeof(respBody), &in_bytes);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	if (in_bytes != sizeof(respBody))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, recv data fail, " \
+			"expect %d bytes, but recv " \
+			INT64_PRINTF_FORMAT" bytes", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			(int)sizeof(respBody), in_bytes);
+		return EINVAL;
+	}
+
+	if (respBody.inserted && sync_old_done)
+	{
+		return tracker_sync_notify(pTrackerServer);
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer)

@@ -54,12 +54,19 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
+	if (g_tracker_group.server_count > 1)
+	{
+		srand(time(NULL));
+		g_tracker_group.server_index = (int)((g_tracker_group.server_count * (double)rand()) / (double)RAND_MAX);
+	}
+
 	pTrackerServer = tracker_get_connection();
 	if (pTrackerServer == NULL)
 	{
 		fdfs_client_destroy();
 		return errno != 0 ? errno : ECONNREFUSED;
 	}
+	printf("\ntracker server is %s:%d\n\n", pTrackerServer->ip_addr, pTrackerServer->port);
 
 	if (strcmp(op_type, "list") == 0)
 	{

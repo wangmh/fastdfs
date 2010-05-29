@@ -116,6 +116,7 @@ TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
 	{
 		server_index = 0;
 	}
+
 	pCurrentServer = pTrackerGroup->servers + server_index;
 	if (pCurrentServer->sock > 0 ||
 		tracker_connect_server(pCurrentServer) == 0)
