@@ -50,8 +50,10 @@ ALL_LIBS = libfastcommon.so.1 libfdfsclient.so.1
 all: $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS)
 libfastcommon.so.1:
 	$(COMPILE) -o $@ $< -shared $(FAST_SHARED_OBJS) $(LIB_PATH)
+	ln -fs libfastcommon.so.1 libfastcommon.so
 libfdfsclient.so.1:
-	$(COMPILE) -o $@ $< -shared $(FDFS_SHARED_OBJS) $(LIB_PATH)
+	$(COMPILE) -o $@ $< -shared $(FDFS_SHARED_OBJS) $(LIB_PATH) -L. -lfastcommon
+	ln -fs libfdfsclient.so.1 libfdfsclient.so
 .o:
 	$(COMPILE) -o $@ $<  $(STATIC_OBJS) $(LIB_PATH) $(INC_PATH)
 .c:

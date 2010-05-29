@@ -2427,11 +2427,11 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 }
 
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
-		const FDFSStorageJoinBody *pJoinBody, const bool bIncRef)
+		const FDFSStorageJoinBody *pJoinBody, const bool bIncRef, \
+		bool *bStorageInserted)
 {
 	int result;
 	bool bGroupInserted;
-	bool bStorageInserted;
 	FDFSStorageDetail *pStorageServer;
 	FDFSStorageDetail *pServer;
 	FDFSStorageDetail *pEnd;
@@ -2498,7 +2498,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	}
 	
 	if ((result=tracker_mem_add_storage(pClientInfo, bIncRef, \
-			&bStorageInserted)) != 0)
+			bStorageInserted)) != 0)
 	{
 		return result;
 	}
@@ -2625,25 +2625,50 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		}
 	}
 
-	if (bStorageInserted || pJoinBody->init_flag)
+	if (*bStorageInserted)
 	{
-		pStorageServer->status = FDFS_STORAGE_STATUS_INIT;
+		if (pJoinBody->init_flag)
+		{
+			pStorageServer->status = FDFS_STORAGE_STATUS_INIT;
+		}
+		else
+		{
+			if (pJoinBody->status < 0 || \
+			pJoinBody->status == FDFS_STORAGE_STATUS_DELETED || \
+			pJoinBody->status == FDFS_STORAGE_STATUS_IP_CHANGED || \
+			pJoinBody->status == FDFS_STORAGE_STATUS_NONE)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s:%d, invalid storage " \
+					"status %d, in the group \"%s\"", \
+					__LINE__, pClientInfo->ip_addr, \
+					pClientInfo->storage_port, \
+					pJoinBody->status, \
+					pClientInfo->group_name);
+				return EINVAL;
+			}
+
+			if (pJoinBody->status == FDFS_STORAGE_STATUS_ACTIVE)
+			{
+				pStorageServer->status = FDFS_STORAGE_STATUS_ONLINE;
+			}
+			else
+			{
+				pStorageServer->status = pJoinBody->status;
+			}
+		}
+
 		if ((result=tracker_save_storages()) != 0)
 		{
 			return result;
 		}
 	}
-	else if (!((pStorageServer->status == FDFS_STORAGE_STATUS_WAIT_SYNC)||\
-		(pStorageServer->status == FDFS_STORAGE_STATUS_SYNCING) || \
-		(pStorageServer->status == FDFS_STORAGE_STATUS_INIT) || \
-		(pStorageServer->status == FDFS_STORAGE_STATUS_DELETED) || \
-		(pStorageServer->status == FDFS_STORAGE_STATUS_IP_CHANGED) ||\
-		(pStorageServer->status == FDFS_STORAGE_STATUS_ACTIVE)))
+
+	if (pStorageServer->status == FDFS_STORAGE_STATUS_OFFLINE)
 	{
 		pStorageServer->status = FDFS_STORAGE_STATUS_ONLINE;
 	}
-
-	if (pStorageServer->status == FDFS_STORAGE_STATUS_INIT)
+	else if (pStorageServer->status == FDFS_STORAGE_STATUS_INIT)
 	{
 	 	pStorageServer->changelog_offset = g_changelog_fsize;
 	}

@@ -1,5 +1,5 @@
 
-Version 1.28  2010-05-28
+Version 1.28  2010-05-29
  * tracker_servive.c: set current_write_group anyway when current group
    out of space
  * logger support context (multi instance)
@@ -14,6 +14,7 @@ Version 1.28  2010-05-28
  * make.sh use TARGET_PREFIX instead of TARGET_PATH
  * protocol add ACTIVE_TEST, tracker and storage both support
  * php client, bug fixed: fastdfs_connect_server, the sock must init to -1
+ * bug fixed: storage status not correct with multi tracker server
 
 Version 1.27  2010-04-10
  * storage.conf: add if_alias_prefix parameter to get the ip address of the 

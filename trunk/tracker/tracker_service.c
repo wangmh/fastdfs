@@ -564,10 +564,18 @@ static int tracker_deal_storage_report_status(TrackerClientInfo *pClientInfo, \
 static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 				const int64_t nInPackLen)
 {
+	char out_buff[sizeof(TrackerHeader) + sizeof(TrackerStorageJoinBodyResp)];
+	TrackerStorageJoinBodyResp *pJoinBodyResp;
+	TrackerHeader *pHeader;
 	TrackerStorageJoinBody body;
 	FDFSStorageJoinBody joinBody;
 	int status;
+	int result;
 
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
+	pJoinBodyResp = (TrackerStorageJoinBodyResp *)(out_buff + \
+				sizeof(TrackerHeader));
 	do
 	{
 	if (nInPackLen != sizeof(body))
@@ -657,12 +665,27 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	strcpy(joinBody.version, body.version);
 	strcpy(joinBody.domain_name, body.domain_name);
 	joinBody.init_flag = body.init_flag;
+	joinBody.status = body.status ;
 
 	status = tracker_mem_add_group_and_storage(pClientInfo, \
-			&joinBody, true);
+			&joinBody, true, &pJoinBodyResp->inserted);
 	} while (0);
 
-	return tracker_check_and_sync(pClientInfo, status);
+	pHeader->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+	pHeader->status = status;
+	long2buff(sizeof(TrackerStorageJoinBodyResp), pHeader->pkg_len);
+	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
+			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			result, strerror(result));
+		return result;
+	}
+
+	return status;
 }
 
 static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \

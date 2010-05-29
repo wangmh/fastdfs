@@ -48,7 +48,8 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 		const char *old_storage_ip, const char *new_storage_ip);
 
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
-		const FDFSStorageJoinBody *pJoinBody, const bool bIncRef);
+		const FDFSStorageJoinBody *pJoinBody, const bool bIncRef, \
+		bool *bStorageInserted);
 
 int tracker_mem_offline_store_server(TrackerClientInfo *pClientInfo);
 int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
