@@ -2423,10 +2423,10 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 }
 
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
-		const FDFSStorageJoinBody *pJoinBody, const bool bIncRef, \
-		bool *bStorageInserted)
+		const FDFSStorageJoinBody *pJoinBody, const bool bIncRef)
 {
 	int result;
+	bool bStorageInserted;
 	bool bGroupInserted;
 	FDFSStorageDetail *pStorageServer;
 	FDFSStorageDetail *pServer;
@@ -2493,8 +2493,48 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		}
 	}
 	
+	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	pStorageServer = tracker_mem_get_storage(pClientInfo->pGroup, \
+					pClientInfo->ip_addr);
+
+	if (pthread_mutex_unlock(&mem_thread_lock) != 0)
+	{
+		logError("file: "__FILE__", line: %d, "   \
+			"call pthread_mutex_unlock fail", \
+			__LINE__);
+	}
+
+	if (pStorageServer == NULL)
+	{
+		if (!pJoinBody->init_flag)
+		{
+			if (pJoinBody->status < 0 || \
+			pJoinBody->status == FDFS_STORAGE_STATUS_DELETED || \
+			pJoinBody->status == FDFS_STORAGE_STATUS_IP_CHANGED || \
+			pJoinBody->status == FDFS_STORAGE_STATUS_NONE)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s:%d, invalid storage " \
+					"status %d, in the group \"%s\"", \
+					__LINE__, pClientInfo->ip_addr, \
+					pClientInfo->storage_port, \
+					pJoinBody->status, \
+					pClientInfo->group_name);
+				return EINVAL;
+			}
+		}
+	}
+
 	if ((result=tracker_mem_add_storage(pClientInfo, bIncRef, \
-			bStorageInserted)) != 0)
+			&bStorageInserted)) != 0)
 	{
 		return result;
 	}
@@ -2621,29 +2661,10 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		}
 	}
 
-	if (*bStorageInserted)
+	if (bStorageInserted)
 	{
-		if (pJoinBody->init_flag)
+		if ((!pJoinBody->init_flag) && pJoinBody->status > 0)
 		{
-			pStorageServer->status = FDFS_STORAGE_STATUS_INIT;
-		}
-		else
-		{
-			if (pJoinBody->status < 0 || \
-			pJoinBody->status == FDFS_STORAGE_STATUS_DELETED || \
-			pJoinBody->status == FDFS_STORAGE_STATUS_IP_CHANGED || \
-			pJoinBody->status == FDFS_STORAGE_STATUS_NONE)
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"client ip: %s:%d, invalid storage " \
-					"status %d, in the group \"%s\"", \
-					__LINE__, pClientInfo->ip_addr, \
-					pClientInfo->storage_port, \
-					pJoinBody->status, \
-					pClientInfo->group_name);
-				return EINVAL;
-			}
-
 			if (pJoinBody->status == FDFS_STORAGE_STATUS_ACTIVE)
 			{
 				pStorageServer->status = FDFS_STORAGE_STATUS_ONLINE;

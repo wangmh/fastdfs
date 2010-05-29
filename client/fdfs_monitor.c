@@ -57,6 +57,7 @@ int main(int argc, char *argv[])
 	if (g_tracker_group.server_count > 1)
 	{
 		srand(time(NULL));
+		rand();  //discard the first
 		g_tracker_group.server_index = (int)((g_tracker_group.server_count * (double)rand()) / (double)RAND_MAX);
 	}
 

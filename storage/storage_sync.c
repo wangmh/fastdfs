@@ -1085,6 +1085,8 @@ static int storage_report_storage_status(const char *ip_addr, \
 				socketBind(pTServer->sock, g_bind_addr, 0);
 			}
 
+			tcpsetserveropt(pTServer->sock, g_fdfs_network_timeout);
+
 			if ((result=connectserverbyip(pTServer->sock, \
 				pTServer->ip_addr, pTServer->port)) == 0)
 			{

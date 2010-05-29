@@ -668,12 +668,18 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 	joinBody.status = body.status ;
 
 	status = tracker_mem_add_group_and_storage(pClientInfo, \
-			&joinBody, true, &pJoinBodyResp->inserted);
+			&joinBody, true);
 	} while (0);
 
 	pHeader->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
 	pHeader->status = status;
 	long2buff(sizeof(TrackerStorageJoinBodyResp), pHeader->pkg_len);
+	if (status == 0 && pClientInfo->pStorage->psync_src_server != NULL)
+	{
+		strcpy(pJoinBodyResp->src_ip_addr, \
+			pClientInfo->pStorage->psync_src_server->ip_addr);
+	}
+
 	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
 			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
 	{
