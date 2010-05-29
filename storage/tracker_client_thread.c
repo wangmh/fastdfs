@@ -37,6 +37,7 @@ static pthread_mutex_t reporter_thread_lock;
 /* save report thread ids */
 static pthread_t *report_tids = NULL;
 static int *src_storage_status = NULL; //returned by tracker server
+static signed char *my_report_status = NULL;  //returned by tracker server
 
 static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 			int *pstat_chg_sync_count);
@@ -296,7 +297,8 @@ static void *tracker_report_thread_entrance(void *arg)
 			continue;
 		}
 
-		if (tracker_report_join(pTrackerServer, sync_old_done) != 0)
+		if (tracker_report_join(pTrackerServer, tracker_index, \
+					sync_old_done) != 0)
 		{
 			sleep(g_heart_beat_interval);
 			continue;
@@ -1178,7 +1180,8 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 	return tracker_check_response(pTrackerServer);
 }
 
-int tracker_report_join(TrackerServerInfo *pTrackerServer, const bool sync_old_done)
+int tracker_report_join(TrackerServerInfo *pTrackerServer, \
+			const int tracker_index, const bool sync_old_done)
 {
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageJoinBody)];
 	TrackerHeader *pHeader;
@@ -1224,7 +1227,23 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, const bool sync_old_d
 	{
 		if (g_tracker_group.server_count > 1)
 		{
-			pReqBody->status = -1;
+			int i;
+			for (i=0; i<g_tracker_group.server_count; i++)
+			{
+				if (my_report_status[i] != EAGAIN)
+				{
+					break;
+				}
+			}
+
+			if (i == g_tracker_group.server_count)
+			{
+				pReqBody->status = FDFS_STORAGE_STATUS_INIT;
+			}
+			else
+			{
+				pReqBody->status = -1;
+			}
 		}
 		else
 		{
@@ -1250,6 +1269,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, const bool sync_old_d
         pInBuff = (char *)&respBody;
 	result = fdfs_recv_response(pTrackerServer, \
 			&pInBuff, sizeof(respBody), &in_bytes);
+	my_report_status[tracker_index] = result;
 	if (result != 0)
 	{
 		return result;
@@ -1264,6 +1284,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, const bool sync_old_d
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
 			(int)sizeof(respBody), in_bytes);
+		my_report_status[tracker_index] = EINVAL;
 		return EINVAL;
 	}
 
@@ -1665,6 +1686,19 @@ int tracker_report_thread_start()
 	}
 	memset(src_storage_status,-1,sizeof(int)*g_tracker_group.server_count);
 
+	my_report_status = (signed char *)malloc(sizeof(signed char) * \
+					g_tracker_group.server_count);
+	if (my_report_status == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			(int)sizeof(signed char) * g_tracker_group.server_count, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+	memset(my_report_status, -1, sizeof(char)*g_tracker_group.server_count);
+	
 	g_tracker_reporter_count = 0;
 	pServerEnd = g_tracker_group.servers + g_tracker_group.server_count;
 	for (pTrackerServer=g_tracker_group.servers; pTrackerServer<pServerEnd; \
