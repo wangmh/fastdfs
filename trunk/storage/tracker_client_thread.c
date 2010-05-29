@@ -1230,7 +1230,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 			int i;
 			for (i=0; i<g_tracker_group.server_count; i++)
 			{
-				if (my_report_status[i] != EAGAIN)
+				if (my_report_status[i] != EFAULT)
 				{
 					break;
 				}

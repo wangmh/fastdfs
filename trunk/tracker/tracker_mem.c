@@ -2528,7 +2528,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 					pClientInfo->storage_port, \
 					pJoinBody->status, \
 					pClientInfo->group_name);
-				return EAGAIN;
+				return EFAULT;
 			}
 		}
 	}
