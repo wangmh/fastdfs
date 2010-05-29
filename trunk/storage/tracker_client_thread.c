@@ -1251,9 +1251,6 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 		}
 	}
 
-	logInfo("tracker server %s:%d, my status: %d", pTrackerServer->ip_addr, \
-			pTrackerServer->port, pReqBody->status);
-
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
 	{
