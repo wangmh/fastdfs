@@ -28,9 +28,10 @@
 #define STORAGE_BEAT_DEF_INTERVAL    30
 #define STORAGE_REPORT_DEF_INTERVAL  300
 #define STORAGE_DEF_SYNC_WAIT_MSEC   100
-#define STORAGE_SYNC_STAT_FILE_FREQ  50000
+#define DEFAULT_SYNC_STAT_FILE_INTERVAL  300
 #define DEFAULT_DATA_DIR_COUNT_PER_PATH	 256
 #define DEFAULT_UPLOAD_PRIORITY           10
+#define DEFAULT_SYNC_MARK_FILE_FREQ  500
 
 #define STORAGE_MAX_LOCAL_IP_ADDRS	  4
 #define STORAGE_IF_ALIAS_PREFIX_MAX_SIZE 32
@@ -79,6 +80,8 @@ extern TimeInfo g_sync_end_time;
 extern bool g_sync_part_time; //true for part time, false for all time of a day
 extern int g_sync_log_buff_interval; //sync log buff to disk every interval seconds
 extern int g_sync_binlog_buff_interval; //sync binlog buff to disk every interval seconds
+extern int g_write_mark_file_freq;      //write to mark file after sync N files
+extern int g_sync_stat_file_interval;   //sync storage stat info to disk interval
 
 extern FDFSStorageStat g_storage_stat;
 extern int g_stat_change_count;

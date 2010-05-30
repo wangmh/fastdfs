@@ -539,6 +539,19 @@ static int storage_sync_data(BinLogReader *pReader, \
 	if (result == 0)
 	{
 		pReader->sync_row_count++;
+
+		if (pReader->sync_row_count - pReader->last_sync_rows >= \
+			g_write_mark_file_freq)
+		{
+			if ((result=storage_write_to_mark_file(pReader)) != 0)
+			{
+				logCrit("file: "__FILE__", line: %d, " \
+					"storage_write_to_mark_file " \
+					"fail, program exit!", __LINE__);
+				g_continue_flag = false;
+				return result;
+			}
+		}
 	}
 
 	return result;
@@ -1392,7 +1405,8 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 		iniFreeContext(&iniContext);
 	}
 
-	pReader->last_write_row_count = pReader->scan_row_count;
+	pReader->last_scan_rows = pReader->scan_row_count;
+	pReader->last_sync_rows = pReader->sync_row_count;
 
 	pReader->mark_fd = open(full_filename, O_WRONLY | O_CREAT, 0644);
 	if (pReader->mark_fd < 0)
@@ -1488,7 +1502,8 @@ static int storage_write_to_mark_file(BinLogReader *pReader)
 	if ((result=storage_write_to_fd(pReader->mark_fd, \
 		get_mark_filename_by_reader, pReader, buff, len)) == 0)
 	{
-		pReader->last_write_row_count = pReader->scan_row_count;
+		pReader->last_scan_rows = pReader->scan_row_count;
+		pReader->last_sync_rows = pReader->sync_row_count;
 	}
 
 	return result;
@@ -2202,6 +2217,19 @@ static void* storage_sync_thread_entrance(void* arg)
 				}
 				}
 
+
+				if (reader.last_scan_rows!=reader.scan_row_count)
+				{
+					if (storage_write_to_mark_file(&reader)!=0)
+					{
+					logCrit("file: "__FILE__", line: %d, " \
+						"storage_write_to_mark_file fail, " \
+						"program exit!", __LINE__);
+					g_continue_flag = false;
+					break;
+					}
+				}
+
 				usleep(g_sync_wait_usec);
 				continue;
 			}
@@ -2227,18 +2255,6 @@ static void* storage_sync_thread_entrance(void* arg)
 
 			reader.binlog_offset += record_len;
 			reader.scan_row_count++;
-			if (reader.scan_row_count % 2000 == 0)
-			{
-				if (storage_write_to_mark_file(&reader) != 0)
-				{
-					logCrit("file: "__FILE__", line: %d, " \
-						"storage_write_to_mark_file " \
-						"fail, program exit!", \
-						__LINE__);
-					g_continue_flag = false;
-					break;
-				}
-			}
 
 			if (g_sync_interval > 0)
 			{
@@ -2246,7 +2262,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			}
 		}
 
-		if (reader.last_write_row_count != reader.scan_row_count)
+		if (reader.last_scan_rows != reader.scan_row_count)
 		{
 			if (storage_write_to_mark_file(&reader) != 0)
 			{
