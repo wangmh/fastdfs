@@ -22,6 +22,8 @@ void* storage_thread_entrance(void* arg);
 int storage_service_init();
 void storage_service_destroy();
 
+int fdfs_stat_file_sync_func(void *args);
+
 #ifdef __cplusplus
 }
 #endif

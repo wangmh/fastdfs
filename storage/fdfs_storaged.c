@@ -56,7 +56,7 @@ static void sigUsrHandler(int sig);
 static void sigSegvHandler(int signum, siginfo_t *info, void *ptr);
 #endif
 
-#define SCHEDULE_ENTRIES_COUNT 2
+#define SCHEDULE_ENTRIES_COUNT 3
 
 int main(int argc, char *argv[])
 {
@@ -254,6 +254,13 @@ int main(int argc, char *argv[])
 	scheduleEntries[1].interval = g_sync_binlog_buff_interval;
 	scheduleEntries[1].task_func = fdfs_binlog_sync_func;
 	scheduleEntries[1].func_args = NULL;
+
+	scheduleEntries[2].id = 3;
+	scheduleEntries[2].time_base.hour = TIME_NONE;
+	scheduleEntries[2].time_base.minute = TIME_NONE;
+	scheduleEntries[2].interval = g_sync_stat_file_interval;
+	scheduleEntries[2].task_func = fdfs_stat_file_sync_func;
+	scheduleEntries[2].func_args = NULL;
 	if ((result=sched_start(&scheduleArray, &schedule_tid, \
 			g_thread_stack_size, &g_continue_flag)) != 0)
 	{

@@ -25,6 +25,7 @@
 #include "fdfs_global.h"
 #include "sockopt.h"
 #include "shared_func.h"
+#include "pthread_func.h"
 #include "ini_file_reader.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
@@ -79,8 +80,10 @@ static pthread_cond_t fsync_thread_cond;
 static int fsync_thread_count = 0;
 */
 
-static int storage_open_storage_stat();
-static int storage_close_storage_stat();
+static pthread_mutex_t sync_stat_file_lock;
+
+static int storage_open_stat_file();
+static int storage_close_stat_file();
 static int storage_make_data_dirs(const char *pBasePath);
 static int storage_check_and_make_data_dirs();
 
@@ -144,7 +147,7 @@ int storage_write_to_fd(int fd, get_filename_func filename_func, \
 	return 0;
 }
 
-static int storage_open_storage_stat()
+static int storage_open_stat_file()
 {
 	char full_filename[MAX_PATH_SIZE];
 	IniContext iniContext;
@@ -251,7 +254,7 @@ static int storage_open_storage_stat()
 	return storage_write_to_stat_file();
 }
 
-static int storage_close_storage_stat()
+static int storage_close_stat_file()
 {
 	int result;
 
@@ -273,6 +276,8 @@ int storage_write_to_stat_file()
 {
 	char buff[1024];
 	int len;
+	int result;
+	int write_ret;
 
 	len = sprintf(buff, 
 		"%s="INT64_PRINTF_FORMAT"\n"  \
@@ -323,8 +328,26 @@ int storage_write_to_stat_file()
 		STAT_ITEM_DIST_WRITE_FILE_COUNT, g_dist_write_file_count
 	    );
 
-	return storage_write_to_fd(storage_stat_fd, \
+        if ((result=pthread_mutex_lock(&sync_stat_file_lock)) != 0)
+        {
+                logError("file: "__FILE__", line: %d, " \
+                        "call pthread_mutex_lock fail, " \
+                        "errno: %d, error info: %s", \
+                        __LINE__, result, strerror(result));
+        }
+
+	write_ret = storage_write_to_fd(storage_stat_fd, \
 			get_storage_stat_filename, NULL, buff, len);
+
+        if ((result=pthread_mutex_unlock(&sync_stat_file_lock)) != 0)
+        {
+                logError("file: "__FILE__", line: %d, " \
+                        "call pthread_mutex_unlock fail, " \
+                        "errno: %d, error info: %s", \
+                        __LINE__, result, strerror(result));
+        }
+
+	return write_ret;
 }
 
 int storage_write_to_sync_ini_file()
@@ -990,6 +1013,23 @@ int storage_func_init(const char *filename, \
 			g_sync_binlog_buff_interval=SYNC_BINLOG_BUFF_DEF_INTERVAL;
 		}
 
+		g_write_mark_file_freq = iniGetIntValue(NULL, \
+				"write_mark_file_freq", &iniContext, \
+				DEFAULT_SYNC_MARK_FILE_FREQ);
+		if (g_write_mark_file_freq <= 0)
+		{
+			g_write_mark_file_freq = DEFAULT_SYNC_MARK_FILE_FREQ;
+		}
+
+
+		g_sync_stat_file_interval = iniGetIntValue(NULL, \
+				"sync_stat_file_interval", &iniContext, \
+				DEFAULT_SYNC_STAT_FILE_INTERVAL);
+		if (g_sync_stat_file_interval <= 0)
+		{
+			g_sync_stat_file_interval=DEFAULT_SYNC_STAT_FILE_INTERVAL;
+		}
+
 		pThreadStackSize = iniGetStrValue(NULL, \
 			"thread_stack_size", &iniContext);
 		if (pThreadStackSize == NULL)
@@ -1125,12 +1165,14 @@ int storage_func_init(const char *filename, \
 			"stat_report_interval=%ds, tracker_server_count=%d, " \
 			"sync_wait_msec=%dms, sync_interval=%dms, " \
 			"sync_start_time=%02d:%02d, sync_end_time: %02d:%02d, "\
+			"write_mark_file_freq=%d, " \
 			"allow_ip_count=%d, " \
 			"file_distribute_path_mode=%d, " \
 			"file_distribute_rotate_count=%d, " \
 			"fsync_after_written_bytes=%d, " \
 			"sync_log_buff_interval=%ds, " \
 			"sync_binlog_buff_interval=%ds, " \
+			"sync_stat_file_interval=%ds, " \
 			"thread_stack_size=%d KB, upload_priority=%d, " \
 			"if_alias_prefix=%s, " \
 			"check_file_duplicate=%d, FDHT group count=%d, " \
@@ -1147,14 +1189,16 @@ int storage_func_init(const char *filename, \
 			g_sync_interval / 1000, \
 			g_sync_start_time.hour, g_sync_start_time.minute, \
 			g_sync_end_time.hour, g_sync_end_time.minute, \
+			g_write_mark_file_freq, \
 			g_allow_ip_count, g_file_distribute_path_mode, \
 			g_file_distribute_rotate_count, \
 			g_fsync_after_written_bytes, g_sync_log_buff_interval, \
-			g_sync_binlog_buff_interval, g_thread_stack_size/1024, \
-			g_upload_priority, g_if_alias_prefix, \
-			g_check_file_duplicate, g_group_array.group_count, \
-			g_group_array.server_count, g_key_namespace, \
-			g_keep_alive, g_http_port, g_http_domain);
+			g_sync_binlog_buff_interval, g_sync_stat_file_interval, \
+			g_thread_stack_size/1024, g_upload_priority, \
+			g_if_alias_prefix, g_check_file_duplicate, \
+			g_group_array.group_count, g_group_array.server_count, \
+			g_key_namespace, g_keep_alive, \
+			g_http_port, g_http_domain);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)
@@ -1206,12 +1250,19 @@ int storage_func_init(const char *filename, \
 		return result;
 	}
 
-	return storage_open_storage_stat();
+	if ((result=init_pthread_lock(&sync_stat_file_lock)) != 0)
+	{
+		return result;
+	}
+
+	return storage_open_stat_file();
 }
 
 int storage_func_destroy()
 {
 	int i;
+	int result;
+	int close_ret;
 
 	if (g_store_paths != NULL)
 	{
@@ -1235,7 +1286,18 @@ int storage_func_destroy()
 		g_tracker_group.server_index = 0;
 	}
 
-	return storage_close_storage_stat();
+	close_ret = storage_close_stat_file();
+
+	if ((result=pthread_mutex_destroy(&sync_stat_file_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_destroy fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	return close_ret;
 }
 
 #define SPLIT_FILENAME_BODY(logic_filename, \

@@ -41,6 +41,7 @@
 
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
+static int last_stat_change_count = 1;  //for sync to stat file
 
 static pthread_mutex_t path_index_thread_lock;
 static pthread_mutex_t stat_count_thread_lock;
@@ -76,6 +77,8 @@ int storage_service_init()
 	{
 		return result;
 	}
+
+	last_stat_change_count = g_stat_change_count;
 
 	return result;
 }
@@ -145,12 +148,7 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 				g_dist_path_index_low = 0;
 			}
 
-			if (++g_stat_change_count%STORAGE_SYNC_STAT_FILE_FREQ==0)
-			{
-				if (storage_write_to_stat_file() != 0)
-				{
-				}
-			}
+			++g_stat_change_count;
 
 			if ((result=pthread_mutex_unlock( \
 					&path_index_thread_lock)) != 0)
@@ -3584,28 +3582,14 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 		} \
 \
 		g_storage_stat.last_sync_update = time(NULL); \
-		if (++g_stat_change_count % STORAGE_SYNC_STAT_FILE_FREQ == 0) \
-		{ \
-			if ((result=storage_write_to_stat_file()) != 0) \
-			{ \
-				pthread_mutex_unlock(&stat_count_thread_lock); \
-				break; \
-			} \
-		} \
+		++g_stat_change_count; \
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
 #define CHECK_AND_WRITE_TO_STAT_FILE2(total_count, success_count)  \
 		pthread_mutex_lock(&stat_count_thread_lock); \
 		total_count++; \
 		success_count++; \
-		if (++g_stat_change_count % STORAGE_SYNC_STAT_FILE_FREQ == 0) \
-		{ \
-			if ((result=storage_write_to_stat_file()) != 0) \
-			{ \
-				pthread_mutex_unlock(&stat_count_thread_lock); \
-				break; \
-			} \
-		} \
+		++g_stat_change_count; \
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
 #define CHECK_AND_WRITE_TO_STAT_FILE3(total_count, success_count, timestamp)  \
@@ -3613,14 +3597,7 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 		total_count++; \
 		success_count++; \
 		timestamp = time(NULL); \
-		if (++g_stat_change_count % STORAGE_SYNC_STAT_FILE_FREQ == 0) \
-		{ \
-			if ((result=storage_write_to_stat_file()) != 0) \
-			{ \
-				pthread_mutex_unlock(&stat_count_thread_lock); \
-				break; \
-			} \
-		} \
+		++g_stat_change_count;  \
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
 
@@ -4033,5 +4010,24 @@ data buff (struct)
 	}
 
 	return NULL;
+}
+
+int fdfs_stat_file_sync_func(void *args)
+{
+	int result;
+
+	if (last_stat_change_count !=  g_stat_change_count)
+	{
+		if ((result=storage_write_to_stat_file()) == 0)
+		{
+			last_stat_change_count = g_stat_change_count;
+		}
+
+		return result;
+	}
+	else
+	{
+		return 0;
+	}
 }
 
