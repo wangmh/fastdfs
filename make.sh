@@ -106,7 +106,7 @@ fi
 
 if [ "$DEBUG_FLAG" = "1" ] && [ "$uname" = "Linux" ]; then
   LIBS="$LIBS -ldl -rdynamic"
-  TRACKER_HTTPD_OBJS="$TRACKER_HTTPD_OBJS ../common/linux_stack_trace.o"
+  TRACKER_HTTPD_OBJS="$TRACKER_HTTPD_OBJS ../common/linux_stack_trace.o tracker_dump.o"
   STORAGE_HTTPD_OBJS="$STORAGE_HTTPD_OBJS ../common/linux_stack_trace.o"
 fi
 
