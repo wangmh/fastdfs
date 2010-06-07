@@ -271,6 +271,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 	bool bGenFilename;
 	char *pValue;
 	int value_len;
+	int64_t total_recv_bytes;
 
 	*create_flag = STORAGE_CREATE_FLAG_NONE;
 
@@ -552,7 +553,7 @@ static int storage_deal_file(StorageClientInfo *pClientInfo, \
 			if ((result=tcprecvfile(pClientInfo->sock, 
 				full_filename, file_size, \
 				g_fsync_after_written_bytes, \
-				g_fdfs_network_timeout)) != 0)
+				g_fdfs_network_timeout, &total_recv_bytes))!=0)
 			{
 				*filename = '\0';
 				*filename_len = 0;
@@ -1869,6 +1870,7 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 	char *pBasePath;
 	int filename_len;
 	int64_t file_bytes;
+	int64_t total_recv_bytes;
 	int result;
 
 	memset(&resp, 0, sizeof(resp));
@@ -1993,14 +1995,16 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 				pClientInfo->ip_addr, full_filename);
 
 			if ((resp.status=tcpdiscard(pClientInfo->sock, \
-					file_bytes, g_fdfs_network_timeout)) != 0)
+					file_bytes, g_fdfs_network_timeout, \
+					&total_recv_bytes)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"client ip: %s, discard buff fail, " \
-					"buff size: "INT64_PRINTF_FORMAT", " \
+					"file size: "INT64_PRINTF_FORMAT", " \
+					"recv size: "INT64_PRINTF_FORMAT", " \
 					"errno: %d, error info: %s.", \
 					__LINE__, pClientInfo->ip_addr, \
-					file_bytes, \
+					file_bytes, total_recv_bytes, \
 					resp.status, strerror(resp.status));
 				break;
 			}
@@ -2008,14 +2012,16 @@ static int storage_sync_copy_file(StorageClientInfo *pClientInfo, \
 		else if ((resp.status=tcprecvfile(pClientInfo->sock, 
 				full_filename, file_bytes, \
 				g_fsync_after_written_bytes, \
-				g_fdfs_network_timeout)) != 0)
+				g_fdfs_network_timeout, &total_recv_bytes))!=0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, recv file buff fail, " \
 				"file size: "INT64_PRINTF_FORMAT \
+				", recv size: "INT64_PRINTF_FORMAT \
 				", errno: %d, error info: %s.", \
 				__LINE__, pClientInfo->ip_addr, \
-				file_bytes, resp.status, strerror(resp.status));
+				file_bytes, total_recv_bytes, \
+				resp.status, strerror(resp.status));
 			break;
 		}
 

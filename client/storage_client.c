@@ -516,6 +516,7 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 	char *p;
 	int out_bytes;
 	int64_t in_bytes;
+	int64_t total_recv_bytes;
 	int filename_len;
 	bool new_connection;
 
@@ -574,7 +575,7 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 
 		if ((result=tcprecvfile(pStorageServer->sock, \
 				*file_buff, in_bytes, 0, \
-				g_fdfs_network_timeout)) != 0)
+				g_fdfs_network_timeout, &total_recv_bytes))!=0)
 		{
 			break;
 		}

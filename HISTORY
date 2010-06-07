@@ -1,5 +1,6 @@
 Version 1.29  2010-06-06
  * add files: tracker_dump.h and tracker_dump.c
+ * sockopt.c: tcprecvfile and tcpdiscard add parameter total_recv_bytes
 
 Version 1.28  2010-05-30
  * tracker_servive.c: set current_write_group anyway when current group

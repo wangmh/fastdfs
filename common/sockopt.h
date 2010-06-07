@@ -220,10 +220,12 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
  *          file_bytes: file size (bytes) 
  *          fsync_after_written_bytes: call fsync every x bytes
  *          timeout: read/recv timeout
+ *          total_recv_bytes: store the total recv bytes
  *  return: error no, 0 success, != 0 fail
 */
 int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
-		const int fsync_after_written_bytes, const int timeout);
+		const int fsync_after_written_bytes, const int timeout, \
+		int64_t *total_recv_bytes);
 
 /** receive data to a file
  *  parameters:
@@ -244,9 +246,11 @@ int tcprecvfile_ex(int sock, const char *filename, const int64_t file_bytes, \
  *          sock: the socket
  *          bytes: data bytes to discard
  *          timeout: read timeout
+ *          total_recv_bytes: store the total recv bytes
  *  return: error no, 0 success, != 0 fail
 */
-int tcpdiscard(int sock, const int bytes, const int timeout);
+int tcpdiscard(int sock, const int bytes, const int timeout, \
+		int64_t *total_recv_bytes);
 
 /** get local host ip address
  *  parameters:
