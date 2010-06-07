@@ -668,7 +668,8 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no)
 }
 
 int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
-		const int fsync_after_written_bytes, const int timeout)
+		const int fsync_after_written_bytes, const int timeout, \
+		int64_t *total_recv_bytes)
 {
 	int fd;
 	char buff[FDFS_WRITE_BUFF_SIZE];
@@ -677,8 +678,10 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 	int written_bytes;
 	int result;
 	int flags;
+	int count;
 	tcprecvdata_exfunc recv_func;
 
+	*total_recv_bytes = 0;
 	flags = fcntl(sock, F_GETFL, 0);
 	if (flags < 0)
 	{
@@ -713,8 +716,10 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 			recv_bytes = remain_bytes;
 		}
 
-		if ((result=recv_func(sock, buff, recv_bytes, \
-				timeout, NULL)) != 0)
+		result = recv_func(sock, buff, recv_bytes, \
+				timeout, &count);
+		*total_recv_bytes += count;
+		if (result != 0)
 		{
 			close(fd);
 			unlink(filename);
@@ -845,15 +850,18 @@ int tcprecvfile_ex(int sock, const char *filename, const int64_t file_bytes, \
 	return 0;
 }
 
-int tcpdiscard(int sock, const int bytes, const int timeout)
+int tcpdiscard(int sock, const int bytes, const int timeout, \
+		int64_t *total_recv_bytes)
 {
 	char buff[FDFS_WRITE_BUFF_SIZE];
 	int remain_bytes;
 	int recv_bytes;
 	int result;
 	int flags;
+	int count;
 	tcprecvdata_exfunc recv_func;
 
+	*total_recv_bytes = 0;
 	flags = fcntl(sock, F_GETFL, 0);
 	if (flags < 0)
 	{
@@ -881,8 +889,10 @@ int tcpdiscard(int sock, const int bytes, const int timeout)
 			recv_bytes = remain_bytes;
 		}
 
-		if ((result=recv_func(sock, buff, recv_bytes, \
-				timeout, NULL)) != 0)
+		result = recv_func(sock, buff, recv_bytes, \
+				timeout, &count);
+		*total_recv_bytes += count;
+		if (result != 0)
 		{
 			return result;
 		}
