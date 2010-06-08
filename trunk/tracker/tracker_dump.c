@@ -8,43 +8,7 @@
 
 #include "tracker_dump.h"
 #include "shared_func.h"
-
-/*
-bool g_continue_flag = true;
-int g_server_port = FDFS_TRACKER_SERVER_DEF_PORT;
-int g_max_connections = DEFAULT_MAX_CONNECTONS;
-int g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
-int g_check_active_interval = CHECK_ACTIVE_DEF_INTERVAL;
-
-FDFSGroups g_groups;
-int g_storage_stat_chg_count = 0;
-int g_storage_sync_time_chg_count = 0; //sync timestamp
-int g_storage_reserved_mb = 0;
-
-int g_allow_ip_count = 0;
-in_addr_t *g_allow_ip_addrs = NULL;
-
-struct base64_context g_base64_context;
-char g_run_by_group[32] = {0};
-char g_run_by_user[32] = {0};
-
-bool g_storage_ip_changed_auto_adjust = true;
-bool g_thread_kill_done = false;
-
-int g_thread_stack_size = 64 * 1024;
-
-#ifdef WITH_HTTPD
-FDFSHTTPParams g_http_params;
-int g_http_check_interval = 30;
-int g_http_check_type = FDFS_HTTP_CHECK_ALIVE_TYPE_TCP;
-char g_http_check_uri[128] = {0};
-bool g_http_servers_dirty = false;
-#endif
-
-#if defined(DEBUG_FLAG) && defined(OS_LINUX)
-char g_exe_name[256] = {0};
-#endif
-*/
+#include "tracker_global.h"
 
 int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buffSize)
 {
@@ -292,5 +256,115 @@ int fdfs_dump_storage_stat(FDFSStorageDetail *pServer,
 	}
 
 	return total_len;
+}
+
+int fdfs_dump_global_vars(char *buff, const int buffSize)
+{
+	int total_len;
+
+	total_len = snprintf(buff + total_len, buffSize - total_len, 
+		"g_continue_flag=%d\n"
+		"g_server_port=%d\n"
+		"g_max_connections=%d\n"
+		"g_sync_log_buff_interval=%d\n"
+		"g_check_active_interval=%d\n"
+		"g_storage_stat_chg_count=%d\n"
+		"g_storage_sync_time_chg_count=%d\n"
+		"g_storage_reserved_mb=%d\n"
+		"g_allow_ip_count=%d\n"
+		"g_run_by_group=%s\n"
+		"g_run_by_user=%s\n"
+		"g_storage_ip_changed_auto_adjust=%d\n"
+		"g_thread_kill_done=%d\n"
+		"g_thread_stack_size=%d\n"
+	#ifdef WITH_HTTPD
+		"g_http_params.disabled=%d\n"
+		"g_http_params.anti_steal_token=%d\n"
+		"g_http_params.server_port=%d\n"
+		"g_http_params.content_type_hash item count=%d\n"
+		"g_http_params.anti_steal_secret_key length=%d\n"
+		"g_http_params.token_check_fail_buff length=%d\n"
+		"g_http_params.default_content_type=%s\n"
+		"g_http_params.token_check_fail_content_type=%s\n"
+		"g_http_params.token_ttl=%d\n"
+		"g_http_check_interval=%d\n"
+		"g_http_check_type=%d\n"
+		"g_http_check_uri=%s\n"
+		"g_http_servers_dirty=%d\n"
+	#endif
+	#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+		"g_exe_name=%s\n"
+	#endif
+		, g_continue_flag
+		, g_server_port
+		, g_max_connections
+		, g_sync_log_buff_interval
+		, g_check_active_interval
+		, g_storage_stat_chg_count
+		, g_storage_sync_time_chg_count
+		, g_storage_reserved_mb
+		, g_allow_ip_count
+		, g_run_by_group
+		, g_run_by_user
+		, g_storage_ip_changed_auto_adjust
+		, g_thread_kill_done
+		, g_thread_stack_size
+	#ifdef WITH_HTTPD
+		, g_http_params.disabled
+		, g_http_params.anti_steal_token
+		, g_http_params.server_port
+		/*, g_http_params.content_type_hash*/
+		, g_http_params.anti_steal_secret_key.length
+		, g_http_params.token_check_fail_buff.length
+		, g_http_params.default_content_type
+		, g_http_params.token_check_fail_content_type
+		, g_http_params.token_ttl
+		, g_http_check_interval
+		, g_http_check_type
+		, g_http_check_uri
+		, g_http_servers_dirty
+	#endif
+		
+	#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+		, g_exe_name
+	#endif
+	);
+
+	return total_len;
+}
+
+/*
+typedef struct
+{
+        int alloc_size;
+        int count;  //group count
+        FDFSGroupInfo *groups;
+        FDFSGroupInfo **sorted_groups; //order by group_name
+        FDFSGroupInfo *pStoreGroup;  //the group to store uploaded files
+        int current_write_group;  //current group index to upload file
+        byte store_lookup;  //store to which group
+        byte store_server;  //store to which server
+        byte download_server; //download from which server
+        byte store_path;  //store to which path
+        char store_group[FDFS_GROUP_NAME_MAX_LEN + 1];
+} FDFSGroups;
+*/
+
+int fdfs_dump_global_vars_to_file()
+{
+	char buff[16 * 1024];
+	int len;
+	FDFSGroupInfo **ppGroup;
+	FDFSGroupInfo **ppGroupEnd;
+
+	len = fdfs_dump_global_vars(buff, sizeof(buff));
+
+	ppGroupEnd = g_groups.sorted_groups + g_groups.count;
+	for (ppGroup=g_groups.sorted_groups; ppGroup<ppGroupEnd; ppGroup++)
+	{
+		len = fdfs_dump_group_stat(*ppGroup, buff, sizeof(buff));
+	}
+
+	return 0;
 }
 
