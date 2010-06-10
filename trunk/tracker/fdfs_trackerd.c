@@ -38,10 +38,15 @@
 #include "tracker_http_check.h"
 #endif
 
-#if defined(DEBUG_FLAG) && defined(OS_LINUX)
-#include "linux_stack_trace.h"
+#if defined(DEBUG_FLAG)
 
+#if defined(OS_LINUX)
+#include "linux_stack_trace.h"
 static bool bSegmentFault = false;
+
+#endif
+
+#include "tracker_dump.h"
 #endif
 
 static bool bTerminateFlag = false;
@@ -50,8 +55,12 @@ static void sigQuitHandler(int sig);
 static void sigHupHandler(int sig);
 static void sigUsrHandler(int sig);
 
-#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+#if defined(DEBUG_FLAG)
+#if defined(OS_LINUX)
 static void sigSegvHandler(int signum, siginfo_t *info, void *ptr);
+#endif
+
+static void sigDumpHandler(int sig);
 #endif
 
 #define SCHEDULE_ENTRIES_COUNT 2
@@ -185,12 +194,27 @@ int main(int argc, char *argv[])
 		return errno;
 	}
 
-#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+#if defined(DEBUG_FLAG)
+#if defined(OS_LINUX)
 	memset(&act, 0, sizeof(act));
+	sigemptyset(&act.sa_mask);
         act.sa_sigaction = sigSegvHandler;
         act.sa_flags = SA_SIGINFO;
         if (sigaction(SIGSEGV, &act, NULL) < 0 || \
         	sigaction(SIGABRT, &act, NULL) < 0)
+	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"call sigaction fail, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno;
+	}
+#endif
+
+	memset(&act, 0, sizeof(act));
+	sigemptyset(&act.sa_mask);
+	act.sa_handler = sigDumpHandler;
+	if(sigaction(SIGUSR1, &act, NULL) < 0 || \
+		sigaction(SIGUSR2, &act, NULL) < 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
@@ -322,7 +346,8 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-#if defined(DEBUG_FLAG) && defined(OS_LINUX)
+#if defined(DEBUG_FLAG)
+#if defined(OS_LINUX)
 static void sigSegvHandler(int signum, siginfo_t *info, void *ptr)
 {
 	bSegmentFault = true;
@@ -337,6 +362,27 @@ static void sigSegvHandler(int signum, siginfo_t *info, void *ptr)
 		signal_stack_trace_print(signum, info, ptr);
 	}
 }
+#endif
+
+static void sigDumpHandler(int sig)
+{
+	static bool bDumpFlag = false;
+	char filename[256];
+
+	if (bDumpFlag)
+	{
+		return;
+	}
+
+	bDumpFlag = true;
+
+	snprintf(filename, sizeof(filename), 
+		"%s/logs/tracker_dump.log", g_fdfs_base_path);
+	fdfs_dump_global_vars_to_file(filename);
+
+	bDumpFlag = false;
+}
+
 #endif
 
 static void sigQuitHandler(int sig)
