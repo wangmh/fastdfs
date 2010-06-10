@@ -21,14 +21,7 @@
 extern "C" {
 #endif
 
-int fdfs_dump_storage_stat(FDFSStorageDetail *pServer, 
-		char *buff, const int buffSize);
-
-int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buffSize);
-
-int fdfs_dump_global_vars(char *buff, const int buffSize);
-
-int fdfs_dump_global_vars_to_file();
+int fdfs_dump_global_vars_to_file(const char *filename);
 
 #ifdef __cplusplus
 }

@@ -6,11 +6,20 @@
 * Please visit the FastDFS Home Page http://www.csource.org/ for more detail.
 **/
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <fcntl.h>
 #include "tracker_dump.h"
 #include "shared_func.h"
+#include "logger.h"
 #include "tracker_global.h"
 
-int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buffSize)
+static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer, 
+		char *buff, const int buffSize);
+
+static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buffSize)
 {
 	char szLastSourceUpdate[32];
 	char szLastSyncUpdate[32];
@@ -23,7 +32,7 @@ int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buffSize)
 	int i;
 	int j;
 
-	total_len += snprintf(buff, buffSize, 
+	total_len = snprintf(buff, buffSize, 
 		"group_name=%s\n"
 		"dirty=%d\n"
 		"free_mb="INT64_PRINTF_FORMAT"\n"
@@ -102,9 +111,10 @@ int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buffSize)
 	for (ppServer=pGroup->sorted_servers; ppServer<ppServerEnd; ppServer++)
 	{
 		total_len += snprintf(buff + total_len, buffSize - total_len, 
-				"\n");
+				"\nHost %d.\n", 
+				(int)(ppServer - pGroup->sorted_servers) + 1);
 		total_len += fdfs_dump_storage_stat(*ppServer, buff + total_len,
-					 buffSize - total_len);
+				 buffSize - total_len);
 	}
 
 	total_len += snprintf(buff + total_len, buffSize - total_len, 
@@ -135,7 +145,7 @@ int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buffSize)
 	return total_len;
 }
 
-int fdfs_dump_storage_stat(FDFSStorageDetail *pServer, 
+static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer, 
 		char *buff, const int buffSize)
 {
 	char szUpTime[32];
@@ -258,11 +268,11 @@ int fdfs_dump_storage_stat(FDFSStorageDetail *pServer,
 	return total_len;
 }
 
-int fdfs_dump_global_vars(char *buff, const int buffSize)
+static int fdfs_dump_global_vars(char *buff, const int buffSize)
 {
 	int total_len;
 
-	total_len = snprintf(buff + total_len, buffSize - total_len, 
+	total_len = snprintf(buff, buffSize,
 		"g_continue_flag=%d\n"
 		"g_server_port=%d\n"
 		"g_max_connections=%d\n"
@@ -270,7 +280,7 @@ int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_check_active_interval=%d\n"
 		"g_storage_stat_chg_count=%d\n"
 		"g_storage_sync_time_chg_count=%d\n"
-		"g_storage_reserved_mb=%d\n"
+		"g_storage_reserved_mb=%d MB\n"
 		"g_allow_ip_count=%d\n"
 		"g_run_by_group=%s\n"
 		"g_run_by_user=%s\n"
@@ -333,38 +343,111 @@ int fdfs_dump_global_vars(char *buff, const int buffSize)
 	return total_len;
 }
 
-/*
-typedef struct
+static int fdfs_dump_groups_info(char *buff, const int buffSize)
 {
-        int alloc_size;
-        int count;  //group count
-        FDFSGroupInfo *groups;
-        FDFSGroupInfo **sorted_groups; //order by group_name
-        FDFSGroupInfo *pStoreGroup;  //the group to store uploaded files
-        int current_write_group;  //current group index to upload file
-        byte store_lookup;  //store to which group
-        byte store_server;  //store to which server
-        byte download_server; //download from which server
-        byte store_path;  //store to which path
-        char store_group[FDFS_GROUP_NAME_MAX_LEN + 1];
-} FDFSGroups;
-*/
+	int total_len;
 
-int fdfs_dump_global_vars_to_file()
+	total_len = snprintf(buff, buffSize, 
+		"group count=%d\n"
+		"group alloc_size=%d\n"
+		"store_lookup=%d\n"
+		"store_server=%d\n"
+		"download_server=%d\n"
+		"store_path=%d\n"
+		"store_group=%s\n"
+		"pStoreGroup=%s\n"
+		"current_write_group=%d\n",
+		g_groups.count, 
+		g_groups.alloc_size, 
+		g_groups.store_lookup, 
+		g_groups.store_server, 
+		g_groups.download_server, 
+		g_groups.store_path, 
+		g_groups.store_group, 
+		g_groups.pStoreGroup != NULL ? 
+			g_groups.pStoreGroup->group_name : "",
+		g_groups.current_write_group
+	);
+
+	return total_len;
+}
+
+#define WRITE_TO_FILE(fd, buff, len) \
+	if (write(fd, buff, len) != len) \
+	{ \
+		logError("file: "__FILE__", line: %d, " \
+			"write to file %s fail, errno: %d, error info: %s", \
+			__LINE__, filename, errno, strerror(errno)); \
+		result = errno; \
+		break; \
+	}
+
+int fdfs_dump_global_vars_to_file(const char *filename)
 {
 	char buff[16 * 1024];
+	char szCurrentTime[32];
 	int len;
+	int result;
+	int fd;
+	FDFSGroupInfo *pGroup;
+	FDFSGroupInfo *pGroupEnd;
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppGroupEnd;
 
-	len = fdfs_dump_global_vars(buff, sizeof(buff));
-
-	ppGroupEnd = g_groups.sorted_groups + g_groups.count;
-	for (ppGroup=g_groups.sorted_groups; ppGroup<ppGroupEnd; ppGroup++)
+	fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (fd < 0)
 	{
-		len = fdfs_dump_group_stat(*ppGroup, buff, sizeof(buff));
+		logError("file: "__FILE__", line: %d, "
+			"open file %s fail, errno: %d, error info: %s",
+			__LINE__, filename, errno, strerror(errno));
+		return errno;
 	}
 
-	return 0;
+	do
+	{
+		result = 0;
+		formatDatetime(time(NULL), "%Y-%m-%d %H:%M:%S", 
+				szCurrentTime, sizeof(szCurrentTime));
+
+		len = sprintf(buff, "\n====time: %s  DUMP START====\n", 
+				szCurrentTime);
+		WRITE_TO_FILE(fd, buff, len)
+
+		len = fdfs_dump_global_vars(buff, sizeof(buff));
+		WRITE_TO_FILE(fd, buff, len)
+
+		len = fdfs_dump_groups_info(buff, sizeof(buff));
+		WRITE_TO_FILE(fd, buff, len)
+
+		len = sprintf(buff, "\ngroup name list:\n");
+		WRITE_TO_FILE(fd, buff, len)
+		len = 0;
+		pGroupEnd = g_groups.groups + g_groups.count;
+		for (pGroup=g_groups.groups; pGroup<pGroupEnd; pGroup++)
+		{
+			len += sprintf(buff+len, "\t%s\n", pGroup->group_name);
+		}
+		len += sprintf(buff+len, "\n");
+		WRITE_TO_FILE(fd, buff, len)
+
+		ppGroupEnd = g_groups.sorted_groups + g_groups.count;
+		for (ppGroup=g_groups.sorted_groups; ppGroup<ppGroupEnd; ppGroup++)
+		{
+			len = sprintf(buff, "\nGroup %d.\n", 
+				(int)(ppGroup - g_groups.sorted_groups) + 1);
+			WRITE_TO_FILE(fd, buff, len)
+
+			len = fdfs_dump_group_stat(*ppGroup, buff, sizeof(buff));
+			WRITE_TO_FILE(fd, buff, len)
+		}
+
+		len = sprintf(buff, "\n====time: %s  DUMP END====\n\n", 
+				szCurrentTime);
+		WRITE_TO_FILE(fd, buff, len)
+	} while(0);
+
+	close(fd);
+
+	return result;
 }
 

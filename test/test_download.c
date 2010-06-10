@@ -91,6 +91,7 @@ int main(int argc, char **argv)
 		return EINVAL;
 	}
 
+	log_init();
 	proccess_index = atoi(argv[1]);
 	if (proccess_index < 0 || proccess_index >= PROCESS_COUNT)
 	{
