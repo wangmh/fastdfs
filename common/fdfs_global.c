@@ -22,7 +22,7 @@
 
 int g_fdfs_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 char g_fdfs_base_path[MAX_PATH_SIZE] = {'/', 't', 'm', 'p', '\0'};
-Version g_fdfs_version = {1, 28};
+Version g_fdfs_version = {1, 29};
 
 /*
 data filename format:
