@@ -194,6 +194,11 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\ttotal storage = %dGB\n" \
 			"\t\tfree storage = %dGB\n" \
 			"\t\tupload priority = %d\n" \
+			"\t\tstore_path_count = %d\n" \
+			"\t\tsubdir_count_per_path = %d\n" \
+			"\t\tstorage_port = %d\n" \
+			"\t\tstorage_http_port = %d\n" \
+			"\t\tcurrent_write_path = %d\n" \
 			"\t\tsource ip_addr = %s\n" \
 			"\t\ttotal_upload_count = "INT64_PRINTF_FORMAT"\n"   \
 			"\t\tsuccess_upload_count = "INT64_PRINTF_FORMAT"\n" \
@@ -219,6 +224,11 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			pStorage->version, szUpTime, pStorage->total_mb / 1024,\
 			pStorage->free_mb / 1024,  \
 			pStorage->upload_priority,  \
+			pStorage->store_path_count,  \
+			pStorage->subdir_count_per_path,  \
+			pStorage->storage_port,  \
+			pStorage->storage_http_port,  \
+			pStorage->current_write_path,  \
 			pStorage->src_ip_addr,  \
 			pStorageStat->total_upload_count, \
 			pStorageStat->success_upload_count, \

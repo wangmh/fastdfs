@@ -123,6 +123,11 @@ typedef struct
 	char sz_total_mb[8];
 	char sz_free_mb[8];
 	char sz_upload_priority[8];
+	char sz_store_path_count[8];
+	char sz_subdir_count_per_path[8];
+	char sz_current_write_path[8];
+	char sz_storage_port[8];
+	char sz_storage_http_port[8];
 	FDFSStorageStatBuff stat_buff;
 } TrackerStorageStat;
 

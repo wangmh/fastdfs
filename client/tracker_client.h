@@ -27,6 +27,11 @@ typedef struct
 	int free_mb;  //free disk storage in MB
 	int upload_priority;  //upload priority
 	time_t up_time;  //storage service started timestamp
+	int store_path_count;  //store base path count of each storage server
+	int subdir_count_per_path;
+	int storage_port;
+	int storage_http_port; //storage http server port
+	int current_write_path; //current write path index
         FDFSStorageStat stat;
 } FDFSStorageInfo;
 

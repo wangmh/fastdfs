@@ -5,8 +5,8 @@ cat <<EOF > $tmp_src_filename
 #include <fcntl.h>
 int main()
 {
-	printf("%d\n", sizeof(long));
-	printf("%d\n", sizeof(off_t));
+	printf("%d\n", (int)sizeof(long));
+	printf("%d\n", (int)sizeof(off_t));
 	return 0;
 }
 EOF

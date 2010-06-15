@@ -1,6 +1,7 @@
-Version 1.29  2010-06-10
+Version 1.29  2010-06-15
  * add files: tracker_dump.h and tracker_dump.c, tracker dump global vars
  * sockopt.c: tcprecvfile and tcpdiscard add parameter total_recv_bytes
+ * storage server add fields: storage_port and storage_http_port
 
 Version 1.28  2010-05-30
  * tracker_servive.c: set current_write_group anyway when current group

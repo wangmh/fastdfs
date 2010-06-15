@@ -181,6 +181,9 @@ typedef struct StructFDFSStorageDetail
 	int subdir_count_per_path;
 	int upload_priority; //storage upload priority
 
+	int storage_port;
+	int storage_http_port; //storage http server port
+
 	int current_write_path; //current write path index
 
 	int *ref_count;   //group/storage servers referer count
