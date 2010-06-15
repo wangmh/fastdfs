@@ -703,6 +703,33 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				pStorage->src_ip_addr, \
 				strlen(pStorage->src_ip_addr), 1);
 
+			add_assoc_long_ex(server_info_array, \
+				"upload_priority", sizeof("upload_priority"), \
+				pStorage->upload_priority);
+
+			add_assoc_long_ex(server_info_array, \
+				"store_path_count", sizeof("store_path_count"),\
+				pStorage->store_path_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"subdir_count_per_path", \
+				sizeof("subdir_count_per_path"), \
+				pStorage->subdir_count_per_path);
+
+			add_assoc_long_ex(server_info_array, \
+				"storage_port", sizeof("storage_port"), \
+				pStorage->storage_port);
+
+			add_assoc_long_ex(server_info_array, \
+				"storage_http_port", \
+				sizeof("storage_http_port"), \
+				pStorage->storage_http_port);
+
+			add_assoc_long_ex(server_info_array, \
+				"current_write_path", \
+				sizeof("current_write_path"), \
+				pStorage->current_write_path);
+
 			pStorageStat = &(pStorage->stat);
 
 			add_assoc_long_ex(server_info_array, "status", \

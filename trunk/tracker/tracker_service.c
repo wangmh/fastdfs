@@ -1142,6 +1142,16 @@ static int tracker_deal_server_list_group_storages( \
 			long2buff((*ppServer)->free_mb, pDest->sz_free_mb);
 			long2buff((*ppServer)->upload_priority, \
 				pDest->sz_upload_priority);
+			long2buff((*ppServer)->storage_port, \
+				 pDest->sz_storage_port);
+			long2buff((*ppServer)->storage_http_port, \
+				 pDest->sz_storage_http_port);
+			long2buff((*ppServer)->store_path_count, \
+				 pDest->sz_store_path_count);
+			long2buff((*ppServer)->subdir_count_per_path, \
+				 pDest->sz_subdir_count_per_path);
+			long2buff((*ppServer)->current_write_path, \
+				 pDest->sz_current_write_path);
 
 			long2buff(pStorageStat->total_upload_count, \
 				 pStatBuff->sz_total_upload_count);

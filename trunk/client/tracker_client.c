@@ -320,6 +320,13 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 		pDest->total_mb = buff2long(pSrc->sz_total_mb);
 		pDest->free_mb = buff2long(pSrc->sz_free_mb);
 		pDest->upload_priority = buff2long(pSrc->sz_upload_priority);
+		pDest->store_path_count = buff2long(pSrc->sz_store_path_count);
+		pDest->subdir_count_per_path = buff2long( \
+					pSrc->sz_subdir_count_per_path);
+		pDest->storage_port = buff2long(pSrc->sz_storage_port);
+		pDest->storage_http_port = buff2long(pSrc->sz_storage_http_port);
+		pDest->current_write_path = buff2long( \
+					pSrc->sz_current_write_path);
 
 		pStorageStat->total_upload_count = buff2long( \
 			pStatBuff->sz_total_upload_count);

@@ -447,7 +447,7 @@ static int tracker_locate_storage_sync_server(FDFSStorageSync *pStorageSyncs, \
 
 static int tracker_load_storages(const char *data_path)
 {
-#define STORAGE_DATA_SERVER_FIELDS	18
+#define STORAGE_DATA_SERVER_FIELDS	20
 
 	FILE *fp;
 	char szLine[256];
@@ -485,15 +485,17 @@ static int tracker_load_storages(const char *data_path)
 		cols = splitEx(szLine, STORAGE_DATA_FIELD_SEPERATOR, \
 				fields, STORAGE_DATA_SERVER_FIELDS);
 		if (cols != STORAGE_DATA_SERVER_FIELDS && \
-		    cols != STORAGE_DATA_SERVER_FIELDS - 1)
+		    cols != STORAGE_DATA_SERVER_FIELDS - 2 && \
+		    cols != STORAGE_DATA_SERVER_FIELDS - 3)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"the format of the file \"%s/%s\" is invalid" \
-				", colums: %d != expect colums: %d or %d", \
+				", colums: %d != expect colums: %d or %d or %d",\
 				__LINE__, data_path, \
 				STORAGE_SERVERS_LIST_FILENAME, \
 				cols, STORAGE_DATA_SERVER_FIELDS, \
-				STORAGE_DATA_SERVER_FIELDS - 1);
+				STORAGE_DATA_SERVER_FIELDS - 2, \
+				STORAGE_DATA_SERVER_FIELDS - 3);
 			result = EINVAL;
 			break;
 		}
@@ -573,7 +575,7 @@ static int tracker_load_storages(const char *data_path)
 					trim_left(fields[15]));
 		clientInfo.pStorage->stat.last_sync_update = atoi( \
 					trim_left(fields[16]));
-		if (cols == STORAGE_DATA_SERVER_FIELDS)
+		if (cols > STORAGE_DATA_SERVER_FIELDS - 3)
 		{
 			clientInfo.pStorage->changelog_offset = strtoll( \
 					trim_left(fields[17]), NULL, 10);
@@ -587,10 +589,26 @@ static int tracker_load_storages(const char *data_path)
 				clientInfo.pStorage->changelog_offset = \
 					g_changelog_fsize;
 			}
+
+			
+			if (cols > STORAGE_DATA_SERVER_FIELDS - 2)
+			{
+				clientInfo.pStorage->storage_port = \
+					atoi(trim_left(fields[18]));
+				clientInfo.pStorage->storage_http_port = \
+					atoi(trim_left(fields[19]));
+			}
+			else
+			{
+				clientInfo.pStorage->storage_port = 0;
+				clientInfo.pStorage->storage_http_port = 0;
+			}
 		}
 		else
 		{
 			clientInfo.pStorage->changelog_offset = 0;
+			clientInfo.pStorage->storage_port = 0;
+			clientInfo.pStorage->storage_http_port = 0;
 		}
 
 		if (*psync_src_ip_addr == '\0')
@@ -1027,7 +1045,9 @@ int tracker_save_storages()
 				INT64_PRINTF_FORMAT"%c" \
 				"%d%c" \
 				"%d%c" \
-				INT64_PRINTF_FORMAT"\n", \
+				INT64_PRINTF_FORMAT"%c" \
+				"%d%c" \
+				"%d\n", \
 				(*ppGroup)->group_name, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
 				pStorage->ip_addr, \
@@ -1063,7 +1083,11 @@ int tracker_save_storages()
 				STORAGE_DATA_FIELD_SEPERATOR, \
 				(int)(pStorage->stat.last_sync_update), \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				pStorage->changelog_offset \
+				pStorage->changelog_offset, \
+				STORAGE_DATA_FIELD_SEPERATOR, \
+				pStorage->storage_port, \
+				STORAGE_DATA_FIELD_SEPERATOR, \
+				pStorage->storage_http_port
 	 		    );
 
 			if (write(fd, buff, len) != len)
@@ -2459,6 +2483,37 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		if (pClientInfo->pGroup->storage_port !=  \
 			pClientInfo->storage_port)
 		{
+			pEnd = pClientInfo->pGroup->all_servers + \
+				pClientInfo->pGroup->count;
+			for (pServer=pClientInfo->pGroup->all_servers; \
+				pServer<pEnd; pServer++)
+			{
+				if (strcmp(pServer->ip_addr, \
+					pClientInfo->ip_addr) == 0)
+				{
+					pStorageServer->storage_port = \
+						pClientInfo->storage_port;
+					continue;
+				}
+
+				if (pServer->storage_port != \
+					pClientInfo->storage_port)
+				{
+					break;
+				}
+			}
+
+			if (pServer == pEnd)  //all servers are same, adjust
+			{
+				pClientInfo->pGroup->storage_port = \
+						pClientInfo->storage_port;
+				if ((result=tracker_save_groups()) != 0)
+				{
+					return result;
+				}
+			}
+			else
+			{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, port %d is not same " \
 				"in the group \"%s\", group port is %d", \
@@ -2467,6 +2522,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				pClientInfo->group_name, \
 				pClientInfo->pGroup->storage_port);
 			return EINVAL;
+			}
 		}
 	}
 
@@ -2474,12 +2530,47 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	{
 		pClientInfo->pGroup->storage_http_port = \
 			pJoinBody->storage_http_port;
+		if ((result=tracker_save_groups()) != 0)
+		{
+			return result;
+		}
 	}
 	else
 	{
 		if (pClientInfo->pGroup->storage_http_port !=  \
 			pJoinBody->storage_http_port)
 		{
+			pEnd = pClientInfo->pGroup->all_servers + \
+				pClientInfo->pGroup->count;
+			for (pServer=pClientInfo->pGroup->all_servers; \
+				pServer<pEnd; pServer++)
+			{
+				if (strcmp(pServer->ip_addr, \
+					pClientInfo->ip_addr) == 0)
+				{
+					pStorageServer->storage_http_port = \
+						pJoinBody->storage_http_port;
+					continue;
+				}
+
+				if (pServer->storage_http_port != \
+					pJoinBody->storage_http_port)
+				{
+					break;
+				}
+			}
+
+			if (pServer == pEnd)  //all servers are same, adjust
+			{
+				pClientInfo->pGroup->storage_http_port = \
+					pJoinBody->storage_http_port;
+				if ((result=tracker_save_groups()) != 0)
+				{
+					return result;
+				}
+			}
+			else
+			{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, http port %d is not same " \
 				"in the group \"%s\", group http port is %d", \
@@ -2490,6 +2581,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 #ifdef WITH_HTTPD
 			return EINVAL;
 #endif
+			}
 		}
 	}
 	
@@ -2549,10 +2641,13 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	snprintf(pStorageServer->domain_name, \
 		sizeof(pStorageServer->domain_name), \
 		"%s", pJoinBody->domain_name);
+	pStorageServer->storage_port = pClientInfo->storage_port;
+	pStorageServer->storage_http_port = pJoinBody->storage_http_port;
 
 	if (pClientInfo->pGroup->store_path_count == 0)
 	{
-		pClientInfo->pGroup->store_path_count = pJoinBody->store_path_count;
+		pClientInfo->pGroup->store_path_count = \
+				pJoinBody->store_path_count;
 		if ((result=tracker_malloc_group_path_mbs( \
 				pClientInfo->pGroup)) != 0)
 		{
