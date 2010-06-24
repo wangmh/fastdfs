@@ -820,6 +820,13 @@ int storage_func_init(const char *filename, \
 			break;
 		}
 
+		g_fdfs_connect_timeout = iniGetIntValue(NULL, "connect_timeout", \
+				&iniContext, DEFAULT_CONNECT_TIMEOUT);
+		if (g_fdfs_connect_timeout <= 0)
+		{
+			g_fdfs_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+		}
+
 		g_fdfs_network_timeout = iniGetIntValue(NULL, "network_timeout", \
 				&iniContext, DEFAULT_NETWORK_TIMEOUT);
 		if (g_fdfs_network_timeout <= 0)
@@ -1158,7 +1165,7 @@ int storage_func_init(const char *filename, \
 
 		logInfo("FastDFS v%d.%d, base_path=%s, store_path_count=%d, " \
 			"subdir_count_per_path=%d, group_name=%s, " \
-			"network_timeout=%ds, "\
+			"connect_timeout=%ds, network_timeout=%ds, "\
 			"port=%d, bind_addr=%s, client_bind=%d, " \
 			"max_connections=%d, "    \
 			"heart_beat_interval=%ds, " \
@@ -1180,10 +1187,10 @@ int storage_func_init(const char *filename, \
 			"FDHT keep_alive=%d, HTTP server port=%d, " \
 			"domain name=%s", \
 			g_fdfs_version.major, g_fdfs_version.minor, \
-			g_fdfs_base_path, g_path_count, g_subdir_count_per_path, \
-			g_group_name, g_fdfs_network_timeout, \
-			g_server_port, bind_addr, g_client_bind_addr, \
-			g_max_connections, \
+			g_fdfs_base_path, g_path_count, g_subdir_count_per_path,\
+			g_group_name, g_fdfs_connect_timeout, \
+			g_fdfs_network_timeout, g_server_port, bind_addr, \
+			g_client_bind_addr, g_max_connections, \
 			g_heart_beat_interval, g_stat_report_interval, \
 			g_tracker_group.server_count, g_sync_wait_usec / 1000, \
 			g_sync_interval / 1000, \

@@ -25,14 +25,16 @@ extern "C" {
 get content from url
 params:
 	url: the url to fetch, must start as: "http://"
-	timeout: network timeout (seconds)
+	connect_timeout: connect timeout (seconds)
+	network_timeout: network timeout (seconds)
 	http_status: return http status code, 200 for Ok
 	content: return the content (HTTP body only, not including HTTP header),
 		 *content should be freed by caller
 	content_len: return content length (bytes)
 return: 0 for success, != 0 for error
 **/
-int get_url_content(const char *url, const int timeout, int *http_status, \
+int get_url_content(const char *url, const int connect_timeout, \
+	const int network_timeout, int *http_status, \
 	char **content, int *content_len, char *error_info);
 
 /**

@@ -167,6 +167,13 @@ int tracker_load_from_conf_file(const char *filename, \
 			break;
 		}
 
+		g_fdfs_connect_timeout = iniGetIntValue(NULL, "connect_timeout", \
+				&iniContext, DEFAULT_CONNECT_TIMEOUT);
+		if (g_fdfs_connect_timeout <= 0)
+		{
+			g_fdfs_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+		}
+
 		g_fdfs_network_timeout = iniGetIntValue(NULL, "network_timeout", \
 				&iniContext, DEFAULT_NETWORK_TIMEOUT);
 		if (g_fdfs_network_timeout <= 0)
@@ -377,6 +384,7 @@ int tracker_load_from_conf_file(const char *filename, \
 #endif
 
 		logInfo("FastDFS v%d.%d, base_path=%s, " \
+			"connect_timeout=%ds, "    \
 			"network_timeout=%ds, "    \
 			"port=%d, bind_addr=%s, " \
 			"max_connections=%d, "    \
@@ -389,7 +397,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			"thread_stack_size=%d KB, " \
 			"storage_ip_changed_auto_adjust=%d",  \
 			g_fdfs_version.major, g_fdfs_version.minor,  \
-			g_fdfs_base_path, g_fdfs_network_timeout, \
+			g_fdfs_base_path, g_fdfs_connect_timeout, \
+			g_fdfs_network_timeout, \
 			g_server_port, bind_addr, g_max_connections, \
 			g_groups.store_lookup, g_groups.store_group, \
 			g_groups.store_server, g_groups.store_path, \

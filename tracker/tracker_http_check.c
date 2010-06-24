@@ -76,8 +76,9 @@ static void *http_check_entrance(void *arg)
 				continue;
 			}
 
-			result = connectserverbyip(sock, (*ppServer)->ip_addr, \
-						pGroup->storage_http_port);
+			result = connectserverbyip_nb(sock, (*ppServer)->ip_addr, \
+						pGroup->storage_http_port, \
+						g_fdfs_connect_timeout);
 			close(sock);
 
 			if (g_http_servers_dirty)

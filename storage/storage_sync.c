@@ -1100,8 +1100,17 @@ static int storage_report_storage_status(const char *ip_addr, \
 
 			tcpsetserveropt(pTServer->sock, g_fdfs_network_timeout);
 
-			if ((result=connectserverbyip(pTServer->sock, \
-				pTServer->ip_addr, pTServer->port)) == 0)
+			if (tcpsetnonblockopt(pTServer->sock) != 0)
+			{
+				close(pTServer->sock);
+				pTServer->sock = -1;
+				sleep(5);
+				continue;
+			}
+
+			if ((result=connectserverbyip_nb(pTServer->sock, \
+				pTServer->ip_addr, pTServer->port, \
+				g_fdfs_connect_timeout)) == 0)
 			{
 				break;
 			}
@@ -1119,12 +1128,6 @@ static int storage_report_storage_status(const char *ip_addr, \
 				__LINE__, pTServer->ip_addr, pTServer->port, \
 				result, strerror(result));
 
-			continue;
-		}
-
-		if (tcpsetnonblockopt(pTServer->sock) != 0)
-		{
-			close(pTServer->sock);
 			continue;
 		}
 
@@ -1204,8 +1207,16 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 				socketBind(pTServer->sock, g_bind_addr, 0);
 			}
 
-			if ((conn_ret=connectserverbyip(pTServer->sock, \
-				pTServer->ip_addr, pTServer->port)) == 0)
+			if (tcpsetnonblockopt(pTServer->sock) != 0)
+			{
+				close(pTServer->sock);
+				sleep(g_heart_beat_interval);
+				continue;
+			}
+
+			if ((conn_ret=connectserverbyip_nb(pTServer->sock, \
+				pTServer->ip_addr, pTServer->port, \
+				g_fdfs_connect_timeout)) == 0)
 			{
 				break;
 			}
@@ -1230,12 +1241,6 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 		if (!g_continue_flag)
 		{
 			break;
-		}
-
-		if (tcpsetnonblockopt(pTServer->sock) != 0)
-		{
-			close(pTServer->sock);
-			continue;
 		}
 
 		getSockIpaddr(pTServer->sock, \
@@ -2010,8 +2015,19 @@ static void* storage_sync_thread_entrance(void* arg)
 				socketBind(storage_server.sock, g_bind_addr, 0);
 			}
 
-			if ((conn_result=connectserverbyip(storage_server.sock,\
-				storage_server.ip_addr, g_server_port)) == 0)
+			if (tcpsetnonblockopt(storage_server.sock) != 0)
+			{
+				nContinuousFail++;
+				close(storage_server.sock);
+				storage_server.sock = -1;
+				sleep(1);
+
+				continue;
+			}
+
+			if ((conn_result=connectserverbyip_nb(storage_server.sock,\
+				storage_server.ip_addr, g_server_port, \
+				g_fdfs_connect_timeout)) == 0)
 			{
 				char szFailPrompt[64];
 				if (nContinuousFail == 0)
@@ -2111,12 +2127,6 @@ static void* storage_sync_thread_entrance(void* arg)
 			}
 		}
 
-		if (tcpsetnonblockopt(storage_server.sock) != 0)
-		{
-			close(storage_server.sock);
-			storage_reader_destroy(&reader);
-			continue;
-		}
 
 		getSockIpaddr(storage_server.sock, \
 			local_ip_addr, IP_ADDRESS_SIZE);

@@ -93,6 +93,8 @@ int main(int argc, char *argv[])
 	}
 
 	log_init();
+	log_set_cache(false);
+
 	conf_filename = argv[1];
 	operation = argv[2];
 	if ((result=fdfs_client_init(conf_filename)) != 0)

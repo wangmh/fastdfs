@@ -241,6 +241,13 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 			break;
 		}
 
+		g_fdfs_connect_timeout = iniGetIntValue(NULL, "connect_timeout", \
+				&iniContext, DEFAULT_CONNECT_TIMEOUT);
+		if (g_fdfs_connect_timeout <= 0)
+		{
+			g_fdfs_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+		}
+
 		g_fdfs_network_timeout = iniGetIntValue(NULL, "network_timeout", \
 				&iniContext, DEFAULT_NETWORK_TIMEOUT);
 		if (g_fdfs_network_timeout <= 0)
@@ -289,13 +296,14 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 
 #ifdef DEBUG_FLAG
 		fprintf(stderr, "base_path=%s, " \
+			"connect_timeout=%d, "\
 			"network_timeout=%d, "\
 			"tracker_server_count=%d, " \
 			"anti_steal_token=%d, " \
 			"anti_steal_secret_key length=%d\n", \
-			g_fdfs_base_path, g_fdfs_network_timeout, \
-			pTrackerGroup->server_count, g_anti_steal_token, \
-			g_anti_steal_secret_key.length);
+			g_fdfs_base_path, g_fdfs_connect_timeout, \
+			g_fdfs_network_timeout, pTrackerGroup->server_count, \
+			g_anti_steal_token, g_anti_steal_secret_key.length);
 #endif
 
 	} while (0);

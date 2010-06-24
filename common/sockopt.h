@@ -88,7 +88,7 @@ int tcpsenddata(int sock, void* data, const int size, const int timeout);
 */
 int tcpsenddata_nb(int sock, void* data, const int size, const int timeout);
 
-/** connect to server
+/** connect to server by block mode
  *  parameters:
  *          sock: the socket
  *          server_ip: ip address of the server
@@ -96,6 +96,17 @@ int tcpsenddata_nb(int sock, void* data, const int size, const int timeout);
  *  return: error no, 0 success, != 0 fail
 */
 int connectserverbyip(int sock, const char *server_ip, const short server_port);
+
+/** connect to server by non-block mode
+ *  parameters:
+ *          sock: the socket
+ *          server_ip: ip address of the server
+ *          server_port: port of the server
+ *          timeout: connect timeout in seconds
+ *  return: error no, 0 success, != 0 fail
+*/
+int connectserverbyip_nb(int sock, const char *server_ip, \
+		const short server_port, const int timeout);
 
 /** accept client connect request
  *  parameters:

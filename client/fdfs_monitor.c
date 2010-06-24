@@ -47,6 +47,7 @@ int main(int argc, char *argv[])
 	}
 
 	log_init();
+	log_set_cache(false);
 
 	conf_filename = argv[1];
 	if ((result=fdfs_client_init(conf_filename)) != 0)
@@ -60,6 +61,8 @@ int main(int argc, char *argv[])
 		rand();  //discard the first
 		g_tracker_group.server_index = (int)((g_tracker_group.server_count * (double)rand()) / (double)RAND_MAX);
 	}
+
+	printf("server_count=%d, server_index=%d\n", g_tracker_group.server_count, g_tracker_group.server_index);
 
 	pTrackerServer = tracker_get_connection();
 	if (pTrackerServer == NULL)

@@ -170,7 +170,7 @@ static int iniDoLoadFromFile(const char *szFilename, \
 
 	if (strncasecmp(szFilename, "http://", 7) == 0)
 	{
-		if ((result=get_url_content(szFilename, 60, &http_status, \
+		if ((result=get_url_content(szFilename, 10, 60, &http_status, \
 				&content, &content_len, error_info)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \

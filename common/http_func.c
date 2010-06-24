@@ -22,7 +22,8 @@
 #include "logger.h"
 #include "shared_func.h"
 
-int get_url_content(const char *url, const int timeout, int *http_status, \
+int get_url_content(const char *url, const int connect_timeout, \
+	const int network_timeout, int *http_status, \
 	char **content, int *content_len, char *error_info)
 {
 	char domain_name[256];
@@ -106,7 +107,8 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 		return errno != 0 ? errno : EPERM;
 	}
 
-	if ((result=connectserverbyip(sock, ip_addr, port)) != 0)
+	if ((result=connectserverbyip_nb(sock, ip_addr, port, \
+			connect_timeout)) != 0)
 	{
 		close(sock);
 
@@ -123,7 +125,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 		"Host: %s:%d\r\n" \
 		"Connection: close\r\n" \
 		"\r\n", pURI, domain_name, port);
-	if ((result=tcpsenddata(sock, out_buff, out_len, timeout)) != 0)
+	if ((result=tcpsenddata(sock, out_buff, out_len, network_timeout)) != 0)
 	{
 		close(sock);
 
@@ -175,7 +177,7 @@ int get_url_content(const char *url, const int timeout, int *http_status, \
 		}
 
 		result = tcprecvdata_ex(sock, *content + *content_len, \
-				recv_bytes, timeout, &recv_bytes);
+				recv_bytes, network_timeout, &recv_bytes);
 
 		*content_len += recv_bytes;
 	} while (result == 0);
