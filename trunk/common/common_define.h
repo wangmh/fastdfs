@@ -74,6 +74,7 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 #define MAX_PATH_SIZE				256
 #define LOG_FILE_DIR				"logs"
 #define CONF_FILE_DIR				"conf"
+#define DEFAULT_CONNECT_TIMEOUT			30
 #define DEFAULT_NETWORK_TIMEOUT			30
 #define DEFAULT_MAX_CONNECTONS			256
 #define SYNC_LOG_BUFF_DEF_INTERVAL              10

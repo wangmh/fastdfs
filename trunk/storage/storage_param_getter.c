@@ -112,8 +112,17 @@ static int storage_do_get_params_from_tracker( \
 				socketBind(pTServer->sock, g_bind_addr, 0);
 			}
 
-			if ((result=connectserverbyip(pTServer->sock, \
-				pTServer->ip_addr, pTServer->port)) == 0)
+			if (tcpsetnonblockopt(pTServer->sock) != 0)
+			{
+				close(pTServer->sock);
+				pTServer->sock = -1;
+				sleep(1);
+				continue;
+			}
+
+			if ((result=connectserverbyip_nb(pTServer->sock, \
+				pTServer->ip_addr, pTServer->port, \
+				g_fdfs_connect_timeout)) == 0)
 			{
 				break;
 			}
@@ -131,12 +140,6 @@ static int storage_do_get_params_from_tracker( \
 				__LINE__, pTServer->ip_addr, pTServer->port, \
 				result, strerror(result));
 
-			continue;
-		}
-
-		if (tcpsetnonblockopt(pTServer->sock) != 0)
-		{
-			close(pTServer->sock);
 			continue;
 		}
 

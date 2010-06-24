@@ -51,20 +51,21 @@ int tracker_connect_server(TrackerServerInfo *pTrackerServer)
 		return errno != 0 ? errno : EPERM;
 	}
 
-	if ((result=connectserverbyip(pTrackerServer->sock, \
-		pTrackerServer->ip_addr, pTrackerServer->port)) != 0)
+	if ((result=tcpsetnonblockopt(pTrackerServer->sock)) != 0)
 	{
-		logError("connect to %s:%d fail, errno: %d, " \
-			"error info: %s", pTrackerServer->ip_addr, \
-			pTrackerServer->port, result, strerror(result));
-
 		close(pTrackerServer->sock);
 		pTrackerServer->sock = -1;
 		return result;
 	}
 
-	if ((result=tcpsetnonblockopt(pTrackerServer->sock)) != 0)
+	if ((result=connectserverbyip_nb(pTrackerServer->sock, \
+		pTrackerServer->ip_addr, pTrackerServer->port, \
+		g_fdfs_connect_timeout)) != 0)
 	{
+		logError("connect to %s:%d fail, errno: %d, " \
+			"error info: %s", pTrackerServer->ip_addr, \
+			pTrackerServer->port, result, strerror(result));
+
 		close(pTrackerServer->sock);
 		pTrackerServer->sock = -1;
 		return result;

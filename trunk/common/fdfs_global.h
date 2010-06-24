@@ -21,6 +21,7 @@
 extern "C" {
 #endif
 
+extern int g_fdfs_connect_timeout;
 extern int g_fdfs_network_timeout;
 extern char g_fdfs_base_path[MAX_PATH_SIZE];
 extern Version g_fdfs_version;

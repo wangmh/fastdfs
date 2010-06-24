@@ -4251,13 +4251,15 @@ static int load_config_files()
 	#define ITEM_NAME_CONF_COUNT "fastdfs_client.tracker_group_count"
 	#define ITEM_NAME_CONF_FILE  "fastdfs_client.tracker_group"
 	#define ITEM_NAME_BASE_PATH  	 "fastdfs_client.base_path"
-	#define ITEM_NAME_NETWOK_TIMEOUT "fastdfs_client.network_timeout"
+	#define ITEM_NAME_CONNECT_TIMEOUT "fastdfs_client.connect_timeout"
+	#define ITEM_NAME_NETWORK_TIMEOUT "fastdfs_client.network_timeout"
 	#define ITEM_NAME_LOG_LEVEL      "fastdfs_client.log_level"
 	#define ITEM_NAME_LOG_FILENAME   "fastdfs_client.log_filename"
 	#define ITEM_NAME_ANTI_STEAL_SECRET_KEY "fastdfs_client.http.anti_steal_secret_key"
 
 	zval conf_c;
 	zval base_path;
+	zval connect_timeout;
 	zval network_timeout;
 	zval log_level;
 	zval anti_steal_secret_key;
@@ -4311,8 +4313,23 @@ static int load_config_files()
 		return ENOTDIR;
 	}
 
-	if (zend_get_configuration_directive(ITEM_NAME_NETWOK_TIMEOUT, \
-			sizeof(ITEM_NAME_NETWOK_TIMEOUT), \
+	if (zend_get_configuration_directive(ITEM_NAME_CONNECT_TIMEOUT, \
+			sizeof(ITEM_NAME_CONNECT_TIMEOUT), \
+			&connect_timeout) == SUCCESS)
+	{
+		g_fdfs_connect_timeout = atoi(connect_timeout.value.str.val);
+		if (g_fdfs_connect_timeout <= 0)
+		{
+			g_fdfs_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+		}
+	}
+	else
+	{
+		g_fdfs_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+	}
+
+	if (zend_get_configuration_directive(ITEM_NAME_NETWORK_TIMEOUT, \
+			sizeof(ITEM_NAME_NETWORK_TIMEOUT), \
 			&network_timeout) == SUCCESS)
 	{
 		g_fdfs_network_timeout = atoi(network_timeout.value.str.val);
@@ -4420,10 +4437,11 @@ static int load_config_files()
 		}
 	}
 
-	logInfo("base_path=%s, network_timeout=%d, " \
+	logInfo("base_path=%s, connect_timeout=%d, network_timeout=%d, " \
 		"anti_steal_secret_key length=%d, " \
 		"tracker_group_count=%d, first tracker group server_count=%d", \
-		g_fdfs_base_path, g_fdfs_network_timeout, strlen(pAntiStealSecretKey), \
+		g_fdfs_base_path, g_fdfs_connect_timeout, \
+		g_fdfs_network_timeout, strlen(pAntiStealSecretKey), \
 		config_count, g_tracker_group.server_count);
 
 	return 0;

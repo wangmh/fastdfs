@@ -216,9 +216,16 @@ static void *tracker_report_thread_entrance(void *arg)
 
 		tcpsetserveropt(pTrackerServer->sock, g_fdfs_network_timeout);
 
-		if ((result=connectserverbyip(pTrackerServer->sock, \
+		if (tcpsetnonblockopt(pTrackerServer->sock) != 0)
+		{
+			nContinuousFail++;
+			sleep(g_heart_beat_interval);
+			continue;
+		}
+
+		if ((result=connectserverbyip_nb(pTrackerServer->sock, \
 			pTrackerServer->ip_addr, \
-			pTrackerServer->port)) != 0)
+			pTrackerServer->port, g_fdfs_connect_timeout)) != 0)
 		{
 			if (previousCode != result)
 			{
@@ -290,12 +297,6 @@ static void *tracker_report_thread_entrance(void *arg)
 			__LINE__, tracker_client_ip);
 		//print_local_host_ip_addrs();
 		*/
-
-		if (tcpsetnonblockopt(pTrackerServer->sock) != 0)
-		{
-			sleep(g_heart_beat_interval);
-			continue;
-		}
 
 		if (tracker_report_join(pTrackerServer, tracker_index, \
 					sync_old_done) != 0)
