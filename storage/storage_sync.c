@@ -1826,7 +1826,7 @@ int storage_rename_mark_file(const char *old_ip_addr, const int old_port, \
 			new_filename, sizeof(new_filename));
 	if (fileExists(new_filename))
 	{
-		logError("file: "__FILE__", line: %d, " \
+		logWarning("file: "__FILE__", line: %d, " \
 			"mark file %s already exists, " \
 			"ignore rename file %s to %s", \
 			__LINE__, new_filename, old_filename, new_filename);
