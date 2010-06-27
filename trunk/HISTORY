@@ -1,4 +1,4 @@
-Version 1.29  2010-06-28
+Version 1.29  2010-06-27
  * add files: tracker_dump.h and tracker_dump.c, tracker dump global vars
  * sockopt.c: tcprecvfile and tcpdiscard add parameter total_recv_bytes
  * storage server add fields: storage_port and storage_http_port
@@ -6,6 +6,7 @@ Version 1.29  2010-06-28
    in a group changed to another port
  * connect server support timeout, adding connect_timeout parameter in 
    config file
+ * log_init set log to cache to false (no cache)
 
 Version 1.28  2010-05-30
  * tracker_servive.c: set current_write_group anyway when current group

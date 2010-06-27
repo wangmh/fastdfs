@@ -58,7 +58,7 @@ int log_init_ex(LogContext *pContext)
 
 	pContext->log_level = LOG_INFO;
 	pContext->log_fd = STDERR_FILENO;
-	pContext->log_to_cache = true;
+	pContext->log_to_cache = false;
 
 	pContext->log_buff = (char *)malloc(LOG_BUFF_SIZE);
 	if (pContext->log_buff == NULL)
