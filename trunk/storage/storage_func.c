@@ -50,6 +50,8 @@
 #define INIT_ITEM_SYNC_SRC_SERVER	"sync_src_server"
 #define INIT_ITEM_SYNC_UNTIL_TIMESTAMP	"sync_until_timestamp"
 #define INIT_ITEM_LAST_IP_ADDRESS	"last_ip_addr"
+#define INIT_ITEM_LAST_SERVER_PORT	"last_server_port"
+#define INIT_ITEM_LAST_HTTP_PORT	"last_http_port"
 
 #define STAT_ITEM_TOTAL_UPLOAD		"total_upload_count"
 #define STAT_ITEM_SUCCESS_UPLOAD	"success_upload_count"
@@ -353,7 +355,7 @@ int storage_write_to_stat_file()
 int storage_write_to_sync_ini_file()
 {
 	char full_filename[MAX_PATH_SIZE];
-	char buff[256];
+	char buff[512];
 	int fd;
 	int len;
 
@@ -373,12 +375,16 @@ int storage_write_to_sync_ini_file()
 		"%s=%d\n"  \
 		"%s=%s\n"  \
 		"%s=%d\n"  \
-		"%s=%s\n", \
+		"%s=%s\n"  \
+		"%s=%d\n"  \
+		"%s=%d\n", \
 		INIT_ITEM_STORAGE_JOIN_TIME, g_storage_join_time, \
 		INIT_ITEM_SYNC_OLD_DONE, g_sync_old_done, \
 		INIT_ITEM_SYNC_SRC_SERVER, g_sync_src_ip_addr, \
 		INIT_ITEM_SYNC_UNTIL_TIMESTAMP, g_sync_until_timestamp, \
-		INIT_ITEM_LAST_IP_ADDRESS, g_tracker_client_ip
+		INIT_ITEM_LAST_IP_ADDRESS, g_tracker_client_ip, \
+		INIT_ITEM_LAST_SERVER_PORT, g_last_server_port, \
+		INIT_ITEM_LAST_HTTP_PORT, g_last_http_port
 	    );
 	if (write(fd, buff, len) != len)
 	{
@@ -473,13 +479,47 @@ static int storage_check_and_make_data_dirs()
 				"%s", pValue);
 		}
 
+		pValue = iniGetStrValue(NULL, INIT_ITEM_LAST_SERVER_PORT, \
+				&iniContext);
+		if (pValue != NULL)
+		{
+			g_last_server_port = atoi(pValue);
+		}
+
+		pValue = iniGetStrValue(NULL, INIT_ITEM_LAST_HTTP_PORT, \
+				&iniContext);
+		if (pValue != NULL)
+		{
+			g_last_http_port = atoi(pValue);
+		}
+ 
 		iniFreeContext(&iniContext);
+
+		if (g_last_server_port == 0 || g_last_http_port == 0)
+		{
+			if (g_last_server_port == 0)
+			{
+				g_last_server_port = g_server_port;
+			}
+
+			if (g_last_http_port == 0)
+			{
+				g_last_http_port = g_http_port;
+			}
+
+			if ((result=storage_write_to_sync_ini_file()) != 0)
+			{
+				return result;
+			}
+		}
 
 		/*
 		printf("g_sync_old_done = %d\n", g_sync_old_done);
 		printf("g_sync_src_ip_addr = %s\n", g_sync_src_ip_addr);
 		printf("g_sync_until_timestamp = %d\n", g_sync_until_timestamp);
 		printf("g_last_storage_ip= %s\n", g_last_storage_ip);
+		printf("g_last_server_port= %d\n", g_last_server_port);
+		printf("g_last_http_port= %d\n", g_last_http_port);
 		*/
 	}
 	else
@@ -497,6 +537,8 @@ static int storage_check_and_make_data_dirs()
 			}
 		}
 
+		g_last_server_port = g_server_port;
+		g_last_http_port = g_http_port;
 		g_storage_join_time = time(NULL);
 		if ((result=storage_write_to_sync_ini_file()) != 0)
 		{

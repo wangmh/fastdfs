@@ -41,7 +41,7 @@ int load_mime_types_from_file(HashArray *pHash, const char *mime_filename)
 
 	if (strncasecmp(mime_filename, "http://", 7) == 0)
 	{
-		if ((result=get_url_content(mime_filename, 60, &http_status, \
+		if ((result=get_url_content(mime_filename, 30, 60, &http_status,\
 				&content, &content_len, error_info)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
