@@ -104,10 +104,15 @@ else
   fi
 fi
 
-if [ "$DEBUG_FLAG" = "1" ] && [ "$uname" = "Linux" ]; then
-  LIBS="$LIBS -ldl -rdynamic"
-  TRACKER_HTTPD_OBJS="$TRACKER_HTTPD_OBJS ../common/linux_stack_trace.o tracker_dump.o"
-  STORAGE_HTTPD_OBJS="$STORAGE_HTTPD_OBJS ../common/linux_stack_trace.o"
+if [ "$DEBUG_FLAG" = "1" ]; then
+  TRACKER_HTTPD_OBJS="$TRACKER_HTTPD_OBJS tracker_dump.o"
+  STORAGE_HTTPD_OBJS="$STORAGE_HTTPD_OBJS"
+
+  if [ "$uname" = "Linux" ]; then
+    LIBS="$LIBS -ldl -rdynamic"
+    TRACKER_HTTPD_OBJS="$TRACKER_HTTPD_OBJS ../common/linux_stack_trace.o"
+    STORAGE_HTTPD_OBJS="$STORAGE_HTTPD_OBJS ../common/linux_stack_trace.o"
+  fi
 fi
 
 cd tracker

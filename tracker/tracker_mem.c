@@ -2491,18 +2491,21 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				if (strcmp(pServer->ip_addr, \
 					pClientInfo->ip_addr) == 0)
 				{
-					pStorageServer->storage_port = \
+					pServer->storage_port = \
 						pClientInfo->storage_port;
-					continue;
+					break;
 				}
+			}
 
+			for (pServer=pClientInfo->pGroup->all_servers; \
+				pServer<pEnd; pServer++)
+			{
 				if (pServer->storage_port != \
 					pClientInfo->storage_port)
 				{
 					break;
 				}
 			}
-
 			if (pServer == pEnd)  //all servers are same, adjust
 			{
 				pClientInfo->pGroup->storage_port = \
@@ -2548,18 +2551,21 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				if (strcmp(pServer->ip_addr, \
 					pClientInfo->ip_addr) == 0)
 				{
-					pStorageServer->storage_http_port = \
+					pServer->storage_http_port = \
 						pJoinBody->storage_http_port;
-					continue;
+					break;
 				}
+			}
 
+			for (pServer=pClientInfo->pGroup->all_servers; \
+				pServer<pEnd; pServer++)
+			{
 				if (pServer->storage_http_port != \
 					pJoinBody->storage_http_port)
 				{
 					break;
 				}
 			}
-
 			if (pServer == pEnd)  //all servers are same, adjust
 			{
 				pClientInfo->pGroup->storage_http_port = \
