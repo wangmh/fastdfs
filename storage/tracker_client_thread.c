@@ -40,12 +40,15 @@ static int *src_storage_status = NULL; //returned by tracker server
 static signed char *my_report_status = NULL;  //returned by tracker server
 
 static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
-			int *pstat_chg_sync_count);
-static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer);
+		int *pstat_chg_sync_count, bool *bServerPortChanged);
+static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
+		bool *bServerPortChanged);
+static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer, \
+		bool *bServerPortChanged);
+
 static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer);
 static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer);
 static int tracker_sync_notify(TrackerServerInfo *pTrackerServer);
-static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer);
 static int tracker_storage_changelog_req(TrackerServerInfo *pTrackerServer);
 static bool tracker_insert_into_sorted_servers( \
 		FDFSStorageServer *pInsertedServer);
@@ -171,7 +174,10 @@ static void *tracker_report_thread_entrance(void *arg)
 	int previousCode;
 	int nContinuousFail;
 	int tracker_index;
+	bool bServerPortChanged;
 
+	bServerPortChanged = (g_last_server_port != 0) && \
+				(g_server_port != g_last_server_port);
 	stat_chg_sync_count = 0;
 
 	pTrackerServer = (TrackerServerInfo *)arg;
@@ -425,14 +431,15 @@ static void *tracker_report_thread_entrance(void *arg)
 					g_heart_beat_interval)
 			{
 				if (tracker_heart_beat(pTrackerServer, \
-					&stat_chg_sync_count) != 0)
+					&stat_chg_sync_count, \
+					&bServerPortChanged) != 0)
 				{
 					break;
 				}
 
 				if (g_storage_ip_changed_auto_adjust && \
 					tracker_storage_changelog_req( \
-							pTrackerServer) != 0)
+						pTrackerServer) != 0)
 				{
 					break;
 				}
@@ -445,7 +452,7 @@ static void *tracker_report_thread_entrance(void *arg)
 					g_heart_beat_interval)
 			{
 				if (tracker_report_sync_timestamp( \
-						pTrackerServer) != 0)
+					pTrackerServer, &bServerPortChanged)!=0)
 				{
 					break;
 				}
@@ -457,7 +464,8 @@ static void *tracker_report_thread_entrance(void *arg)
 			if (current_time - last_df_report_time >= \
 					g_stat_report_interval)
 			{
-				if (tracker_report_df_stat(pTrackerServer) != 0)
+				if (tracker_report_df_stat(pTrackerServer, \
+						&bServerPortChanged) != 0)
 				{
 					break;
 				}
@@ -878,7 +886,8 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 			diffServers, pDiffServer - diffServers);
 }
 
-static int tracker_check_response(TrackerServerInfo *pTrackerServer)
+static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
+	bool *bServerPortChanged)
 {
 	int64_t nInPackLen;
 	TrackerHeader resp;
@@ -954,6 +963,35 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer)
 		}
 	}
 	*/
+
+	if (*bServerPortChanged)
+	{
+		FDFSStorageBrief *pStorageEnd;
+		FDFSStorageBrief *pStorage;
+
+		*bServerPortChanged = false;
+		pStorageEnd = briefServers + server_count;
+		for (pStorage=briefServers; pStorage<pStorageEnd; pStorage++)
+		{
+			if (strcmp(pStorage->ip_addr, g_tracker_client_ip) == 0)
+			{
+				continue;
+			}
+
+			storage_rename_mark_file(pStorage->ip_addr, \
+					g_last_server_port, pStorage->ip_addr, \
+					g_server_port);
+		}
+
+		if (g_server_port != g_last_server_port)
+		{
+			g_last_server_port = g_server_port;
+			if ((result=storage_write_to_sync_ini_file()) != 0)
+			{
+				return result;
+			}
+		}
+	}
 
 	return tracker_merge_servers(pTrackerServer, \
                 briefServers, server_count);
@@ -1155,6 +1193,7 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageSyncReqBody)];
 	TrackerHeader *pHeader;
 	TrackerStorageSyncReqBody *pReqBody;
+	int64_t in_bytes;
 	int result;
 
 	pHeader = (TrackerHeader *)out_buff;
@@ -1178,7 +1217,22 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 		return result;
 	}
 
-	return tracker_check_response(pTrackerServer);
+	if ((result=fdfs_recv_header(pTrackerServer, &in_bytes)) != 0)
+	{
+		return result;
+	}
+
+	if (in_bytes != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, recv body length: " \
+			INT64_PRINTF_FORMAT" != 0",  \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, in_bytes);
+		return EINVAL;
+	}
+
+	return 0;
 }
 
 int tracker_report_join(TrackerServerInfo *pTrackerServer, \
@@ -1296,7 +1350,8 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 	}
 }
 
-static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer)
+static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer, \
+		bool *bServerPortChanged)
 {
 	char out_buff[sizeof(TrackerHeader) + (IP_ADDRESS_SIZE + 4) * \
 			FDFS_MAX_SERVERS_EACH_GROUP];
@@ -1341,10 +1396,11 @@ static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer)
 		return result;
 	}
 
-	return tracker_check_response(pTrackerServer);
+	return tracker_check_response(pTrackerServer, bServerPortChanged);
 }
 
-static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer)
+static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
+		bool *bServerPortChanged)
 {
 	char out_buff[sizeof(TrackerHeader) + \
 			sizeof(TrackerStatReportReqBody) * 16];
@@ -1424,11 +1480,11 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer)
 		return result;
 	}
 
-	return tracker_check_response(pTrackerServer);
+	return tracker_check_response(pTrackerServer, bServerPortChanged);
 }
 
 static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
-			int *pstat_chg_sync_count)
+		int *pstat_chg_sync_count, bool *bServerPortChanged)
 {
 	char out_buff[sizeof(TrackerHeader) + sizeof(FDFSStorageStatBuff)];
 	TrackerHeader *pHeader;
@@ -1498,7 +1554,7 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 		return result;
 	}
 
-	return tracker_check_response(pTrackerServer);
+	return tracker_check_response(pTrackerServer, bServerPortChanged);
 }
 
 static int tracker_storage_changelog_req(TrackerServerInfo *pTrackerServer)
@@ -1613,7 +1669,8 @@ int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer)
 			}
 			else if (server_status == FDFS_STORAGE_STATUS_IP_CHANGED)
 			{
-				storage_rename_mark_file(pOldIpAddr, pNewIpAddr);
+				storage_rename_mark_file(pOldIpAddr, \
+					g_server_port, pNewIpAddr, g_server_port);
 				if (strcmp(g_sync_src_ip_addr, pOldIpAddr) == 0)
 				{
 					snprintf(g_sync_src_ip_addr, \

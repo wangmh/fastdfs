@@ -905,8 +905,11 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 {
 	TrackerStorageSyncReqBody body;
 	int status;
+	int result;
 	char sync_src_ip_addr[IP_ADDRESS_SIZE];
+	char out_buff[sizeof(TrackerHeader)];
 	bool bSaveStorages;
+	TrackerHeader* pHeader;
 
 	do
 	{
@@ -1011,7 +1014,23 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 	status = 0;
 	} while (0);
 
-	return tracker_check_and_sync(pClientInfo, status);
+	memset(out_buff, 0, sizeof(TrackerHeader));
+	pHeader = (TrackerHeader *)out_buff;
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+	pHeader->status = status;
+
+	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
+		sizeof(TrackerHeader), g_fdfs_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pClientInfo->ip_addr, \
+			result, strerror(result));
+		return result;
+	}
+
+	return 0;
 }
 
 static int tracker_check_logined(TrackerClientInfo *pClientInfo)
