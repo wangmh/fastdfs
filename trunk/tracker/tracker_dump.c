@@ -14,6 +14,7 @@
 #include "tracker_dump.h"
 #include "shared_func.h"
 #include "logger.h"
+#include "fdfs_global.h"
 #include "tracker_global.h"
 
 static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer, 
@@ -170,6 +171,8 @@ static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer,
 		"free_mb="INT64_PRINTF_FORMAT" MB\n"
 		"changelog_offset="INT64_PRINTF_FORMAT"\n"
 		"store_path_count=%d\n"
+		"storage_port=%d\n"
+		"storage_http_port=%d\n"
 		"subdir_count_per_path=%d\n"
 		"upload_priority=%d\n"
 		"current_write_path=%d\n"
@@ -217,6 +220,8 @@ static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer,
 		pServer->free_mb, 
 		pServer->changelog_offset, 
 		pServer->store_path_count, 
+		pServer->storage_port, 
+		pServer->storage_http_port, 
 		pServer->subdir_count_per_path, 
 		pServer->upload_priority,
 		pServer->current_write_path,
@@ -273,6 +278,10 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 	int total_len;
 
 	total_len = snprintf(buff, buffSize,
+		"g_fdfs_connect_timeout=%ds\n"
+		"g_fdfs_network_timeout=%ds\n"
+		"g_fdfs_base_path=%s\n"
+		"g_fdfs_version=%d.%d\n"
 		"g_continue_flag=%d\n"
 		"g_server_port=%d\n"
 		"g_max_connections=%d\n"
@@ -305,6 +314,10 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 	#if defined(DEBUG_FLAG) && defined(OS_LINUX)
 		"g_exe_name=%s\n"
 	#endif
+		, g_fdfs_connect_timeout
+		, g_fdfs_network_timeout
+		, g_fdfs_base_path
+		, g_fdfs_version.major, g_fdfs_version.minor
 		, g_continue_flag
 		, g_server_port
 		, g_max_connections

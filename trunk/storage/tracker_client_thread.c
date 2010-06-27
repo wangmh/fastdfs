@@ -311,6 +311,14 @@ static void *tracker_report_thread_entrance(void *arg)
 			continue;
 		}
 
+		if (g_http_port != g_last_http_port)
+		{
+			g_last_http_port = g_http_port;
+			if ((result=storage_write_to_sync_ini_file()) != 0)
+			{
+			}
+		}
+
 		if (!sync_old_done)
 		{
 			if ((result=pthread_mutex_lock(&reporter_thread_lock)) \
