@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 	}
 
 	log_init();
-	log_set_cache(false);
+	//log_set_cache(false);
 
 	conf_filename = argv[1];
 	operation = argv[2];

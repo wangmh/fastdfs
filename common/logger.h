@@ -36,7 +36,7 @@ typedef struct log_context
 	pthread_mutex_t log_thread_lock; 
 
 	/* if write to buffer firstly, then sync to disk.
-	   default value is true */
+	   default value is false (no cache) */
 	bool log_to_cache;
 } LogContext;
 
