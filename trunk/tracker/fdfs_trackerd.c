@@ -378,7 +378,7 @@ static void sigDumpHandler(int sig)
 
 	snprintf(filename, sizeof(filename), 
 		"%s/logs/tracker_dump.log", g_fdfs_base_path);
-	fdfs_dump_global_vars_to_file(filename);
+	fdfs_dump_tracker_global_vars_to_file(filename);
 
 	bDumpFlag = false;
 }

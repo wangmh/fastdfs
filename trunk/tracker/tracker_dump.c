@@ -395,7 +395,7 @@ static int fdfs_dump_groups_info(char *buff, const int buffSize)
 		break; \
 	}
 
-int fdfs_dump_global_vars_to_file(const char *filename)
+int fdfs_dump_tracker_global_vars_to_file(const char *filename)
 {
 	char buff[16 * 1024];
 	char szCurrentTime[32];

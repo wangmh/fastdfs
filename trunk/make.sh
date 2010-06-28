@@ -106,7 +106,7 @@ fi
 
 if [ "$DEBUG_FLAG" = "1" ]; then
   TRACKER_HTTPD_OBJS="$TRACKER_HTTPD_OBJS tracker_dump.o"
-  STORAGE_HTTPD_OBJS="$STORAGE_HTTPD_OBJS"
+  STORAGE_HTTPD_OBJS="$STORAGE_HTTPD_OBJS storage_dump.o"
 
   if [ "$uname" = "Linux" ]; then
     LIBS="$LIBS -ldl -rdynamic"
