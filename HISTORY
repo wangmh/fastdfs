@@ -1,5 +1,6 @@
-Version 1.29  2010-06-27
+Version 1.29  2010-06-28
  * add files: tracker_dump.h and tracker_dump.c, tracker dump global vars
+ * add files: storage_dump.h and storage_dump.c, storage dump global vars
  * sockopt.c: tcprecvfile and tcpdiscard add parameter total_recv_bytes
  * storage server add fields: storage_port and storage_http_port
  * auto rename synced remark files when the port of all storage servers 

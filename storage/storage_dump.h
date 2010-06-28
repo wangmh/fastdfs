@@ -6,10 +6,10 @@
 * Please visit the FastDFS Home Page http://www.csource.org/ for more detail.
 **/
 
-//tracker_dump.h
+//storage_dump.h
 
-#ifndef _TRACKER_DUMP_H
-#define _TRACKER_DUMP_H
+#ifndef _STORAGE_DUMP_H
+#define _STORAGE_DUMP_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-int fdfs_dump_tracker_global_vars_to_file(const char *filename);
+int fdfs_dump_storage_global_vars_to_file(const char *filename);
 
 #ifdef __cplusplus
 }
