@@ -13,9 +13,12 @@
 #include <fcntl.h>
 #include "tracker_dump.h"
 #include "shared_func.h"
+#include "sched_thread.h"
 #include "logger.h"
 #include "fdfs_global.h"
 #include "tracker_global.h"
+#include "tracker_mem.h"
+#include "tracker_service.h"
 
 static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer, 
 		char *buff, const int buffSize);
@@ -283,8 +286,10 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_fdfs_base_path=%s\n"
 		"g_fdfs_version=%d.%d\n"
 		"g_continue_flag=%d\n"
+		"g_schedule_flag=%d\n"
 		"g_server_port=%d\n"
 		"g_max_connections=%d\n"
+		"g_tracker_thread_count=%d\n"
 		"g_sync_log_buff_interval=%d\n"
 		"g_check_active_interval=%d\n"
 		"g_storage_stat_chg_count=%d\n"
@@ -296,6 +301,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_storage_ip_changed_auto_adjust=%d\n"
 		"g_thread_kill_done=%d\n"
 		"g_thread_stack_size=%d\n"
+		"g_changelog_fsize="INT64_PRINTF_FORMAT"\n"
 	#ifdef WITH_HTTPD
 		"g_http_params.disabled=%d\n"
 		"g_http_params.anti_steal_token=%d\n"
@@ -319,8 +325,10 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_fdfs_base_path
 		, g_fdfs_version.major, g_fdfs_version.minor
 		, g_continue_flag
+		, g_schedule_flag
 		, g_server_port
 		, g_max_connections
+		, g_tracker_thread_count
 		, g_sync_log_buff_interval
 		, g_check_active_interval
 		, g_storage_stat_chg_count
@@ -332,6 +340,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_storage_ip_changed_auto_adjust
 		, g_thread_kill_done
 		, g_thread_stack_size
+		, g_changelog_fsize
 	#ifdef WITH_HTTPD
 		, g_http_params.disabled
 		, g_http_params.anti_steal_token

@@ -13,9 +13,12 @@
 #include <fcntl.h>
 #include "storage_dump.h"
 #include "shared_func.h"
+#include "sched_thread.h"
 #include "logger.h"
 #include "fdfs_global.h"
 #include "storage_global.h"
+#include "storage_service.h"
+#include "storage_sync.h"
 
 static int fdfs_dump_global_vars(char *buff, const int buffSize)
 {
@@ -31,8 +34,10 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_fdfs_base_path=%s\n"
 		"g_fdfs_version=%d.%d\n"
 		"g_continue_flag=%d\n"
+		"g_schedule_flag=%d\n"
 		"g_server_port=%d\n"
 		"g_max_connections=%d\n"
+		"g_storage_thread_count=%d\n"
 		"g_group_name=%s\n"
 		"g_sync_log_buff_interval=%d\n"
 		"g_subdir_count_per_path=%d\n"
@@ -78,6 +83,9 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_upload_priority=%d\n"
 		"g_up_time=%s\n"
 		"g_if_alias_prefix=%s\n"
+		"g_binlog_fd=%d\n"
+		"g_binlog_index=%d\n"
+		"g_storage_sync_thread_count=%d\n"
 	#ifdef WITH_HTTPD
 		"g_http_params.disabled=%d\n"
 		"g_http_params.anti_steal_token=%d\n"
@@ -102,8 +110,10 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_fdfs_base_path
 		, g_fdfs_version.major, g_fdfs_version.minor
 		, g_continue_flag
+		, g_schedule_flag
 		, g_server_port
 		, g_max_connections
+		, g_storage_thread_count
 		, g_group_name
 		, g_sync_log_buff_interval
 		, g_subdir_count_per_path 
@@ -152,6 +162,9 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, formatDatetime(g_up_time, "%Y-%m-%d %H:%M:%S", 
 			szUptime, sizeof(szUptime))
 		, g_if_alias_prefix
+		, g_binlog_fd
+		, g_binlog_index
+		, g_storage_sync_thread_count
 	#ifdef WITH_HTTPD
 		, g_http_params.disabled
 		, g_http_params.anti_steal_token
