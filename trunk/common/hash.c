@@ -676,6 +676,12 @@ int hash_walk(HashArray *pHash, HashWalkFunc walkFunc, void *args)
 	return 0;
 }
 
+int hash_count(HashArray *pHash)
+{
+	return pHash->item_count;
+}
+
+// RS Hash Function
 // RS Hash Function
 int RSHash(const void *key, const int key_len)
 {

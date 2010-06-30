@@ -15,6 +15,7 @@
 #include "shared_func.h"
 #include "sched_thread.h"
 #include "logger.h"
+#include "hash.h"
 #include "fdfs_global.h"
 #include "storage_global.h"
 #include "storage_service.h"
@@ -96,10 +97,6 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_http_params.default_content_type=%s\n"
 		"g_http_params.token_check_fail_content_type=%s\n"
 		"g_http_params.token_ttl=%d\n"
-		"g_http_check_interval=%d\n"
-		"g_http_check_type=%d\n"
-		"g_http_check_uri=%s\n"
-		"g_http_servers_dirty=%d\n"
 		"g_http_trunk_size=%d\n"
 	#endif
 	#if defined(DEBUG_FLAG) && defined(OS_LINUX)
@@ -169,16 +166,12 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_http_params.disabled
 		, g_http_params.anti_steal_token
 		, g_http_params.server_port
-		/*, g_http_params.content_type_hash*/
+		, hash_count(&(g_http_params.content_type_hash))
 		, g_http_params.anti_steal_secret_key.length
 		, g_http_params.token_check_fail_buff.length
 		, g_http_params.default_content_type
 		, g_http_params.token_check_fail_content_type
 		, g_http_params.token_ttl
-		, g_http_check_interval
-		, g_http_check_type
-		, g_http_check_uri
-		, g_http_servers_dirty
 		, g_http_trunk_size
 	#endif
 		

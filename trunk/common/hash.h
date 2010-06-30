@@ -169,6 +169,14 @@ int hash_delete(HashArray *pHash, const void *key, const int key_len);
 int hash_walk(HashArray *pHash, HashWalkFunc walkFunc, void *args);
 
 /**
+ * get hash item count
+ * parameters:
+ *         pHash: the hash table
+ * return item count
+*/
+int hash_count(HashArray *pHash);
+
+/**
  * hash best optimize
  * parameters:
  *         pHash: the hash table
