@@ -15,6 +15,7 @@
 #include "shared_func.h"
 #include "sched_thread.h"
 #include "logger.h"
+#include "hash.h"
 #include "fdfs_global.h"
 #include "tracker_global.h"
 #include "tracker_mem.h"
@@ -345,7 +346,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_http_params.disabled
 		, g_http_params.anti_steal_token
 		, g_http_params.server_port
-		/*, g_http_params.content_type_hash*/
+		, hash_count(&(g_http_params.content_type_hash))
 		, g_http_params.anti_steal_secret_key.length
 		, g_http_params.token_check_fail_buff.length
 		, g_http_params.default_content_type
