@@ -103,10 +103,34 @@ int connectserverbyip(int sock, const char *server_ip, const short server_port);
  *          server_ip: ip address of the server
  *          server_port: port of the server
  *          timeout: connect timeout in seconds
+ *          auto_detect: if detect and adjust the block mode of the socket
  *  return: error no, 0 success, != 0 fail
 */
-int connectserverbyip_nb(int sock, const char *server_ip, \
-		const short server_port, const int timeout);
+int connectserverbyip_nb_ex(int sock, const char *server_ip, \
+		const short server_port, const int timeout, \
+		const bool auto_detect);
+
+/** connect to server by non-block mode, the socket must be set to non-block
+ *  parameters:
+ *          sock: the socket,  must be set to non-block
+ *          server_ip: ip address of the server
+ *          server_port: port of the server
+ *          timeout: connect timeout in seconds
+ *  return: error no, 0 success, != 0 fail
+*/
+#define connectserverbyip_nb(sock, server_ip, server_port, timeout) \
+	connectserverbyip_nb_ex(sock, server_ip, server_port, timeout, false)
+
+/** connect to server by non-block mode, auto detect socket block mode
+ *  parameters:
+ *          sock: the socket, can be block mode
+ *          server_ip: ip address of the server
+ *          server_port: port of the server
+ *          timeout: connect timeout in seconds
+ *  return: error no, 0 success, != 0 fail
+*/
+#define connectserverbyip_nb_auto(sock, server_ip, server_port, timeout) \
+	connectserverbyip_nb_ex(sock, server_ip, server_port, timeout, true)
 
 /** accept client connect request
  *  parameters:

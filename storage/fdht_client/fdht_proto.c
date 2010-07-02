@@ -164,6 +164,47 @@ void fdht_disconnect_server(FDHTServerInfo *pServer)
 	}
 }
 
+int fdht_connect_server_nb(FDHTServerInfo *pServer, const int connect_timeout)
+{
+	int result;
+
+	if (pServer->sock > 0)
+	{
+		close(pServer->sock);
+	}
+	pServer->sock = socket(AF_INET, SOCK_STREAM, 0);
+	if(pServer->sock < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"socket create failed, errno: %d, " \
+			"error info: %s", __LINE__, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : EPERM;
+	}
+
+	if ((result=tcpsetnonblockopt(pServer->sock)) != 0)
+	{
+		close(pServer->sock);
+		pServer->sock = -1;
+		return result;
+	}
+
+	if ((result=connectserverbyip_nb(pServer->sock, \
+		pServer->ip_addr, pServer->port, connect_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"connect to %s:%d fail, errno: %d, " \
+			"error info: %s", __LINE__, pServer->ip_addr, \
+			pServer->port, result, strerror(result));
+
+		close(pServer->sock);
+		pServer->sock = -1;
+		return result;
+	}
+
+	return 0;
+}
+
 int fdht_connect_server(FDHTServerInfo *pServer)
 {
 	int result;

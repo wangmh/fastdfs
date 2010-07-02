@@ -1125,6 +1125,7 @@ int storage_func_init(const char *filename, \
 			char *pKeyNamespace;
 
 			strcpy(g_fdht_base_path, g_fdfs_base_path);
+			g_fdht_connect_timeout = g_fdfs_connect_timeout;
 			g_fdht_network_timeout = g_fdfs_network_timeout;
 
 			pKeyNamespace = iniGetStrValue(NULL, \
