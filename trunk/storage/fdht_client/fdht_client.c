@@ -20,13 +20,11 @@
 #include "ini_file_reader.h"
 #include "fdht_types.h"
 #include "fdht_proto.h"
+#include "fdht_global.h"
 #include "fdht_client.h"
 
 GroupArray g_group_array = {NULL, 0};
 bool g_keep_alive = false;
-
-extern int g_fdht_network_timeout;
-extern char g_fdht_base_path[MAX_PATH_SIZE];
 
 static void fdht_proxy_extra_deal(GroupArray *pGroupArray, bool *bKeepAlive)
 {
@@ -103,6 +101,13 @@ int fdht_client_init(const char *filename)
 			break;
 		}
 
+		g_fdht_connect_timeout = iniGetIntValue(NULL, "connect_timeout", \
+				&iniContext, DEFAULT_CONNECT_TIMEOUT);
+		if (g_fdht_connect_timeout <= 0)
+		{
+			g_fdht_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+		}
+
 		g_fdht_network_timeout = iniGetIntValue(NULL, "network_timeout", \
 				&iniContext, DEFAULT_NETWORK_TIMEOUT);
 		if (g_fdht_network_timeout <= 0)
@@ -134,9 +139,11 @@ int fdht_client_init(const char *filename)
 
 		logInfo("file: "__FILE__", line: %d, " \
 			"base_path=%s, " \
-			"network_timeout=%d, keep_alive=%d, use_proxy=%d, %s"\
+			"connect_timeout=%ds, network_timeout=%ds, " \
+			"keep_alive=%d, use_proxy=%d, %s"\
 			"group_count=%d, server_count=%d", __LINE__, \
-			g_fdht_base_path, g_fdht_network_timeout, g_keep_alive, \
+			g_fdht_base_path, g_fdht_connect_timeout, \
+			g_fdht_network_timeout, g_keep_alive, \
 			g_group_array.use_proxy, szProxyPrompt, \
 			g_group_array.group_count, g_group_array.server_count);
 
@@ -212,7 +219,8 @@ static FDHTServerInfo *get_connection(ServerArray *pServerArray, \
 			return *ppServer;
 		}
 
-		if (fdht_connect_server(*ppServer) == 0)
+		if (fdht_connect_server_nb(*ppServer, \
+			g_fdht_connect_timeout) == 0)
 		{
 			if (bKeepAlive)
 			{
@@ -230,7 +238,8 @@ static FDHTServerInfo *get_connection(ServerArray *pServerArray, \
 			return *ppServer;
 		}
 
-		if (fdht_connect_server(*ppServer) == 0)
+		if (fdht_connect_server_nb(*ppServer, \
+			g_fdht_connect_timeout) == 0)
 		{
 			if (bKeepAlive)
 			{
@@ -1316,7 +1325,8 @@ int fdht_connect_all_servers(GroupArray *pGroupArray, const bool bKeepAlive, \
 	for (pServerInfo=pGroupArray->servers; \
 			pServerInfo<pServerEnd; pServerInfo++)
 	{
-		if ((conn_result=fdht_connect_server(pServerInfo)) != 0)
+		if ((conn_result=fdht_connect_server_nb(pServerInfo, \
+				g_fdht_connect_timeout)) != 0)
 		{
 			result = conn_result;
 			(*fail_count)++;
@@ -1384,7 +1394,8 @@ int fdht_stat_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 	pServer = pGroupArray->servers + server_index;
 	for (i=0; i<2; i++)
 	{
-	if ((result=fdht_connect_server(pServer)) != 0)
+	if ((result=fdht_connect_server_nb(pServer, \
+			g_fdht_connect_timeout)) != 0)
 	{
 		return result;
 	}

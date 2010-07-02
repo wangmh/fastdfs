@@ -26,12 +26,20 @@ int fdht_recv_response(FDHTServerInfo *pServer, \
 int fdht_quit(FDHTServerInfo *pServer);
 
 /**
-* connect to the server
+* connect to the server (block mode)
 * params:
 *	pServer: server
 * return: 0 success, !=0 fail, return the error code
 **/
 int fdht_connect_server(FDHTServerInfo *pServer);
+
+/**
+* connect to the server (non-block mode)
+* params:
+*	pServer: server
+* return: 0 success, !=0 fail, return the error code
+**/
+int fdht_connect_server_nb(FDHTServerInfo *pServer, const int connect_timeout);
 
 /**
 * close connection to the server

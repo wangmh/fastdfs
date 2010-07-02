@@ -443,12 +443,13 @@ int connectserverbyip(int sock, const char *server_ip, const short server_port)
 	return 0;
 }
 
-int connectserverbyip_nb(int sock, const char *server_ip, \
-		const short server_port, const int timeout)
+int connectserverbyip_nb_ex(int sock, const char *server_ip, \
+		const short server_port, const int timeout, \
+		const bool auto_detect)
 {
 	int result;
 	int flags;
-	int needRestore;
+	bool needRestore;
 	socklen_t len;
 
 #ifdef USE_SELECT
@@ -469,25 +470,32 @@ int connectserverbyip_nb(int sock, const char *server_ip, \
 		return EINVAL;
 	}
 
-	
-	flags = fcntl(sock, F_GETFL, 0);
-	if (flags < 0)
+	if (auto_detect)
 	{
-		return errno != 0 ? errno : EACCES;
-	}
-	
-	if ((flags & O_NONBLOCK) == 0)
-	{
-		if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0)
+		flags = fcntl(sock, F_GETFL, 0);
+		if (flags < 0)
 		{
 			return errno != 0 ? errno : EACCES;
 		}
-		
-		needRestore = 1;
+
+		if ((flags & O_NONBLOCK) == 0)
+		{
+			if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0)
+			{
+				return errno != 0 ? errno : EACCES;
+			}
+
+			needRestore = true;
+		}
+		else
+		{
+			needRestore = false;
+		}
 	}
 	else
 	{
-		needRestore = 0;
+		needRestore = false;
+		flags = 0;
 	}
 
 	do

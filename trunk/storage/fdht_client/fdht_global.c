@@ -11,7 +11,8 @@
 #include <errno.h>
 #include "fdht_global.h"
 
+int g_fdht_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
 int g_fdht_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 char g_fdht_base_path[MAX_PATH_SIZE] = {'/', 't', 'm', 'p', '\0'};
-Version g_fdht_version = {1, 13};
+Version g_fdht_version = {1, 14};
 

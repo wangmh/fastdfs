@@ -58,12 +58,12 @@ EOF
 
 TARGET_PREFIX=/usr/local
 
-#WITH_HTTPD=1
+WITH_HTTPD=1
 #WITH_LINUX_SERVICE=1
 
 DEBUG_FLAG=1
 
-CFLAGS='-Wall -D_FILE_OFFSET_BITS=64'
+CFLAGS='-Wall -D_FILE_OFFSET_BITS=64 -I /home/o/o/happyfish100/libevent/include -L /home/o/o/happyfish100/libevent/lib'
 if [ "$DEBUG_FLAG" = "1" ]; then
   CFLAGS="$CFLAGS -g -DDEBUG_FLAG"
 else

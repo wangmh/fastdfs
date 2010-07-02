@@ -24,6 +24,7 @@
 extern "C" {
 #endif
 
+extern int g_fdht_connect_timeout;
 extern int g_fdht_network_timeout;
 extern char g_fdht_base_path[MAX_PATH_SIZE];
 extern Version g_fdht_version;
