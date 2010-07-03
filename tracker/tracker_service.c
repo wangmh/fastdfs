@@ -29,6 +29,7 @@
 #include "tracker_global.h"
 #include "tracker_mem.h"
 #include "tracker_proto.h"
+#include "tracker_io.h"
 #include "tracker_service.h"
 
 static pthread_mutex_t tracker_thread_lock;
@@ -36,9 +37,17 @@ static pthread_mutex_t lb_thread_lock;
 
 int g_tracker_thread_count = 0;
 
+static void *work_thread_entrance(void* arg);
+static void wait_for_work_threads_exit();
+
 int tracker_service_init()
 {
 	int result;
+	struct thread_data *pThreadData;
+	struct thread_data *pDataEnd;
+	pthread_t tid;
+	pthread_attr_t thread_attr;
+
 	if ((result=init_pthread_lock(&tracker_thread_lock)) != 0)
 	{
 		return result;
@@ -49,15 +58,195 @@ int tracker_service_init()
 		return result;
 	}
 
+	if ((result=init_pthread_attr(&thread_attr, g_thread_stack_size)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"init_pthread_attr fail, program exit!", __LINE__);
+		return result;
+	}
+
+	g_thread_data = (struct thread_data *)malloc(sizeof( \
+				struct thread_data) * g_work_threads);
+	if (g_thread_data == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(struct thread_data) * \
+			g_work_threads, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	g_tracker_thread_count = 0;
+	pDataEnd = g_thread_data + g_work_threads;
+	for (pThreadData=g_thread_data; pThreadData<pDataEnd; pThreadData++)
+	{
+		pThreadData->ev_base = event_base_new();
+		if (pThreadData->ev_base == NULL)
+		{
+			result = errno != 0 ? errno : ENOMEM;
+			logError("file: "__FILE__", line: %d, " \
+				"event_base_new fail.", __LINE__);
+			return result;
+		}
+
+		if (pipe(pThreadData->pipe_fds) != 0)
+		{
+			result = errno != 0 ? errno : EPERM;
+			logError("file: "__FILE__", line: %d, " \
+				"call pipe fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, strerror(result));
+			break;
+		}
+
+		if ((result=set_nonblock(pThreadData->pipe_fds[0])) != 0)
+		{
+			break;
+		}
+
+		if ((result=pthread_create(&tid, &thread_attr, \
+			work_thread_entrance, pThreadData)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"create thread failed, startup threads: %d, " \
+				"errno: %d, error info: %s", \
+				__LINE__, g_tracker_thread_count, \
+				result, strerror(result));
+			break;
+		}
+		else
+		{
+			if ((result=pthread_mutex_lock(&tracker_thread_lock)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"call pthread_mutex_lock fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, result, strerror(result));
+			}
+			g_tracker_thread_count++;
+			if ((result=pthread_mutex_unlock(&tracker_thread_lock)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"call pthread_mutex_lock fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, result, strerror(result));
+			}
+		}
+	}
+
+	pthread_attr_destroy(&thread_attr);
+
 	return 0;
+}
+
+static void wait_for_work_threads_exit()
+{
+	while (g_tracker_thread_count != 0)
+	{
+		sleep(1);
+	}
 }
 
 int tracker_service_destroy()
 {
+	wait_for_work_threads_exit();
 	pthread_mutex_destroy(&tracker_thread_lock);
 	pthread_mutex_destroy(&lb_thread_lock);
 
 	return 0;
+}
+
+void tracker_accept_loop(int server_sock)
+{
+	int incomesock;
+	struct sockaddr_in inaddr;
+	unsigned int sockaddr_len;
+	struct thread_data *pThreadData;
+
+	while (g_continue_flag)
+	{
+		sockaddr_len = sizeof(inaddr);
+		incomesock = accept(server_sock, (struct sockaddr*)&inaddr, &sockaddr_len);
+		if (incomesock < 0) //error
+		{
+			if (!(errno == EINTR || errno == EAGAIN))
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"accept failed, " \
+					"errno: %d, error info: %s", \
+					__LINE__, errno, strerror(errno));
+			}
+
+			continue;
+		}
+
+		pThreadData = g_thread_data + incomesock % g_work_threads;
+		if (write(pThreadData->pipe_fds[1], &incomesock, \
+			sizeof(incomesock)) != sizeof(incomesock))
+		{
+			close(incomesock);
+			logError("file: "__FILE__", line: %d, " \
+				"call write failed, " \
+				"errno: %d, error info: %s", \
+				__LINE__, errno, strerror(errno));
+		}
+	}
+}
+
+static void *work_thread_entrance(void* arg)
+{
+	int result;
+	struct thread_data *pThreadData;
+	struct event ev_notify;
+
+	pThreadData = (struct thread_data *)arg;
+	do
+	{
+		event_set(&ev_notify, pThreadData->pipe_fds[0], \
+			EV_READ | EV_PERSIST, recv_notify_read, NULL);
+		if ((result=event_base_set(pThreadData->ev_base, &ev_notify)) != 0)
+		{
+			logCrit("file: "__FILE__", line: %d, " \
+				"event_base_set fail.", __LINE__);
+			break;
+		}
+		if ((result=event_add(&ev_notify, NULL)) != 0)
+		{
+			logCrit("file: "__FILE__", line: %d, " \
+				"event_add fail.", __LINE__);
+			break;
+		}
+
+		while (g_continue_flag)
+		{
+			event_base_loop(pThreadData->ev_base, 0);
+		}
+	} while (0);
+
+	event_base_free(pThreadData->ev_base);
+
+	if ((result=pthread_mutex_lock(&tracker_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+	g_tracker_thread_count--;
+	if ((result=pthread_mutex_unlock(&tracker_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	while (!g_thread_kill_done)  //waiting for kill signal
+	{
+		sleep(1);
+	}
+
+	return NULL;
 }
 
 /*
@@ -77,7 +266,7 @@ static int tracker_check_and_sync(TrackerClientInfo *pClientInfo, \
 
 	memset(out_buff, 0, sizeof(TrackerHeader));
 	pHeader = (TrackerHeader *)out_buff;
-	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+	pHeader->cmd = TRACKER_PROTO_CMD_RESP;
 	pHeader->status = status;
 
 	if (status != 0 || pClientInfo->pGroup == NULL ||
@@ -141,7 +330,7 @@ static int tracker_changelog_response(TrackerClientInfo *pClientInfo, \
 	int fd;
 
 	memset(&resp, 0, sizeof(TrackerHeader));
-	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+	resp.cmd = TRACKER_PROTO_CMD_RESP;
 
 	changelog_fsize = g_changelog_fsize;
 	chg_len = changelog_fsize - pStorage->changelog_offset;
@@ -328,7 +517,7 @@ static int tracker_deal_changelog_req(TrackerClientInfo *pClientInfo, \
 	if (result != 0)
 	{
 		memset(&resp, 0, sizeof(TrackerHeader));
-		resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+		resp.cmd = TRACKER_PROTO_CMD_RESP;
 		resp.status = result;
 		if ((result=tcpsenddata_nb(pClientInfo->sock, &resp, \
 			sizeof(TrackerHeader), g_fdfs_network_timeout)) != 0)
@@ -379,7 +568,7 @@ static int tracker_deal_parameter_req(TrackerClientInfo *pClientInfo, \
 	} while (0);
 	
 	long2buff(body_len, pHeader->pkg_len);
-	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+	pHeader->cmd = TRACKER_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
 			sizeof(TrackerHeader) + body_len, \
 			g_fdfs_network_timeout)) != 0)
@@ -477,7 +666,7 @@ static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 				briefServers, server_count);
 	} while (0);
 
-	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+	resp.cmd = TRACKER_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
@@ -546,7 +735,7 @@ static int tracker_deal_storage_report_status(TrackerClientInfo *pClientInfo, \
 		resp.status=tracker_mem_sync_storages(pGroup, briefServers, 1);
 	} while (0);
 
-	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+	resp.cmd = TRACKER_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
@@ -671,7 +860,7 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 			&joinBody, true);
 	} while (0);
 
-	pHeader->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+	pHeader->cmd = TRACKER_PROTO_CMD_RESP;
 	pHeader->status = status;
 	long2buff(sizeof(TrackerStorageJoinBodyResp), pHeader->pkg_len);
 	if (status == 0 && pClientInfo->pStorage->psync_src_server != NULL)
@@ -761,7 +950,7 @@ static int tracker_deal_server_delete_storage(TrackerClientInfo *pClientInfo, \
 		resp.status = tracker_mem_delete_storage(pGroup, pIpAddr);
 	} while (0);
 
-	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+	resp.cmd = TRACKER_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
@@ -798,7 +987,7 @@ static int tracker_deal_active_test(TrackerClientInfo *pClientInfo, \
 		}
 	} while (0);
 
-	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+	resp.cmd = TRACKER_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
@@ -885,7 +1074,7 @@ static int tracker_deal_storage_report_ip_changed( \
 				pOldIpAddr, pNewIpAddr);
 	} while (0);
 
-	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+	resp.cmd = TRACKER_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
@@ -1016,7 +1205,7 @@ static int tracker_deal_storage_sync_notify(TrackerClientInfo *pClientInfo, \
 
 	memset(out_buff, 0, sizeof(TrackerHeader));
 	pHeader = (TrackerHeader *)out_buff;
-	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+	pHeader->cmd = TRACKER_PROTO_CMD_RESP;
 	pHeader->status = status;
 
 	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
@@ -1044,7 +1233,7 @@ static int tracker_check_logined(TrackerClientInfo *pClientInfo)
 	}
 
 	memset(&resp, 0, sizeof(resp));
-	resp.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
+	resp.cmd = TRACKER_PROTO_CMD_RESP;
 	resp.status = EACCES;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, &resp, sizeof(resp), \
 		g_fdfs_network_timeout)) != 0)
@@ -1224,7 +1413,7 @@ static int tracker_deal_server_list_group_storages( \
 
 	out_len = (pDest - stats) * sizeof(TrackerStorageStat);
 	long2buff(out_len, resp.pkg_len);
-	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+	resp.cmd = TRACKER_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
@@ -1336,7 +1525,7 @@ static int tracker_deal_service_query_fetch_update( \
 			ppStoreServers, &server_count);
 	} while (0);
 
-	pResp->cmd = TRACKER_PROTO_CMD_SERVICE_RESP;
+	pResp->cmd = TRACKER_PROTO_CMD_RESP;
 	if (pResp->status == 0)
 	{
 		char *p;
@@ -1652,7 +1841,7 @@ static int tracker_deal_service_query_storage( \
 		resp.status = 0;
 	} while (0);
 
-	resp.cmd = TRACKER_PROTO_CMD_SERVICE_RESP;
+	resp.cmd = TRACKER_PROTO_CMD_RESP;
 	if (resp.status == 0)
 	{
 		out_len = TRACKER_QUERY_STORAGE_STORE_BODY_LEN;
@@ -1746,7 +1935,7 @@ static int tracker_deal_server_list_groups(TrackerClientInfo *pClientInfo, \
 
 	out_len = (pDest - groupStats) * sizeof(TrackerGroupStat);
 	long2buff(out_len, resp.pkg_len);
-	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+	resp.cmd = TRACKER_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{
@@ -1879,7 +2068,7 @@ static int tracker_deal_storage_sync_src_req(TrackerClientInfo *pClientInfo, \
 	} while (0);
 
 	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
-	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+	pResp->cmd = TRACKER_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		out_buff, out_len, g_fdfs_network_timeout)) != 0)
 	{
@@ -1979,7 +2168,7 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 	//printf("deal sync request, status=%d\n", pResp->status);
 
 	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
-	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+	pResp->cmd = TRACKER_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		out_buff, out_len, g_fdfs_network_timeout)) != 0)
 	{
@@ -2017,14 +2206,14 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 		return result;
 	}
 
-	if (pResp->cmd != TRACKER_PROTO_CMD_STORAGE_RESP)
+	if (pResp->cmd != STORAGE_PROTO_CMD_RESP)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip addr: %s, " \
 			"recv storage confirm fail, resp cmd: %d, " \
 			"expect cmd: %d",  \
 			__LINE__, pClientInfo->ip_addr, \
-			pResp->cmd, TRACKER_PROTO_CMD_STORAGE_RESP);
+			pResp->cmd, STORAGE_PROTO_CMD_RESP);
 		return EINVAL;
 	}
 
@@ -2090,7 +2279,7 @@ static int tracker_deal_storage_sync_dest_query(TrackerClientInfo *pClientInfo,\
 	} while (0);
 
 	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
-	pResp->cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+	pResp->cmd = TRACKER_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		out_buff, out_len, g_fdfs_network_timeout)) != 0)
 	{
@@ -2881,5 +3070,150 @@ data buff (struct)
 	}
 
 	return NULL;
+}
+
+int tracker_deal_task(struct fast_task_info *pTask)
+{
+	TrackerHeader *pHeader;
+	TrackerClientInfo client_info;
+	int64_t nInPackLen;
+	int result;
+
+	pHeader = (TrackerHeader *)pTask->data;
+
+	nInPackLen = buff2long(pHeader->pkg_len);
+
+	//tracker_check_dirty(&client_info);
+
+	switch(pHeader->cmd)
+		{
+		case TRACKER_PROTO_CMD_STORAGE_BEAT:
+			if ((result=tracker_check_logined(&client_info)) != 0)
+			{
+				break;
+			}
+
+			result = tracker_deal_storage_beat(&client_info, \
+				nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_SYNC_REPORT:
+			if ((result=tracker_check_logined(&client_info)) != 0)
+			{
+				break;
+			}
+
+			result = tracker_deal_storage_sync_report( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_REPORT_DISK_USAGE:
+			if ((result=tracker_check_logined(&client_info)) != 0)
+			{
+				break;
+			}
+
+			result = tracker_deal_storage_df_report(&client_info, \
+				nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_JOIN:
+			result = tracker_deal_storage_join(&client_info, \
+				nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_REPORT_STATUS:
+			result = tracker_deal_storage_report_status( \
+					&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG:
+			if ((result=tracker_check_logined(&client_info)) != 0)
+			{
+				break;
+			}
+
+			result = tracker_deal_storage_replica_chg( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE:
+			result = tracker_deal_service_query_fetch_update( \
+				&client_info, pHeader->cmd, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE:
+			result = tracker_deal_service_query_fetch_update( \
+				&client_info, pHeader->cmd, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ALL:
+			result = tracker_deal_service_query_fetch_update( \
+				&client_info, pHeader->cmd, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITHOUT_GROUP:
+			result = tracker_deal_service_query_storage(
+				&client_info, nInPackLen, pHeader->cmd);
+			break;
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP:
+			result = tracker_deal_service_query_storage( \
+				&client_info, nInPackLen, pHeader->cmd);
+			break;
+		case TRACKER_PROTO_CMD_SERVER_LIST_GROUP:
+			result = tracker_deal_server_list_groups( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_SERVER_LIST_STORAGE:
+			result = tracker_deal_server_list_group_storages( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ:
+			result = tracker_deal_storage_sync_src_req( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ:
+			result = tracker_deal_storage_sync_dest_req( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY:
+			result = tracker_deal_storage_sync_notify( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_QUERY:
+			result = tracker_deal_storage_sync_dest_query( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE:
+			result = tracker_deal_server_delete_storage( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_REPORT_IP_CHANGED:
+			result = tracker_deal_storage_report_ip_changed( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ:
+			result = tracker_deal_changelog_req( \
+				&client_info, nInPackLen);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_PARAMETER_REQ:
+			result = tracker_deal_parameter_req( \
+				&client_info, nInPackLen);
+			break;
+		case FDFS_PROTO_CMD_QUIT:
+			result = ECONNRESET;  //for quit loop
+			break;
+		case FDFS_PROTO_CMD_ACTIVE_TEST:
+			result = tracker_deal_active_test(&client_info, \
+				nInPackLen);
+			break;
+		default:
+			logError("file: "__FILE__", line: %d, "  \
+				"client ip: %s, unkown cmd: %d", \
+				__LINE__, client_info.ip_addr, \
+				pHeader->cmd);
+			result = EINVAL;
+			break;
+		}
+
+	pHeader = (TrackerHeader *)pTask->data;
+	pHeader->status = result;
+	pHeader->cmd = TRACKER_PROTO_CMD_RESP;
+	long2buff(pTask->length - sizeof(TrackerHeader), pHeader->pkg_len);
+
+	send_add_event(pTask);
+
+	return 0;
 }
 

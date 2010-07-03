@@ -11,6 +11,13 @@
 #ifndef _TRACKER_SERVICE_H_
 #define _TRACKER_SERVICE_H_
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <event.h>
+#include "fdfs_define.h"
+#include "fast_task_queue.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -20,7 +27,8 @@ extern int g_tracker_thread_count;
 int tracker_service_init();
 int tracker_service_destroy();
 
-void* tracker_thread_entrance(void* arg);
+void tracker_accept_loop(int server_sock);
+int tracker_deal_task(struct fast_task_info *pTask);
 
 #ifdef __cplusplus
 }
