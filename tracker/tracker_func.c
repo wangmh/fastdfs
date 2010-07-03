@@ -180,6 +180,7 @@ int tracker_load_from_conf_file(const char *filename, \
 		{
 			g_fdfs_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 		}
+		g_network_tv.tv_sec = g_fdfs_network_timeout;
 
 		g_server_port = iniGetIntValue(NULL, "port", &iniContext, \
 				FDFS_TRACKER_SERVER_DEF_PORT);
@@ -274,6 +275,17 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_max_connections = DEFAULT_MAX_CONNECTONS;
 		}
 	
+		g_work_threads = iniGetIntValue(NULL, "work_threads", \
+				&iniContext, DEFAULT_WORK_THREADS);
+		if (g_work_threads <= 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"item \"work_threads\" is invalid, " \
+				"value: %d <= 0!", __LINE__, g_work_threads);
+			result = EINVAL;
+                        break;
+		}
+
 		if ((result=set_rlimit(RLIMIT_NOFILE, g_max_connections)) != 0)
 		{
 			break;
@@ -388,6 +400,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			"network_timeout=%ds, "    \
 			"port=%d, bind_addr=%s, " \
 			"max_connections=%d, "    \
+			"work_threads=%d, "    \
 			"store_lookup=%d, store_group=%s, " \
 			"store_server=%d, store_path=%d, " \
 			"reserved_storage_space=%dMB, " \
@@ -398,8 +411,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			"storage_ip_changed_auto_adjust=%d",  \
 			g_fdfs_version.major, g_fdfs_version.minor,  \
 			g_fdfs_base_path, g_fdfs_connect_timeout, \
-			g_fdfs_network_timeout, \
-			g_server_port, bind_addr, g_max_connections, \
+			g_fdfs_network_timeout, g_server_port, bind_addr, \
+			g_max_connections, g_work_threads, \
 			g_groups.store_lookup, g_groups.store_group, \
 			g_groups.store_server, g_groups.store_path, \
 			g_storage_reserved_mb, g_groups.download_server, \
