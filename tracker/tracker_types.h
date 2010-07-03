@@ -260,13 +260,9 @@ typedef struct
 typedef struct
 {
 	int sock;
-	int storage_port;
 	char ip_addr[IP_ADDRESS_SIZE];
-	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	FDFSGroupInfo *pGroup;
 	FDFSStorageDetail *pStorage;
-	FDFSGroupInfo *pAllocedGroups;		//for free
-	FDFSStorageDetail *pAllocedStorages;	//for free
 } TrackerClientInfo;
 
 typedef struct
@@ -298,6 +294,7 @@ typedef struct
 	int upload_priority;
 	int up_time;   //storage service started timestamp
         char version[FDFS_VERSION_SIZE];   //storage version
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
         char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE];
         char init_flag;
 	signed char status;

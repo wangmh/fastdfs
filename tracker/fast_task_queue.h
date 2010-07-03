@@ -24,7 +24,8 @@ struct fast_task_info
 	char client_ip[IP_ADDRESS_SIZE];
 	struct event ev_read;
 	struct event ev_write;
-	char *data;
+	void *arg;  //extra argument pointer
+	char *data; //buffer for write or recv
 	int size;   //alloc size
 	int length; //data length
 	int offset; //current offset
@@ -40,6 +41,7 @@ struct fast_task_queue
 	int max_connections;
 	int min_buff_size;
 	int max_buff_size;
+	int arg_size;
 	bool malloc_whole_block;
 };
 
@@ -47,7 +49,9 @@ struct fast_task_queue
 extern "C" {
 #endif
 
-int task_queue_init();
+int task_queue_init(const int max_connections, const int min_buff_size, \
+		const int max_buff_size, const int arg_size);
+
 void task_queue_destroy();
 
 int free_queue_push(struct fast_task_info *pTask);
