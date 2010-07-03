@@ -30,8 +30,6 @@ int tracker_service_destroy();
 void tracker_accept_loop(int server_sock);
 int tracker_deal_task(struct fast_task_info *pTask);
 
-void* tracker_thread_entrance(void* arg);
-
 #ifdef __cplusplus
 }
 #endif
