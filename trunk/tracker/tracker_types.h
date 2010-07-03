@@ -16,6 +16,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <time.h>
+#include <event.h>
 #include "fdfs_define.h"
 
 #define FDFS_ONE_MB	(1024 * 1024)
@@ -305,6 +306,13 @@ typedef struct
         char init_flag;
 	signed char status;
 } FDFSStorageJoinBody;
+
+
+struct thread_data
+{
+        struct event_base *ev_base;
+        int pipe_fds[2];
+};
 
 #endif
 

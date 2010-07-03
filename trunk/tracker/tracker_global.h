@@ -23,6 +23,7 @@
 #endif
 
 #define TRACKER_SYNC_TO_FILE_FREQ 1000
+#define TRACKER_MAX_PACKAGE_SIZE  4 * 1024
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,9 +35,12 @@ extern FDFSGroups g_groups;
 extern int g_storage_stat_chg_count;
 extern int g_storage_sync_time_chg_count; //sync timestamp
 extern int g_max_connections;
+extern int g_work_threads;
 extern int g_storage_reserved_mb;
 extern int g_sync_log_buff_interval; //sync log buff to disk every interval seconds
 extern int g_check_active_interval; //check storage server alive every interval seconds
+
+extern struct timeval g_network_tv;
 
 extern int g_allow_ip_count;  /* -1 means match any ip address */
 extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
@@ -61,6 +65,8 @@ extern bool g_http_servers_dirty;
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
 extern char g_exe_name[256];
 #endif
+
+extern struct thread_data *g_thread_data;
 
 #ifdef __cplusplus
 }

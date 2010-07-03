@@ -28,6 +28,7 @@ struct fast_task_info
 	int size;   //alloc size
 	int length; //data length
 	int offset; //current offset
+	int req_count; //request count
 	struct fast_task_info *next;
 };
 
