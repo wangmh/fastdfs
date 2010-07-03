@@ -83,6 +83,9 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 
 int tracker_mem_check_alive(void *arg);
 
+int tracker_mem_get_storage_index(FDFSGroupInfo *pGroup, \
+		FDFSStorageDetail *pStorage);
+
 #ifdef __cplusplus
 }
 #endif
