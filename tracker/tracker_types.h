@@ -162,7 +162,6 @@ typedef struct
 typedef struct StructFDFSStorageDetail
 {
 	char status;
-	bool dirty;
 	char ip_addr[IP_ADDRESS_SIZE];
 	char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE];
 	char version[FDFS_VERSION_SIZE];
@@ -187,7 +186,6 @@ typedef struct StructFDFSStorageDetail
 
 	int current_write_path; //current write path index
 
-	int *ref_count;   //group/storage servers referer count
 	int chg_count;    //current server changed counter
 	FDFSStorageStat stat;
 
@@ -201,7 +199,6 @@ typedef struct StructFDFSStorageDetail
 
 typedef struct
 {
-	bool dirty;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	int64_t free_mb;  //free disk storage in MB
 	int alloc_size;
@@ -209,7 +206,7 @@ typedef struct
 	int active_count; //active server count
 	int storage_port;
 	int storage_http_port; //storage http server port
-	FDFSStorageDetail *all_servers;
+	FDFSStorageDetail **all_servers;
 	FDFSStorageDetail **sorted_servers;  //order by ip addr
 	FDFSStorageDetail **active_servers;  //order by ip addr
 	FDFSStorageDetail *pStoreServer;  //for upload priority mode
@@ -232,7 +229,6 @@ typedef struct
 
 	int **last_sync_timestamps;//row for src storage, col for dest storage
 
-	int *ref_count;  //groups referer count
 	int chg_count;   //current group changed count 
 	time_t last_source_update;
 	time_t last_sync_update;
@@ -242,7 +238,7 @@ typedef struct
 {
 	int alloc_size;
 	int count;  //group count
-	FDFSGroupInfo *groups;
+	FDFSGroupInfo **groups;
 	FDFSGroupInfo **sorted_groups; //order by group_name
 	FDFSGroupInfo *pStoreGroup;  //the group to store uploaded files
 	int current_write_group;  //current group index to upload file
