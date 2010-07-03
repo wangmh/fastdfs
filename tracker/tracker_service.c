@@ -1053,627 +1053,462 @@ remain bytes: filename
 static int tracker_deal_service_query_fetch_update( \
 		struct fast_task_info *pTask, const byte cmd)
 {
-	TrackerHeader *pResp;
-	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 128];
-	char out_buff[sizeof(TrackerHeader) + \
-		TRACKER_QUERY_STORAGE_FETCH_BODY_LEN + \
-		FDFS_MAX_SERVERS_EACH_GROUP * IP_ADDRESS_SIZE];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char *filename;
+	char *p;
 	FDFSGroupInfo *pGroup;
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppServerEnd;
 	FDFSStorageDetail *ppStoreServers[FDFS_MAX_SERVERS_EACH_GROUP];
 	int filename_len;
-	int out_len;
 	int server_count;
 	int result;
 
-	memset(out_buff, 0, sizeof(out_buff));
-	pResp = (TrackerHeader *)out_buff;
-	pGroup = NULL;
-	server_count = 0;
-	do
+	if (pTask->length - sizeof(TrackerHeader) < FDFS_GROUP_NAME_MAX_LEN + 22)
 	{
-		if (pTask->length < FDFS_GROUP_NAME_MAX_LEN + 22)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size " \
-				PKG_LEN_PRINTF_FORMAT" is not correct, " \
-				"expect length > %d", \
-				__LINE__, cmd, \
-				pTask->client_ip,  \
-				pTask->length, FDFS_GROUP_NAME_MAX_LEN+22);
-			pResp->status = EINVAL;
-			break;
-		}
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length > %d", \
+			__LINE__, cmd, pTask->client_ip,  \
+			pTask->length - sizeof(TrackerHeader), \
+			FDFS_GROUP_NAME_MAX_LEN+22);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
 
-		if (pTask->length >= sizeof(in_buff))
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size " \
-				PKG_LEN_PRINTF_FORMAT" is too large, " \
-				"expect length should < %d", \
-				__LINE__, cmd, \
-				pTask->client_ip, pTask->length, \
-				(int)sizeof(in_buff));
-			pResp->status = EINVAL;
-			break;
-		}
+	pTask->data[pTask->length] = '\0';
 
-		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			pTask->length, g_fdfs_network_timeout)) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"client ip: %s, recv data fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, pTask->client_ip, \
-				pResp->status, strerror(pResp->status));
-			break;
-		}
-		in_buff[pTask->length] = '\0';
+	memcpy(group_name, pTask->data + sizeof(TrackerHeader), \
+			FDFS_GROUP_NAME_MAX_LEN);
+	group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
+	filename = pTask->data + sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN;
+	filename_len = pTask->length - sizeof(TrackerHeader) - \
+			FDFS_GROUP_NAME_MAX_LEN;
 
-		memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
-		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
-		filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
-		filename_len = pTask->length - FDFS_GROUP_NAME_MAX_LEN;
-
-		pResp->status = tracker_mem_get_storage_by_filename(cmd, \
+	result = tracker_mem_get_storage_by_filename(cmd, \
 			FDFS_DOWNLOAD_TYPE_CALL \
 			group_name, filename, filename_len, &pGroup, \
 			ppStoreServers, &server_count);
-	} while (0);
 
-	pResp->cmd = TRACKER_PROTO_CMD_RESP;
-	if (pResp->status == 0)
+	if (result != 0)
 	{
-		char *p;
-
-		out_len = TRACKER_QUERY_STORAGE_FETCH_BODY_LEN + \
-				(server_count - 1) * (IP_ADDRESS_SIZE - 1);
-		long2buff(out_len, pResp->pkg_len);
-
-		p  = out_buff + sizeof(TrackerHeader);
-		memcpy(p, pGroup->group_name, FDFS_GROUP_NAME_MAX_LEN);
-		p += FDFS_GROUP_NAME_MAX_LEN;
-		memcpy(p, ppStoreServers[0]->ip_addr, IP_ADDRESS_SIZE-1);
-		p += IP_ADDRESS_SIZE - 1;
-		long2buff(pGroup->storage_port, p);
-		p += FDFS_PROTO_PKG_LEN_SIZE;
-
-		if (server_count > 1)
-		{
-			ppServerEnd = ppStoreServers + server_count;
-			for (ppServer=ppStoreServers+1; ppServer<ppServerEnd; \
-				ppServer++)
-			{
-				memcpy(p, (*ppServer)->ip_addr, \
-					IP_ADDRESS_SIZE - 1);
-				p += IP_ADDRESS_SIZE - 1;
-			}
-		}
-	}
-	else
-	{
-		out_len = 0;
-		long2buff(out_len, pResp->pkg_len);
-	}
-
-	if ((result=tcpsenddata_nb(pClientInfo->sock, out_buff, \
-		sizeof(TrackerHeader) + out_len, g_fdfs_network_timeout)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, send data fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, \
-			result, strerror(result));
+		pTask->length = sizeof(TrackerHeader);
 		return result;
 	}
 
-	return pResp->status;
+
+	pTask->length = sizeof(TrackerHeader) + \
+			TRACKER_QUERY_STORAGE_FETCH_BODY_LEN + \
+			(server_count - 1) * (IP_ADDRESS_SIZE - 1);
+
+	p  = pTask->data + sizeof(TrackerHeader);
+	memcpy(p, pGroup->group_name, FDFS_GROUP_NAME_MAX_LEN);
+	p += FDFS_GROUP_NAME_MAX_LEN;
+	memcpy(p, ppStoreServers[0]->ip_addr, IP_ADDRESS_SIZE-1);
+	p += IP_ADDRESS_SIZE - 1;
+	long2buff(pGroup->storage_port, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+
+	if (server_count > 1)
+	{
+		ppServerEnd = ppStoreServers + server_count;
+		for (ppServer=ppStoreServers+1; ppServer<ppServerEnd; \
+				ppServer++)
+		{
+			memcpy(p, (*ppServer)->ip_addr, \
+					IP_ADDRESS_SIZE - 1);
+			p += IP_ADDRESS_SIZE - 1;
+		}
+	}
+
+	return 0;
 }
 
 static int tracker_deal_service_query_storage( \
 		struct fast_task_info *pTask, char cmd)
 {
-	TrackerHeader resp;
 	int expect_pkg_len;
-	int out_len;
 	FDFSGroupInfo *pStoreGroup;
 	FDFSGroupInfo **ppFoundGroup;
 	FDFSGroupInfo **ppGroup;
 	FDFSStorageDetail *pStorageServer;
-	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char out_buff[sizeof(TrackerHeader) + \
-		TRACKER_QUERY_STORAGE_STORE_BODY_LEN];
+	char *group_name;
+	char *p;
 	bool bHaveActiveServer;
-	int result;
 	int write_path_index;
 	int avg_reserved_mb;
 
-	memset(&resp, 0, sizeof(resp));
-	pStoreGroup = NULL;
-	pStorageServer = NULL;
-	write_path_index = 0;
-	do
+	if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP)
 	{
-		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP)
-		{
-			expect_pkg_len = FDFS_GROUP_NAME_MAX_LEN;
-		}
-		else
-		{
-			expect_pkg_len = 0;
-		}
-
-		if (pTask->length != expect_pkg_len)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size " \
-				PKG_LEN_PRINTF_FORMAT"is not correct, " \
-				"expect length: %d", __LINE__, \
-				cmd, pTask->client_ip, \
-				pTask->length, expect_pkg_len);
-			resp.status = EINVAL;
-			break;
-		}
-
-		if (g_groups.count == 0)
-		{
-			resp.status = ENOENT;
-			break;
-		}
-
-		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP)
-		{
-			if ((resp.status=tcprecvdata_nb(pClientInfo->sock, \
-					group_name, pTask->length, \
-					g_fdfs_network_timeout)) != 0)
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"client ip: %s, recv data fail, " \
-					"errno: %d, error info: %s", \
-					__LINE__, pTask->client_ip, \
-					resp.status, strerror(resp.status));
-				break;
-			}
-			group_name[pTask->length] = '\0';
-
-			pStoreGroup = tracker_mem_get_group(group_name);
-			if (pStoreGroup == NULL)
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"client ip: %s, invalid group name: %s", \
-					__LINE__, pTask->client_ip, group_name);
-				resp.status = ENOENT;
-				break;
-			}
-
-			if (pStoreGroup->active_count == 0)
-			{
-				resp.status = ENOENT;
-				break;
-			}
-
-			if (pStoreGroup->free_mb <= g_storage_reserved_mb)
-			{
-				resp.status = ENOSPC;
-				break;
-			}
-		}
-		else if (g_groups.store_lookup == FDFS_STORE_LOOKUP_ROUND_ROBIN
-			||g_groups.store_lookup==FDFS_STORE_LOOKUP_LOAD_BALANCE)
-		{
-			int write_group_index;
-
-			bHaveActiveServer = false;
-			write_group_index = g_groups.current_write_group;
-			if (write_group_index >= g_groups.count)
-			{
-				write_group_index = 0;
-			}
-			ppFoundGroup = g_groups.sorted_groups + write_group_index;
-			if ((*ppFoundGroup)->active_count > 0)
-			{
-				bHaveActiveServer = true;
-				if ((*ppFoundGroup)->free_mb > \
-					g_storage_reserved_mb)
-				{
-					pStoreGroup = *ppFoundGroup;
-				}
-			}
-
-			if (pStoreGroup == NULL)
-			{
-				FDFSGroupInfo **ppGroupEnd;
-				ppGroupEnd = g_groups.sorted_groups + \
-						g_groups.count;
-				for (ppGroup=ppFoundGroup+1; \
-					ppGroup<ppGroupEnd; ppGroup++)
-				{
-					if ((*ppGroup)->active_count == 0)
-					{
-						continue;
-					}
-
-					bHaveActiveServer = true;
-					if ((*ppGroup)->free_mb > \
-						g_storage_reserved_mb)
-					{
-					pStoreGroup = *ppGroup;
-					g_groups.current_write_group = \
-						ppGroup-g_groups.sorted_groups;
-					break;
-					}
-				}
-
-				if (pStoreGroup == NULL)
-				{
-				for (ppGroup=g_groups.sorted_groups; \
-					ppGroup<ppFoundGroup; ppGroup++)
-				{
-					if ((*ppGroup)->active_count == 0)
-					{
-						continue;
-					}
-
-					bHaveActiveServer = true;
-					if ((*ppGroup)->free_mb > \
-						g_storage_reserved_mb)
-					{
-					pStoreGroup = *ppGroup;
-					g_groups.current_write_group = \
-						ppGroup-g_groups.sorted_groups;
-					break;
-					}
-				}
-				}
-
-				if (pStoreGroup == NULL)
-				{
-					if (bHaveActiveServer)
-					{
-						resp.status = ENOSPC;
-					}
-					else
-					{
-						resp.status = ENOENT;
-					}
-					break;
-				}
-			}
-
-			if (g_groups.store_lookup == FDFS_STORE_LOOKUP_ROUND_ROBIN)
-			{
-				g_groups.current_write_group++;
-				if (g_groups.current_write_group >= g_groups.count)
-				{
-					g_groups.current_write_group = 0;
-				}
-			}
-		}
-		else if (g_groups.store_lookup == FDFS_STORE_LOOKUP_SPEC_GROUP)
-		{
-			if (g_groups.pStoreGroup == NULL || \
-				g_groups.pStoreGroup->active_count == 0)
-			{
-				resp.status = ENOENT;
-				break;
-			}
-
-			if (g_groups.pStoreGroup->free_mb <= \
-				g_storage_reserved_mb)
-			{
-				resp.status = ENOSPC;
-				break;
-			}
-
-			pStoreGroup = g_groups.pStoreGroup;
-		}
-		else
-		{
-			resp.status = EINVAL;
-			break;
-		}
-
-		if (pStoreGroup->store_path_count <= 0)
-		{
-			resp.status = ENOENT;
-			break;
-		}
-
-		pStorageServer = tracker_get_writable_storage(pStoreGroup);
-		if (pStorageServer == NULL)
-		{
-			resp.status = ENOENT;
-			break;
-		}
-
-		write_path_index = pStorageServer->current_write_path;
-		if (write_path_index >= pStoreGroup->store_path_count)
-		{
-			write_path_index = 0;
-		}
-
-		avg_reserved_mb = g_storage_reserved_mb / \
-				pStoreGroup->store_path_count;
-		if (pStorageServer->path_free_mbs[write_path_index] <= \
-				avg_reserved_mb)
-		{
-			int i;
-			for (i=0; i<pStoreGroup->store_path_count; i++)
-			{
-				if (pStorageServer->path_free_mbs[i]
-				 	> avg_reserved_mb)
-				{
-					pStorageServer->current_write_path = i;
-					write_path_index = i;
-					break;
-				}
-			}
-
-			if (i == pStoreGroup->store_path_count)
-			{
-				resp.status = ENOSPC;
-				break;
-			}
-		}
-
-		if (g_groups.store_path == FDFS_STORE_PATH_ROUND_ROBIN)
-		{
-			pStorageServer->current_write_path++;
-			if (pStorageServer->current_write_path >= \
-				pStoreGroup->store_path_count)
-			{
-				pStorageServer->current_write_path = 0;
-			}
-		}
-
-		/*
-		//printf("pStoreGroup->current_write_server: %d, " \
-			"pStoreGroup->active_count=%d\n", \
-			pStoreGroup->current_write_server, \
-			pStoreGroup->active_count);
-		*/
-
-		resp.status = 0;
-	} while (0);
-
-	resp.cmd = TRACKER_PROTO_CMD_RESP;
-	if (resp.status == 0)
-	{
-		out_len = TRACKER_QUERY_STORAGE_STORE_BODY_LEN;
-		long2buff(out_len, resp.pkg_len);
-
-		memcpy(out_buff, &resp, sizeof(resp));
-		memcpy(out_buff + sizeof(resp), pStoreGroup->group_name, \
-				FDFS_GROUP_NAME_MAX_LEN);
-		memcpy(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN, \
-				pStorageServer->ip_addr, IP_ADDRESS_SIZE-1);
-
-		long2buff(pStoreGroup->storage_port, out_buff + sizeof(resp) + \
-			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE-1);
-
-		*(out_buff + sizeof(resp) + FDFS_GROUP_NAME_MAX_LEN + \
-		    IP_ADDRESS_SIZE - 1 + FDFS_PROTO_PKG_LEN_SIZE) = \
-				(char)write_path_index;
+		expect_pkg_len = FDFS_GROUP_NAME_MAX_LEN;
 	}
 	else
 	{
-		out_len = 0;
-		long2buff(out_len, resp.pkg_len);
-		memcpy(out_buff, &resp, sizeof(resp));
+		expect_pkg_len = 0;
 	}
 
-	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		out_buff, sizeof(resp) + out_len, g_fdfs_network_timeout)) != 0)
+	if (pTask->length - sizeof(TrackerHeader) != expect_pkg_len)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, send data fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, \
-			result, strerror(result));
-		return result;
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT"is not correct, " \
+			"expect length: %d", __LINE__, \
+			cmd, pTask->client_ip, \
+			pTask->length - sizeof(TrackerHeader), expect_pkg_len);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
 	}
 
-	return resp.status;
+	if (g_groups.count == 0)
+	{
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP)
+	{
+		group_name = pTask->data + sizeof(TrackerHeader);
+		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
+
+		pStoreGroup = tracker_mem_get_group(group_name);
+		if (pStoreGroup == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, invalid group name: %s", \
+				__LINE__, pTask->client_ip, group_name);
+			pTask->length = sizeof(TrackerHeader);
+			return ENOENT;
+		}
+
+		if (pStoreGroup->active_count == 0)
+		{
+			pTask->length = sizeof(TrackerHeader);
+			return ENOENT;
+		}
+
+		if (pStoreGroup->free_mb <= g_storage_reserved_mb)
+		{
+			pTask->length = sizeof(TrackerHeader);
+			return ENOSPC;
+		}
+	}
+	else if (g_groups.store_lookup == FDFS_STORE_LOOKUP_ROUND_ROBIN
+		||g_groups.store_lookup==FDFS_STORE_LOOKUP_LOAD_BALANCE)
+	{
+		int write_group_index;
+
+		bHaveActiveServer = false;
+		write_group_index = g_groups.current_write_group;
+		if (write_group_index >= g_groups.count)
+		{
+			write_group_index = 0;
+		}
+		ppFoundGroup = g_groups.sorted_groups + write_group_index;
+		if ((*ppFoundGroup)->active_count > 0)
+		{
+			bHaveActiveServer = true;
+			if ((*ppFoundGroup)->free_mb > \
+					g_storage_reserved_mb)
+			{
+				pStoreGroup = *ppFoundGroup;
+			}
+		}
+
+		if (pStoreGroup == NULL)
+		{
+			FDFSGroupInfo **ppGroupEnd;
+			ppGroupEnd = g_groups.sorted_groups + \
+				     g_groups.count;
+			for (ppGroup=ppFoundGroup+1; \
+					ppGroup<ppGroupEnd; ppGroup++)
+			{
+				if ((*ppGroup)->active_count == 0)
+				{
+					continue;
+				}
+
+				bHaveActiveServer = true;
+				if ((*ppGroup)->free_mb > \
+						g_storage_reserved_mb)
+				{
+					pStoreGroup = *ppGroup;
+					g_groups.current_write_group = \
+					       ppGroup-g_groups.sorted_groups;
+					break;
+				}
+			}
+
+			if (pStoreGroup == NULL)
+			{
+				for (ppGroup=g_groups.sorted_groups; \
+						ppGroup<ppFoundGroup; ppGroup++)
+				{
+					if ((*ppGroup)->active_count == 0)
+					{
+						continue;
+					}
+
+					bHaveActiveServer = true;
+					if ((*ppGroup)->free_mb > \
+							g_storage_reserved_mb)
+					{
+						pStoreGroup = *ppGroup;
+						g_groups.current_write_group = \
+						       ppGroup-g_groups.sorted_groups;
+						break;
+					}
+				}
+			}
+
+			if (pStoreGroup == NULL)
+			{
+				pTask->length = sizeof(TrackerHeader);
+				if (bHaveActiveServer)
+				{
+					return ENOSPC;
+				}
+				else
+				{
+					return ENOENT;
+				}
+			}
+		}
+
+		if (g_groups.store_lookup == FDFS_STORE_LOOKUP_ROUND_ROBIN)
+		{
+			g_groups.current_write_group++;
+			if (g_groups.current_write_group >= g_groups.count)
+			{
+				g_groups.current_write_group = 0;
+			}
+		}
+	}
+	else if (g_groups.store_lookup == FDFS_STORE_LOOKUP_SPEC_GROUP)
+	{
+		if (g_groups.pStoreGroup == NULL || \
+				g_groups.pStoreGroup->active_count == 0)
+		{
+			pTask->length = sizeof(TrackerHeader);
+			return ENOENT;
+		}
+
+		if (g_groups.pStoreGroup->free_mb <= \
+				g_storage_reserved_mb)
+		{
+			pTask->length = sizeof(TrackerHeader);
+			return ENOSPC;
+		}
+
+		pStoreGroup = g_groups.pStoreGroup;
+	}
+	else
+	{
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	if (pStoreGroup->store_path_count <= 0)
+	{
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	pStorageServer = tracker_get_writable_storage(pStoreGroup);
+	if (pStorageServer == NULL)
+	{
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	write_path_index = pStorageServer->current_write_path;
+	if (write_path_index >= pStoreGroup->store_path_count)
+	{
+		write_path_index = 0;
+	}
+
+	avg_reserved_mb = g_storage_reserved_mb / \
+			  pStoreGroup->store_path_count;
+	if (pStorageServer->path_free_mbs[write_path_index] <= \
+			avg_reserved_mb)
+	{
+		int i;
+		for (i=0; i<pStoreGroup->store_path_count; i++)
+		{
+			if (pStorageServer->path_free_mbs[i] > avg_reserved_mb)
+			{
+				pStorageServer->current_write_path = i;
+				write_path_index = i;
+				break;
+			}
+		}
+
+		if (i == pStoreGroup->store_path_count)
+		{
+			pTask->length = sizeof(TrackerHeader);
+			return ENOSPC;
+		}
+	}
+
+	if (g_groups.store_path == FDFS_STORE_PATH_ROUND_ROBIN)
+	{
+		pStorageServer->current_write_path++;
+		if (pStorageServer->current_write_path >= \
+				pStoreGroup->store_path_count)
+		{
+			pStorageServer->current_write_path = 0;
+		}
+	}
+
+	/*
+	//printf("pStoreGroup->current_write_server: %d, " \
+	"pStoreGroup->active_count=%d\n", \
+	pStoreGroup->current_write_server, \
+	pStoreGroup->active_count);
+	*/
+
+	p = pTask->data + sizeof(TrackerHeader);
+	memcpy(p, pStoreGroup->group_name, FDFS_GROUP_NAME_MAX_LEN);
+	p += FDFS_GROUP_NAME_MAX_LEN;
+
+	memcpy(p, pStorageServer->ip_addr, IP_ADDRESS_SIZE - 1);
+	p += IP_ADDRESS_SIZE - 1;
+	
+	long2buff(pStoreGroup->storage_port, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+
+	*p++ = (char)write_path_index;
+
+	pTask->length = p - pTask->data;
+
+	return 0;
 }
 
 static int tracker_deal_server_list_groups(struct fast_task_info *pTask)
 {
-	TrackerHeader resp;
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppEnd;
-	TrackerGroupStat groupStats[FDFS_MAX_GROUPS];
+	TrackerGroupStat *groupStats;
 	TrackerGroupStat *pDest;
-	int out_len;
-	int result;
 
-	memset(&resp, 0, sizeof(resp));
+	if (pTask->length - sizeof(TrackerHeader) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length: 0", __LINE__, \
+			TRACKER_PROTO_CMD_SERVER_LIST_GROUP, \
+			pTask->client_ip, pTask->length - sizeof(TrackerHeader));
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	groupStats = (TrackerGroupStat *)(pTask->data + sizeof(TrackerHeader));
 	pDest = groupStats;
-	do
+	ppEnd = g_groups.sorted_groups + g_groups.count;
+	for (ppGroup=g_groups.sorted_groups; ppGroup<ppEnd; ppGroup++)
 	{
-		if (pTask->length != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size " \
-				PKG_LEN_PRINTF_FORMAT" is not correct, " \
-				"expect length: 0", __LINE__, \
-				TRACKER_PROTO_CMD_SERVER_LIST_GROUP, \
-				pTask->client_ip, pTask->length);
-			resp.status = EINVAL;
-			break;
-		}
-
-		ppEnd = g_groups.sorted_groups + g_groups.count;
-		for (ppGroup=g_groups.sorted_groups; ppGroup<ppEnd; ppGroup++)
-		{
-			memcpy(pDest->group_name, (*ppGroup)->group_name, \
+		memcpy(pDest->group_name, (*ppGroup)->group_name, \
 				FDFS_GROUP_NAME_MAX_LEN + 1);
-			long2buff((*ppGroup)->free_mb, pDest->sz_free_mb);
-			long2buff((*ppGroup)->count, pDest->sz_count);
-			long2buff((*ppGroup)->storage_port, \
+		long2buff((*ppGroup)->free_mb, pDest->sz_free_mb);
+		long2buff((*ppGroup)->count, pDest->sz_count);
+		long2buff((*ppGroup)->storage_port, \
 				pDest->sz_storage_port);
-			long2buff((*ppGroup)->storage_http_port, \
+		long2buff((*ppGroup)->storage_http_port, \
 				pDest->sz_storage_http_port);
-			long2buff((*ppGroup)->active_count, \
+		long2buff((*ppGroup)->active_count, \
 				pDest->sz_active_count);
-			long2buff((*ppGroup)->current_write_server, \
+		long2buff((*ppGroup)->current_write_server, \
 				pDest->sz_current_write_server);
-			long2buff((*ppGroup)->store_path_count, \
+		long2buff((*ppGroup)->store_path_count, \
 				pDest->sz_store_path_count);
-			long2buff((*ppGroup)->subdir_count_per_path, \
+		long2buff((*ppGroup)->subdir_count_per_path, \
 				pDest->sz_subdir_count_per_path);
-			pDest++;
-		}
-
-		resp.status = 0;
-	} while (0);
-
-	out_len = (pDest - groupStats) * sizeof(TrackerGroupStat);
-	long2buff(out_len, resp.pkg_len);
-	resp.cmd = TRACKER_PROTO_CMD_RESP;
-	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, send data fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, \
-			result, strerror(result));
-		return result;
+		pDest++;
 	}
 
-	if (out_len == 0)
-	{
-		return resp.status;
-	}
+	pTask->length = sizeof(TrackerHeader) + (pDest - groupStats) * \
+			sizeof(TrackerGroupStat);
 
-	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		groupStats, out_len, g_fdfs_network_timeout)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, send data fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, \
-			result, strerror(result));
-		return result;
-	}
-
-	return resp.status;
+	return 0;
 }
 
 static int tracker_deal_storage_sync_src_req(struct fast_task_info *pTask)
 {
-	char in_buff[FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageSyncReqBody)];
 	FDFSGroupInfo *pGroup;
 	char *dest_ip_addr;
-	TrackerHeader *pResp;
-	TrackerStorageSyncReqBody *pBody;
 	FDFSStorageDetail *pDestStorage;
-	int out_len;
-	int result;
 
-	memset(out_buff, 0, sizeof(out_buff));
-	pResp = (TrackerHeader *)out_buff;
-	pBody = (TrackerStorageSyncReqBody *)(out_buff + sizeof(TrackerHeader));
-	out_len = sizeof(TrackerHeader);
-	do
-	{
-		if (pTask->length != FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size " \
-				PKG_LEN_PRINTF_FORMAT" is not correct, " \
-				"expect length: %d", __LINE__, \
-				TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ, \
-				pTask->client_ip, pTask->length, \
-				FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE);
-			pResp->status = EINVAL;
-			break;
-		}
-
-		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, \
-			in_buff, pTask->length, g_fdfs_network_timeout)) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip addr: %s, recv data fail, " \
-				"errno: %d, error info: %s.", \
-				__LINE__, \
-				TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ, \
-				pTask->client_ip, \
-				pResp->status, strerror(pResp->status));
-			break;
-		}
-
-		memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
-		*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
-		pGroup = tracker_mem_get_group(group_name);
-		if (pGroup == NULL)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"client ip: %s, invalid group_name: %s", \
-				__LINE__, pTask->client_ip, group_name);
-			pResp->status = ENOENT;
-			break;
-		}
-
-		dest_ip_addr = in_buff + FDFS_GROUP_NAME_MAX_LEN;
-		dest_ip_addr[IP_ADDRESS_SIZE-1] = '\0';
-		pDestStorage = tracker_mem_get_storage(pGroup, \
-				dest_ip_addr);
-		if (pDestStorage == NULL)
-		{
-			pResp->status = ENOENT;
-			break;
-		}
-
-		if (pDestStorage->status == FDFS_STORAGE_STATUS_INIT || \
-			pDestStorage->status == FDFS_STORAGE_STATUS_DELETED || \
-			pDestStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED)
-		{
-			pResp->status = ENOENT;
-			break;
-		}
-
-		if (pDestStorage->psync_src_server != NULL)
-		{
-			if (pDestStorage->psync_src_server->status == \
-				FDFS_STORAGE_STATUS_OFFLINE
-			 || pDestStorage->psync_src_server->status == \
-				FDFS_STORAGE_STATUS_ONLINE
-			 || pDestStorage->psync_src_server->status == \
-				FDFS_STORAGE_STATUS_ACTIVE)
-			{
-				strcpy(pBody->src_ip_addr, \
-					pDestStorage->psync_src_server->ip_addr);
-				long2buff(pDestStorage->sync_until_timestamp, \
-					pBody->until_timestamp);
-				out_len += sizeof(TrackerStorageSyncReqBody);
-			}
-			else
-			{
-				pDestStorage->psync_src_server = NULL;
-				tracker_save_storages();
-			}
-		}
-
-		pResp->status = 0;
-	} while (0);
-
-	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
-	pResp->cmd = TRACKER_PROTO_CMD_RESP;
-	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		out_buff, out_len, g_fdfs_network_timeout)) != 0)
+	if (pTask->length - sizeof(TrackerHeader) != \
+			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, send data fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, \
-			result, strerror(result));
-		return result;
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length: %d", __LINE__, \
+			TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ, \
+			pTask->client_ip, pTask->length-sizeof(TrackerHeader), \
+			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	memcpy(group_name, pTask->data + sizeof(TrackerHeader), \
+			FDFS_GROUP_NAME_MAX_LEN);
+	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
+	pGroup = tracker_mem_get_group(group_name);
+	if (pGroup == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid group_name: %s", \
+			__LINE__, pTask->client_ip, group_name);
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	dest_ip_addr = pTask->data + sizeof(TrackerHeader) + \
+			FDFS_GROUP_NAME_MAX_LEN;
+	dest_ip_addr[IP_ADDRESS_SIZE - 1] = '\0';
+	pDestStorage = tracker_mem_get_storage(pGroup, dest_ip_addr);
+	if (pDestStorage == NULL)
+	{
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	if (pDestStorage->status == FDFS_STORAGE_STATUS_INIT || \
+		pDestStorage->status == FDFS_STORAGE_STATUS_DELETED || \
+		pDestStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED)
+	{
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	pTask->length = sizeof(TrackerHeader);
+	if (pDestStorage->psync_src_server != NULL)
+	{
+		if (pDestStorage->psync_src_server->status == \
+				FDFS_STORAGE_STATUS_OFFLINE
+			|| pDestStorage->psync_src_server->status == \
+				FDFS_STORAGE_STATUS_ONLINE
+			|| pDestStorage->psync_src_server->status == \
+				FDFS_STORAGE_STATUS_ACTIVE)
+		{
+			TrackerStorageSyncReqBody *pBody;
+			pBody = (TrackerStorageSyncReqBody *)(pTask->data + \
+						sizeof(TrackerHeader));
+			strcpy(pBody->src_ip_addr, \
+					pDestStorage->psync_src_server->ip_addr);
+			long2buff(pDestStorage->sync_until_timestamp, \
+					pBody->until_timestamp);
+			pTask->length += sizeof(TrackerStorageSyncReqBody);
+		}
+		else
+		{
+			pDestStorage->psync_src_server = NULL;
+			tracker_save_storages();
+		}
 	}
 
 	return 0;
@@ -1681,145 +1516,85 @@ static int tracker_deal_storage_sync_src_req(struct fast_task_info *pTask)
 
 static int tracker_deal_storage_sync_dest_req(struct fast_task_info *pTask)
 {
-	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageSyncReqBody)];
-	TrackerHeader *pResp;
 	TrackerStorageSyncReqBody *pBody;
 	FDFSStorageDetail *pSrcStorage;
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppServerEnd;
-	int out_len;
 	int sync_until_timestamp;
 	int source_count;
-	int result;
+	TrackerClientInfo *pClientInfo;
+	
+	pClientInfo = (TrackerClientInfo *)pTask->arg;
 
-	sync_until_timestamp = 0;
-	memset(out_buff, 0, sizeof(out_buff));
-	pResp = (TrackerHeader *)out_buff;
-	pBody = (TrackerStorageSyncReqBody *)(out_buff + sizeof(TrackerHeader));
-	out_len = sizeof(TrackerHeader);
 	pSrcStorage = NULL;
 	do
 	{
-		if (pTask->length != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size " \
-				PKG_LEN_PRINTF_FORMAT" is not correct, " \
-				"expect length: 0", \
-				__LINE__, \
-				TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ, \
-				pTask->client_ip, pTask->length);
-			pResp->status = EINVAL;
-			break;
-		}
-
-		if (pClientInfo->pGroup->count <= 1)
-		{
-			pResp->status = 0;
-			break;
-		}
-
-        	source_count = 0;
-		ppServerEnd = pClientInfo->pGroup->all_servers + \
-				pClientInfo->pGroup->count;
-		for (ppServer=pClientInfo->pGroup->all_servers; \
-			ppServer<ppServerEnd; ppServer++)
-		{
-			if (strcmp((*ppServer)->ip_addr, \
-				pClientInfo->pStorage->ip_addr) == 0)
-			{
-				continue;
-			}
-
-			if ((*ppServer)->status ==FDFS_STORAGE_STATUS_OFFLINE 
-			 || (*ppServer)->status == FDFS_STORAGE_STATUS_ONLINE
-			 || (*ppServer)->status == FDFS_STORAGE_STATUS_ACTIVE)
-			{
-				source_count++;
-			}
-		}
-		if (source_count == 0)
-		{
-			pResp->status = 0;
-			break;
-		}
-
-		pSrcStorage = tracker_get_group_sync_src_server( \
-			pClientInfo->pGroup, pClientInfo->pStorage);
-		if (pSrcStorage == NULL)
-		{
-			pResp->status = ENOENT;
-			break;
-		}
-
-		sync_until_timestamp = (int)time(NULL);
-		strcpy(pBody->src_ip_addr, pSrcStorage->ip_addr);
-
-		long2buff(sync_until_timestamp, pBody->until_timestamp);
-		out_len += sizeof(TrackerStorageSyncReqBody);
-		pResp->status = 0;
-	} while (0);
-
-	//printf("deal sync request, status=%d\n", pResp->status);
-
-	long2buff(out_len - (int)sizeof(TrackerHeader), pResp->pkg_len);
-	pResp->cmd = TRACKER_PROTO_CMD_RESP;
-	if ((result=tcpsenddata_nb(pClientInfo->sock, \
-		out_buff, out_len, g_fdfs_network_timeout)) != 0)
+	if (pTask->length - sizeof(TrackerHeader) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, send data fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, \
-			result, strerror(result));
-		return result;
-	}
-
-	if (pSrcStorage == NULL)
-	{
-		if (pResp->status == 0)
-		{
-			pClientInfo->pStorage->status = \
-				FDFS_STORAGE_STATUS_ONLINE;
-			pClientInfo->pGroup->chg_count++;
-			tracker_save_storages();
-		}
-
-		return pResp->status;
-	}
-
-	if ((result=tcprecvdata_nb(pClientInfo->sock, pResp, \
-		sizeof(TrackerHeader), g_fdfs_network_timeout)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"cmd=%d, client ip addr: %s, recv data fail, " \
-			"errno: %d, error info: %s.", \
-			__LINE__, \
-			TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ, \
-			pTask->client_ip, \
-			result, strerror(result));
-		return result;
-	}
-
-	if (pResp->cmd != STORAGE_PROTO_CMD_RESP)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip addr: %s, " \
-			"recv storage confirm fail, resp cmd: %d, " \
-			"expect cmd: %d",  \
-			__LINE__, pTask->client_ip, \
-			pResp->cmd, STORAGE_PROTO_CMD_RESP);
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length: 0", \
+			__LINE__, TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ, \
+			pTask->client_ip, pTask->length - sizeof(TrackerHeader));
+		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
-	if (pResp->status != 0)
+	if (pClientInfo->pGroup->count <= 1)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip addr: %s, " \
-			"recv storage confirm fail, resp status: %d, " \
-			"expect status: 0",  \
-			__LINE__, pTask->client_ip, pResp->status);
-		return pResp->status;
+		break;
+	}
+
+	source_count = 0;
+	ppServerEnd = pClientInfo->pGroup->all_servers + \
+		      pClientInfo->pGroup->count;
+	for (ppServer=pClientInfo->pGroup->all_servers; \
+			ppServer<ppServerEnd; ppServer++)
+	{
+		if (strcmp((*ppServer)->ip_addr, \
+				pClientInfo->pStorage->ip_addr) == 0)
+		{
+			continue;
+		}
+
+		if ((*ppServer)->status ==FDFS_STORAGE_STATUS_OFFLINE 
+			|| (*ppServer)->status == FDFS_STORAGE_STATUS_ONLINE
+			|| (*ppServer)->status == FDFS_STORAGE_STATUS_ACTIVE)
+		{
+			source_count++;
+		}
+	}
+	if (source_count == 0)
+	{
+		break;
+	}
+
+	pSrcStorage = tracker_get_group_sync_src_server( \
+			pClientInfo->pGroup, pClientInfo->pStorage);
+	if (pSrcStorage == NULL)
+	{
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	pBody=(TrackerStorageSyncReqBody *)(pTask->data+sizeof(TrackerHeader));
+	sync_until_timestamp = (int)time(NULL);
+	strcpy(pBody->src_ip_addr, pSrcStorage->ip_addr);
+
+	long2buff(sync_until_timestamp, pBody->until_timestamp);
+
+	} while (0);
+
+	if (pSrcStorage == NULL)
+	{
+		pClientInfo->pStorage->status = \
+				FDFS_STORAGE_STATUS_ONLINE;
+		pClientInfo->pGroup->chg_count++;
+		tracker_save_storages();
+
+		pTask->length = sizeof(TrackerHeader);
+		return 0;
 	}
 
 	pClientInfo->pStorage->psync_src_server = pSrcStorage;
@@ -1828,6 +1603,8 @@ static int tracker_deal_storage_sync_dest_req(struct fast_task_info *pTask)
 	pClientInfo->pGroup->chg_count++;
 
 	tracker_save_storages();
+
+	pTask->length = sizeof(TrackerHeader)+sizeof(TrackerStorageSyncReqBody);
 	return 0;
 }
 
