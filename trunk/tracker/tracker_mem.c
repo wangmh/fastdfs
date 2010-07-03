@@ -1235,6 +1235,8 @@ static int tracker_open_changlog_file()
 int tracker_mem_init()
 {
 	int result;
+	FDFSGroupInfo **ppGroup;
+	FDFSGroupInfo **ppGroupEnd;
 
 	if ((result=init_pthread_lock(&mem_thread_lock)) != 0)
 	{
@@ -1268,6 +1270,21 @@ int tracker_mem_init()
 	memset(g_groups.groups, 0, \
 		sizeof(FDFSGroupInfo *) * g_groups.alloc_size);
 
+	ppGroupEnd = g_groups.groups + g_groups.alloc_size;
+	for (ppGroup=g_groups.groups; ppGroup<ppGroupEnd; ppGroup++)
+	{
+		*ppGroup = (FDFSGroupInfo *)malloc(sizeof(FDFSGroupInfo));
+		if (*ppGroup == NULL)
+		{
+			logCrit("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, program exit!", \
+				__LINE__, (int)sizeof(FDFSGroupInfo));
+			return errno != 0 ? errno : ENOMEM;
+		}
+
+		memset(*ppGroup, 0, sizeof(FDFSGroupInfo));
+	}
+
 	g_groups.sorted_groups = (FDFSGroupInfo **) \
 			malloc(sizeof(FDFSGroupInfo *) * g_groups.alloc_size);
 	if (g_groups.sorted_groups == NULL)
@@ -1288,14 +1305,6 @@ int tracker_mem_init()
 	{
 		return result;
 	}
-
-	/*
-	if (g_groups.store_lookup == FDFS_STORE_LOOKUP_SPEC_GROUP)
-	{
-		g_groups.pStoreGroup = tracker_mem_get_group( \
-					g_groups.store_group);
-	}
-	*/
 
 	return 0;
 }
@@ -1358,8 +1367,64 @@ static int **tracker_malloc_last_sync_timestamps(const int alloc_size, \
 	return results;
 }
 
+static void tracker_mem_free_storages(FDFSStorageDetail **servers, const int count)
+{
+	FDFSStorageDetail **ppServer;
+	FDFSStorageDetail **ppServerEnd;
+
+	ppServerEnd = servers + count;
+	for (ppServer=servers; ppServer<ppServerEnd; ppServer++)
+	{
+		if (*ppServer != NULL)
+		{
+			free(*ppServer);
+		}
+	}
+
+	free(servers);
+}
+
+static void tracker_mem_free_group(FDFSGroupInfo *pGroup)
+{
+	if (pGroup->sorted_servers != NULL)
+	{
+		free(pGroup->sorted_servers);
+		pGroup->sorted_servers = NULL;
+	}
+
+	if (pGroup->active_servers != NULL)
+	{
+		free(pGroup->active_servers);
+		pGroup->active_servers = NULL;
+	}
+
+	if (pGroup->all_servers != NULL)
+	{
+		tracker_mem_free_storages(pGroup->all_servers, \
+				pGroup->alloc_size);
+		pGroup->all_servers = NULL;
+	}
+
+#ifdef WITH_HTTPD
+	if (g_http_check_interval > 0)
+	{
+		if (pGroup->http_servers != NULL)
+		{
+			free(pGroup->http_servers);
+			pGroup->http_servers = NULL;
+		}
+	}
+#endif
+
+	tracker_free_last_sync_timestamps(pGroup->last_sync_timestamps, \
+				pGroup->alloc_size);
+	pGroup->last_sync_timestamps = NULL;
+}
+
 static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 {
+	FDFSStorageDetail **ppServer;
+	FDFSStorageDetail **ppServerEnd;
 	int err_no;
 
 	pGroup->alloc_size = TRACKER_MEM_ALLOC_ONCE;
@@ -1376,11 +1441,30 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 
 	memset(pGroup->all_servers, 0, \
 		sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
+	ppServerEnd = pGroup->all_servers + pGroup->alloc_size;	
+	for (ppServer=pGroup->all_servers; ppServer<ppServerEnd; ppServer++)
+	{
+		*ppServer = (FDFSStorageDetail *)malloc( \
+					sizeof(FDFSStorageDetail));
+		if (*ppServer == NULL)
+		{
+			tracker_mem_free_group(pGroup);
+
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", __LINE__, \
+				(int)sizeof(FDFSStorageDetail));
+			return errno != 0 ? errno : ENOMEM;
+		}
+
+		memset(*ppServer, 0, sizeof(FDFSStorageDetail));
+	}
 
 	pGroup->sorted_servers = (FDFSStorageDetail **) \
 		malloc(sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
 	if (pGroup->sorted_servers == NULL)
 	{
+		tracker_mem_free_group(pGroup);
+
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
 			(int)sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
@@ -1393,6 +1477,8 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 		malloc(sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
 	if (pGroup->active_servers == NULL)
 	{
+		tracker_mem_free_group(pGroup);
+
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
 			(int)sizeof(FDFSStorageDetail *) * pGroup->alloc_size);
@@ -1412,6 +1498,8 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 			malloc(sizeof(FDFSStorageDetail *)*pGroup->alloc_size);
 		if (pGroup->http_servers == NULL)
 		{
+			tracker_mem_free_group(pGroup);
+
 			logError("file: "__FILE__", line: %d, " \
 				"malloc %d bytes fail", __LINE__, \
 				(int)sizeof(FDFSStorageDetail *) * \
@@ -1427,32 +1515,6 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 	pGroup->last_sync_timestamps = tracker_malloc_last_sync_timestamps( \
 			pGroup->alloc_size, &err_no);
 	return err_no;
-}
-
-static void tracker_mem_free_group(FDFSGroupInfo *pGroup)
-{
-	if (pGroup->sorted_servers != NULL)
-	{
-		free(pGroup->sorted_servers);
-		pGroup->sorted_servers = NULL;
-	}
-
-	if (pGroup->active_servers != NULL)
-	{
-		free(pGroup->active_servers);
-		pGroup->active_servers = NULL;
-	}
-
-	if (pGroup->all_servers != NULL)
-	{
-		free(pGroup->all_servers);
-		pGroup->all_servers = NULL;
-	}
-
-	tracker_free_last_sync_timestamps(pGroup->last_sync_timestamps, \
-				pGroup->alloc_size);
-	pGroup->last_sync_timestamps = NULL;
-
 }
 
 int tracker_mem_destroy()
@@ -1508,12 +1570,31 @@ int tracker_mem_destroy()
 	return result;
 }
 
+static void tracker_mem_free_groups(FDFSGroupInfo **groups, const int count)
+{
+	FDFSGroupInfo **ppGroup;
+	FDFSGroupInfo **ppGroupEnd;
+
+	ppGroupEnd = groups + count;
+	for (ppGroup=groups; ppGroup<ppGroupEnd; ppGroup++)
+	{
+		if (*ppGroup != NULL)
+		{
+			free(*ppGroup);
+		}
+	}
+
+	free(groups);
+}
+
 static int tracker_mem_realloc_groups(const bool bNeedSleep)
 {
 	FDFSGroupInfo **old_groups;
 	FDFSGroupInfo **old_sorted_groups;
 	FDFSGroupInfo **new_groups;
 	FDFSGroupInfo **new_sorted_groups;
+	FDFSGroupInfo **ppGroup;
+	FDFSGroupInfo **ppGroupEnd;
 	int new_size;
 
 	new_size = g_groups.alloc_size + TRACKER_MEM_ALLOC_ONCE;
@@ -1525,21 +1606,39 @@ static int tracker_mem_realloc_groups(const bool bNeedSleep)
 			__LINE__, (int)sizeof(FDFSGroupInfo *) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
+	memset(new_groups, 0, sizeof(FDFSGroupInfo *) * new_size);
+
+	ppGroupEnd = new_groups + new_size;
+	for (ppGroup=new_groups+g_groups.count; ppGroup<ppGroupEnd; ppGroup++)
+	{
+		*ppGroup = (FDFSGroupInfo *)malloc(sizeof(FDFSGroupInfo));
+		if (*ppGroup == NULL)
+		{
+			tracker_mem_free_groups(new_groups, new_size);
+
+			logCrit("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", \
+				__LINE__, (int)sizeof(FDFSGroupInfo));
+			return errno != 0 ? errno : ENOMEM;
+		}
+
+		memset(*ppGroup, 0, sizeof(FDFSGroupInfo));
+	}
+
+	memcpy(new_groups, g_groups.groups, \
+		sizeof(FDFSGroupInfo *) * g_groups.count);
 
 	new_sorted_groups = (FDFSGroupInfo **)malloc( \
 			sizeof(FDFSGroupInfo *) * new_size);
 	if (new_sorted_groups == NULL)
 	{
-		free(new_groups);
+		tracker_mem_free_groups(new_groups, new_size);
+
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", \
 			__LINE__, (int)sizeof(FDFSGroupInfo *) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
-
-	memset(new_groups, 0, sizeof(FDFSGroupInfo *) * new_size);
-	memcpy(new_groups, g_groups.groups, \
-		sizeof(FDFSGroupInfo *) * g_groups.count);
 
 	memset(new_sorted_groups, 0, sizeof(FDFSGroupInfo *) * new_size);
 	memcpy(new_sorted_groups, g_groups.sorted_groups, \
@@ -1550,12 +1649,6 @@ static int tracker_mem_realloc_groups(const bool bNeedSleep)
 	g_groups.alloc_size = new_size;
 	g_groups.groups = new_groups;
 	g_groups.sorted_groups = new_sorted_groups;
-
-	if (g_groups.store_lookup == FDFS_STORE_LOOKUP_SPEC_GROUP)
-	{
-		g_groups.pStoreGroup = tracker_mem_get_group( \
-					g_groups.store_group);
-	}
 
 	if (bNeedSleep)
 	{
@@ -1632,6 +1725,8 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 	FDFSStorageDetail **new_servers;
 	FDFSStorageDetail **new_sorted_servers;
 	FDFSStorageDetail **new_active_servers;
+	FDFSStorageDetail **ppServer;
+	FDFSStorageDetail **ppServerEnd;
 #ifdef WITH_HTTPD
 	FDFSStorageDetail **old_http_servers;
 	FDFSStorageDetail **new_http_servers;
@@ -1652,6 +1747,28 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 			__LINE__, (int)sizeof(FDFSStorageDetail *) * new_size);
 		return errno != 0 ? errno : ENOMEM;
 	}
+	memset(new_servers, 0, sizeof(FDFSStorageDetail *) * new_size);
+
+	ppServerEnd = new_servers + new_size;	
+	for (ppServer=new_servers+pGroup->count; ppServer<ppServerEnd; ppServer++)
+	{
+		*ppServer = (FDFSStorageDetail *)malloc( \
+					sizeof(FDFSStorageDetail));
+		if (*ppServer == NULL)
+		{
+			tracker_mem_free_storages(new_servers, new_size);
+
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail", __LINE__, \
+				(int)sizeof(FDFSStorageDetail));
+			return errno != 0 ? errno : ENOMEM;
+		}
+
+		memset(*ppServer, 0, sizeof(FDFSStorageDetail));
+	}
+
+	memcpy(new_servers, pGroup->all_servers, \
+		sizeof(FDFSStorageDetail *) * pGroup->count);
 
 	new_sorted_servers = (FDFSStorageDetail **) \
 		malloc(sizeof(FDFSStorageDetail *) * new_size);
@@ -1702,11 +1819,8 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 	}
 #endif
 
-	memset(new_servers, 0, sizeof(FDFSStorageDetail *) * new_size);
 	memset(new_sorted_servers, 0, sizeof(FDFSStorageDetail *) * new_size);
 	memset(new_active_servers, 0, sizeof(FDFSStorageDetail *) * new_size);
-	memcpy(new_servers, pGroup->all_servers, \
-		sizeof(FDFSStorageDetail *) * pGroup->count);
 	if (pGroup->store_path_count > 0)
 	{
 		for (i=pGroup->count; i<new_size; i++)
@@ -1728,20 +1842,6 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 
 	memcpy(new_active_servers, pGroup->active_servers, \
 		sizeof(FDFSStorageDetail *) * pGroup->count);
-
-#ifdef WITH_HTTPD
-	if (g_http_check_interval > 0)
-	{
-	ppServerEnd = pGroup->http_servers + pGroup->http_server_count;
-	ppDestServer = new_http_servers;
-	for (ppSrcServer=pGroup->http_servers; ppSrcServer<ppServerEnd;
-		ppSrcServer++)
-	{
-		*ppDestServer++ = new_servers + 
-				  (*ppSrcServer - pGroup->all_servers);
-	}
-	}
-#endif
 
 	new_last_sync_timestamps = tracker_malloc_last_sync_timestamps( \
 		new_size, &err_no);
@@ -3337,5 +3437,27 @@ int tracker_mem_check_alive(void *arg)
 	}
 
 	return 0;
+}
+
+int tracker_mem_get_storage_index(FDFSGroupInfo *pGroup, \
+		FDFSStorageDetail *pStorage)
+{
+	FDFSStorageDetail **ppStorage;
+	FDFSStorageDetail **ppEnd;
+
+	ppEnd = pGroup->all_servers + pGroup->count;
+	for (ppStorage=pGroup->all_servers; ppStorage<ppEnd; ppStorage++)
+	{
+		if (*ppStorage == pStorage)
+		{
+			return ppStorage - pGroup->all_servers;
+		}
+	}
+
+	logError("file: "__FILE__", line: %d, " \
+		"get index of storage %s fail!!!", \
+		__LINE__, pStorage->ip_addr);
+
+	return -1;
 }
 

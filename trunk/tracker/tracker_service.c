@@ -584,36 +584,6 @@ static int tracker_deal_parameter_req(TrackerClientInfo *pClientInfo, \
 	return pHeader->status;
 }
 
-static void tracker_check_dirty(TrackerClientInfo *pClientInfo)
-{
-	bool bInserted;
-	if (pClientInfo->pGroup != NULL && pClientInfo->pGroup->dirty)
-	{
-		tracker_mem_pthread_lock();
-		if (--(*pClientInfo->pGroup->ref_count) == 0)
-		{
-			free(pClientInfo->pGroup->ref_count);
-			free(pClientInfo->pAllocedGroups);
-		}
-		tracker_mem_pthread_unlock();
-
-		tracker_mem_add_group(pClientInfo, true, &bInserted);
-	}
-
-	if (pClientInfo->pStorage != NULL && pClientInfo->pStorage->dirty)
-	{
-		tracker_mem_pthread_lock();
-		if (--(*pClientInfo->pStorage->ref_count) == 0)
-		{
-			free(pClientInfo->pStorage->ref_count);
-			free(pClientInfo->pAllocedStorages);
-		}
-		tracker_mem_pthread_unlock();
-
-		tracker_mem_add_storage(pClientInfo, true, &bInserted);
-	}
-}
-
 static int tracker_deal_storage_replica_chg(TrackerClientInfo *pClientInfo, \
 				const int64_t nInPackLen)
 {
@@ -2090,8 +2060,8 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 	TrackerHeader *pResp;
 	TrackerStorageSyncReqBody *pBody;
 	FDFSStorageDetail *pSrcStorage;
-	FDFSStorageDetail *pServer;
-	FDFSStorageDetail *pServerEnd;
+	FDFSStorageDetail **ppServer;
+	FDFSStorageDetail **ppServerEnd;
 	int out_len;
 	int sync_until_timestamp;
 	int source_count;
@@ -2125,20 +2095,20 @@ static int tracker_deal_storage_sync_dest_req(TrackerClientInfo *pClientInfo, \
 		}
 
         	source_count = 0;
-		pServerEnd = pClientInfo->pGroup->all_servers + \
+		ppServerEnd = pClientInfo->pGroup->all_servers + \
 				pClientInfo->pGroup->count;
-		for (pServer=pClientInfo->pGroup->all_servers; \
-			pServer<pServerEnd; pServer++)
+		for (ppServer=pClientInfo->pGroup->all_servers; \
+			ppServer<ppServerEnd; ppServer++)
 		{
-			if (strcmp(pServer->ip_addr, \
+			if (strcmp((*ppServer)->ip_addr, \
 				pClientInfo->pStorage->ip_addr) == 0)
 			{
 				continue;
 			}
 
-			if (pServer->status ==FDFS_STORAGE_STATUS_OFFLINE 
-			 || pServer->status == FDFS_STORAGE_STATUS_ONLINE
-			 || pServer->status == FDFS_STORAGE_STATUS_ACTIVE)
+			if ((*ppServer)->status ==FDFS_STORAGE_STATUS_OFFLINE 
+			 || (*ppServer)->status == FDFS_STORAGE_STATUS_ONLINE
+			 || (*ppServer)->status == FDFS_STORAGE_STATUS_ACTIVE)
 			{
 				source_count++;
 			}
@@ -2389,10 +2359,8 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		tracker_check_dirty(pClientInfo);
-
-		dest_index = pClientInfo->pStorage - \
-				pClientInfo->pGroup->all_servers;
+		dest_index = tracker_mem_get_storage_index(pClientInfo->pGroup,
+					pClientInfo->pStorage);
 		if (dest_index < 0 || dest_index >= pClientInfo->pGroup->count)
 		{
 			status = 0;
@@ -2426,8 +2394,8 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 					continue;
 				}
 
-				src_index = pSrcStorage - 
-						pClientInfo->pGroup->all_servers;
+				src_index = tracker_mem_get_storage_index( \
+						pClientInfo->pGroup, pSrcStorage);
 				if (src_index == dest_index || src_index < 0 || \
 					src_index >= pClientInfo->pGroup->count)
 				{
@@ -2481,8 +2449,8 @@ static int tracker_deal_storage_sync_report(TrackerClientInfo *pClientInfo, \
 					continue;
 				}
 
-				src_index = pSrcStorage - 
-						pClientInfo->pGroup->all_servers;
+				src_index = tracker_mem_get_storage_index( \
+						pClientInfo->pGroup, pSrcStorage);
 				if (src_index == dest_index || src_index < 0 || \
 					src_index >= pClientInfo->pGroup->count)
 				{
@@ -2652,7 +2620,6 @@ static int tracker_deal_storage_df_report(TrackerClientInfo *pClientInfo, \
 
 	if (status == 0)
 	{
-		tracker_check_dirty(pClientInfo);
 		tracker_mem_active_store_server(pClientInfo->pGroup, \
 				pClientInfo->pStorage);
 	}
@@ -2751,7 +2718,6 @@ static int tracker_deal_storage_beat(TrackerClientInfo *pClientInfo, \
 
 	if (status == 0)
 	{
-		tracker_check_dirty(pClientInfo);
 		tracker_mem_active_store_server(pClientInfo->pGroup, \
 				pClientInfo->pStorage);
 		pClientInfo->pStorage->stat.last_heart_beat_time = time(NULL);
@@ -2897,8 +2863,6 @@ data buff (struct)
 
 		nInPackLen = buff2long(header.pkg_len);
 
-		tracker_check_dirty(&client_info);
-
 		switch(header.cmd)
 		{
 		case TRACKER_PROTO_CMD_STORAGE_BEAT:
@@ -3031,18 +2995,7 @@ data buff (struct)
 
 	if (g_continue_flag)
 	{
-		tracker_check_dirty(&client_info);
 		tracker_mem_offline_store_server(&client_info);
-	}
-
-	if (client_info.pGroup != NULL)
-	{
-		--(*(client_info.pGroup->ref_count));
-	}
-
-	if (client_info.pStorage != NULL)
-	{
-		--(*(client_info.pStorage->ref_count));
 	}
 
 	close(client_info.sock);
@@ -3082,8 +3035,6 @@ int tracker_deal_task(struct fast_task_info *pTask)
 	pHeader = (TrackerHeader *)pTask->data;
 
 	nInPackLen = buff2long(pHeader->pkg_len);
-
-	//tracker_check_dirty(&client_info);
 
 	switch(pHeader->cmd)
 		{
