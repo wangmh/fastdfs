@@ -2,7 +2,7 @@
 
 COMPILE = $(CC) $(CFLAGS)
 INC_PATH = -I../common -I/usr/local/include
-LIB_PATH = -L/usr/local/lib $(LIBS)
+LIB_PATH = -L/usr/local/lib $(LIBS) -levent
 TARGET_PATH = $(TARGET_PREFIX)/bin
 
 SHARED_OBJS = ../common/hash.o ../common/chain.o ../common/base64.o \

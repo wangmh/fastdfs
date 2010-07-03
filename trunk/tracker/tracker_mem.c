@@ -314,6 +314,7 @@ static int tracker_load_groups(const char *data_path)
 
 	FILE *fp;
 	char szLine[256];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char *fields[STORAGE_DATA_GROUP_FIELDS];
 	int result;
 	int col_count;
@@ -352,10 +353,10 @@ static int tracker_load_groups(const char *data_path)
 		}
 	
 		memset(&clientInfo, 0, sizeof(TrackerClientInfo));
-		snprintf(clientInfo.group_name, sizeof(clientInfo.group_name),\
+		snprintf(group_name, sizeof(group_name),\
 				"%s", trim(fields[0]));
 		if ((result=tracker_mem_add_group(&clientInfo, \
-				false, &bInserted)) != 0)
+				group_name, false, &bInserted)) != 0)
 		{
 			break;
 		}
@@ -367,7 +368,7 @@ static int tracker_load_groups(const char *data_path)
 				"group \"%s\" is duplicate", \
 				__LINE__, data_path, \
 				STORAGE_GROUPS_LIST_FILENAME, \
-				clientInfo.group_name);
+				group_name);
 			result = errno != 0 ? errno : EEXIST;
 			break;
 		}
@@ -451,6 +452,7 @@ static int tracker_load_storages(const char *data_path)
 
 	FILE *fp;
 	char szLine[256];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char *fields[STORAGE_DATA_SERVER_FIELDS];
 	char *psync_src_ip_addr;
 	FDFSStorageSync *pStorageSyncs;
@@ -501,19 +503,17 @@ static int tracker_load_storages(const char *data_path)
 		}
 	
 		memset(&clientInfo, 0, sizeof(TrackerClientInfo));
-		snprintf(clientInfo.group_name, sizeof(clientInfo.group_name),\
-				"%s", trim(fields[0]));
+		snprintf(group_name, sizeof(group_name), "%s", trim(fields[0]));
 		snprintf(clientInfo.ip_addr, sizeof(clientInfo.ip_addr),\
 				"%s", trim(fields[1]));
-		if ((clientInfo.pGroup=tracker_mem_get_group( \
-				clientInfo.group_name)) == NULL)
+		if ((clientInfo.pGroup=tracker_mem_get_group(group_name)) == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"in the file \"%s/%s\", " \
 				"group \"%s\" is not found", \
 				__LINE__, data_path, \
 				STORAGE_SERVERS_LIST_FILENAME, \
-				clientInfo.group_name);
+				group_name);
 			result = errno != 0 ? errno : ENOENT;
 			break;
 		}
@@ -1812,6 +1812,10 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 		}
 
 		memset(new_http_servers,0,sizeof(FDFSStorageDetail *)*new_size);
+
+		memcpy(new_http_servers, pGroup->http_servers, \
+			sizeof(FDFSStorageDetail *) * pGroup->count);
+
 	}
 	else
 	{
@@ -1997,7 +2001,7 @@ FDFSGroupInfo *tracker_mem_get_group(const char *group_name)
 }
 
 int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
-		const bool bIncRef, bool *bInserted)
+	const char *group_name, const bool bNeedSleep, bool *bInserted)
 {
 	FDFSGroupInfo *pGroup;
 	int result;
@@ -2015,7 +2019,7 @@ int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 	{	
 		result = 0;
 		*bInserted = false;
-		pGroup = tracker_mem_get_group(pClientInfo->group_name);
+		pGroup = tracker_mem_get_group(group_name);
 		if (pGroup != NULL)
 		{
 			break;
@@ -2023,7 +2027,7 @@ int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 
 		if (g_groups.count >= g_groups.alloc_size)
 		{
-			result = tracker_mem_realloc_groups(bIncRef);
+			result = tracker_mem_realloc_groups(bNeedSleep);
 			if (result != 0)
 			{
 				break;
@@ -2037,7 +2041,7 @@ int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 			break;
 		}
 
-		strcpy(pGroup->group_name, pClientInfo->group_name);
+		strcpy(pGroup->group_name, group_name);
 		tracker_mem_insert_into_sorted_groups(pGroup);
 		g_groups.count++;
 
@@ -2276,7 +2280,7 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 }
 
 int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
-			const bool bIncRef, bool *bInserted)
+			const bool bNeedSleep, bool *bInserted)
 {
 	FDFSStorageDetail *pStorageServer;
 	int result;
@@ -2311,7 +2315,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 				pClientInfo->pGroup->alloc_size)
 		{
 			result = tracker_mem_realloc_store_servers( \
-						pClientInfo->pGroup, 1, bIncRef);
+					pClientInfo->pGroup, 1, bNeedSleep);
 			if (result != 0)
 			{
 				break;
@@ -2350,7 +2354,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 }
 
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
-		const FDFSStorageJoinBody *pJoinBody, const bool bIncRef)
+		const FDFSStorageJoinBody *pJoinBody, const bool bNeedSleep)
 {
 	int result;
 	bool bStorageInserted;
@@ -2359,8 +2363,8 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppEnd;
 
-	if ((result=tracker_mem_add_group(pClientInfo, bIncRef, \
-			&bGroupInserted)) != 0)
+	if ((result=tracker_mem_add_group(pClientInfo, pJoinBody->group_name, \
+				bNeedSleep, &bGroupInserted)) != 0)
 	{
 		return result;
 	}
@@ -2375,7 +2379,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 
 	if (pClientInfo->pGroup->storage_port == 0)
 	{
-		pClientInfo->pGroup->storage_port = pClientInfo->storage_port;
+		pClientInfo->pGroup->storage_port = pJoinBody->storage_port;
 		if ((result=tracker_save_groups()) != 0)
 		{
 			return result;
@@ -2384,7 +2388,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	else
 	{
 		if (pClientInfo->pGroup->storage_port !=  \
-			pClientInfo->storage_port)
+			pJoinBody->storage_port)
 		{
 			ppEnd = pClientInfo->pGroup->all_servers + \
 				pClientInfo->pGroup->count;
@@ -2395,7 +2399,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 					pClientInfo->ip_addr) == 0)
 				{
 					(*ppServer)->storage_port = \
-						pClientInfo->storage_port;
+						pJoinBody->storage_port;
 					break;
 				}
 			}
@@ -2404,7 +2408,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				ppServer<ppEnd; ppServer++)
 			{
 				if ((*ppServer)->storage_port != \
-					pClientInfo->storage_port)
+					pJoinBody->storage_port)
 				{
 					break;
 				}
@@ -2412,7 +2416,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 			if (ppServer == ppEnd)  //all servers are same, adjust
 			{
 				pClientInfo->pGroup->storage_port = \
-						pClientInfo->storage_port;
+						pJoinBody->storage_port;
 				if ((result=tracker_save_groups()) != 0)
 				{
 					return result;
@@ -2424,8 +2428,8 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				"client ip: %s, port %d is not same " \
 				"in the group \"%s\", group port is %d", \
 				__LINE__, pClientInfo->ip_addr, \
-				pClientInfo->storage_port, \
-				pClientInfo->group_name, \
+				pJoinBody->storage_port, \
+				pJoinBody->group_name, \
 				pClientInfo->pGroup->storage_port);
 			return EINVAL;
 			}
@@ -2485,7 +2489,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				"in the group \"%s\", group http port is %d", \
 				__LINE__, pClientInfo->ip_addr, \
 				pJoinBody->storage_http_port, \
-				pClientInfo->group_name, \
+				pJoinBody->group_name, \
 				pClientInfo->pGroup->storage_http_port);
 #ifdef WITH_HTTPD
 			return EINVAL;
@@ -2526,16 +2530,16 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 					"client ip: %s:%d, invalid storage " \
 					"status %d, in the group \"%s\"", \
 					__LINE__, pClientInfo->ip_addr, \
-					pClientInfo->storage_port, \
+					pJoinBody->storage_port, \
 					pJoinBody->status, \
-					pClientInfo->group_name);
+					pJoinBody->group_name);
 				return EFAULT;
 			}
 		}
 	}
 
-	if ((result=tracker_mem_add_storage(pClientInfo, bIncRef, \
-			&bStorageInserted)) != 0)
+	if ((result=tracker_mem_add_storage(pClientInfo, \
+			bNeedSleep, &bStorageInserted)) != 0)
 	{
 		return result;
 	}
@@ -2550,7 +2554,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	snprintf(pStorageServer->domain_name, \
 		sizeof(pStorageServer->domain_name), \
 		"%s", pJoinBody->domain_name);
-	pStorageServer->storage_port = pClientInfo->storage_port;
+	pStorageServer->storage_port = pJoinBody->storage_port;
 	pStorageServer->storage_http_port = pJoinBody->storage_http_port;
 
 	if (pClientInfo->pGroup->store_path_count == 0)
@@ -2606,7 +2610,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				"group store_path_count is %d", \
 				__LINE__, pClientInfo->ip_addr, \
 				pJoinBody->store_path_count, \
-				pClientInfo->group_name, \
+				pJoinBody->group_name, \
 				pClientInfo->pGroup->store_path_count);
 
 				return EINVAL;
@@ -2657,7 +2661,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				"group subdir_count_per_path is %d", \
 				__LINE__, pClientInfo->ip_addr, \
 				pJoinBody->subdir_count_per_path, \
-				pClientInfo->group_name,\
+				pJoinBody->group_name,\
 				pClientInfo->pGroup->subdir_count_per_path);
 
 				return EINVAL;

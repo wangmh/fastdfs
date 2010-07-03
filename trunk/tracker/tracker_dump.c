@@ -30,8 +30,6 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 	char szLastSyncUpdate[32];
 	char szSyncedTimestamp[32];
 	int total_len;
-	FDFSStorageDetail *pServer;
-	FDFSStorageDetail *pServerEnd;
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppServerEnd;
 	int i;
@@ -39,7 +37,6 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 
 	total_len = snprintf(buff, buffSize, 
 		"group_name=%s\n"
-		"dirty=%d\n"
 		"free_mb="INT64_PRINTF_FORMAT"\n"
 		"alloc_size=%d\n"
 		"server count=%d\n"
@@ -51,12 +48,10 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 		"store_path_count=%d\n"
 		"subdir_count_per_path=%d\n" 
 		"pStoreServer=%s\n" 
-		"ref_count=%d\n"
 		"chg_count=%d\n"
 		"last_source_update=%s\n"
 		"last_sync_update=%s\n",
 		pGroup->group_name, 
-		pGroup->dirty, 
 		pGroup->free_mb, 
 		pGroup->alloc_size, 
 		pGroup->count, 
@@ -68,7 +63,6 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 		pGroup->store_path_count,
 		pGroup->subdir_count_per_path,
 		pGroup->pStoreServer != NULL ? pGroup->pStoreServer->ip_addr : "",
-		*(pGroup->ref_count),
 		pGroup->chg_count,
 		formatDatetime(pGroup->last_source_update, 
 			"%Y-%m-%d %H:%M:%S", 
@@ -81,11 +75,11 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 
 	total_len += snprintf(buff + total_len, buffSize - total_len, 
 		"total server count=%d\n", pGroup->count);
-	pServerEnd = pGroup->all_servers + pGroup->count;
-	for (pServer=pGroup->all_servers; pServer<pServerEnd; pServer++)
+	ppServerEnd = pGroup->all_servers + pGroup->count;
+	for (ppServer=pGroup->all_servers; ppServer<ppServerEnd; ppServer++)
 	{
 		total_len += snprintf(buff + total_len, buffSize - total_len, 
-			"\t%s\n", pServer->ip_addr);
+			"\t%s\n", (*ppServer)->ip_addr);
 	}
 
 	total_len += snprintf(buff + total_len, buffSize - total_len, 
@@ -135,8 +129,8 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 
 		total_len += snprintf(buff + total_len, buffSize - total_len, 
 				"\t%s => %s: %s\n", 
-				pGroup->all_servers[i].ip_addr, 
-				pGroup->all_servers[j].ip_addr,
+				pGroup->all_servers[i]->ip_addr, 
+				pGroup->all_servers[j]->ip_addr,
 				formatDatetime(pGroup->last_sync_timestamps[i][j],
 					"%Y-%m-%d %H:%M:%S", 
 					szSyncedTimestamp, 
@@ -166,7 +160,6 @@ static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer,
 		"ip_addr=%s\n"
 		"version=%s\n"
 		"status=%d\n"
-		"dirty=%d\n"
 		"domain_name=%s\n"
 		"sync_src_server=%s\n"
 		"sync_until_timestamp=%s\n"
@@ -180,7 +173,6 @@ static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer,
 		"subdir_count_per_path=%d\n"
 		"upload_priority=%d\n"
 		"current_write_path=%d\n"
-		"ref_count=%d\n"
 		"chg_count=%d\n"
 #ifdef WITH_HTTPD
 		"http_check_last_errno=%d\n"
@@ -210,7 +202,6 @@ static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer,
 		pServer->ip_addr, 
 		pServer->version, 
 		pServer->status, 
-		pServer->dirty, 
 		pServer->domain_name, 
 		pServer->psync_src_server != NULL ? 
 		pServer->psync_src_server->ip_addr : "", 
@@ -229,7 +220,6 @@ static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer,
 		pServer->subdir_count_per_path, 
 		pServer->upload_priority,
 		pServer->current_write_path,
-		*(pServer->ref_count),
 		pServer->chg_count,
 #ifdef WITH_HTTPD
 		pServer->http_check_last_errno,
@@ -412,8 +402,6 @@ int fdfs_dump_tracker_global_vars_to_file(const char *filename)
 	int len;
 	int result;
 	int fd;
-	FDFSGroupInfo *pGroup;
-	FDFSGroupInfo *pGroupEnd;
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppGroupEnd;
 
@@ -445,10 +433,10 @@ int fdfs_dump_tracker_global_vars_to_file(const char *filename)
 		len = sprintf(buff, "\ngroup name list:\n");
 		WRITE_TO_FILE(fd, buff, len)
 		len = 0;
-		pGroupEnd = g_groups.groups + g_groups.count;
-		for (pGroup=g_groups.groups; pGroup<pGroupEnd; pGroup++)
+		ppGroupEnd = g_groups.groups + g_groups.count;
+		for (ppGroup=g_groups.groups; ppGroup<ppGroupEnd; ppGroup++)
 		{
-			len += sprintf(buff+len, "\t%s\n", pGroup->group_name);
+			len += sprintf(buff+len, "\t%s\n", (*ppGroup)->group_name);
 		}
 		len += sprintf(buff+len, "\n");
 		WRITE_TO_FILE(fd, buff, len)

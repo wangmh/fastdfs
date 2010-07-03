@@ -760,24 +760,24 @@ static int tracker_deal_storage_join(TrackerClientInfo *pClientInfo, \
 		break;
 	}
 
-	memcpy(pClientInfo->group_name, body.group_name, FDFS_GROUP_NAME_MAX_LEN);
-	pClientInfo->group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
-	if ((status=fdfs_validate_group_name(pClientInfo->group_name)) != 0)
+	memcpy(joinBody.group_name, body.group_name, FDFS_GROUP_NAME_MAX_LEN);
+	joinBody.group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
+	if ((status=fdfs_validate_group_name(joinBody.group_name)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, invalid group_name: %s", \
 			__LINE__, pClientInfo->ip_addr, \
-			pClientInfo->group_name);
+			joinBody.group_name);
 		break;
 	}
 
-	pClientInfo->storage_port = (int)buff2long(body.storage_port);
-	if (pClientInfo->storage_port <= 0)
+	joinBody.storage_port = (int)buff2long(body.storage_port);
+	if (joinBody.storage_port <= 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, invalid port: %d", \
 			__LINE__, pClientInfo->ip_addr, \
-			pClientInfo->storage_port);
+			joinBody.storage_port);
 		status = EINVAL;
 		break;
 	}
