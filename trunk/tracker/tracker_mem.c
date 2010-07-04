@@ -454,6 +454,7 @@ static int tracker_load_storages(const char *data_path)
 	char szLine[256];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char *fields[STORAGE_DATA_SERVER_FIELDS];
+	char ip_addr[IP_ADDRESS_SIZE];
 	char *psync_src_ip_addr;
 	FDFSStorageSync *pStorageSyncs;
 	int nStorageSyncSize;
@@ -504,8 +505,7 @@ static int tracker_load_storages(const char *data_path)
 	
 		memset(&clientInfo, 0, sizeof(TrackerClientInfo));
 		snprintf(group_name, sizeof(group_name), "%s", trim(fields[0]));
-		snprintf(clientInfo.ip_addr, sizeof(clientInfo.ip_addr),\
-				"%s", trim(fields[1]));
+		snprintf(ip_addr, sizeof(ip_addr), "%s", trim(fields[1]));
 		if ((clientInfo.pGroup=tracker_mem_get_group(group_name)) == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -518,7 +518,7 @@ static int tracker_load_storages(const char *data_path)
 			break;
 		}
 
-		if ((result=tracker_mem_add_storage(&clientInfo, \
+		if ((result=tracker_mem_add_storage(&clientInfo, ip_addr, \
 				false, &bInserted)) != 0)
 		{
 			break;
@@ -530,8 +530,7 @@ static int tracker_load_storages(const char *data_path)
 				"in the file \"%s/%s\", " \
 				"storage \"%s\" is duplicate", \
 				__LINE__, data_path, \
-				STORAGE_SERVERS_LIST_FILENAME, \
-				clientInfo.ip_addr);
+				STORAGE_SERVERS_LIST_FILENAME, ip_addr);
 			result = errno != 0 ? errno : EEXIST;
 			break;
 		}
@@ -2280,7 +2279,7 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 }
 
 int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
-			const bool bNeedSleep, bool *bInserted)
+		const char *ip_addr, const bool bNeedSleep, bool *bInserted)
 {
 	FDFSStorageDetail *pStorageServer;
 	int result;
@@ -2299,7 +2298,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 		result = 0;
 		*bInserted = false;
 		pStorageServer = tracker_mem_get_storage(pClientInfo->pGroup, \
-					pClientInfo->ip_addr);
+					ip_addr);
 		if (pStorageServer != NULL)
 		{
 			if (pStorageServer->status==FDFS_STORAGE_STATUS_DELETED \
@@ -2324,7 +2323,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 
 		pStorageServer = *(pClientInfo->pGroup->all_servers \
 					 + pClientInfo->pGroup->count);
-		memcpy(pStorageServer->ip_addr, pClientInfo->ip_addr,
+		memcpy(pStorageServer->ip_addr, ip_addr,
 				IP_ADDRESS_SIZE);
 
 		tracker_mem_insert_into_sorted_servers( \
@@ -2354,7 +2353,8 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 }
 
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
-		const FDFSStorageJoinBody *pJoinBody, const bool bNeedSleep)
+		const char *ip_addr, const FDFSStorageJoinBody *pJoinBody, \
+		const bool bNeedSleep)
 {
 	int result;
 	bool bStorageInserted;
@@ -2395,8 +2395,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 			for (ppServer=pClientInfo->pGroup->all_servers; \
 				ppServer<ppEnd; ppServer++)
 			{
-				if (strcmp((*ppServer)->ip_addr, \
-					pClientInfo->ip_addr) == 0)
+				if (strcmp((*ppServer)->ip_addr, ip_addr) == 0)
 				{
 					(*ppServer)->storage_port = \
 						pJoinBody->storage_port;
@@ -2427,8 +2426,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, port %d is not same " \
 				"in the group \"%s\", group port is %d", \
-				__LINE__, pClientInfo->ip_addr, \
-				pJoinBody->storage_port, \
+				__LINE__, ip_addr, pJoinBody->storage_port, \
 				pJoinBody->group_name, \
 				pClientInfo->pGroup->storage_port);
 			return EINVAL;
@@ -2455,8 +2453,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 			for (ppServer=pClientInfo->pGroup->all_servers; \
 				ppServer<ppEnd; ppServer++)
 			{
-				if (strcmp((*ppServer)->ip_addr, \
-					pClientInfo->ip_addr) == 0)
+				if (strcmp((*ppServer)->ip_addr, ip_addr) == 0)
 				{
 					(*ppServer)->storage_http_port = \
 						pJoinBody->storage_http_port;
@@ -2487,7 +2484,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, http port %d is not same " \
 				"in the group \"%s\", group http port is %d", \
-				__LINE__, pClientInfo->ip_addr, \
+				__LINE__, ip_addr, \
 				pJoinBody->storage_http_port, \
 				pJoinBody->group_name, \
 				pClientInfo->pGroup->storage_http_port);
@@ -2507,8 +2504,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		return result;
 	}
 
-	pStorageServer = tracker_mem_get_storage(pClientInfo->pGroup, \
-					pClientInfo->ip_addr);
+	pStorageServer = tracker_mem_get_storage(pClientInfo->pGroup, ip_addr);
 
 	if (pthread_mutex_unlock(&mem_thread_lock) != 0)
 	{
@@ -2529,7 +2525,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				logError("file: "__FILE__", line: %d, " \
 					"client ip: %s:%d, invalid storage " \
 					"status %d, in the group \"%s\"", \
-					__LINE__, pClientInfo->ip_addr, \
+					__LINE__, ip_addr, \
 					pJoinBody->storage_port, \
 					pJoinBody->status, \
 					pJoinBody->group_name);
@@ -2538,7 +2534,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		}
 	}
 
-	if ((result=tracker_mem_add_storage(pClientInfo, \
+	if ((result=tracker_mem_add_storage(pClientInfo, ip_addr, \
 			bNeedSleep, &bStorageInserted)) != 0)
 	{
 		return result;
@@ -2608,7 +2604,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				"client ip: %s, store_path_count %d is not " \
 				"same in the group \"%s\", " \
 				"group store_path_count is %d", \
-				__LINE__, pClientInfo->ip_addr, \
+				__LINE__, ip_addr, \
 				pJoinBody->store_path_count, \
 				pJoinBody->group_name, \
 				pClientInfo->pGroup->store_path_count);
@@ -2659,7 +2655,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				"client ip: %s, subdir_count_per_path %d is " \
 				"not same in the group \"%s\", " \
 				"group subdir_count_per_path is %d", \
-				__LINE__, pClientInfo->ip_addr, \
+				__LINE__, ip_addr, \
 				pJoinBody->subdir_count_per_path, \
 				pJoinBody->group_name,\
 				pClientInfo->pGroup->subdir_count_per_path);
@@ -2700,8 +2696,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 
 	logDebug("file: "__FILE__", line: %d, " \
 		"storage server %s::%s join in", \
-		__LINE__, pClientInfo->pGroup->group_name, \
-		pStorageServer->ip_addr);
+		__LINE__, pClientInfo->pGroup->group_name, ip_addr);
 
 	return 0;
 }

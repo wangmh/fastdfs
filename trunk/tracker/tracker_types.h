@@ -259,8 +259,6 @@ typedef struct
 
 typedef struct
 {
-	int sock;
-	char ip_addr[IP_ADDRESS_SIZE];
 	FDFSGroupInfo *pGroup;
 	FDFSStorageDetail *pStorage;
 } TrackerClientInfo;
