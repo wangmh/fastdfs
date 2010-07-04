@@ -107,7 +107,7 @@ int get_url_content(const char *url, const int connect_timeout, \
 		return errno != 0 ? errno : EPERM;
 	}
 
-	if ((result=connectserverbyip_nb(sock, ip_addr, port, \
+	if ((result=connectserverbyip_nb_auto(sock, ip_addr, port, \
 			connect_timeout)) != 0)
 	{
 		close(sock);
