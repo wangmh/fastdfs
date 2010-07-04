@@ -6,10 +6,10 @@
 * Please visit the FastDFS Home Page http://www.csource.org/ for more detail.
 **/
 
-//tracker_io.h
+//tracker_nio.h
 
-#ifndef _TRACKER_IO_H
-#define _TRACKER_IO_H
+#ifndef _TRACKER_NIO_H
+#define _TRACKER_NIO_H
 
 #include <stdio.h>
 #include <stdlib.h>
