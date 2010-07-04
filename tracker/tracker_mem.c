@@ -1911,7 +1911,7 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 	tracker_free_last_sync_timestamps(old_last_sync_timestamps, \
 				old_size);
 
-	return result;
+	return 0;
 }
 
 static int tracker_mem_cmp_by_group_name(const void *p1, const void *p2)

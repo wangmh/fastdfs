@@ -403,6 +403,7 @@ static int tracker_deal_changelog_req(struct fast_task_info *pTask)
 	TrackerClientInfo *pClientInfo;
 	
 	pClientInfo = (TrackerClientInfo *)pTask->arg;
+	pStorage = NULL;
 
 	do
 	{
@@ -1585,6 +1586,8 @@ static int tracker_deal_storage_sync_dest_req(struct fast_task_info *pTask)
 	pClientInfo = (TrackerClientInfo *)pTask->arg;
 
 	pSrcStorage = NULL;
+	sync_until_timestamp = (int)time(NULL);
+
 	do
 	{
 	if (pTask->length - sizeof(TrackerHeader) != 0)
@@ -1638,7 +1641,6 @@ static int tracker_deal_storage_sync_dest_req(struct fast_task_info *pTask)
 	}
 
 	pBody=(TrackerStorageSyncReqBody *)(pTask->data+sizeof(TrackerHeader));
-	sync_until_timestamp = (int)time(NULL);
 	strcpy(pBody->src_ip_addr, pSrcStorage->ip_addr);
 
 	long2buff(sync_until_timestamp, pBody->until_timestamp);
