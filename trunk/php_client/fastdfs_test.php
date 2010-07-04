@@ -28,13 +28,13 @@
 	exit(1);
  }
  
- $storage = fastdfs_connect_server($storage['ip_addr'], $storage['port']);
- if (!$storage)
+ $server = fastdfs_connect_server($storage['ip_addr'], $storage['port']);
+ if (!$server)
  {
         error_log("errno1: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
         exit(1);
  }
- if (!fastdfs_active_test($storage))
+ if (!fastdfs_active_test($server))
  {
 	error_log("errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
 	exit(1);
@@ -42,6 +42,7 @@
 
  //var_dump(fastdfs_tracker_list_groups($tracker));
 
+ $storage['sock'] = $server['sock'];
  $file_info = fastdfs_storage_upload_by_filename("/usr/include/stdio.h", null, array(), null, $tracker, $storage);
  if ($file_info)
  {
