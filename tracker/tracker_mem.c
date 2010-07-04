@@ -2990,36 +2990,26 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 	return 0;
 }
 
-int tracker_mem_offline_store_server(TrackerClientInfo *pClientInfo)
+int tracker_mem_offline_store_server(FDFSGroupInfo *pGroup, \
+			FDFSStorageDetail *pStorage)
 {
-	if (pClientInfo->pGroup == NULL || pClientInfo->pStorage == NULL)
-	{
-		return 0;
-	}
-
-	pClientInfo->pStorage->up_time = 0;
-	if ((pClientInfo->pStorage->status == \
-			FDFS_STORAGE_STATUS_WAIT_SYNC) || \
-		(pClientInfo->pStorage->status == \
-			FDFS_STORAGE_STATUS_SYNCING) || \
-		(pClientInfo->pStorage->status == \
-			FDFS_STORAGE_STATUS_INIT) || \
-		(pClientInfo->pStorage->status == \
-			FDFS_STORAGE_STATUS_DELETED) || \
-		(pClientInfo->pStorage->status == \
-			FDFS_STORAGE_STATUS_IP_CHANGED))
+	pStorage->up_time = 0;
+	if ((pStorage->status == FDFS_STORAGE_STATUS_WAIT_SYNC) || \
+		(pStorage->status == FDFS_STORAGE_STATUS_SYNCING) || \
+		(pStorage->status == FDFS_STORAGE_STATUS_INIT) || \
+		(pStorage->status == FDFS_STORAGE_STATUS_DELETED) || \
+		(pStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED))
 	{
 		return 0;
 	}
 
 	logDebug("file: "__FILE__", line: %d, " \
 		"storage server %s::%s offline", \
-		__LINE__, pClientInfo->pGroup->group_name, \
-		pClientInfo->pStorage->ip_addr);
+		__LINE__, pGroup->group_name, \
+		pStorage->ip_addr);
 
-	pClientInfo->pStorage->status = FDFS_STORAGE_STATUS_OFFLINE;
-	return tracker_mem_deactive_store_server(pClientInfo->pGroup, \
-				pClientInfo->pStorage);
+	pStorage->status = FDFS_STORAGE_STATUS_OFFLINE;
+	return tracker_mem_deactive_store_server(pGroup, pStorage);
 }
 
 FDFSStorageDetail *tracker_get_writable_storage(FDFSGroupInfo *pStoreGroup)

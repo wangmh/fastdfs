@@ -51,7 +51,8 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		const char *ip_addr, const FDFSStorageJoinBody *pJoinBody, \
 		const bool bNeedSleep);
 
-int tracker_mem_offline_store_server(TrackerClientInfo *pClientInfo);
+int tracker_mem_offline_store_server(FDFSGroupInfo *pGroup, \
+			FDFSStorageDetail *pStorage);
 int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 			FDFSStorageDetail *pTargetServer);
 

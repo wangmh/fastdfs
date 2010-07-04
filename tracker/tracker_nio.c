@@ -27,12 +27,34 @@
 #include "fast_task_queue.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
+#include "tracker_mem.h"
 #include "tracker_global.h"
 #include "tracker_service.h"
 #include "tracker_nio.h"
 
 static void client_sock_read(int sock, short event, void *arg);
 static void client_sock_write(int sock, short event, void *arg);
+
+void task_finish_clean_up(struct fast_task_info *pTask)
+{
+	TrackerClientInfo *pClientInfo;
+
+	pClientInfo = (TrackerClientInfo *)pTask->arg;
+	if (pClientInfo->pGroup != NULL)
+	{
+		if (pClientInfo->pStorage != NULL)
+		{
+			tracker_mem_offline_store_server(pClientInfo->pGroup, \
+						pClientInfo->pStorage);
+
+			pClientInfo->pStorage = NULL;
+		}
+
+		pClientInfo->pGroup = NULL;
+	}
+
+	free_queue_push(pTask);
+}
 
 void recv_notify_read(int sock, short event, void *arg)
 {
@@ -115,7 +137,7 @@ void recv_notify_read(int sock, short event, void *arg)
 				client_sock_read, pTask);
 		if (event_base_set(pThreadData->ev_base, &pTask->ev_read) != 0)
 		{
-			free_queue_push(pTask);
+			task_finish_clean_up(pTask);
 			close(incomesock);
 
 			logError("file: "__FILE__", line: %d, " \
@@ -128,7 +150,7 @@ void recv_notify_read(int sock, short event, void *arg)
 		if ((result=event_base_set(pThreadData->ev_base, \
 				&pTask->ev_write)) != 0)
 		{
-			free_queue_push(pTask);
+			task_finish_clean_up(pTask);
 			close(incomesock);
 
 			logError("file: "__FILE__", line: %d, " \
@@ -138,7 +160,7 @@ void recv_notify_read(int sock, short event, void *arg)
 
 		if (event_add(&pTask->ev_read, &g_network_tv) != 0)
 		{
-			free_queue_push(pTask);
+			task_finish_clean_up(pTask);
 			close(incomesock);
 
 			logError("file: "__FILE__", line: %d, " \
@@ -173,7 +195,7 @@ static void client_sock_read(int sock, short event, void *arg)
 			if (event_add(&pTask->ev_read, &g_network_tv) != 0)
 			{
 				close(pTask->ev_read.ev_fd);
-				free_queue_push(pTask);
+				task_finish_clean_up(pTask);
 
 				logError("file: "__FILE__", line: %d, " \
 						"event_add fail.", __LINE__);
@@ -188,7 +210,7 @@ static void client_sock_read(int sock, short event, void *arg)
 				pTask->offset, pTask->length);
 
 			close(pTask->ev_read.ev_fd);
-			free_queue_push(pTask);
+			task_finish_clean_up(pTask);
 		}
 
 		return;
@@ -213,7 +235,7 @@ static void client_sock_read(int sock, short event, void *arg)
 				if(event_add(&pTask->ev_read, &g_network_tv)!=0)
 				{
 					close(pTask->ev_read.ev_fd);
-					free_queue_push(pTask);
+					task_finish_clean_up(pTask);
 
 					logError("file: "__FILE__", line: %d, "\
 						"event_add fail.", __LINE__);
@@ -228,7 +250,7 @@ static void client_sock_read(int sock, short event, void *arg)
 					errno, strerror(errno));
 
 				close(pTask->ev_read.ev_fd);
-				free_queue_push(pTask);
+				task_finish_clean_up(pTask);
 			}
 
 			return;
@@ -241,7 +263,7 @@ static void client_sock_read(int sock, short event, void *arg)
 				__LINE__, pTask->client_ip);
 
 			close(pTask->ev_read.ev_fd);
-			free_queue_push(pTask);
+			task_finish_clean_up(pTask);
 			return;
 		}
 
@@ -252,7 +274,7 @@ static void client_sock_read(int sock, short event, void *arg)
 				if (event_add(&pTask->ev_read, &g_network_tv)!=0)
 				{
 					close(pTask->ev_read.ev_fd);
-					free_queue_push(pTask);
+					task_finish_clean_up(pTask);
 
 					logError("file: "__FILE__", line: %d, "\
 						"event_add fail.", __LINE__);
@@ -272,7 +294,7 @@ static void client_sock_read(int sock, short event, void *arg)
 					pTask->length);
 
 				close(pTask->ev_read.ev_fd);
-				free_queue_push(pTask);
+				task_finish_clean_up(pTask);
 				return;
 			}
 
@@ -286,7 +308,7 @@ static void client_sock_read(int sock, short event, void *arg)
 					TRACKER_MAX_PACKAGE_SIZE);
 
 				close(pTask->ev_read.ev_fd);
-				free_queue_push(pTask);
+				task_finish_clean_up(pTask);
 				return;
 			}
 		}
@@ -316,7 +338,7 @@ static void client_sock_write(int sock, short event, void *arg)
 			"send timeout", __LINE__);
 
 		close(pTask->ev_write.ev_fd);
-		free_queue_push(pTask);
+		task_finish_clean_up(pTask);
 
 		return;
 	}
@@ -333,7 +355,7 @@ static void client_sock_write(int sock, short event, void *arg)
 				if (event_add(&pTask->ev_write, &g_network_tv) != 0)
 				{
 					close(pTask->ev_write.ev_fd);
-					free_queue_push(pTask);
+					task_finish_clean_up(pTask);
 
 					logError("file: "__FILE__", line: %d, " \
 						"event_add fail.", __LINE__);
@@ -348,7 +370,7 @@ static void client_sock_write(int sock, short event, void *arg)
 					errno, strerror(errno));
 
 				close(pTask->ev_write.ev_fd);
-				free_queue_push(pTask);
+				task_finish_clean_up(pTask);
 			}
 
 			return;
@@ -360,7 +382,7 @@ static void client_sock_write(int sock, short event, void *arg)
 				__LINE__);
 
 			close(pTask->ev_write.ev_fd);
-			free_queue_push(pTask);
+			task_finish_clean_up(pTask);
 			return;
 		}
 
@@ -374,7 +396,7 @@ static void client_sock_write(int sock, short event, void *arg)
 						&g_network_tv)) != 0)
 			{
 				close(pTask->ev_read.ev_fd);
-				free_queue_push(pTask);
+				task_finish_clean_up(pTask);
 
 				logError("file: "__FILE__", line: %d, "\
 					"event_add fail.", __LINE__);

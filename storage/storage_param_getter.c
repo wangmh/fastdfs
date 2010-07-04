@@ -83,6 +83,7 @@ static int storage_do_get_params_from_tracker( \
 	int result;
 	int i;
 
+	result = 0;
 	*count = 0;
 	pTServer = &trackerServer;
 	pTServerEnd = g_tracker_group.servers + g_tracker_group.server_count;

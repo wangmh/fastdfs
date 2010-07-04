@@ -1257,6 +1257,8 @@ static int tracker_deal_service_query_storage( \
 		{
 			write_group_index = 0;
 		}
+
+		pStoreGroup = NULL;
 		ppFoundGroup = g_groups.sorted_groups + write_group_index;
 		if ((*ppFoundGroup)->active_count > 0)
 		{
@@ -1316,13 +1318,14 @@ static int tracker_deal_service_query_storage( \
 
 			if (pStoreGroup == NULL)
 			{
-				pTask->length = sizeof(TrackerHeader);
 				if (bHaveActiveServer)
 				{
+					pTask->length = sizeof(TrackerHeader);
 					return ENOSPC;
 				}
 				else
 				{
+					pTask->length = sizeof(TrackerHeader);
 					return ENOENT;
 				}
 			}
@@ -2197,7 +2200,7 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			break;
 		case FDFS_PROTO_CMD_QUIT:
 			close(pTask->ev_read.ev_fd);
-			free_queue_push(pTask);
+			task_finish_clean_up(pTask);
 			return 0;
 		case FDFS_PROTO_CMD_ACTIVE_TEST:
 			result = tracker_deal_active_test(pTask);

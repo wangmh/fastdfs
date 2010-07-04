@@ -120,6 +120,7 @@ static int storage_report_storage_ip_addr()
 	int result;
 	int i;
 
+	result = 0;
 	success_count = 0;
 	pTServer = &trackerServer;
 	pTServerEnd = g_tracker_group.servers + g_tracker_group.server_count;
@@ -306,6 +307,7 @@ int storage_changelog_req()
 	int result;
 	int i;
 
+	result = 0;
 	success_count = 0;
 	pTServer = &trackerServer;
 	pTServerEnd = g_tracker_group.servers + g_tracker_group.server_count;
