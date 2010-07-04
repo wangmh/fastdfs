@@ -828,7 +828,7 @@ static int tracker_deal_storage_report_ip_changed(struct fast_task_info *pTask)
 
 static int tracker_deal_storage_sync_notify(struct fast_task_info *pTask)
 {
-	TrackerStorageSyncReqBody body;
+	TrackerStorageSyncReqBody *pBody;
 	char sync_src_ip_addr[IP_ADDRESS_SIZE];
 	bool bSaveStorages;
 	TrackerClientInfo *pClientInfo;
@@ -850,7 +850,8 @@ static int tracker_deal_storage_sync_notify(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
-	if (*(body.src_ip_addr) == '\0')
+	pBody=(TrackerStorageSyncReqBody *)(pTask->data+sizeof(TrackerHeader));
+	if (*(pBody->src_ip_addr) == '\0')
 	{
 	if (pClientInfo->pStorage->status == FDFS_STORAGE_STATUS_INIT || \
 	    pClientInfo->pStorage->status == FDFS_STORAGE_STATUS_WAIT_SYNC || \
@@ -875,7 +876,7 @@ static int tracker_deal_storage_sync_notify(struct fast_task_info *pTask)
 
 	if (pClientInfo->pStorage->psync_src_server == NULL)
 	{
-		memcpy(sync_src_ip_addr, body.src_ip_addr, IP_ADDRESS_SIZE);
+		memcpy(sync_src_ip_addr, pBody->src_ip_addr, IP_ADDRESS_SIZE);
 		sync_src_ip_addr[IP_ADDRESS_SIZE-1] = '\0';
 
 		pClientInfo->pStorage->psync_src_server = \
@@ -917,7 +918,7 @@ static int tracker_deal_storage_sync_notify(struct fast_task_info *pTask)
 		}
 
 		pClientInfo->pStorage->sync_until_timestamp = \
-				(int)buff2long(body.until_timestamp);
+				(int)buff2long(pBody->until_timestamp);
 		bSaveStorages = true;
 	}
 
