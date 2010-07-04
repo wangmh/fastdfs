@@ -1,6 +1,7 @@
 //fast_task_queue.c
 
 #include <errno.h>
+#include <sys/resource.h>
 #include <pthread.h>
 #include "fast_task_queue.h"
 #include "logger.h"
@@ -43,8 +44,32 @@ int task_queue_init(const int max_connections, const int min_buff_size, \
 	}
 	else
 	{
+		struct rlimit rlimit_data;
+		rlim_t max_data_size;
+
+		if (getrlimit(RLIMIT_DATA, &rlimit_data) < 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"call getrlimit fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, errno, strerror(errno));
+			return errno != 0 ? errno : EPERM;
+		}
+		if (rlimit_data.rlim_cur == RLIM_INFINITY)
+		{
+			max_data_size = 512 * 1024 * 1024;
+		}
+		else
+		{
+			max_data_size = rlimit_data.rlim_cur;
+			if (max_data_size > 512 * 1024 * 1024)
+			{
+				max_data_size = 512 * 1024 * 1024;
+			}
+		}
+
 		total_size = alloc_size+(int64_t)min_buff_size*max_connections;
-		if (total_size <= 512 * 1024 * 1024)
+		if (total_size <= max_data_size)
 		{
 			g_free_queue.malloc_whole_block = true;
 			block_size += min_buff_size;

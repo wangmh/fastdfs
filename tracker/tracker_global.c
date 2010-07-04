@@ -30,7 +30,6 @@ char g_run_by_group[32] = {0};
 char g_run_by_user[32] = {0};
 
 bool g_storage_ip_changed_auto_adjust = true;
-bool g_thread_kill_done = false;
 
 int g_thread_stack_size = 64 * 1024;
 

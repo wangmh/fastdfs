@@ -1554,7 +1554,7 @@ static int storage_deal_active_test(StorageClientInfo *pClientInfo, \
 		}
 	} while (0);
 
-	resp.cmd = TRACKER_PROTO_CMD_SERVER_RESP;
+	resp.cmd = STORAGE_PROTO_CMD_RESP;
 	if ((result=tcpsenddata_nb(pClientInfo->sock, \
 		&resp, sizeof(resp), g_fdfs_network_timeout)) != 0)
 	{

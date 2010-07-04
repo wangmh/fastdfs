@@ -24,10 +24,11 @@
 #include "shared_func.h"
 #include "logger.h"
 #include "sockopt.h"
+#include "fast_task_queue.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
 #include "tracker_global.h"
-#include "fast_task_queue.h"
+#include "tracker_service.h"
 #include "tracker_io.h"
 
 static void client_sock_read(int sock, short event, void *arg);
@@ -109,6 +110,8 @@ void recv_notify_read(int sock, short event, void *arg)
 		pThreadData = g_thread_data + incomesock % g_work_threads;
 
 		strcpy(pTask->client_ip, szClientIp);
+		strcpy(((TrackerClientInfo *)(pTask->arg))->ip_addr, szClientIp);
+	
 		event_set(&pTask->ev_read, incomesock, EV_READ, \
 				client_sock_read, pTask);
 		if (event_base_set(pThreadData->ev_base, &pTask->ev_read) != 0)
@@ -292,7 +295,8 @@ static void client_sock_read(int sock, short event, void *arg)
 		pTask->offset += bytes;
 		if (pTask->offset >= pTask->length) //recv done
 		{
-			// to do work_deal_task(pTask);
+			pTask->req_count++;
+			tracker_deal_task(pTask);
 			return;
 		}
 	}
@@ -374,7 +378,7 @@ static void client_sock_write(int sock, short event, void *arg)
 				free_queue_push(pTask);
 
 				logError("file: "__FILE__", line: %d, "\
-						"event_add fail.", __LINE__);
+					"event_add fail.", __LINE__);
 				return;
 			}
 
