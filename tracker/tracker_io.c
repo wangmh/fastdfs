@@ -110,7 +110,6 @@ void recv_notify_read(int sock, short event, void *arg)
 		pThreadData = g_thread_data + incomesock % g_work_threads;
 
 		strcpy(pTask->client_ip, szClientIp);
-		strcpy(((TrackerClientInfo *)(pTask->arg))->ip_addr, szClientIp);
 	
 		event_set(&pTask->ev_read, incomesock, EV_READ, \
 				client_sock_read, pTask);

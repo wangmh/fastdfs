@@ -675,7 +675,7 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 	joinBody.status = pBody->status;
 
 	result = tracker_mem_add_group_and_storage(pClientInfo, \
-			&joinBody, true);
+			pTask->client_ip, &joinBody, true);
 	if (result != 0)
 	{
 		pTask->length = sizeof(TrackerHeader);

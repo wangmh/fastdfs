@@ -20,12 +20,10 @@ static pthread_t http_check_tid;
 
 static void *http_check_entrance(void *arg)
 {
-	FDFSGroupInfo *pGroup;
-	FDFSGroupInfo *pGroupEnd;
+	FDFSGroupInfo **ppGroup;
+	FDFSGroupInfo **ppGroupEnd;
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppServerEnd;
-	FDFSStorageDetail *pServer;
-	FDFSStorageDetail *pServerEnd;
 	char url[512];
 	char error_info[512];
 	char *content;
@@ -47,19 +45,19 @@ static void *http_check_entrance(void *arg)
 		sleep(g_http_check_interval);
 	}
 
-	pGroupEnd = g_groups.groups + g_groups.count;
-	for (pGroup=g_groups.groups; g_continue_flag && (!g_http_servers_dirty)\
-		&& pGroup<pGroupEnd; pGroup++)
+	ppGroupEnd = g_groups.groups + g_groups.count;
+	for (ppGroup=g_groups.groups; g_continue_flag && (!g_http_servers_dirty)\
+		&& ppGroup<ppGroupEnd; ppGroup++)
         {
 
-	if (pGroup->storage_http_port <= 0)
+	if ((*ppGroup)->storage_http_port <= 0)
 	{
 		continue;
 	}
 
 	server_count = 0;
-	ppServerEnd = pGroup->active_servers + pGroup->active_count;
-	for (ppServer=pGroup->active_servers; g_continue_flag && \
+	ppServerEnd = (*ppGroup)->active_servers + (*ppGroup)->active_count;
+	for (ppServer=(*ppGroup)->active_servers; g_continue_flag && \
 		(!g_http_servers_dirty) && ppServer<ppServerEnd; ppServer++)
 	{
 		if (g_http_check_type == FDFS_HTTP_CHECK_ALIVE_TYPE_TCP)
@@ -77,7 +75,7 @@ static void *http_check_entrance(void *arg)
 			}
 
 			result = connectserverbyip_nb(sock, (*ppServer)->ip_addr, \
-						pGroup->storage_http_port, \
+						(*ppGroup)->storage_http_port, \
 						g_fdfs_connect_timeout);
 			close(sock);
 
@@ -88,7 +86,7 @@ static void *http_check_entrance(void *arg)
 
 			if (result == 0)
 			{
-				*(pGroup->http_servers+server_count)=*ppServer;
+				*((*ppGroup)->http_servers+server_count)=*ppServer;
 				server_count++;
 				if ((*ppServer)->http_check_fail_count > 0)
 				{
@@ -98,7 +96,7 @@ static void *http_check_entrance(void *arg)
 						__LINE__, \
 						(*ppServer)->http_check_fail_count, 
 						(*ppServer)->ip_addr, \
-						pGroup->storage_http_port);
+						(*ppGroup)->storage_http_port);
 					(*ppServer)->http_check_fail_count = 0;
 				}
 			}
@@ -115,7 +113,7 @@ static void *http_check_entrance(void *arg)
 						__LINE__, \
 						(*ppServer)->http_check_fail_count, \
 						(*ppServer)->ip_addr, \
-						pGroup->storage_http_port, \
+						(*ppGroup)->storage_http_port, \
 						(*ppServer)->http_check_error_info);
 				}
 
@@ -124,7 +122,7 @@ static void *http_check_entrance(void *arg)
 					"server %s:%d fail, " \
 					"errno: %d, error info: %s", \
 					(*ppServer)->ip_addr, \
-					pGroup->storage_http_port, result, \
+					(*ppGroup)->storage_http_port, result, \
 					strerror(result));
 
 				logError("file: "__FILE__", line: %d, %s", \
@@ -142,7 +140,7 @@ static void *http_check_entrance(void *arg)
 		else  //http
 		{
 		sprintf(url, "http://%s:%d%s", (*ppServer)->ip_addr, \
-			pGroup->storage_http_port, g_http_check_uri);
+			(*ppGroup)->storage_http_port, g_http_check_uri);
 
 		result = get_url_content(url, g_fdfs_connect_timeout, \
 				g_fdfs_network_timeout, &http_status, \
@@ -162,7 +160,7 @@ static void *http_check_entrance(void *arg)
 		{
 			if (http_status == 200)
 			{
-				*(pGroup->http_servers+server_count)=*ppServer;
+				*((*ppGroup)->http_servers+server_count)=*ppServer;
 				server_count++;
 
 				if ((*ppServer)->http_check_fail_count > 0)
@@ -189,7 +187,7 @@ static void *http_check_entrance(void *arg)
 						__LINE__, \
 						(*ppServer)->http_check_fail_count, \
 						(*ppServer)->ip_addr, \
-						pGroup->storage_http_port, \
+						(*ppGroup)->storage_http_port, \
 						(*ppServer)->http_check_error_info);
 				}
 
@@ -224,7 +222,7 @@ static void *http_check_entrance(void *arg)
 						__LINE__, \
 						(*ppServer)->http_check_fail_count, \
 						(*ppServer)->ip_addr, \
-						pGroup->storage_http_port, \
+						(*ppGroup)->storage_http_port, \
 						(*ppServer)->http_check_error_info);
 				}
 
@@ -251,33 +249,34 @@ static void *http_check_entrance(void *arg)
 		break;
 	}
 
-	if (pGroup->http_server_count != server_count)
+	if ((*ppGroup)->http_server_count != server_count)
 	{
 		logDebug("file: "__FILE__", line: %d, " \
 			"group: %s, HTTP server count change from %d to %d", \
-			__LINE__, pGroup->group_name, \
-			pGroup->http_server_count, server_count);
+			__LINE__, (*ppGroup)->group_name, \
+			(*ppGroup)->http_server_count, server_count);
 
-		pGroup->http_server_count = server_count;
+		(*ppGroup)->http_server_count = server_count;
 	}
 	}
 	}
 
-	pGroupEnd = g_groups.groups + g_groups.count;
-	for (pGroup=g_groups.groups; pGroup<pGroupEnd; pGroup++)
+	ppGroupEnd = g_groups.groups + g_groups.count;
+	for (ppGroup=g_groups.groups; ppGroup<ppGroupEnd; ppGroup++)
 	{
-	pServerEnd = pGroup->all_servers + pGroup->count;
-	for (pServer=pGroup->all_servers; pServer<pServerEnd; pServer++)
+	ppServerEnd = (*ppGroup)->all_servers + (*ppGroup)->count;
+	for (ppServer=(*ppGroup)->all_servers; ppServer<ppServerEnd; ppServer++)
 	{
-		if (pServer->http_check_fail_count > 1)
+		if ((*ppServer)->http_check_fail_count > 1)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"http check alive fail " \
 				"after %d times, storage server: %s:%d, " \
 				"error info: %s", \
-				__LINE__, pServer->http_check_fail_count, \
-				pServer->ip_addr, pGroup->storage_http_port, \
-				pServer->http_check_error_info);
+				__LINE__, (*ppServer)->http_check_fail_count, \
+				(*ppServer)->ip_addr, \
+				(*ppGroup)->storage_http_port,\
+				(*ppServer)->http_check_error_info);
 		}
 	}
 	}
