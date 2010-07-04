@@ -290,7 +290,6 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_run_by_group=%s\n"
 		"g_run_by_user=%s\n"
 		"g_storage_ip_changed_auto_adjust=%d\n"
-		"g_thread_kill_done=%d\n"
 		"g_thread_stack_size=%d\n"
 		"g_changelog_fsize="INT64_PRINTF_FORMAT"\n"
 	#ifdef WITH_HTTPD
@@ -329,7 +328,6 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_run_by_group
 		, g_run_by_user
 		, g_storage_ip_changed_auto_adjust
-		, g_thread_kill_done
 		, g_thread_stack_size
 		, g_changelog_fsize
 	#ifdef WITH_HTTPD

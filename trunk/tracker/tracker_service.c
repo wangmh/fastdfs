@@ -67,6 +67,12 @@ int tracker_service_init()
 		return result;
 	}
 
+	if ((result=task_queue_init(g_max_connections, TRACKER_MAX_PACKAGE_SIZE,\
+                TRACKER_MAX_PACKAGE_SIZE, sizeof(TrackerClientInfo))) != 0)
+	{
+		return result;
+	}
+
 	g_thread_data = (struct thread_data *)malloc(sizeof( \
 				struct thread_data) * g_work_threads);
 	if (g_thread_data == NULL)
@@ -139,6 +145,28 @@ int tracker_service_init()
 	pthread_attr_destroy(&thread_attr);
 
 	return 0;
+}
+
+int tracker_terminate_threads()
+{
+        struct thread_data *pThreadData;
+        struct thread_data *pDataEnd;
+        int quit_sock;
+
+        if (g_thread_data != NULL)
+        {
+                pDataEnd = g_thread_data + g_work_threads;
+                quit_sock = 0;
+                for (pThreadData=g_thread_data; pThreadData<pDataEnd; \
+                        pThreadData++)
+                {
+                        quit_sock--;
+                        write(pThreadData->pipe_fds[1], &quit_sock, \
+                                        sizeof(quit_sock));
+                }
+        }
+
+        return 0;
 }
 
 static void wait_for_work_threads_exit()
@@ -241,11 +269,6 @@ static void *work_thread_entrance(void* arg)
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, result, strerror(result));
-	}
-
-	while (!g_thread_kill_done)  //waiting for kill signal
-	{
-		sleep(1);
 	}
 
 	return NULL;
@@ -385,7 +408,7 @@ static int tracker_deal_changelog_req(struct fast_task_info *pTask)
 	{
 	if (pClientInfo->pGroup != NULL && pClientInfo->pStorage != NULL)
 	{  //already logined
-		if (pTask->length != sizeof(TrackerHeader))
+		if (pTask->length - sizeof(TrackerHeader) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, package size " \
@@ -393,7 +416,7 @@ static int tracker_deal_changelog_req(struct fast_task_info *pTask)
 				"expect length = %d", __LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ, \
 				pTask->client_ip, pTask->length - \
-				sizeof(TrackerHeader), 0);
+				(int)sizeof(TrackerHeader), 0);
 
 			result = EINVAL;
 			break;
@@ -412,7 +435,8 @@ static int tracker_deal_changelog_req(struct fast_task_info *pTask)
 				"expect length = %d", __LINE__, \
 				TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ, \
 				pTask->client_ip, pTask->length - \
-				sizeof(TrackerHeader), FDFS_GROUP_NAME_MAX_LEN);
+				(int)sizeof(TrackerHeader), \
+				FDFS_GROUP_NAME_MAX_LEN);
 
 			result = EINVAL;
 			break;
@@ -465,7 +489,7 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 			"expect length = %d", __LINE__, \
 			TRACKER_PROTO_CMD_STORAGE_PARAMETER_REQ, \
 			pTask->client_ip, pTask->length - \
-			sizeof(TrackerHeader), 0);
+			(int)sizeof(TrackerHeader), 0);
 
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
@@ -530,7 +554,8 @@ static int tracker_deal_storage_report_status(struct fast_task_info *pTask)
 			"package size "PKG_LEN_PRINTF_FORMAT" " \
 			"is not correct", __LINE__, \
 			TRACKER_PROTO_CMD_STORAGE_REPORT_STATUS, \
-			pTask->client_ip, pTask->length - sizeof(TrackerHeader));
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader));
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
@@ -572,7 +597,8 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 			"package size "PKG_LEN_PRINTF_FORMAT" " \
 			"is not correct, expect length: %d.", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_JOIN, \
-			pTask->client_ip, pTask->length - sizeof(TrackerHeader),
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader),
 			(int)sizeof(TrackerStorageJoinBody));
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
@@ -676,17 +702,29 @@ static int tracker_deal_server_delete_storage(struct fast_task_info *pTask)
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char *pIpAddr;
 	FDFSGroupInfo *pGroup;
+	int nPkgLen;
 
-	if (pTask->length - sizeof(TrackerHeader) <= \
-			FDFS_GROUP_NAME_MAX_LEN)
+	nPkgLen = pTask->length - sizeof(TrackerHeader);
+	if (nPkgLen <= FDFS_GROUP_NAME_MAX_LEN)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
 			"expect length > %d", __LINE__, \
 			TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE, \
-			pTask->client_ip, pTask->length - \
-			sizeof(TrackerHeader), FDFS_GROUP_NAME_MAX_LEN);
+			pTask->client_ip, nPkgLen, FDFS_GROUP_NAME_MAX_LEN);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+	if (nPkgLen >= FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length < %d", __LINE__, \
+			TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE, \
+			pTask->client_ip, nPkgLen, \
+			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE);
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
@@ -720,7 +758,7 @@ static int tracker_deal_active_test(struct fast_task_info *pTask)
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
 			"expect length 0", __LINE__, \
 			FDFS_PROTO_CMD_ACTIVE_TEST, pTask->client_ip, \
-			pTask->length - sizeof(TrackerHeader));
+			pTask->length - (int)sizeof(TrackerHeader));
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
@@ -744,7 +782,8 @@ static int tracker_deal_storage_report_ip_changed(struct fast_task_info *pTask)
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
 			"expect length = %d", __LINE__, \
 			TRACKER_PROTO_CMD_STORAGE_REPORT_IP_CHANGED, \
-			pTask->client_ip, pTask->length - sizeof(TrackerHeader),\
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader),\
 			FDFS_GROUP_NAME_MAX_LEN + 2 * IP_ADDRESS_SIZE);
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
@@ -804,7 +843,8 @@ static int tracker_deal_storage_sync_notify(struct fast_task_info *pTask)
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
 			"expect length: %d", __LINE__, \
 			TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY, \
-			pTask->client_ip, pTask->length - sizeof(TrackerHeader),
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader),
 			(int)sizeof(TrackerStorageSyncReqBody));
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
@@ -1063,16 +1103,27 @@ static int tracker_deal_service_query_fetch_update( \
 	int filename_len;
 	int server_count;
 	int result;
+	int nPkgLen;
 
-	if (pTask->length - sizeof(TrackerHeader) < FDFS_GROUP_NAME_MAX_LEN + 22)
+	nPkgLen = pTask->length - sizeof(TrackerHeader);
+	if (nPkgLen < FDFS_GROUP_NAME_MAX_LEN+22)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
-			"expect length > %d", \
-			__LINE__, cmd, pTask->client_ip,  \
-			pTask->length - sizeof(TrackerHeader), \
+			"expect length > %d", __LINE__, cmd, \
+			pTask->client_ip, nPkgLen, \
 			FDFS_GROUP_NAME_MAX_LEN+22);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+	if (nPkgLen >= FDFS_GROUP_NAME_MAX_LEN + 128)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is too long, exceeds %d", \
+			__LINE__, cmd, pTask->client_ip, nPkgLen, \
+			FDFS_GROUP_NAME_MAX_LEN + 128);
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
@@ -1155,7 +1206,8 @@ static int tracker_deal_service_query_storage( \
 			PKG_LEN_PRINTF_FORMAT"is not correct, " \
 			"expect length: %d", __LINE__, \
 			cmd, pTask->client_ip, \
-			pTask->length - sizeof(TrackerHeader), expect_pkg_len);
+			pTask->length - (int)sizeof(TrackerHeader), \
+			expect_pkg_len);
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
@@ -1398,7 +1450,8 @@ static int tracker_deal_server_list_groups(struct fast_task_info *pTask)
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
 			"expect length: 0", __LINE__, \
 			TRACKER_PROTO_CMD_SERVER_LIST_GROUP, \
-			pTask->client_ip, pTask->length - sizeof(TrackerHeader));
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader));
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
@@ -1448,7 +1501,8 @@ static int tracker_deal_storage_sync_src_req(struct fast_task_info *pTask)
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
 			"expect length: %d", __LINE__, \
 			TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ, \
-			pTask->client_ip, pTask->length-sizeof(TrackerHeader), \
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader), \
 			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE);
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
@@ -1536,7 +1590,8 @@ static int tracker_deal_storage_sync_dest_req(struct fast_task_info *pTask)
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
 			"expect length: 0", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ, \
-			pTask->client_ip, pTask->length - sizeof(TrackerHeader));
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader));
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
@@ -1622,7 +1677,8 @@ static int tracker_deal_storage_sync_dest_query(struct fast_task_info *pTask)
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
 			"expect length: 0", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_QUERY, \
-			pTask->client_ip, pTask->length - sizeof(TrackerHeader));
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader));
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
@@ -2139,8 +2195,9 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			result = tracker_deal_parameter_req(pTask);
 			break;
 		case FDFS_PROTO_CMD_QUIT:
-			result = ECONNRESET;  //for quit loop
-			break;
+			close(pTask->ev_read.ev_fd);
+			free_queue_push(pTask);
+			return 0;
 		case FDFS_PROTO_CMD_ACTIVE_TEST:
 			result = tracker_deal_active_test(pTask);
 			break;

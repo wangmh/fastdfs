@@ -27,6 +27,8 @@ extern int g_tracker_thread_count;
 int tracker_service_init();
 int tracker_service_destroy();
 
+int tracker_terminate_threads();
+
 void tracker_accept_loop(int server_sock);
 int tracker_deal_task(struct fast_task_info *pTask);
 

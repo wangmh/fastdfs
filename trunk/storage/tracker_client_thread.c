@@ -1124,20 +1124,6 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 
 	g_sync_until_timestamp = (time_t)buff2long(syncReqbody.until_timestamp);
 
-	memset(&header, 0, sizeof(header));
-	header.cmd = TRACKER_PROTO_CMD_STORAGE_RESP;
-	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, \
-			sizeof(header), g_fdfs_network_timeout)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"tracker server %s:%d, send data fail, " \
-			"errno: %d, error info: %s.", \
-			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, \
-			result, strerror(result));
-		return result;
-	}
-
 	return 0;
 }
 

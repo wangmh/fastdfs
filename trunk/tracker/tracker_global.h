@@ -23,7 +23,7 @@
 #endif
 
 #define TRACKER_SYNC_TO_FILE_FREQ 1000
-#define TRACKER_MAX_PACKAGE_SIZE  4 * 1024
+#define TRACKER_MAX_PACKAGE_SIZE  8 * 1024
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +50,6 @@ extern char g_run_by_group[32];
 extern char g_run_by_user[32];
 
 extern bool g_storage_ip_changed_auto_adjust;
-extern bool g_thread_kill_done;
 
 extern int g_thread_stack_size;
 
