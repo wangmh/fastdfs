@@ -149,6 +149,14 @@ static int storage_report_storage_ip_addr()
 				socketBind(pTServer->sock, g_bind_addr, 0);
 			}
 
+			if (tcpsetnonblockopt(pTServer->sock) != 0)
+			{
+				close(pTServer->sock);
+				pTServer->sock = -1;
+				sleep(5);
+				continue;
+			}
+
 			if ((result=connectserverbyip_nb(pTServer->sock, \
 				pTServer->ip_addr, pTServer->port, \
 				g_fdfs_connect_timeout)) == 0)
