@@ -63,7 +63,7 @@ TARGET_PREFIX=/usr/local
 
 DEBUG_FLAG=1
 
-CFLAGS='-Wall -O -D_FILE_OFFSET_BITS=64 -I /home/o/o/happyfish100/libevent/include -L /home/o/o/happyfish100/libevent/lib'
+CFLAGS='-Wall -O -D_FILE_OFFSET_BITS=64'
 if [ "$DEBUG_FLAG" = "1" ]; then
   CFLAGS="$CFLAGS -g -DDEBUG_FLAG"
 else
