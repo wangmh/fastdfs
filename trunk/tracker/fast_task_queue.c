@@ -182,8 +182,11 @@ int free_queue_push(struct fast_task_info *pTask)
 	char *new_buff;
 	int result;
 
+	*(pTask->client_ip) = '\0';
 	pTask->length = 0;
 	pTask->offset = 0;
+	pTask->req_count = 0;
+
 	if (pTask->size > g_free_queue.min_buff_size) //need thrink
 	{
 		new_buff = (char *)malloc(g_free_queue.min_buff_size);

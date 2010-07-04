@@ -24,6 +24,8 @@ extern "C" {
 void recv_notify_read(int sock, short event, void *arg);
 int send_add_event(struct fast_task_info *pTask);
 
+void task_finish_clean_up(struct fast_task_info *pTask);
+
 #ifdef __cplusplus
 }
 #endif
