@@ -6,7 +6,7 @@ LIB_PATH = -L/usr/local/lib $(LIBS)
 TARGET_PATH = $(TARGET_PREFIX)/bin
 TARGET_LIB = $(TARGET_PREFIX)/lib
 TARGET_INC = $(TARGET_PREFIX)/include
-CONFIG_PATH = $(TARGET_PREFIX)/etc
+CONFIG_PATH = $(TARGET_CONF_PATH)
 
 STATIC_OBJS = ../common/hash.o ../common/chain.o \
               ../common/shared_func.o ../common/ini_file_reader.o \

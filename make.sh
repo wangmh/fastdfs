@@ -57,6 +57,7 @@ cat <<EOF > common/_os_bits.h
 EOF
 
 TARGET_PREFIX=/usr/local
+TARGET_CONF_PATH=/etc/fdfs
 
 #WITH_HTTPD=1
 #WITH_LINUX_SERVICE=1
@@ -121,6 +122,7 @@ perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_PREFIX\)#$TARGET_PREFIX#g" Makefile
 perl -pi -e "s#\\\$\(TRACKER_HTTPD_OBJS\)#$TRACKER_HTTPD_OBJS#g" Makefile
+perl -pi -e "s#\\\$\(TARGET_CONF_PATH\)#$TARGET_CONF_PATH#g" Makefile
 make $1 $2
 
 cd ../storage
@@ -129,6 +131,7 @@ perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_PREFIX\)#$TARGET_PREFIX#g" Makefile
 perl -pi -e "s#\\\$\(STORAGE_HTTPD_OBJS\)#$STORAGE_HTTPD_OBJS#g" Makefile
+perl -pi -e "s#\\\$\(TARGET_CONF_PATH\)#$TARGET_CONF_PATH#g" Makefile
 make $1 $2
 
 cd ../client
@@ -136,6 +139,7 @@ cp Makefile.in Makefile
 perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_PREFIX\)#$TARGET_PREFIX#g" Makefile
+perl -pi -e "s#\\\$\(TARGET_CONF_PATH\)#$TARGET_CONF_PATH#g" Makefile
 make $1 $2
 
 cd test
