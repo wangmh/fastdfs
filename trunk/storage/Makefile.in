@@ -4,6 +4,7 @@ COMPILE = $(CC) $(CFLAGS)
 INC_PATH = -I../common -I../tracker -I../client -Ifdht_client -I/usr/local/include
 LIB_PATH = -L/usr/local/lib $(LIBS)
 TARGET_PATH = $(TARGET_PREFIX)/bin
+CONFIG_PATH = $(TARGET_PREFIX)/etc
 
 SHARED_OBJS = ../common/hash.o ../common/chain.o \
               ../common/shared_func.o ../common/ini_file_reader.o \
@@ -32,6 +33,8 @@ all: $(ALL_OBJS) $(ALL_PRGS)
 	$(COMPILE) -c -o $@ $<  $(INC_PATH)
 install:
 	mkdir -p $(TARGET_PATH)
+	mkdir -p $(CONFIG_PATH)
 	cp -f $(ALL_PRGS) $(TARGET_PATH)
+	if [ ! -f $(CONFIG_PATH)/storage.conf ]; then cp -f ../conf/storage.conf ../conf/mime.types ../conf/http.conf $(CONFIG_PATH); fi
 clean:
 	rm -f $(ALL_OBJS) $(ALL_PRGS)

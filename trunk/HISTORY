@@ -1,6 +1,7 @@
-Version 2.0  2010-07-04
+Version 2.0  2010-07-08
  * tracker network io use libevent instead of traditional io model
  * tracker_mem.c malloc single group and storage struct, remove referer
+ * make install copy config files
 
 Version 1.29  2010-06-30
  * add files: tracker_dump.h and tracker_dump.c, tracker dump global vars
