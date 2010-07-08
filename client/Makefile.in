@@ -6,6 +6,7 @@ LIB_PATH = -L/usr/local/lib $(LIBS)
 TARGET_PATH = $(TARGET_PREFIX)/bin
 TARGET_LIB = $(TARGET_PREFIX)/lib
 TARGET_INC = $(TARGET_PREFIX)/include
+CONFIG_PATH = $(TARGET_PREFIX)/etc
 
 STATIC_OBJS = ../common/hash.o ../common/chain.o \
               ../common/shared_func.o ../common/ini_file_reader.o \
@@ -64,10 +65,12 @@ libfdfsclient.so.1:
 	$(COMPILE) -c -fPIC -o $@ $<  $(INC_PATH)
 install:
 	mkdir -p $(TARGET_PATH)
+	mkdir -p $(CONFIG_PATH)
 	mkdir -p $(TARGET_LIB)
 	cp -f $(ALL_PRGS) $(TARGET_PATH)
 	cp -f $(ALL_LIBS) $(TARGET_LIB)
 
+	if [ ! -f $(CONFIG_PATH)/client.conf ]; then cp -f ../conf/client.conf ../conf/http.conf $(CONFIG_PATH); fi
 	mkdir -p $(TARGET_INC)
 	mkdir -p $(TARGET_INC)/fastcommon
 	mkdir -p $(TARGET_INC)/fastdfs
