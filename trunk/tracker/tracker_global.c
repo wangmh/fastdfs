@@ -32,6 +32,8 @@ char g_run_by_user[32] = {0};
 bool g_storage_ip_changed_auto_adjust = true;
 
 int g_thread_stack_size = 64 * 1024;
+int g_storage_sync_file_max_delay = DEFAULT_STORAGE_SYNC_FILE_MAX_DELAY;
+int g_storage_sync_file_max_time = DEFAULT_STORAGE_SYNC_FILE_MAX_TIME;
 
 #ifdef WITH_HTTPD
 FDFSHTTPParams g_http_params;

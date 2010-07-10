@@ -52,6 +52,8 @@ extern char g_run_by_user[32];
 extern bool g_storage_ip_changed_auto_adjust;
 
 extern int g_thread_stack_size;
+extern int g_storage_sync_file_max_delay;
+extern int g_storage_sync_file_max_time;
 
 #ifdef WITH_HTTPD
 extern FDFSHTTPParams g_http_params;
