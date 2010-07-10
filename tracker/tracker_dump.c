@@ -281,8 +281,8 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_server_port=%d\n"
 		"g_max_connections=%d\n"
 		"g_tracker_thread_count=%d\n"
-		"g_sync_log_buff_interval=%d\n"
-		"g_check_active_interval=%d\n"
+		"g_sync_log_buff_interval=%ds\n"
+		"g_check_active_interval=%ds\n"
 		"g_storage_stat_chg_count=%d\n"
 		"g_storage_sync_time_chg_count=%d\n"
 		"g_storage_reserved_mb=%d MB\n"
@@ -292,6 +292,8 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_storage_ip_changed_auto_adjust=%d\n"
 		"g_thread_stack_size=%d\n"
 		"g_changelog_fsize="INT64_PRINTF_FORMAT"\n"
+		"g_storage_sync_file_max_delay=%ds\n"
+		"g_storage_sync_file_max_time=%ds\n"
 	#ifdef WITH_HTTPD
 		"g_http_params.disabled=%d\n"
 		"g_http_params.anti_steal_token=%d\n"
@@ -330,6 +332,8 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_storage_ip_changed_auto_adjust
 		, g_thread_stack_size
 		, g_changelog_fsize
+		, g_storage_sync_file_max_delay
+		, g_storage_sync_file_max_time
 	#ifdef WITH_HTTPD
 		, g_http_params.disabled
 		, g_http_params.anti_steal_token
