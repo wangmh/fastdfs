@@ -45,8 +45,8 @@ static void wait_for_work_threads_exit();
 int tracker_service_init()
 {
 	int result;
-	struct thread_data *pThreadData;
-	struct thread_data *pDataEnd;
+	struct tracker_thread_data *pThreadData;
+	struct tracker_thread_data *pDataEnd;
 	pthread_t tid;
 	pthread_attr_t thread_attr;
 
@@ -73,13 +73,13 @@ int tracker_service_init()
 		return result;
 	}
 
-	g_thread_data = (struct thread_data *)malloc(sizeof( \
-				struct thread_data) * g_work_threads);
+	g_thread_data = (struct tracker_thread_data *)malloc(sizeof( \
+				struct tracker_thread_data) * g_work_threads);
 	if (g_thread_data == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, (int)sizeof(struct thread_data) * \
+			__LINE__, (int)sizeof(struct tracker_thread_data) * \
 			g_work_threads, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -149,8 +149,8 @@ int tracker_service_init()
 
 int tracker_terminate_threads()
 {
-        struct thread_data *pThreadData;
-        struct thread_data *pDataEnd;
+        struct tracker_thread_data *pThreadData;
+        struct tracker_thread_data *pDataEnd;
         int quit_sock;
 
         if (g_thread_data != NULL)
@@ -191,7 +191,7 @@ void tracker_accept_loop(int server_sock)
 	int incomesock;
 	struct sockaddr_in inaddr;
 	unsigned int sockaddr_len;
-	struct thread_data *pThreadData;
+	struct tracker_thread_data *pThreadData;
 
 	while (g_continue_flag)
 	{
@@ -226,10 +226,10 @@ void tracker_accept_loop(int server_sock)
 static void *work_thread_entrance(void* arg)
 {
 	int result;
-	struct thread_data *pThreadData;
+	struct tracker_thread_data *pThreadData;
 	struct event ev_notify;
 
-	pThreadData = (struct thread_data *)arg;
+	pThreadData = (struct tracker_thread_data *)arg;
 	do
 	{
 		event_set(&ev_notify, pThreadData->pipe_fds[0], \
@@ -2209,9 +2209,9 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "  \
-					"client ip: %s, unkown cmd: %d", \
-					__LINE__, pTask->client_ip, \
-					pHeader->cmd);
+				"client ip: %s, unkown cmd: %d", \
+				__LINE__, pTask->client_ip, \
+				pHeader->cmd);
 			result = EINVAL;
 			break;
 	}

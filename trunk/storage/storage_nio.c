@@ -27,48 +27,34 @@
 #include "fast_task_queue.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
-#include "tracker_mem.h"
-#include "tracker_global.h"
-#include "tracker_service.h"
-#include "tracker_nio.h"
+#include "storage_global.h"
+#include "storage_service.h"
+#include "storage_nio.h"
 
 static void client_sock_read(int sock, short event, void *arg);
 static void client_sock_write(int sock, short event, void *arg);
 
 void task_finish_clean_up(struct fast_task_info *pTask)
 {
-	TrackerClientInfo *pClientInfo;
+	StorageClientInfo *pClientInfo;
 
-	pClientInfo = (TrackerClientInfo *)pTask->arg;
-	if (pClientInfo->pGroup != NULL)
-	{
-		if (pClientInfo->pStorage != NULL)
-		{
-			tracker_mem_offline_store_server(pClientInfo->pGroup, \
-						pClientInfo->pStorage);
-
-			pClientInfo->pStorage = NULL;
-		}
-
-		pClientInfo->pGroup = NULL;
-	}
+	pClientInfo = (StorageClientInfo *)pTask->arg;
 
 	free_queue_push(pTask);
 }
 
 void recv_notify_read(int sock, short event, void *arg)
 {
-	int bytes;
-	int incomesock;
-	int result;
-	struct tracker_thread_data *pThreadData;
 	struct fast_task_info *pTask;
-	char szClientIp[IP_ADDRESS_SIZE];
-	in_addr_t client_addr;
+	StorageClientInfo *pClientInfo;
+	struct storage_thread_data *pThreadData;
+	long task_addr;
+	int bytes;
+	int result;
 
 	while (1)
 	{
-		if ((bytes=read(sock, &incomesock, sizeof(incomesock))) < 0)
+		if ((bytes=read(sock, &task_addr, sizeof(task_addr))) < 0)
 		{
 			if (!(errno == EAGAIN || errno == EWOULDBLOCK))
 			{
@@ -85,73 +71,38 @@ void recv_notify_read(int sock, short event, void *arg)
 			break;
 		}
 
-		if (incomesock < 0)
+		pTask = (struct fast_task_info *)task_addr;
+		pClientInfo = (StorageClientInfo *)pTask->arg;
+
+		pThreadData = g_thread_data + pClientInfo->thread_index;
+		if (pClientInfo->sock < 0)  //quit flag
 		{
 			struct timeval tv;
                         tv.tv_sec = 1;
                         tv.tv_usec = 0;
-			pThreadData = g_thread_data + (-1 * incomesock - 1) % \
-					g_work_threads;
 			event_base_loopexit(pThreadData->ev_base, &tv);
 			return;
 		}
 
-		client_addr = getPeerIpaddr(incomesock, \
-				szClientIp, IP_ADDRESS_SIZE);
-		if (g_allow_ip_count >= 0)
-		{
-			if (bsearch(&client_addr, g_allow_ip_addrs, \
-					g_allow_ip_count, sizeof(in_addr_t), \
-					cmp_by_ip_addr_t) == NULL)
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"ip addr %s is not allowed to access", \
-					__LINE__, szClientIp);
-
-				close(incomesock);
-				continue;
-			}
-		}
-
-		if (tcpsetnonblockopt(incomesock) != 0)
-		{
-			close(incomesock);
-			continue;
-		}
-
-		pTask = free_queue_pop();
-		if (pTask == NULL)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"malloc task buff failed", \
-				__LINE__);
-			close(incomesock);
-			continue;
-		}
-
-		pThreadData = g_thread_data + incomesock % g_work_threads;
-
-		strcpy(pTask->client_ip, szClientIp);
-	
-		event_set(&pTask->ev_read, incomesock, EV_READ, \
+		event_set(&pTask->ev_read, pClientInfo->sock, EV_READ, \
 				client_sock_read, pTask);
 		if (event_base_set(pThreadData->ev_base, &pTask->ev_read) != 0)
 		{
 			task_finish_clean_up(pTask);
-			close(incomesock);
+			close(pClientInfo->sock);
 
 			logError("file: "__FILE__", line: %d, " \
 				"event_base_set fail.", __LINE__);
 			continue;
 		}
 
-		event_set(&pTask->ev_write, incomesock, EV_WRITE, \
+		event_set(&pTask->ev_write, pClientInfo->sock, EV_WRITE, \
 				client_sock_write, pTask);
 		if ((result=event_base_set(pThreadData->ev_base, \
 				&pTask->ev_write)) != 0)
 		{
 			task_finish_clean_up(pTask);
-			close(incomesock);
+			close(pClientInfo->sock);
 
 			logError("file: "__FILE__", line: %d, " \
 					"event_base_set fail.", __LINE__);
@@ -161,7 +112,7 @@ void recv_notify_read(int sock, short event, void *arg)
 		if (event_add(&pTask->ev_read, &g_network_tv) != 0)
 		{
 			task_finish_clean_up(pTask);
-			close(incomesock);
+			close(pClientInfo->sock);
 
 			logError("file: "__FILE__", line: %d, " \
 				"event_add fail.", __LINE__);
@@ -299,13 +250,13 @@ static void client_sock_read(int sock, short event, void *arg)
 			}
 
 			pTask->length += sizeof(TrackerHeader);
-			if (pTask->length > TRACKER_MAX_PACKAGE_SIZE)
+			if (pTask->length > g_buff_size) //todo: need to change 
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"client ip: %s, pkg length: %d > " \
 					"max pkg size: %d", __LINE__, \
 					pTask->client_ip, pTask->length, \
-					TRACKER_MAX_PACKAGE_SIZE);
+					g_buff_size);
 
 				close(pTask->ev_read.ev_fd);
 				task_finish_clean_up(pTask);
@@ -317,7 +268,7 @@ static void client_sock_read(int sock, short event, void *arg)
 		if (pTask->offset >= pTask->length) //recv done
 		{
 			pTask->req_count++;
-			tracker_deal_task(pTask);
+			storage_deal_task(pTask);
 			return;
 		}
 	}

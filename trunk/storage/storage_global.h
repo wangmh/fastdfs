@@ -32,7 +32,7 @@
 #define DEFAULT_DATA_DIR_COUNT_PER_PATH	 256
 #define DEFAULT_UPLOAD_PRIORITY           10
 #define DEFAULT_SYNC_MARK_FILE_FREQ  500
-
+#define STORAGE_DEFAULT_BUFF_SIZE    (64 * 1024)
 #define STORAGE_MAX_LOCAL_IP_ADDRS	  4
 #define STORAGE_IF_ALIAS_PREFIX_MAX_SIZE 32
 
@@ -59,9 +59,13 @@ extern int g_last_server_port;
 extern int g_last_http_port;  //last http server port
 extern char g_http_domain[FDFS_DOMAIN_NAME_MAX_SIZE];  //http server domain name
 extern int g_max_connections;
+extern int g_work_threads;
+extern int g_buff_size;
 extern int g_file_distribute_path_mode;
 extern int g_file_distribute_rotate_count;
 extern int g_fsync_after_written_bytes;
+
+extern struct timeval g_network_tv;
 
 extern int g_dist_path_index_high; //current write to high path
 extern int g_dist_path_index_low;  //current write to low path
@@ -130,6 +134,8 @@ extern int g_http_trunk_size;
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
 extern char g_exe_name[256];
 #endif
+
+extern struct storage_thread_data *g_thread_data;
 
 int storage_cmp_by_ip_addr(const void *p1, const void *p2);
 

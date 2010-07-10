@@ -1,5 +1,6 @@
 Version 2.0  2010-07-10
  * tracker network io use libevent instead of traditional io model
+ * storage network and disk io use libevent instead of traditional io model
  * tracker_mem.c malloc single group and storage struct, remove referer
  * make install copy config files
  * tracker.conf add two parameters: storage_sync_file_max_delay and 
