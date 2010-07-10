@@ -41,6 +41,8 @@ void task_finish_clean_up(struct fast_task_info *pTask)
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 
+	memset(pTask->arg, 0, sizeof(StorageClientInfo));
+
 	free_queue_push(pTask);
 }
 
@@ -195,7 +197,7 @@ static void client_sock_read(int sock, short event, void *arg)
 
 	while (1)
 	{
-		if (pTask->length == 0) //recv header
+		if (pClientInfo->total_length == 0) //recv header
 		{
 			recv_bytes = sizeof(TrackerHeader) - pTask->offset;
 		}
@@ -291,7 +293,18 @@ static void client_sock_read(int sock, short event, void *arg)
 		if (pTask->offset >= pTask->length) //recv done
 		{
 			pTask->req_count++;
-			storage_deal_task(pTask);
+
+			if (pClientInfo->total_offset == 0)
+			{
+				pClientInfo->total_offset = pTask->offset;
+				storage_deal_task(pTask);
+			}
+			else
+			{
+				pClientInfo->total_offset += pTask->offset;
+				//to do ...
+			}
+
 			return;
 		}
 	}
