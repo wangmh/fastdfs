@@ -77,6 +77,8 @@ static int copy_tracker_servers(TrackerServerGroup *pTrackerGroup, \
 	int nHostLen;
 
 	memset(&destServer, 0, sizeof(TrackerServerInfo));
+	destServer.sock = -1;
+
 	ppEnd = ppTrackerServers + pTrackerGroup->server_count;
 
 	pTrackerGroup->server_count = 0;

@@ -28,7 +28,7 @@
 
 void tracker_disconnect_server(TrackerServerInfo *pTrackerServer)
 {
-	if (pTrackerServer->sock > 0)
+	if (pTrackerServer->sock >= 0)
 	{
 		close(pTrackerServer->sock);
 		pTrackerServer->sock = -1;
@@ -39,7 +39,7 @@ int tracker_connect_server(TrackerServerInfo *pTrackerServer)
 {
 	int result;
 
-	if (pTrackerServer->sock > 0)
+	if (pTrackerServer->sock >= 0)
 	{
 		close(pTrackerServer->sock);
 	}
@@ -84,7 +84,7 @@ int tracker_get_all_connections_ex(TrackerServerGroup *pTrackerGroup)
 	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
 	{
-		if (pServer->sock > 0 || tracker_connect_server(pServer) == 0)
+		if (pServer->sock >= 0 || tracker_connect_server(pServer) == 0)
 		{
 			success_count++;
 		}
@@ -118,36 +118,47 @@ TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
 		server_index = 0;
 	}
 
+	do
+	{
 	pCurrentServer = pTrackerGroup->servers + server_index;
-	if (pCurrentServer->sock > 0 ||
+	if (pCurrentServer->sock >= 0 ||
 		tracker_connect_server(pCurrentServer) == 0)
 	{
-		pTrackerGroup->server_index++;
-		if (pTrackerGroup->server_index >= pTrackerGroup->server_count)
-		{
-			pTrackerGroup->server_index = 0;
-		}
-		return pCurrentServer;
+		break;
 	}
 
+	pCurrentServer = NULL;
 	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pCurrentServer+1; pServer<pEnd; pServer++)
 	{
-		if (tracker_connect_server(pServer) == 0)
+		if (pServer->sock >= 0 || tracker_connect_server(pServer) == 0)
 		{
-			return pServer;
+			pCurrentServer = pServer;
+			pTrackerGroup->server_index = pServer - \
+							pTrackerGroup->servers;
+			break;
 		}
 	}
 
 	for (pServer=pTrackerGroup->servers; pServer<pCurrentServer; pServer++)
 	{
-		if (tracker_connect_server(pServer) == 0)
+		if (pServer->sock >= 0 || tracker_connect_server(pServer) == 0)
 		{
-			return pServer;
+			pCurrentServer = pServer;
+			pTrackerGroup->server_index = pServer - \
+							pTrackerGroup->servers;
+			break;
 		}
 	}
+	} while (0);
 
-	return NULL;
+	pTrackerGroup->server_index++;
+	if (pTrackerGroup->server_index >= pTrackerGroup->server_count)
+	{
+		pTrackerGroup->server_index = 0;
+	}
+
+	return pCurrentServer;
 }
 
 int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
@@ -157,25 +168,26 @@ int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 	TrackerServerInfo *pServer;
 	TrackerServerInfo *pEnd;
 	int server_index;
+	int result;
 
 	server_index = pTrackerGroup->server_index;
 	if (server_index >= pTrackerGroup->server_count)
 	{
 		server_index = 0;
 	}
+
+	do
+	{
 	pCurrentServer = pTrackerGroup->servers + server_index;
 	memcpy(pTrackerServer, pCurrentServer, sizeof(TrackerServerInfo));
 	pTrackerServer->sock = -1;
 	if (tracker_connect_server(pTrackerServer) == 0)
 	{
-		pTrackerGroup->server_index++;
-		if (pTrackerGroup->server_index >= pTrackerGroup->server_count)
-		{
-			pTrackerGroup->server_index = 0;
-		}
-		return 0;
+		result = 0;
+		break;
 	}
 
+	result = ENOENT;
 	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pCurrentServer+1; pServer<pEnd; pServer++)
 	{
@@ -183,7 +195,10 @@ int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 		pTrackerServer->sock = -1;
 		if (tracker_connect_server(pTrackerServer) == 0)
 		{
-			return 0;
+			result = 0;
+			pTrackerGroup->server_index = pServer - \
+							pTrackerGroup->servers;
+			break;
 		}
 	}
 
@@ -193,11 +208,21 @@ int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 		pTrackerServer->sock = -1;
 		if (tracker_connect_server(pTrackerServer) == 0)
 		{
-			return 0;
+			result = 0;
+			pTrackerGroup->server_index = pServer - \
+							pTrackerGroup->servers;
+			break;
 		}
 	}
+	} while (0);
 
-	return ENOENT;
+	pTrackerGroup->server_index++;
+	if (pTrackerGroup->server_index >= pTrackerGroup->server_count)
+	{
+		pTrackerGroup->server_index = 0;
+	}
+
+	return result;
 }
 
 int tracker_list_servers(TrackerServerInfo *pTrackerServer, \

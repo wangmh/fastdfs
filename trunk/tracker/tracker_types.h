@@ -276,10 +276,13 @@ typedef struct
 	char ip_addr[IP_ADDRESS_SIZE];
 	char tracker_client_ip[IP_ADDRESS_SIZE];
 
+	int64_t total_length;   //pkg total length
+	int64_t total_offset;   //pkg current offset
+
 	char file_op;     //w for writing, r for reading
 	int fd;		  //file description no
-	int file_size; 	  //file size
-	int file_offset;  //file offset
+	int64_t file_size;   //file size
+	int64_t file_offset; //file offset
 } StorageClientInfo;
 
 typedef struct

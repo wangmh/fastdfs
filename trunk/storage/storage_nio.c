@@ -33,6 +33,7 @@
 
 static void client_sock_read(int sock, short event, void *arg);
 static void client_sock_write(int sock, short event, void *arg);
+static int trigger_nio_recv(struct fast_task_info *pTask);
 
 void task_finish_clean_up(struct fast_task_info *pTask)
 {
@@ -47,7 +48,6 @@ void recv_notify_read(int sock, short event, void *arg)
 {
 	struct fast_task_info *pTask;
 	StorageClientInfo *pClientInfo;
-	struct storage_thread_data *pThreadData;
 	long task_addr;
 	int bytes;
 	int result;
@@ -74,51 +74,74 @@ void recv_notify_read(int sock, short event, void *arg)
 		pTask = (struct fast_task_info *)task_addr;
 		pClientInfo = (StorageClientInfo *)pTask->arg;
 
-		pThreadData = g_thread_data + pClientInfo->thread_index;
 		if (pClientInfo->sock < 0)  //quit flag
 		{
+			struct storage_thread_data *pThreadData;
 			struct timeval tv;
+
+			pThreadData = g_thread_data + pClientInfo->thread_index;
                         tv.tv_sec = 1;
                         tv.tv_usec = 0;
 			event_base_loopexit(pThreadData->ev_base, &tv);
 			return;
 		}
 
-		event_set(&pTask->ev_read, pClientInfo->sock, EV_READ, \
-				client_sock_read, pTask);
-		if (event_base_set(pThreadData->ev_base, &pTask->ev_read) != 0)
+		switch (pClientInfo->stage)
 		{
-			task_finish_clean_up(pTask);
-			close(pClientInfo->sock);
-
-			logError("file: "__FILE__", line: %d, " \
-				"event_base_set fail.", __LINE__);
-			continue;
+			case FDFS_STORAGE_STAGE_NIO_RECV:
+				result = trigger_nio_recv(pTask);
+				break;
+			default:
+				logError("file: "__FILE__", line: %d, " \
+					"invalid stage: %d", __LINE__, \
+					pClientInfo->stage);
+				result = EINVAL;
+				break;
 		}
 
-		event_set(&pTask->ev_write, pClientInfo->sock, EV_WRITE, \
-				client_sock_write, pTask);
-		if ((result=event_base_set(pThreadData->ev_base, \
-				&pTask->ev_write)) != 0)
+		if (result != 0)
 		{
 			task_finish_clean_up(pTask);
 			close(pClientInfo->sock);
-
-			logError("file: "__FILE__", line: %d, " \
-					"event_base_set fail.", __LINE__);
-			continue;
-		}
-
-		if (event_add(&pTask->ev_read, &g_network_tv) != 0)
-		{
-			task_finish_clean_up(pTask);
-			close(pClientInfo->sock);
-
-			logError("file: "__FILE__", line: %d, " \
-				"event_add fail.", __LINE__);
-			continue;
 		}
 	}
+}
+
+static int trigger_nio_recv(struct fast_task_info *pTask)
+{
+	int result;
+	StorageClientInfo *pClientInfo;
+	struct storage_thread_data *pThreadData;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pThreadData = g_thread_data + pClientInfo->thread_index;
+	event_set(&pTask->ev_read, pClientInfo->sock, EV_READ, \
+			client_sock_read, pTask);
+	if ((result=event_base_set(pThreadData->ev_base, &pTask->ev_read)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"event_base_set fail.", __LINE__);
+		return result;
+	}
+
+	event_set(&pTask->ev_write, pClientInfo->sock, EV_WRITE, \
+			client_sock_write, pTask);
+	if ((result=event_base_set(pThreadData->ev_base, \
+					&pTask->ev_write)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"event_base_set fail.", __LINE__);
+		return result;
+	}
+
+	if ((result=event_add(&pTask->ev_read, &g_network_tv)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"event_add fail.", __LINE__);
+		return result;
+	}
+
+	return 0;
 }
 
 int send_add_event(struct fast_task_info *pTask)
@@ -136,6 +159,7 @@ static void client_sock_read(int sock, short event, void *arg)
 	int bytes;
 	int recv_bytes;
 	struct fast_task_info *pTask;
+        StorageClientInfo *pClientInfo;
 
 	pTask = (struct fast_task_info *)arg;
 
@@ -166,6 +190,8 @@ static void client_sock_read(int sock, short event, void *arg)
 
 		return;
 	}
+
+        pClientInfo = (StorageClientInfo *)pTask->arg;
 
 	while (1)
 	{
@@ -218,7 +244,7 @@ static void client_sock_read(int sock, short event, void *arg)
 			return;
 		}
 
-		if (pTask->length == 0) //header
+		if (pClientInfo->total_length == 0) //header
 		{
 			if (pTask->offset + bytes < sizeof(TrackerHeader))
 			{
@@ -235,32 +261,29 @@ static void client_sock_read(int sock, short event, void *arg)
 				return;
 			}
 
-			pTask->length = buff2long(((TrackerHeader *) \
+			pClientInfo->total_length=buff2long(((TrackerHeader *) \
 						pTask->data)->pkg_len);
-			if (pTask->length < 0)
+			if (pClientInfo->total_length < 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
-					"client ip: %s, pkg length: %d < 0", \
+					"client ip: %s, pkg length: " \
+					INT64_PRINTF_FORMAT" < 0", \
 					__LINE__, pTask->client_ip, \
-					pTask->length);
+					pClientInfo->total_length);
 
 				close(pTask->ev_read.ev_fd);
 				task_finish_clean_up(pTask);
 				return;
 			}
 
-			pTask->length += sizeof(TrackerHeader);
-			if (pTask->length > g_buff_size) //todo: need to change 
+			pClientInfo->total_length += sizeof(TrackerHeader);
+			if (pClientInfo->total_length > pTask->size)
 			{
-				logError("file: "__FILE__", line: %d, " \
-					"client ip: %s, pkg length: %d > " \
-					"max pkg size: %d", __LINE__, \
-					pTask->client_ip, pTask->length, \
-					g_buff_size);
-
-				close(pTask->ev_read.ev_fd);
-				task_finish_clean_up(pTask);
-				return;
+				pTask->length = pTask->size;
+			}
+			else
+			{
+				pTask->length = pClientInfo->total_length;
 			}
 		}
 
