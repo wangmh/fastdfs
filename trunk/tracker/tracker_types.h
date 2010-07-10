@@ -273,7 +273,7 @@ typedef struct
 	int thread_index;
 	int stage;
 	int sock;
-	char ip_addr[IP_ADDRESS_SIZE];
+	char ip_addr[IP_ADDRESS_SIZE];  //to be removed
 	char tracker_client_ip[IP_ADDRESS_SIZE];
 
 	int64_t total_length;   //pkg total length
