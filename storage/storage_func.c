@@ -875,6 +875,7 @@ int storage_func_init(const char *filename, \
 		{
 			g_fdfs_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 		}
+		g_network_tv.tv_sec = g_fdfs_network_timeout;
 
 		g_server_port = iniGetIntValue(NULL, "port", &iniContext, \
 					FDFS_STORAGE_SERVER_DEF_PORT);
@@ -991,6 +992,29 @@ int storage_func_init(const char *filename, \
 		if ((result=set_rlimit(RLIMIT_NOFILE, g_max_connections)) != 0)
 		{
 			break;
+		}
+
+		g_work_threads = iniGetIntValue(NULL, "work_threads", \
+				&iniContext, DEFAULT_WORK_THREADS);
+		if (g_work_threads <= 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"item \"work_threads\" is invalid, " \
+				"value: %d <= 0!", __LINE__, g_work_threads);
+			result = EINVAL;
+                        break;
+		}
+
+		g_buff_size = iniGetIntValue(NULL, "buff_size", \
+				&iniContext, STORAGE_DEFAULT_BUFF_SIZE);
+		if (g_buff_size < 8 * 1024)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"buffer_size=%d is invalid, must >= 8KB", \
+				__LINE__, g_buff_size);
+
+			result = EINVAL;
+                        break;
 		}
 	
 		pRunByGroup = iniGetStrValue(NULL, "run_by_group", &iniContext);
@@ -1210,8 +1234,8 @@ int storage_func_init(const char *filename, \
 			"subdir_count_per_path=%d, group_name=%s, " \
 			"connect_timeout=%ds, network_timeout=%ds, "\
 			"port=%d, bind_addr=%s, client_bind=%d, " \
-			"max_connections=%d, "    \
-			"heart_beat_interval=%ds, " \
+			"max_connections=%d, work_threads=%d, "    \
+			"buff_size=%dKB, heart_beat_interval=%ds, " \
 			"stat_report_interval=%ds, tracker_server_count=%d, " \
 			"sync_wait_msec=%dms, sync_interval=%dms, " \
 			"sync_start_time=%02d:%02d, sync_end_time: %02d:%02d, "\
@@ -1234,6 +1258,7 @@ int storage_func_init(const char *filename, \
 			g_group_name, g_fdfs_connect_timeout, \
 			g_fdfs_network_timeout, g_server_port, bind_addr, \
 			g_client_bind_addr, g_max_connections, \
+			g_work_threads, g_buff_size / 1024, \
 			g_heart_beat_interval, g_stat_report_interval, \
 			g_tracker_group.server_count, g_sync_wait_usec / 1000, \
 			g_sync_interval / 1000, \

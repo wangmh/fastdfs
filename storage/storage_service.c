@@ -38,6 +38,7 @@
 #include "fdfs_global.h"
 #include "tracker_client.h"
 #include "storage_client.h"
+#include "storage_nio.h"
 
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
@@ -45,6 +46,8 @@ static int last_stat_change_count = 1;  //for sync to stat file
 
 static pthread_mutex_t path_index_thread_lock;
 static pthread_mutex_t stat_count_thread_lock;
+
+static void *work_thread_entrance(void* arg);
 
 extern int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const char *master_filename,\
@@ -62,6 +65,10 @@ extern int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 int storage_service_init()
 {
 	int result;
+	struct storage_thread_data *pThreadData;
+	struct storage_thread_data *pDataEnd;
+	pthread_t tid;
+	pthread_attr_t thread_attr;
 
 	if ((result=init_pthread_lock(&g_storage_thread_lock)) != 0)
 	{
@@ -78,6 +85,91 @@ int storage_service_init()
 		return result;
 	}
 
+	if ((result=init_pthread_attr(&thread_attr, g_thread_stack_size)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"init_pthread_attr fail, program exit!", __LINE__);
+		return result;
+	}
+
+	if ((result=task_queue_init(g_max_connections, g_buff_size, \
+                g_buff_size, sizeof(StorageClientInfo))) != 0)
+	{
+		return result;
+	}
+
+	g_thread_data = (struct storage_thread_data *)malloc(sizeof( \
+				struct storage_thread_data) * g_work_threads);
+	if (g_thread_data == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(struct storage_thread_data) * \
+			g_work_threads, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	g_storage_thread_count = 0;
+	pDataEnd = g_thread_data + g_work_threads;
+	for (pThreadData=g_thread_data; pThreadData<pDataEnd; pThreadData++)
+	{
+		pThreadData->dealing_file_count = 0;
+		pThreadData->ev_base = event_base_new();
+		if (pThreadData->ev_base == NULL)
+		{
+			result = errno != 0 ? errno : ENOMEM;
+			logError("file: "__FILE__", line: %d, " \
+				"event_base_new fail.", __LINE__);
+			return result;
+		}
+
+		if (pipe(pThreadData->pipe_fds) != 0)
+		{
+			result = errno != 0 ? errno : EPERM;
+			logError("file: "__FILE__", line: %d, " \
+				"call pipe fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, strerror(result));
+			break;
+		}
+
+		if ((result=set_nonblock(pThreadData->pipe_fds[0])) != 0)
+		{
+			break;
+		}
+
+		if ((result=pthread_create(&tid, &thread_attr, \
+			work_thread_entrance, pThreadData)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"create thread failed, startup threads: %d, " \
+				"errno: %d, error info: %s", \
+				__LINE__, g_storage_thread_count, \
+				result, strerror(result));
+			break;
+		}
+		else
+		{
+			if ((result=pthread_mutex_lock(&g_storage_thread_lock)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"call pthread_mutex_lock fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, result, strerror(result));
+			}
+			g_storage_thread_count++;
+			if ((result=pthread_mutex_unlock(&g_storage_thread_lock)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"call pthread_mutex_lock fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, result, strerror(result));
+			}
+		}
+	}
+
+	pthread_attr_destroy(&thread_attr);
+
 	last_stat_change_count = g_stat_change_count;
 
 	return result;
@@ -88,6 +180,195 @@ void storage_service_destroy()
 	pthread_mutex_destroy(&g_storage_thread_lock);
 	pthread_mutex_destroy(&path_index_thread_lock);
 	pthread_mutex_destroy(&stat_count_thread_lock);
+}
+
+int storage_terminate_threads()
+{
+        struct storage_thread_data *pThreadData;
+        struct storage_thread_data *pDataEnd;
+	struct fast_task_info *pTask;
+	StorageClientInfo *pClientInfo;
+	long task_addr;
+        int quit_sock;
+
+        if (g_thread_data != NULL)
+        {
+                pDataEnd = g_thread_data + g_work_threads;
+                quit_sock = 0;
+
+		for (pThreadData=g_thread_data; pThreadData<pDataEnd; \
+			pThreadData++)
+		{
+			quit_sock--;
+			pTask = free_queue_pop();
+			if (pTask == NULL)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"malloc task buff failed", \
+					__LINE__);
+				continue;
+			}
+
+			pClientInfo = (StorageClientInfo *)pTask->arg;
+			pClientInfo->sock = quit_sock;
+			pClientInfo->thread_index = pThreadData - g_thread_data;
+
+			task_addr = (long)pTask;
+			if (write(pThreadData->pipe_fds[1], &task_addr, \
+				sizeof(task_addr)) != sizeof(task_addr))
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"call write failed, " \
+					"errno: %d, error info: %s", \
+					__LINE__, errno, strerror(errno));
+			}
+                }
+        }
+
+        return 0;
+}
+
+void storage_accept_loop(int server_sock)
+{
+	int incomesock;
+	struct sockaddr_in inaddr;
+	unsigned int sockaddr_len;
+	in_addr_t client_addr;
+	char szClientIp[IP_ADDRESS_SIZE];
+	long task_addr;
+	struct fast_task_info *pTask;
+	StorageClientInfo *pClientInfo;
+	struct storage_thread_data *pThreadData;
+
+	while (g_continue_flag)
+	{
+		sockaddr_len = sizeof(inaddr);
+		incomesock = accept(server_sock, (struct sockaddr*)&inaddr, &sockaddr_len);
+		if (incomesock < 0) //error
+		{
+			if (!(errno == EINTR || errno == EAGAIN))
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"accept failed, " \
+					"errno: %d, error info: %s", \
+					__LINE__, errno, strerror(errno));
+			}
+
+			continue;
+		}
+
+		client_addr = getPeerIpaddr(incomesock, \
+				szClientIp, IP_ADDRESS_SIZE);
+		if (g_allow_ip_count >= 0)
+		{
+			if (bsearch(&client_addr, g_allow_ip_addrs, \
+					g_allow_ip_count, sizeof(in_addr_t), \
+					cmp_by_ip_addr_t) == NULL)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"ip addr %s is not allowed to access", \
+					__LINE__, szClientIp);
+
+				close(incomesock);
+				continue;
+			}
+		}
+
+		if (tcpsetnonblockopt(incomesock) != 0)
+		{
+			close(incomesock);
+			continue;
+		}
+
+		pTask = free_queue_pop();
+		if (pTask == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"malloc task buff failed", \
+				__LINE__);
+			close(incomesock);
+			continue;
+		}
+
+		pClientInfo = (StorageClientInfo *)pTask->arg;
+		pClientInfo->sock = incomesock;
+		pClientInfo->stage = FDFS_STORAGE_STAGE_NIO_RECV;
+		pClientInfo->thread_index = pClientInfo->sock % g_work_threads;
+		pThreadData = g_thread_data + pClientInfo->thread_index;
+
+		strcpy(pTask->client_ip, szClientIp);
+		strcpy(pClientInfo->tracker_client_ip, szClientIp);
+
+		task_addr = (long)pTask;
+		if (write(pThreadData->pipe_fds[1], &task_addr, \
+			sizeof(task_addr)) != sizeof(task_addr))
+		{
+			close(incomesock);
+			free_queue_push(pTask);
+			logError("file: "__FILE__", line: %d, " \
+				"call write failed, " \
+				"errno: %d, error info: %s", \
+				__LINE__, errno, strerror(errno));
+		}
+	}
+}
+
+static void *work_thread_entrance(void* arg)
+{
+/*
+package format:
+8 bytes length (hex string)
+1 bytes cmd (char)
+1 bytes status(char)
+data buff (struct)
+*/
+	int result;
+	struct storage_thread_data *pThreadData;
+	struct event ev_notify;
+
+	pThreadData = (struct storage_thread_data *)arg;
+	do
+	{
+		event_set(&ev_notify, pThreadData->pipe_fds[0], \
+			EV_READ | EV_PERSIST, recv_notify_read, NULL);
+		if ((result=event_base_set(pThreadData->ev_base, &ev_notify)) != 0)
+		{
+			logCrit("file: "__FILE__", line: %d, " \
+				"event_base_set fail.", __LINE__);
+			break;
+		}
+		if ((result=event_add(&ev_notify, NULL)) != 0)
+		{
+			logCrit("file: "__FILE__", line: %d, " \
+				"event_add fail.", __LINE__);
+			break;
+		}
+
+		while (g_continue_flag)
+		{
+			event_base_loop(pThreadData->ev_base, 0);
+		}
+	} while (0);
+
+	event_base_free(pThreadData->ev_base);
+
+	if ((result=pthread_mutex_lock(&g_storage_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+	g_storage_thread_count--;
+	if ((result=pthread_mutex_unlock(&g_storage_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	return NULL;
 }
 
 static int storage_gen_filename(StorageClientInfo *pClientInfo, \
@@ -3607,15 +3888,9 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
 
+/*
 void* storage_thread_entrance(void* arg)
 {
-/*
-package format:
-8 bytes length (hex string)
-1 bytes cmd (char)
-1 bytes status(char)
-data buff (struct)
-*/
 	StorageClientInfo client_info;
 	TrackerHeader header;
 	int result;
@@ -3735,16 +4010,6 @@ data buff (struct)
 
 		if (result != 0)
 		{
-			/*
-			unsigned char *p;
-			unsigned char *pEnd = (unsigned char *)&header + recv_bytes);
-			for (p=(unsigned char *)&header; p<pEnd; p++)
-			{
-				fprintf(stderr, "%02X ", *p);
-			}
-			fprintf(stderr, "\n");
-			*/
-
 			if (result == ENOTCONN && recv_bytes == 0)
 			{
 				log_level = LOG_DEBUG;
@@ -4017,6 +4282,7 @@ data buff (struct)
 
 	return NULL;
 }
+*/
 
 int fdfs_stat_file_sync_func(void *args)
 {
@@ -4035,5 +4301,42 @@ int fdfs_stat_file_sync_func(void *args)
 	{
 		return 0;
 	}
+}
+
+int storage_deal_task(struct fast_task_info *pTask)
+{
+	TrackerHeader *pHeader;
+	int result;
+
+	pHeader = (TrackerHeader *)pTask->data;
+	switch(pHeader->cmd)
+	{
+		case TRACKER_PROTO_CMD_STORAGE_BEAT:
+			//result = tracker_deal_storage_beat(pTask);
+			break;
+		case FDFS_PROTO_CMD_QUIT:
+			close(pTask->ev_read.ev_fd);
+			task_finish_clean_up(pTask);
+			return 0;
+		case FDFS_PROTO_CMD_ACTIVE_TEST:
+			//result = storage_deal_active_test(pTask);
+			break;
+		default:
+			logError("file: "__FILE__", line: %d, "  \
+				"client ip: %s, unkown cmd: %d", \
+				__LINE__, pTask->client_ip, \
+				pHeader->cmd);
+			result = EINVAL;
+			break;
+	}
+
+	pHeader = (TrackerHeader *)pTask->data;
+	pHeader->status = result;
+	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
+	long2buff(pTask->length - sizeof(TrackerHeader), pHeader->pkg_len);
+
+	send_add_event(pTask);
+
+	return 0;
 }
 

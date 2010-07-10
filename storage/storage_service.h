@@ -11,6 +11,10 @@
 #ifndef _STORAGE_SERVICE_H_
 #define _STORAGE_SERVICE_H_
 
+#include <event.h>
+#include "fdfs_define.h"
+#include "fast_task_queue.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,11 +22,14 @@ extern "C" {
 extern int g_storage_thread_count;
 extern pthread_mutex_t g_storage_thread_lock;
 
-void* storage_thread_entrance(void* arg);
 int storage_service_init();
 void storage_service_destroy();
 
 int fdfs_stat_file_sync_func(void *args);
+int storage_deal_task(struct fast_task_info *pTask);
+
+void storage_accept_loop(int server_sock);
+int storage_terminate_threads();
 
 #ifdef __cplusplus
 }

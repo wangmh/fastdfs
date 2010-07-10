@@ -74,7 +74,6 @@ int main(int argc, char *argv[])
 	
 	int result;
 	int sock;
-	pthread_t *tids;
 	pthread_t schedule_tid;
 	struct sigaction act;
 	ScheduleEntry scheduleEntries[SCHEDULE_ENTRIES_COUNT];
@@ -299,50 +298,17 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	tids = (pthread_t *)malloc(sizeof(pthread_t) * g_max_connections);
-	if (tids == NULL)
-	{
-		logCrit("file: "__FILE__", line: %d, " \
-			"malloc fail, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
-		return errno;
-	}
-	memset(tids, 0, sizeof(pthread_t) * g_max_connections);
-
-	g_storage_thread_count = g_max_connections;
-	if ((result=create_work_threads(&g_storage_thread_count, \
-		storage_thread_entrance, (void *)(long)sock, tids, \
-		g_thread_stack_size)) != 0)
-	{
-		free(tids);
-		log_destroy();
-		return result;
-	}
-
 	log_set_cache(true);
 
-	g_thread_kill_done = false;
-	bTerminateFlag = false;
-	while (g_continue_flag)
+	storage_accept_loop(sock);
+	if (g_schedule_flag)
 	{
-		sleep(1);
-
-		if (bTerminateFlag)
-		{
-			g_continue_flag = false;
-
-			if (g_schedule_flag)
-			{
-				pthread_kill(schedule_tid, SIGINT);
-			}
-			kill_tracker_report_threads();
-			kill_storage_sync_threads();
-			kill_work_threads(tids, g_max_connections);
-			g_thread_kill_done = true;
-
-			break;
-		}
+		pthread_kill(schedule_tid, SIGINT);
 	}
+	storage_terminate_threads();
+
+	kill_tracker_report_threads();
+	kill_storage_sync_threads();
 
 	while (g_storage_thread_count != 0 || \
 		g_tracker_reporter_count > 0 || \
@@ -365,8 +331,6 @@ int main(int argc, char *argv[])
 	storage_service_destroy();
 	storage_sync_destroy();
 	storage_func_destroy();
-
-	free(tids);
 
 	logInfo("exit nomally.\n");
 	log_destroy();
