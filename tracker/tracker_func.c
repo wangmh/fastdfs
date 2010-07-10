@@ -352,6 +352,24 @@ int tracker_load_from_conf_file(const char *filename, \
 				"storage_ip_changed_auto_adjust", \
 				&iniContext, true);
 
+		g_storage_sync_file_max_delay = iniGetIntValue(NULL, \
+				"storage_sync_file_max_delay", &iniContext, \
+				DEFAULT_STORAGE_SYNC_FILE_MAX_DELAY);
+		if (g_storage_sync_file_max_delay <= 0)
+		{
+			g_storage_sync_file_max_delay = \
+					DEFAULT_STORAGE_SYNC_FILE_MAX_DELAY;
+		}
+
+		g_storage_sync_file_max_time = iniGetIntValue(NULL, \
+				"storage_sync_file_max_time", &iniContext, \
+				DEFAULT_STORAGE_SYNC_FILE_MAX_TIME);
+		if (g_storage_sync_file_max_time <= 0)
+		{
+			g_storage_sync_file_max_time = \
+				DEFAULT_STORAGE_SYNC_FILE_MAX_TIME;
+		}
+
 #ifdef WITH_HTTPD
 		if ((result=fdfs_http_params_load(&iniContext, \
 				filename, &g_http_params)) != 0)
@@ -408,7 +426,9 @@ int tracker_load_from_conf_file(const char *filename, \
 			"allow_ip_count=%d, sync_log_buff_interval=%ds, " \
 			"check_active_interval=%ds, " \
 			"thread_stack_size=%d KB, " \
-			"storage_ip_changed_auto_adjust=%d",  \
+			"storage_ip_changed_auto_adjust=%d, "  \
+			"storage_sync_file_max_delay=%ds, " \
+			"storage_sync_file_max_time=%ds",  \
 			g_fdfs_version.major, g_fdfs_version.minor,  \
 			g_fdfs_base_path, g_fdfs_connect_timeout, \
 			g_fdfs_network_timeout, g_server_port, bind_addr, \
@@ -418,7 +438,9 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_storage_reserved_mb, g_groups.download_server, \
 			g_allow_ip_count, g_sync_log_buff_interval, \
 			g_check_active_interval, g_thread_stack_size / 1024, \
-			g_storage_ip_changed_auto_adjust);
+			g_storage_ip_changed_auto_adjust, \
+			g_storage_sync_file_max_delay, \
+			g_storage_sync_file_max_time);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)
