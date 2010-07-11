@@ -263,28 +263,6 @@ typedef struct
 	FDFSStorageDetail *pStorage;
 } TrackerClientInfo;
 
-#define FDFS_STORAGE_STAGE_NIO_RECV    11
-#define FDFS_STORAGE_STAGE_NIO_SEND    12
-#define FDFS_STORAGE_STAGE_DIO_READ    21
-#define FDFS_STORAGE_STAGE_DIO_WRITE   22
-
-typedef struct
-{
-	int thread_index;
-	int stage;
-	int sock;
-	char ip_addr[IP_ADDRESS_SIZE];  //to be removed
-	char tracker_client_ip[IP_ADDRESS_SIZE];
-
-	int64_t total_length;   //pkg total length
-	int64_t total_offset;   //pkg current offset
-
-	char file_op;     //w for writing, r for reading
-	int fd;		  //file description no
-	int64_t file_size;   //file size
-	int64_t file_offset; //file offset
-} StorageClientInfo;
-
 typedef struct
 {
 	char name[FDFS_MAX_META_NAME_LEN + 1];  //key
@@ -313,18 +291,10 @@ typedef struct
 	signed char status;
 } FDFSStorageJoinBody;
 
-
 struct tracker_thread_data
 {
         struct event_base *ev_base;
         int pipe_fds[2];
-};
-
-struct storage_thread_data
-{
-        struct event_base *ev_base;
-        int pipe_fds[2];
-	int dealing_file_count;
 };
 
 #endif
