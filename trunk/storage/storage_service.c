@@ -540,15 +540,14 @@ typedef struct
 	int src_file_sig_len;
 } SourceFileInfo;
 
-#define storage_save_file(pTask, pGroupArray, store_path_index, \
+#define storage_save_file(pTask, store_path_index, \
 		file_size, master_filename, prefix_name, file_ext_name, \
 		meta_buff, meta_size, filename, filename_len, create_flag) \
-	storage_deal_file(pTask, pGroupArray, store_path_index, NULL, \
+	storage_deal_file(pTask, store_path_index, NULL, \
 		file_size, master_filename, prefix_name, file_ext_name, \
 		meta_buff, meta_size, filename, filename_len, create_flag)
 
 static int storage_deal_file(struct fast_task_info *pTask, \
-		GroupArray *pGroupArray, \
 		const int store_path_index, const SourceFileInfo *pSrcFileInfo,\
 		const int64_t file_size, const char *master_filename, \
 		 const char *prefix_name, const char *file_ext_name,  \
@@ -560,6 +559,7 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 	int result;
 	int i;
 	StorageClientInfo *pClientInfo;
+	GroupArray *pGroupArray;
 	char *pStorePath;
 	char src_full_filename[MAX_PATH_SIZE+64];
 	char full_filename[MAX_PATH_SIZE+64];
@@ -576,6 +576,8 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 	char *pValue;
 	int value_len;
 	int64_t total_recv_bytes;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
 
 	*create_flag = STORAGE_CREATE_FLAG_NONE;
 
@@ -658,6 +660,7 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 	{
 		if (g_check_file_duplicate)
 		{
+			pGroupArray=&((g_thread_data + pClientInfo->thread_index)->group_array);
 			int nSigLen;
 			char szFileSig[FILE_SIGNATURE_SIZE];
 			char src_filename[MAX_PATH_SIZE];
@@ -992,6 +995,7 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 
 	if (pSrcFileInfo != NULL && g_check_file_duplicate)   //create link
 	{
+		pGroupArray=&((g_thread_data + pClientInfo->thread_index)->group_array);
 		*create_flag = STORAGE_CREATE_FLAG_LINK;
 
 		key_info.obj_id_len = snprintf(key_info.szObjectId, \
@@ -1460,63 +1464,33 @@ IP_ADDRESS_SIZE bytes: tracker client ip address
 static int storage_server_report_client_ip(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
-	TrackerHeader *pResp;
-	char tracker_client_ip[IP_ADDRESS_SIZE];
-	char out_buff[sizeof(TrackerHeader)];
-	int result;
+	char *tracker_client_ip;
+	int64_t nInPackLen;
 
-	memset(&out_buff, 0, sizeof(out_buff));
-	pResp = (TrackerHeader *)out_buff;
-	do
-	{
-		if (nInPackLen != IP_ADDRESS_SIZE)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size " \
-				INT64_PRINTF_FORMAT" is not correct, " \
-				"expect length: %d", __LINE__, \
-				STORAGE_PROTO_CMD_REPORT_CLIENT_IP, \
-				pTask->client_ip,  \
-				nInPackLen, IP_ADDRESS_SIZE);
-			pResp->status = EINVAL;
-			break;
-		}
-
-		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, \
-			tracker_client_ip, nInPackLen, g_fdfs_network_timeout)) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"client ip:%s, recv data fail, " \
-				"errno: %d, error info: %s.", \
-				__LINE__, pTask->client_ip, \
-				pResp->status, strerror(pResp->status));
-			break;
-		}
-
-		*(tracker_client_ip + (IP_ADDRESS_SIZE - 1)) = '\0';
-		strcpy(pClientInfo->tracker_client_ip, tracker_client_ip);
-
-		logInfo("file: "__FILE__", line: %d, " \
-			"client ip: %s, tracker client ip is %s", \
-			__LINE__, pTask->client_ip, \
-			tracker_client_ip);
-	} while (0);
-
-	long2buff(0, pResp->pkg_len);
-	pResp->cmd = STORAGE_PROTO_CMD_RESP;
-
-	if ((result=tcpsenddata_nb(pClientInfo->sock, (void *)out_buff, \
-		sizeof(TrackerHeader), g_fdfs_network_timeout)) != 0)
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
+	if (nInPackLen != IP_ADDRESS_SIZE)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, send data fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, \
-			result, strerror(result));
-		return result;
+			"cmd=%d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT" is not correct, " \
+			"expect length: %d", __LINE__, \
+			STORAGE_PROTO_CMD_REPORT_CLIENT_IP, \
+			pTask->client_ip,  \
+			nInPackLen, IP_ADDRESS_SIZE);
+		return EINVAL;
 	}
 
-	return pResp->status;
+	tracker_client_ip = pTask->data + sizeof(TrackerHeader);
+	*(tracker_client_ip + (IP_ADDRESS_SIZE - 1)) = '\0';
+	strcpy(pClientInfo->tracker_client_ip, tracker_client_ip);
+
+	logInfo("file: "__FILE__", line: %d, " \
+			"client ip: %s, tracker client ip is %s", \
+			__LINE__, pTask->client_ip, tracker_client_ip);
+
+	return 0;
 }
 
 /**
@@ -1526,145 +1500,112 @@ filename
 static int storage_server_query_file_info(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
-	TrackerHeader *pResp;
-	char in_buff[128];
-	char out_buff[sizeof(TrackerHeader) + 2 * FDFS_PROTO_PKG_LEN_SIZE];
-	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char true_filename[128];
-	char full_filename[MAX_PATH_SIZE + 64 + sizeof(STORAGE_META_FILE_EXT)];
+	char *in_buff;
 	char *filename;
 	char *pBasePath;
 	char *p;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char true_filename[128];
+	char full_filename[MAX_PATH_SIZE + 64 + sizeof(STORAGE_META_FILE_EXT)];
 	struct stat file_stat;
+	int64_t nInPackLen;
 	int filename_len;
 	int true_filename_len;
-	int out_len;
 	int result;
 	time_t file_mtime;
 
-	memset(&out_buff, 0, sizeof(out_buff));
-	pResp = (TrackerHeader *)out_buff;
-	out_len = sizeof(TrackerHeader);
-	do
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
+	if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 	{
-		if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size " \
-				INT64_PRINTF_FORMAT" is not correct, " \
-				"expect length > %d", __LINE__, \
-				STORAGE_PROTO_CMD_QUERY_FILE_INFO, \
-				pTask->client_ip,  \
-				nInPackLen, FDFS_PROTO_PKG_LEN_SIZE);
-			pResp->status = EINVAL;
-			break;
-		}
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT" is not correct, " \
+			"expect length > %d", __LINE__, \
+			STORAGE_PROTO_CMD_QUERY_FILE_INFO, \
+			pTask->client_ip,  \
+			nInPackLen, FDFS_PROTO_PKG_LEN_SIZE);
+		return EINVAL;
+	}
 
-		if (nInPackLen >= sizeof(in_buff))
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, package size " \
-				INT64_PRINTF_FORMAT" is not correct, " \
-				"expect length < %d", __LINE__, \
-				STORAGE_PROTO_CMD_QUERY_FILE_INFO, \
-				pTask->client_ip,  \
-				nInPackLen, (int)sizeof(in_buff));
-			pResp->status = EINVAL;
-			break;
-		}
+	if (nInPackLen >= sizeof(in_buff))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT" is not correct, " \
+			"expect length < %d", __LINE__, \
+			STORAGE_PROTO_CMD_QUERY_FILE_INFO, \
+			pTask->client_ip,  \
+			nInPackLen, (int)sizeof(in_buff));
+		return EINVAL;
+	}
 
-		if ((pResp->status=tcprecvdata_nb(pClientInfo->sock, in_buff, \
-			nInPackLen, g_fdfs_network_timeout)) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"client ip:%s, recv data fail, " \
-				"errno: %d, error info: %s.", \
-				__LINE__, pTask->client_ip, \
-				pResp->status, strerror(pResp->status));
-			break;
-		}
+	filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
 
-		filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
+	in_buff = pTask->data + sizeof(TrackerHeader);
+	memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
+	group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
+	if (strcmp(group_name, g_group_name) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip:%s, group_name: %s " \
+			"not correct, should be: %s", \
+			__LINE__, pTask->client_ip, \
+			group_name, g_group_name);
+		return EINVAL;
+	}
 
-		memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
-		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
-		if (strcmp(group_name, g_group_name) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"client ip:%s, group_name: %s " \
-				"not correct, should be: %s", \
-				__LINE__, pTask->client_ip, \
-				group_name, g_group_name);
-			pResp->status = EINVAL;
-			break;
-		}
+	filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
+	*(filename + filename_len) = '\0';
 
-		filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
-		*(filename + filename_len) = '\0';
-
-		true_filename_len = filename_len;
-		if ((pResp->status=storage_split_filename(filename, \
-			&true_filename_len, true_filename, &pBasePath)) != 0)
-		{
-			break;
-		}
-		if ((pResp->status=fdfs_check_data_filename(true_filename, \
+	true_filename_len = filename_len;
+	if ((result=storage_split_filename(filename, &true_filename_len, \
+			true_filename, &pBasePath)) != 0)
+	{
+		return result;
+	}
+	if ((result=fdfs_check_data_filename(true_filename, \
 			true_filename_len)) != 0)
-		{
-			break;
-		}
+	{
+		return result;
+	}
 
-		sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
-		if (lstat(full_filename, &file_stat) != 0)
-		{
-			pResp->status = errno != 0 ? errno : ENOENT;
-			logError("file: "__FILE__", line: %d, " \
+	sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
+	if (lstat(full_filename, &file_stat) != 0)
+	{
+		result = errno != 0 ? errno : ENOENT;
+		logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, call lstat file %s fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, true_filename, 
-				pResp->status, strerror(pResp->status));
-			break;
-		}
+				result, strerror(result));
+		return result;
+	}
 
-		file_mtime = file_stat.st_mtime;
-		if (S_ISLNK(file_stat.st_mode))
+	file_mtime = file_stat.st_mtime;
+	if (S_ISLNK(file_stat.st_mode))
+	{
+		if (stat(full_filename, &file_stat) != 0)
 		{
-			if (stat(full_filename, &file_stat) != 0)
-			{
-			pResp->status = errno != 0 ? errno : ENOENT;
+			result = errno != 0 ? errno : ENOENT;
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, call stat file %s fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, true_filename, 
-				pResp->status, strerror(pResp->status));
-			break;
-			}
+				result, strerror(result));
+			return result;
 		}
-
-		p = out_buff + sizeof(TrackerHeader);
-		long2buff(file_stat.st_size, p);
-		p += FDFS_PROTO_PKG_LEN_SIZE;
-		long2buff(file_mtime, p);
-		p += FDFS_PROTO_PKG_LEN_SIZE;
-
-		out_len = p - out_buff;
-	} while (0);
-
-	long2buff(out_len - sizeof(TrackerHeader), pResp->pkg_len);
-	pResp->cmd = STORAGE_PROTO_CMD_RESP;
-
-	if ((result=tcpsenddata_nb(pClientInfo->sock, (void *)out_buff, \
-		out_len, g_fdfs_network_timeout)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, send data fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, \
-			result, strerror(result));
-		return result;
 	}
 
-	return pResp->status;
+	p = pTask->data + sizeof(TrackerHeader);
+	long2buff(file_stat.st_size, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+	long2buff(file_mtime, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+
+	pClientInfo->total_length = p - pTask->data;
+	return 0;
 }
 
 /**
@@ -1676,7 +1617,7 @@ meta data bytes: each meta data seperated by \x01,
 		 name and value seperated by \x02
 file size bytes: file content
 **/
-static int storage_upload_file(struct fast_task_info *pTask)
+static int storage_upload_file(struct fast_task_info *pTask, int *create_flag)
 {
 	StorageClientInfo *pClientInfo;
 	TrackerHeader resp;
@@ -1688,12 +1629,16 @@ static int storage_upload_file(struct fast_task_info *pTask)
 	char *pMetaData;
 	char *file_ext_name;
 	int meta_bytes;
+	int64_t nInPackLen;
 	int64_t file_bytes;
 	int filename_len;
 	int result;
 	int store_path_index;
 
-	memset(&resp, 0, sizeof(resp));
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
+
 	pMetaData = meta_buff;
 	*filename = '\0';
 	filename_len = 0;
@@ -1801,10 +1746,10 @@ static int storage_upload_file(struct fast_task_info *pTask)
 			*pMetaData = '\0';
 		}
 
-		resp.status = storage_save_file(pTask, pGroupArray, \
-			store_path_index, file_bytes, NULL, NULL, \
-			file_ext_name, pMetaData, meta_bytes, \
-			filename, &filename_len, create_flag);
+		resp.status = storage_save_file(pTask, store_path_index, \
+			file_bytes, NULL, NULL, file_ext_name, \
+			pMetaData, meta_bytes, filename, &filename_len, \
+			create_flag);
 
 		if (resp.status!=0 || (*create_flag & STORAGE_CREATE_FLAG_LINK))
 		{
@@ -1874,7 +1819,7 @@ static int storage_deal_active_test(struct fast_task_info *pTask)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
-			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			INT64_PRINTF_FORMAT" is not correct, " \
 			"expect length 0", __LINE__, \
 			FDFS_PROTO_CMD_ACTIVE_TEST, pTask->client_ip, \
 			pTask->length - (int)sizeof(TrackerHeader));
@@ -1897,7 +1842,7 @@ meta data bytes: each meta data seperated by \x01,
 		 name and value seperated by \x02
 file size bytes: file content
 **/
-static int storage_upload_slave_file(struct fast_task_info *pTask)
+static int storage_upload_slave_file(struct fast_task_info *pTask, int *create_flag)
 {
 	StorageClientInfo *pClientInfo;
 	TrackerHeader resp;
@@ -1915,10 +1860,15 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	char *file_ext_name;
 	int meta_bytes;
 	int master_filename_len;
+	int64_t nInPackLen;
 	int64_t file_bytes;
 	int filename_len;
 	int result;
 	int store_path_index;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	memset(&resp, 0, sizeof(resp));
 	pMetaData = meta_buff;
@@ -2100,8 +2050,8 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 			*pMetaData = '\0';
 		}
 
-		resp.status = storage_save_file(pTask, pGroupArray, \
-			store_path_index, file_bytes, master_filename, \
+		resp.status = storage_save_file(pTask, store_path_index, \
+			file_bytes, master_filename, \
 			prefix_name, file_ext_name, pMetaData, meta_bytes, \
 			filename, &filename_len, create_flag);
 
@@ -2187,9 +2137,15 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	char full_filename[MAX_PATH_SIZE];
 	char *pBasePath;
 	int filename_len;
+	int64_t nInPackLen;
 	int64_t file_bytes;
 	int64_t total_recv_bytes;
 	int result;
+	int timestamp;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	memset(&resp, 0, sizeof(resp));
 	do
@@ -2249,7 +2205,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 			break;
 		}
 
-		*timestamp = buff2int(in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE);
+		timestamp = buff2int(in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE);
 		memcpy(group_name, in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE + 4, \
 				FDFS_GROUP_NAME_MAX_LEN);
 		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
@@ -2345,13 +2301,13 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 
 		if (proto_cmd == STORAGE_PROTO_CMD_SYNC_CREATE_FILE)
 		{
-			resp.status = storage_binlog_write(*timestamp, \
+			resp.status = storage_binlog_write(timestamp, \
 				STORAGE_OP_TYPE_REPLICA_CREATE_FILE, \
 				filename);
 		}
 		else
 		{
-			resp.status = storage_binlog_write(*timestamp, \
+			resp.status = storage_binlog_write(timestamp, \
 				STORAGE_OP_TYPE_REPLICA_UPDATE_FILE, \
 				filename);
 		}
@@ -2396,9 +2352,15 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 	char src_full_filename[MAX_PATH_SIZE];
 	char *pDestBasePath;
 	char *pSrcBasePath;
+	int64_t nInPackLen;
 	int dest_filename_len;
 	int src_filename_len;
 	int result;
+	int timestamp;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	memset(&resp, 0, sizeof(resp));
 	do
@@ -2469,7 +2431,7 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 			break;
 		}
 
-		*timestamp = buff2int(in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE);
+		timestamp = buff2int(in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE);
 		memcpy(group_name, in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE + 4, \
 				FDFS_GROUP_NAME_MAX_LEN);
 		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
@@ -2565,7 +2527,7 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 			break;
 		}
 
-		resp.status = storage_binlog_write(*timestamp, \
+		resp.status = storage_binlog_write(timestamp, \
 			STORAGE_OP_TYPE_REPLICA_CREATE_LINK, \
 			dest_filename);
 
@@ -2606,6 +2568,11 @@ static int storage_server_get_metadata(struct fast_task_info *pTask)
 	char *file_buff;
 	int filename_len;
 	int64_t file_bytes;
+	int64_t nInPackLen;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	memset(&resp, 0, sizeof(resp));
 	file_buff = NULL;
@@ -2765,6 +2732,11 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 	int64_t download_bytes;
 	int64_t file_bytes;
 	struct stat stat_buf;
+	int64_t nInPackLen;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	memset(&resp, 0, sizeof(resp));
 	file_offset = 0;
@@ -2959,6 +2931,12 @@ static int storage_sync_delete_file(struct fast_task_info *pTask)
 	char *filename;
 	int filename_len;
 	int result;
+	int timestamp;
+	int64_t nInPackLen;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	memset(&resp, 0, sizeof(resp));
 	do
@@ -3001,7 +2979,7 @@ static int storage_sync_delete_file(struct fast_task_info *pTask)
 			break;
 		}
 
-		*timestamp = buff2int(in_buff);
+		timestamp = buff2int(in_buff);
 		memcpy(group_name, in_buff + 4, FDFS_GROUP_NAME_MAX_LEN);
 		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
 		if (strcmp(group_name, g_group_name) != 0)
@@ -3054,7 +3032,7 @@ static int storage_sync_delete_file(struct fast_task_info *pTask)
 			}
 		}
 
-		resp.status = storage_binlog_write(*timestamp, \
+		resp.status = storage_binlog_write(timestamp, \
 				STORAGE_OP_TYPE_REPLICA_DELETE_FILE, filename);
 	} while (0);
 
@@ -3081,9 +3059,10 @@ Header
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename
 **/
-static int storage_server_delete_file(struct fast_task_info *pTask)
+static int storage_server_delete_file(struct fast_task_info *pTask, int *delete_flag)
 {
 	StorageClientInfo *pClientInfo;
+	GroupArray *pGroupArray;
 	TrackerHeader resp;
 	char in_buff[FDFS_GROUP_NAME_MAX_LEN + 128];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
@@ -3102,6 +3081,11 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 	int src_file_nlink;
 	struct stat stat_buf;
 	int result;
+	int64_t nInPackLen;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	*delete_flag = STORAGE_DELETE_FLAG_NONE;
 	memset(&resp, 0, sizeof(resp));
@@ -3166,6 +3150,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 		src_file_nlink = -1;
 		if (g_check_file_duplicate)
 		{
+			pGroupArray=&((g_thread_data + pClientInfo->thread_index)->group_array);
 			memset(&key_info_sig, 0, sizeof(key_info_sig));
 			key_info_sig.namespace_len = g_namespace_len;
 			memcpy(key_info_sig.szNameSpace, g_key_namespace, \
@@ -3340,6 +3325,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 		{
 			char *pSeperator;
 
+			pGroupArray=&((g_thread_data + pClientInfo->thread_index)->group_array);
 			if ((result=fdht_delete_ex(pGroupArray, g_keep_alive, \
 					&key_info_sig)) != 0)
 			{
@@ -3468,6 +3454,7 @@ meta data bytes: each meta data seperated by \x01,
 static int storage_create_link(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
+	GroupArray *pGroupArray;
 	TrackerHeader resp;
 	int out_len;
 	char in_buff[4 * FDFS_PROTO_PKG_LEN_SIZE + FDFS_GROUP_NAME_MAX_LEN + \
@@ -3494,6 +3481,12 @@ static int storage_create_link(struct fast_task_info *pTask)
 	int store_path_index;
 	struct stat stat_buf;
 	SourceFileInfo sourceFileInfo;
+	int64_t nInPackLen;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	memset(&resp, 0, sizeof(resp));
 	pMetaData = meta_buff;
@@ -3689,6 +3682,7 @@ static int storage_create_link(struct fast_task_info *pTask)
 
 			if (g_check_file_duplicate)
 			{
+			pGroupArray=&((g_thread_data + pClientInfo->thread_index)->group_array);
 			//clean invalid entry
 			memset(&key_info, 0, sizeof(key_info));
 			key_info.namespace_len = g_namespace_len;
@@ -3802,8 +3796,8 @@ static int storage_create_link(struct fast_task_info *pTask)
 			*pMetaData = '\0';
 		}
 
-		resp.status = storage_deal_file(pTask, pGroupArray, \
-			store_path_index, &sourceFileInfo, stat_buf.st_size, \
+		resp.status = storage_deal_file(pTask, store_path_index, \
+			&sourceFileInfo, stat_buf.st_size, \
 			master_filename, prefix_name, file_ext_name, \
 			pMetaData, meta_bytes, \
 			filename, &filename_len, &create_flag);
@@ -3894,14 +3888,15 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 #define CHECK_AND_WRITE_TO_STAT_FILE1  \
 		pthread_mutex_lock(&stat_count_thread_lock); \
 \
-		if (pSrcStorage == NULL) \
+		if (pClientInfo->pSrcStorage == NULL) \
 		{ \
-			pSrcStorage = get_storage_server(client_info.tracker_client_ip); \
+			pClientInfo->pSrcStorage = get_storage_server( \
+					pClientInfo->tracker_client_ip); \
 		} \
-		if (pSrcStorage != NULL) \
+		if (pClientInfo->pSrcStorage != NULL) \
 		{ \
-			pSrcStorage->last_sync_src_timestamp = \
-					src_sync_timestamp; \
+			pClientInfo->pSrcStorage->last_sync_src_timestamp = \
+					pClientInfo->src_sync_timestamp; \
 			g_sync_change_count++; \
 		} \
 \
@@ -3946,10 +3941,12 @@ int fdfs_stat_file_sync_func(void *args)
 int storage_deal_task(struct fast_task_info *pTask)
 {
 	TrackerHeader *pHeader;
+	StorageClientInfo *pClientInfo;
 	int result;
 	int create_flag;
 	int delete_flag;
 
+	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pHeader = (TrackerHeader *)pTask->data;
 	switch(pHeader->cmd)
 	{
@@ -3980,7 +3977,7 @@ int storage_deal_task(struct fast_task_info *pTask)
 					g_storage_stat.success_get_meta_count)
 				break;
 		case STORAGE_PROTO_CMD_UPLOAD_FILE:
-			if ((result=storage_upload_file(pTask)) != 0)
+			if ((result=storage_upload_file(pTask, &create_flag)) != 0)
 			{
 				pthread_mutex_lock(&stat_count_thread_lock);
 				if (create_flag & STORAGE_CREATE_FLAG_FILE)
@@ -4000,7 +3997,7 @@ int storage_deal_task(struct fast_task_info *pTask)
 			}
 			break;
 		case STORAGE_PROTO_CMD_UPLOAD_SLAVE_FILE:
-			if ((result=storage_upload_slave_file(pTask)) != 0)
+			if ((result=storage_upload_slave_file(pTask, &create_flag)) != 0)
 			{
 				pthread_mutex_lock(&stat_count_thread_lock);
 				if (create_flag & STORAGE_CREATE_FLAG_FILE)
@@ -4020,7 +4017,8 @@ int storage_deal_task(struct fast_task_info *pTask)
 			}
 			break;
 		case STORAGE_PROTO_CMD_DELETE_FILE:
-			if ((result=storage_server_delete_file(pTask)) != 0)
+			if ((result=storage_server_delete_file(pTask, \
+						&delete_flag)) != 0)
 			{
 				pthread_mutex_lock(&stat_count_thread_lock);
 				if (delete_flag == STORAGE_DELETE_FLAG_NONE ||\
