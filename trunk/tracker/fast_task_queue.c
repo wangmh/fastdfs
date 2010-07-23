@@ -12,7 +12,25 @@ static struct fast_task_queue g_free_queue;
 
 static struct fast_task_info *g_mpool = NULL;
 
-int task_queue_init(const int max_connections, const int min_buff_size, \
+int task_queue_init(struct fast_task_queue *pQueue)
+{
+	int result;
+
+	if ((result=init_pthread_lock(&(pQueue->lock))) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"init_pthread_lock fail, errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	pQueue->head = NULL;
+	pQueue->tail = NULL;
+
+	return 0;
+}
+
+int free_queue_init(const int max_connections, const int min_buff_size, \
 		const int max_buff_size, const int arg_size)
 {
 	struct fast_task_info *pTask;
@@ -105,7 +123,7 @@ int task_queue_init(const int max_connections, const int min_buff_size, \
 			pTask->data = malloc(pTask->size);
 			if (pTask->data == NULL)
 			{
-				task_queue_destroy();
+				free_queue_destroy();
 
 				logError("file: "__FILE__", line: %d, " \
 					"malloc %d bytes fail, " \
@@ -134,7 +152,7 @@ int task_queue_init(const int max_connections, const int min_buff_size, \
 	return 0;
 }
 
-void task_queue_destroy()
+void free_queue_destroy()
 {
 	if (g_mpool == NULL)
 	{
