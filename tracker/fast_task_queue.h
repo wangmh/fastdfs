@@ -49,15 +49,17 @@ struct fast_task_queue
 extern "C" {
 #endif
 
-int task_queue_init(const int max_connections, const int min_buff_size, \
+int free_queue_init(const int max_connections, const int min_buff_size, \
 		const int max_buff_size, const int arg_size);
 
-void task_queue_destroy();
+void free_queue_destroy();
 
 int free_queue_push(struct fast_task_info *pTask);
 struct fast_task_info *free_queue_pop();
 int free_queue_count();
 
+
+int task_queue_init(struct fast_task_queue *pQueue);
 int task_queue_push(struct fast_task_queue *pQueue, \
 		struct fast_task_info *pTask);
 struct fast_task_info *task_queue_pop(struct fast_task_queue *pQueue);

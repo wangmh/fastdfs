@@ -92,7 +92,7 @@ int storage_service_init()
 		return result;
 	}
 
-	if ((result=task_queue_init(g_max_connections, g_buff_size, \
+	if ((result=free_queue_init(g_max_connections, g_buff_size, \
                 g_buff_size, sizeof(StorageClientInfo))) != 0)
 	{
 		return result;

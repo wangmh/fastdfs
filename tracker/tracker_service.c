@@ -67,7 +67,7 @@ int tracker_service_init()
 		return result;
 	}
 
-	if ((result=task_queue_init(g_max_connections, TRACKER_MAX_PACKAGE_SIZE,\
+	if ((result=free_queue_init(g_max_connections, TRACKER_MAX_PACKAGE_SIZE,\
                 TRACKER_MAX_PACKAGE_SIZE, sizeof(TrackerClientInfo))) != 0)
 	{
 		return result;
