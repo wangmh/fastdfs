@@ -12,9 +12,6 @@ static struct fast_task_queue g_free_queue;
 
 static struct fast_task_info *g_mpool = NULL;
 
-static struct fast_task_info *_queue_pop_task(struct fast_task_queue *pQueue);
-static int _task_queue_count(struct fast_task_queue *pQueue);
-
 int task_queue_init(const int max_connections, const int min_buff_size, \
 		const int max_buff_size, const int arg_size)
 {
@@ -174,7 +171,7 @@ void task_queue_destroy()
 
 struct fast_task_info *free_queue_pop()
 {
-	return _queue_pop_task(&g_free_queue);;
+	return task_queue_pop(&g_free_queue);;
 }
 
 int free_queue_push(struct fast_task_info *pTask)
@@ -234,10 +231,46 @@ int free_queue_push(struct fast_task_info *pTask)
 
 int free_queue_count()
 {
-	return _task_queue_count(&g_free_queue);
+	return task_queue_count(&g_free_queue);
 }
 
-static struct fast_task_info *_queue_pop_task(struct fast_task_queue *pQueue)
+int task_queue_push(struct fast_task_queue *pQueue, \
+		struct fast_task_info *pTask)
+{
+	int result;
+
+	if ((result=pthread_mutex_lock(&(pQueue->lock))) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		return result;
+	}
+
+	pTask->next = NULL;
+	if (pQueue->tail == NULL)
+	{
+		pQueue->head = pTask;
+	}
+	else
+	{
+		pQueue->tail->next = pTask;
+	}
+	pQueue->tail = pTask;
+
+	if ((result=pthread_mutex_unlock(&(pQueue->lock))) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+	}
+
+	return 0;
+}
+
+struct fast_task_info *task_queue_pop(struct fast_task_queue *pQueue)
 {
 	struct fast_task_info *pTask;
 	int result;
@@ -272,7 +305,7 @@ static struct fast_task_info *_queue_pop_task(struct fast_task_queue *pQueue)
 	return pTask;
 }
 
-static int _task_queue_count(struct fast_task_queue *pQueue)
+int task_queue_count(struct fast_task_queue *pQueue)
 {
 	struct fast_task_info *pTask;
 	int count;

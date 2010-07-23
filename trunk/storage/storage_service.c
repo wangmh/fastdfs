@@ -660,7 +660,8 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 	{
 		if (g_check_file_duplicate)
 		{
-			pGroupArray=&((g_thread_data + pClientInfo->thread_index)->group_array);
+			pGroupArray=&((g_thread_data+pClientInfo->thread_index)\
+					->group_array);
 			int nSigLen;
 			char szFileSig[FILE_SIGNATURE_SIZE];
 			char src_filename[MAX_PATH_SIZE];
@@ -995,7 +996,8 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 
 	if (pSrcFileInfo != NULL && g_check_file_duplicate)   //create link
 	{
-		pGroupArray=&((g_thread_data + pClientInfo->thread_index)->group_array);
+		pGroupArray=&((g_thread_data + pClientInfo->thread_index) \
+				->group_array);
 		*create_flag = STORAGE_CREATE_FLAG_LINK;
 
 		key_info.obj_id_len = snprintf(key_info.szObjectId, \
@@ -3150,7 +3152,8 @@ static int storage_server_delete_file(struct fast_task_info *pTask, int *delete_
 		src_file_nlink = -1;
 		if (g_check_file_duplicate)
 		{
-			pGroupArray=&((g_thread_data + pClientInfo->thread_index)->group_array);
+			pGroupArray=&((g_thread_data+pClientInfo->thread_index)\
+					->group_array);
 			memset(&key_info_sig, 0, sizeof(key_info_sig));
 			key_info_sig.namespace_len = g_namespace_len;
 			memcpy(key_info_sig.szNameSpace, g_key_namespace, \
@@ -3325,7 +3328,8 @@ static int storage_server_delete_file(struct fast_task_info *pTask, int *delete_
 		{
 			char *pSeperator;
 
-			pGroupArray=&((g_thread_data + pClientInfo->thread_index)->group_array);
+			pGroupArray=&((g_thread_data+pClientInfo->thread_index)\
+					->group_array);
 			if ((result=fdht_delete_ex(pGroupArray, g_keep_alive, \
 					&key_info_sig)) != 0)
 			{
@@ -3682,7 +3686,8 @@ static int storage_create_link(struct fast_task_info *pTask)
 
 			if (g_check_file_duplicate)
 			{
-			pGroupArray=&((g_thread_data + pClientInfo->thread_index)->group_array);
+			pGroupArray=&((g_thread_data+pClientInfo->thread_index)\
+					->group_array);
 			//clean invalid entry
 			memset(&key_info, 0, sizeof(key_info));
 			key_info.namespace_len = g_namespace_len;
