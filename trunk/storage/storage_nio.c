@@ -33,7 +33,7 @@
 
 static void client_sock_read(int sock, short event, void *arg);
 static void client_sock_write(int sock, short event, void *arg);
-static int trigger_nio_recv(struct fast_task_info *pTask);
+static int storage_nio_init(struct fast_task_info *pTask);
 
 void task_finish_clean_up(struct fast_task_info *pTask)
 {
@@ -63,6 +63,8 @@ void task_finish_clean_up(struct fast_task_info *pTask)
 			}
 		}
 	}
+
+	close(pClientInfo->sock);
 
 	memset(pTask->arg, 0, sizeof(StorageClientInfo));
 	pFileContext->fd = -1;
@@ -105,7 +107,7 @@ void recv_notify_read(int sock, short event, void *arg)
 			struct storage_nio_thread_data *pThreadData;
 			struct timeval tv;
 
-			pThreadData = g_nio_thread_data + pClientInfo->thread_index;
+			pThreadData = g_nio_thread_data + pClientInfo->nio_thread_index;
                         tv.tv_sec = 1;
                         tv.tv_usec = 0;
 			event_base_loopexit(pThreadData->ev_base, &tv);
@@ -114,8 +116,19 @@ void recv_notify_read(int sock, short event, void *arg)
 
 		switch (pClientInfo->stage)
 		{
+			case FDFS_STORAGE_STAGE_NIO_INIT:
+				result = storage_nio_init(pTask);
+				break;
 			case FDFS_STORAGE_STAGE_NIO_RECV:
-				result = trigger_nio_recv(pTask);
+				if ((result=event_add(&pTask->ev_read, \
+						&g_network_tv)) != 0)
+				{
+					logError("file: "__FILE__", line: %d, " \
+						"event_add fail.", __LINE__);
+				}
+				break;
+			case FDFS_STORAGE_STAGE_NIO_SEND:
+				result = send_add_event(pTask);
 				break;
 			default:
 				logError("file: "__FILE__", line: %d, " \
@@ -128,19 +141,18 @@ void recv_notify_read(int sock, short event, void *arg)
 		if (result != 0)
 		{
 			task_finish_clean_up(pTask);
-			close(pClientInfo->sock);
 		}
 	}
 }
 
-static int trigger_nio_recv(struct fast_task_info *pTask)
+static int storage_nio_init(struct fast_task_info *pTask)
 {
 	int result;
 	StorageClientInfo *pClientInfo;
 	struct storage_nio_thread_data *pThreadData;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
-	pThreadData = g_nio_thread_data + pClientInfo->thread_index;
+	pThreadData = g_nio_thread_data + pClientInfo->nio_thread_index;
 	event_set(&pTask->ev_read, pClientInfo->sock, EV_READ, \
 			client_sock_read, pTask);
 	if ((result=event_base_set(pThreadData->ev_base, &pTask->ev_read)) != 0)
@@ -188,18 +200,18 @@ static void client_sock_read(int sock, short event, void *arg)
         StorageClientInfo *pClientInfo;
 
 	pTask = (struct fast_task_info *)arg;
+        pClientInfo = (StorageClientInfo *)pTask->arg;
 
 	if (event == EV_TIMEOUT)
 	{
-		if (pTask->offset == 0 && pTask->req_count > 0)
+		if (pClientInfo->total_offset == 0 && pTask->req_count > 0)
 		{
 			if (event_add(&pTask->ev_read, &g_network_tv) != 0)
 			{
-				close(pTask->ev_read.ev_fd);
 				task_finish_clean_up(pTask);
 
 				logError("file: "__FILE__", line: %d, " \
-						"event_add fail.", __LINE__);
+					"event_add fail.", __LINE__);
 			}
 		}
 		else
@@ -210,14 +222,11 @@ static void client_sock_read(int sock, short event, void *arg)
 				__LINE__, pTask->client_ip, \
 				pTask->offset, pTask->length);
 
-			close(pTask->ev_read.ev_fd);
 			task_finish_clean_up(pTask);
 		}
 
 		return;
 	}
-
-        pClientInfo = (StorageClientInfo *)pTask->arg;
 
 	while (1)
 	{
@@ -237,7 +246,6 @@ static void client_sock_read(int sock, short event, void *arg)
 			{
 				if(event_add(&pTask->ev_read, &g_network_tv)!=0)
 				{
-					close(pTask->ev_read.ev_fd);
 					task_finish_clean_up(pTask);
 
 					logError("file: "__FILE__", line: %d, "\
@@ -252,7 +260,6 @@ static void client_sock_read(int sock, short event, void *arg)
 					__LINE__, pTask->client_ip, \
 					errno, strerror(errno));
 
-				close(pTask->ev_read.ev_fd);
 				task_finish_clean_up(pTask);
 			}
 
@@ -265,7 +272,6 @@ static void client_sock_read(int sock, short event, void *arg)
 				"connection disconnected.", \
 				__LINE__, pTask->client_ip);
 
-			close(pTask->ev_read.ev_fd);
 			task_finish_clean_up(pTask);
 			return;
 		}
@@ -276,7 +282,6 @@ static void client_sock_read(int sock, short event, void *arg)
 			{
 				if (event_add(&pTask->ev_read, &g_network_tv)!=0)
 				{
-					close(pTask->ev_read.ev_fd);
 					task_finish_clean_up(pTask);
 
 					logError("file: "__FILE__", line: %d, "\
@@ -297,7 +302,6 @@ static void client_sock_read(int sock, short event, void *arg)
 					__LINE__, pTask->client_ip, \
 					pClientInfo->total_length);
 
-				close(pTask->ev_read.ev_fd);
 				task_finish_clean_up(pTask);
 				return;
 			}
@@ -314,10 +318,8 @@ static void client_sock_read(int sock, short event, void *arg)
 		}
 
 		pTask->offset += bytes;
-		if (pTask->offset >= pTask->length) //recv done
+		if (pTask->offset >= pTask->length) //recv current pkg done
 		{
-			pTask->req_count++;
-
 			if (pClientInfo->total_offset == 0)
 			{
 				pClientInfo->total_offset = pTask->offset;
@@ -326,6 +328,15 @@ static void client_sock_read(int sock, short event, void *arg)
 			else
 			{
 				pClientInfo->total_offset += pTask->offset;
+				if (pClientInfo->total_offset >= \
+					pClientInfo->total_length)
+				{
+					/* current req recv done */
+					pClientInfo->stage = \
+						FDFS_STORAGE_STAGE_NIO_SEND;
+					pTask->req_count++;
+				}
+
 				//to do ...
 			}
 
@@ -348,7 +359,6 @@ static void client_sock_write(int sock, short event, void *arg)
 		logError("file: "__FILE__", line: %d, " \
 			"send timeout", __LINE__);
 
-		close(pTask->ev_write.ev_fd);
 		task_finish_clean_up(pTask);
 
 		return;
@@ -365,7 +375,6 @@ static void client_sock_write(int sock, short event, void *arg)
 			{
 				if (event_add(&pTask->ev_write, &g_network_tv) != 0)
 				{
-					close(pTask->ev_write.ev_fd);
 					task_finish_clean_up(pTask);
 
 					logError("file: "__FILE__", line: %d, " \
@@ -380,7 +389,6 @@ static void client_sock_write(int sock, short event, void *arg)
 					__LINE__, pTask->client_ip, \
 					errno, strerror(errno));
 
-				close(pTask->ev_write.ev_fd);
 				task_finish_clean_up(pTask);
 			}
 
@@ -392,7 +400,6 @@ static void client_sock_write(int sock, short event, void *arg)
 				"send failed, connection disconnected.", \
 				__LINE__);
 
-			close(pTask->ev_write.ev_fd);
 			task_finish_clean_up(pTask);
 			return;
 		}
@@ -406,7 +413,6 @@ static void client_sock_write(int sock, short event, void *arg)
 			if ((result=event_add(&pTask->ev_read, \
 						&g_network_tv)) != 0)
 			{
-				close(pTask->ev_read.ev_fd);
 				task_finish_clean_up(pTask);
 
 				logError("file: "__FILE__", line: %d, "\

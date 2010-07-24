@@ -21,6 +21,7 @@
 #include "fdht_types.h"
 
 
+#define FDFS_STORAGE_STAGE_NIO_INIT   '\0'
 #define FDFS_STORAGE_STAGE_NIO_RECV   'r'
 #define FDFS_STORAGE_STAGE_NIO_SEND   's'
 
@@ -39,7 +40,8 @@ typedef struct
 
 typedef struct
 {
-	int thread_index;
+	int nio_thread_index;
+	int dio_thread_index;
 	int sock;
 	char stage;  //nio stage
 	char sync_flag;

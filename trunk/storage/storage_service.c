@@ -211,7 +211,7 @@ int storage_terminate_threads()
 
 			pClientInfo = (StorageClientInfo *)pTask->arg;
 			pClientInfo->sock = quit_sock;
-			pClientInfo->thread_index = pThreadData - g_nio_thread_data;
+			pClientInfo->nio_thread_index = pThreadData - g_nio_thread_data;
 
 			task_addr = (long)pTask;
 			if (write(pThreadData->pipe_fds[1], &task_addr, \
@@ -292,9 +292,9 @@ void storage_accept_loop(int server_sock)
 
 		pClientInfo = (StorageClientInfo *)pTask->arg;
 		pClientInfo->sock = incomesock;
-		pClientInfo->stage = FDFS_STORAGE_STAGE_NIO_RECV;
-		pClientInfo->thread_index = pClientInfo->sock % g_work_threads;
-		pThreadData = g_nio_thread_data + pClientInfo->thread_index;
+		pClientInfo->stage = FDFS_STORAGE_STAGE_NIO_INIT;
+		pClientInfo->nio_thread_index = pClientInfo->sock % g_work_threads;
+		pThreadData = g_nio_thread_data + pClientInfo->nio_thread_index;
 
 		strcpy(pTask->client_ip, szClientIp);
 		strcpy(pClientInfo->tracker_client_ip, szClientIp);
@@ -310,6 +310,27 @@ void storage_accept_loop(int server_sock)
 				"errno: %d, error info: %s", \
 				__LINE__, errno, strerror(errno));
 		}
+	}
+}
+
+void storage_nio_notify(struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	struct storage_nio_thread_data *pThreadData;
+	long task_addr;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pThreadData = g_nio_thread_data + pClientInfo->nio_thread_index;
+
+	task_addr = (long)pTask;
+	if (write(pThreadData->pipe_fds[1], &task_addr, \
+		sizeof(task_addr)) != sizeof(task_addr))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call write failed, " \
+			"errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		task_finish_clean_up(pTask);
 	}
 }
 
@@ -660,7 +681,7 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 	{
 		if (g_check_file_duplicate)
 		{
-			pGroupArray=&((g_nio_thread_data+pClientInfo->thread_index)\
+			pGroupArray=&((g_nio_thread_data+pClientInfo->nio_thread_index)\
 					->group_array);
 			int nSigLen;
 			char szFileSig[FILE_SIGNATURE_SIZE];
@@ -996,7 +1017,7 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 
 	if (pSrcFileInfo != NULL && g_check_file_duplicate)   //create link
 	{
-		pGroupArray=&((g_nio_thread_data + pClientInfo->thread_index) \
+		pGroupArray=&((g_nio_thread_data + pClientInfo->nio_thread_index) \
 				->group_array);
 		*create_flag = STORAGE_CREATE_FLAG_LINK;
 
@@ -2786,7 +2807,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask, int *delete_
 	src_file_nlink = -1;
 	if (g_check_file_duplicate)
 	{
-		pGroupArray=&((g_nio_thread_data+pClientInfo->thread_index)\
+		pGroupArray=&((g_nio_thread_data+pClientInfo->nio_thread_index)\
 				->group_array);
 		memset(&key_info_sig, 0, sizeof(key_info_sig));
 		key_info_sig.namespace_len = g_namespace_len;
@@ -2955,7 +2976,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask, int *delete_
 	{
 		char *pSeperator;
 
-		pGroupArray=&((g_nio_thread_data+pClientInfo->thread_index)\
+		pGroupArray=&((g_nio_thread_data+pClientInfo->nio_thread_index)\
 				->group_array);
 		if ((result=fdht_delete_ex(pGroupArray, g_keep_alive, \
 						&key_info_sig)) != 0)
@@ -3253,7 +3274,7 @@ static int storage_create_link(struct fast_task_info *pTask)
 
 		if (g_check_file_duplicate)
 		{
-			pGroupArray=&((g_nio_thread_data+pClientInfo->thread_index)\
+			pGroupArray=&((g_nio_thread_data+pClientInfo->nio_thread_index)\
 					->group_array);
 			//clean invalid entry
 			memset(&key_info, 0, sizeof(key_info));
@@ -3657,7 +3678,6 @@ int storage_deal_task(struct fast_task_info *pTask)
 
 			break;
 		case FDFS_PROTO_CMD_QUIT:
-			close(pTask->ev_read.ev_fd);
 			task_finish_clean_up(pTask);
 			return 0;
 		case FDFS_PROTO_CMD_ACTIVE_TEST:
