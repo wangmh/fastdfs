@@ -35,6 +35,7 @@
 #include "storage_service.h"
 #include "base64.h"
 #include "sched_thread.h"
+#include "storage_dio.h"
 
 #ifdef WITH_HTTPD
 #include "storage_httpd.h"
@@ -298,6 +299,12 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
+	if ((result=storage_dio_init()) != 0)
+	{
+		log_destroy();
+		return result;
+	}
+
 	log_set_cache(true);
 
 	storage_accept_loop(sock);
@@ -305,12 +312,15 @@ int main(int argc, char *argv[])
 	{
 		pthread_kill(schedule_tid, SIGINT);
 	}
+
 	storage_terminate_threads();
+	storage_dio_terminate();
 
 	kill_tracker_report_threads();
 	kill_storage_sync_threads();
 
 	while (g_storage_thread_count != 0 || \
+		g_dio_thread_count != 0 || \
 		g_tracker_reporter_count > 0 || \
 		g_storage_sync_thread_count > 0 || \
 		g_schedule_flag)
