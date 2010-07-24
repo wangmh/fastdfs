@@ -30,6 +30,7 @@
 
 typedef struct
 {
+	int dio_thread_index;
 	char filename[MAX_PATH_SIZE + 128];
 	char op;        //w for writing, r for reading
 	int fd;         //file description no
@@ -41,7 +42,6 @@ typedef struct
 typedef struct
 {
 	int nio_thread_index;
-	int dio_thread_index;
 	int sock;
 	char stage;  //nio stage
 	char sync_flag;

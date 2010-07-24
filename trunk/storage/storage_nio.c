@@ -30,6 +30,7 @@
 #include "storage_global.h"
 #include "storage_service.h"
 #include "storage_nio.h"
+#include "storage_dio.h"
 
 static void client_sock_read(int sock, short event, void *arg);
 static void client_sock_write(int sock, short event, void *arg);
@@ -68,6 +69,7 @@ void task_finish_clean_up(struct fast_task_info *pTask)
 
 	memset(pTask->arg, 0, sizeof(StorageClientInfo));
 	pFileContext->fd = -1;
+	pFileContext->dio_thread_index = -1;
 
 	free_queue_push(pTask);
 }
@@ -322,12 +324,12 @@ static void client_sock_read(int sock, short event, void *arg)
 		{
 			if (pClientInfo->total_offset == 0)
 			{
-				pClientInfo->total_offset = pTask->offset;
+				pClientInfo->total_offset = pTask->length;
 				storage_deal_task(pTask);
 			}
 			else
 			{
-				pClientInfo->total_offset += pTask->offset;
+				pClientInfo->total_offset += pTask->length;
 				if (pClientInfo->total_offset >= \
 					pClientInfo->total_length)
 				{
@@ -337,7 +339,8 @@ static void client_sock_read(int sock, short event, void *arg)
 					pTask->req_count++;
 				}
 
-				//to do ...
+				/* continue to write to file */
+				storage_dio_queue_push(pTask);
 			}
 
 			return;
@@ -352,6 +355,7 @@ static void client_sock_write(int sock, short event, void *arg)
 	int bytes;
 	int result;
 	struct fast_task_info *pTask;
+        StorageClientInfo *pClientInfo;
 
 	pTask = (struct fast_task_info *)arg;
 	if (event == EV_TIMEOUT)
@@ -364,6 +368,7 @@ static void client_sock_write(int sock, short event, void *arg)
 		return;
 	}
 
+        pClientInfo = (StorageClientInfo *)pTask->arg;
 	while (1)
 	{
 		bytes = send(sock, pTask->data + pTask->offset, \
@@ -407,17 +412,29 @@ static void client_sock_write(int sock, short event, void *arg)
 		pTask->offset += bytes;
 		if (pTask->offset >= pTask->length)
 		{
-			pTask->offset = 0;
-			pTask->length  = 0;
-
-			if ((result=event_add(&pTask->ev_read, \
-						&g_network_tv)) != 0)
+			pClientInfo->total_offset += pTask->length;
+			if (pClientInfo->total_offset>=pClientInfo->total_length)
 			{
-				task_finish_clean_up(pTask);
+				/*  reponse done, try to recv again */
+				pClientInfo->total_length = 0;
+				pClientInfo->total_offset = 0;
+				pTask->offset = 0;
+				pTask->length  = 0;
 
-				logError("file: "__FILE__", line: %d, "\
-					"event_add fail.", __LINE__);
-				return;
+				pClientInfo->stage = FDFS_STORAGE_STAGE_NIO_RECV;
+				if ((result=event_add(&pTask->ev_read, \
+							&g_network_tv)) != 0)
+				{
+					task_finish_clean_up(pTask);
+
+					logError("file: "__FILE__", line: %d, "\
+						"event_add fail.", __LINE__);
+					return;
+				}
+			}
+			else  //continue to send file content
+			{
+				storage_dio_queue_push(pTask);
 			}
 
 			return;

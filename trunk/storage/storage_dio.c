@@ -99,7 +99,6 @@ int storage_dio_init()
 		for (pContext=pThreadData->contexts; pContext<pContextEnd; \
 			pContext++)
 		{
-			pContext->thread_index = g_dio_thread_count;
 			if ((result=task_queue_init(&(pContext->queue))) != 0)
 			{
 				return result;
@@ -155,11 +154,71 @@ void storage_dio_terminate()
 	{
 		pthread_cond_signal(&(pContext->cond));
 	}
+}
 
-	while (g_dio_thread_count > 0)
+int storage_dio_queue_push(struct fast_task_info *pTask)
+{
+	StorageFileContext *pFileContext;
+	struct storage_dio_context *pContext;
+	int result;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+	pContext = g_dio_contexts + pFileContext->dio_thread_index;
+	if ((result=task_queue_push(&(pContext->queue), pTask)) != 0)
 	{
-		sleep(1);
+		task_finish_clean_up(pTask);
+		return result;
 	}
+
+	if ((result=pthread_cond_signal(&(pContext->cond))) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"pthread_cond_signal fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+
+		task_finish_clean_up(pTask);
+		return result;
+	}
+
+	return 0;
+}
+
+void storage_dio_get_thread_index(struct fast_task_info *pTask, \
+		const int store_path_index, const char file_op)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	struct storage_dio_thread_data *pThreadData;
+	struct storage_dio_context *contexts;
+	struct storage_dio_context *pContext;
+	int count;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext = &(pClientInfo->file_context);
+
+	pThreadData = g_dio_thread_data + store_path_index;
+	if (g_disk_rw_separated)
+	{
+		if (file_op == FDFS_STORAGE_FILE_OP_READ)
+		{
+			contexts = pThreadData->reader;
+			count = g_disk_reader_threads;
+		}
+		else
+		{
+			contexts = pThreadData->writer;
+			count = g_disk_writer_threads;
+		}
+	}
+	else
+	{
+		contexts = pThreadData->contexts;
+		count = pThreadData->count;
+	}
+
+	pContext = contexts + (pClientInfo->sock % count);
+	pFileContext->dio_thread_index = pContext - g_dio_contexts;
 }
 
 static int dio_deal_task(struct fast_task_info *pTask)
