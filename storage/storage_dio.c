@@ -136,13 +136,13 @@ int storage_dio_init()
 
 static int dio_deal_task(struct fast_task_info *pTask)
 {
-	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
 	int result;
 
-	pClientInfo = (StorageClientInfo *)pTask->arg;
-	pFileContext = &(pClientInfo->file_context);
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 
+	do
+	{
 	if (pFileContext->fd < 0)
 	{
 		if (pFileContext->op == FDFS_STORAGE_FILE_OP_READ)
@@ -163,7 +163,7 @@ static int dio_deal_task(struct fast_task_info *pTask)
 				"errno: %d, error info: %s", \
 				__LINE__, pFileContext->filename, \
 				result, strerror(result));
-			return result;
+			break;
 		}
 
 		if (pFileContext->offset > 0 && lseek(pFileContext->fd, \
@@ -175,7 +175,7 @@ static int dio_deal_task(struct fast_task_info *pTask)
 				"errno: %d, error info: %s", \
 				__LINE__, pFileContext->filename, \
 				result, strerror(result));
-			return result;
+			break;
 		}
 	}
 
@@ -199,12 +199,12 @@ static int dio_deal_task(struct fast_task_info *pTask)
 				"errno: %d, error info: %s", \
 				__LINE__, pFileContext->filename, \
 				result, strerror(result));
-
-			return result;
+			break;
 		}
 
 		pTask->length += read_bytes;
 		pFileContext->offset += read_bytes;
+		result = 0;
 	}
 	else
 	{
@@ -220,14 +220,30 @@ static int dio_deal_task(struct fast_task_info *pTask)
 				"errno: %d, error info: %s", \
 				__LINE__, pFileContext->filename, \
 				result, strerror(result));
-
-			return result;
+			break;
 		}
 
 		pFileContext->offset += write_bytes;
+		result = 0;
+	}
+	}
+	while (0);
+
+	if (result == 0)
+	{
+		if (pFileContext->offset >= pFileContext->end)
+		{
+			/* file read/write done, close it */
+			close(pFileContext->fd);
+			pFileContext->fd = -1;
+		}
+	}
+	else
+	{
+		task_finish_clean_up(pTask);
 	}
 
-	return 0;
+	return result;
 }
 
 static void *dio_thread_entrance(void* arg) 
@@ -252,7 +268,13 @@ static void *dio_thread_entrance(void* arg)
 
 		while ((pTask=task_queue_pop(&(pContext->queue))) != NULL)
 		{
-			dio_deal_task(pTask);
+			if (dio_deal_task(pTask) == 0)
+			{
+				//if (
+			}
+			else
+			{
+			}
 		}
 	}
 	pthread_mutex_unlock(&(pContext->lock));

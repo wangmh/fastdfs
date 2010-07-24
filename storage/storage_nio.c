@@ -38,10 +38,34 @@ static int trigger_nio_recv(struct fast_task_info *pTask);
 void task_finish_clean_up(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
+        StorageFileContext *pFileContext;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext = &(pClientInfo->file_context);
+
+	if (pFileContext->fd >= 0)
+	{
+		close(pFileContext->fd);
+
+		/* if file does not write to the end, delete it */
+		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE && \
+			pFileContext->offset < pFileContext->end)
+		{
+			if (unlink(pFileContext->filename) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s, " \
+					"delete useless file %s fail," \
+					"errno: %d, error info: %s", \
+					__LINE__, pTask->client_ip, \
+					pFileContext->filename, \
+					errno, strerror(errno));
+			}
+		}
+	}
 
 	memset(pTask->arg, 0, sizeof(StorageClientInfo));
+	pFileContext->fd = -1;
 
 	free_queue_push(pTask);
 }
