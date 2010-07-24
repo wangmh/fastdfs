@@ -15,7 +15,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <event.h>
+#include "tracker_types.h"
 #include "fast_task_queue.h"
+#include "storage_global.h"
+#include "fdht_types.h"
 
 
 #define FDFS_STORAGE_STAGE_NIO_RECV    11
@@ -47,7 +50,7 @@ typedef struct
 	FDFSStorageServer *pSrcStorage;
 } StorageClientInfo;
 
-struct storage_thread_data
+struct storage_nio_thread_data
 {
         struct event_base *ev_base;
         int pipe_fds[2];

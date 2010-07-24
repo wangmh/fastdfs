@@ -65,8 +65,8 @@ extern int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 int storage_service_init()
 {
 	int result;
-	struct storage_thread_data *pThreadData;
-	struct storage_thread_data *pDataEnd;
+	struct storage_nio_thread_data *pThreadData;
+	struct storage_nio_thread_data *pDataEnd;
 	pthread_t tid;
 	pthread_attr_t thread_attr;
 
@@ -98,20 +98,20 @@ int storage_service_init()
 		return result;
 	}
 
-	g_thread_data = (struct storage_thread_data *)malloc(sizeof( \
-				struct storage_thread_data) * g_work_threads);
-	if (g_thread_data == NULL)
+	g_nio_thread_data = (struct storage_nio_thread_data *)malloc(sizeof( \
+				struct storage_nio_thread_data) * g_work_threads);
+	if (g_nio_thread_data == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, (int)sizeof(struct storage_thread_data) * \
+			__LINE__, (int)sizeof(struct storage_nio_thread_data) * \
 			g_work_threads, errno, strerror(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
 	g_storage_thread_count = 0;
-	pDataEnd = g_thread_data + g_work_threads;
-	for (pThreadData=g_thread_data; pThreadData<pDataEnd; pThreadData++)
+	pDataEnd = g_nio_thread_data + g_work_threads;
+	for (pThreadData=g_nio_thread_data; pThreadData<pDataEnd; pThreadData++)
 	{
 		pThreadData->dealing_file_count = 0;
 		pThreadData->ev_base = event_base_new();
@@ -184,19 +184,19 @@ void storage_service_destroy()
 
 int storage_terminate_threads()
 {
-        struct storage_thread_data *pThreadData;
-        struct storage_thread_data *pDataEnd;
+        struct storage_nio_thread_data *pThreadData;
+        struct storage_nio_thread_data *pDataEnd;
 	struct fast_task_info *pTask;
 	StorageClientInfo *pClientInfo;
 	long task_addr;
         int quit_sock;
 
-        if (g_thread_data != NULL)
+        if (g_nio_thread_data != NULL)
         {
-                pDataEnd = g_thread_data + g_work_threads;
+                pDataEnd = g_nio_thread_data + g_work_threads;
                 quit_sock = 0;
 
-		for (pThreadData=g_thread_data; pThreadData<pDataEnd; \
+		for (pThreadData=g_nio_thread_data; pThreadData<pDataEnd; \
 			pThreadData++)
 		{
 			quit_sock--;
@@ -211,7 +211,7 @@ int storage_terminate_threads()
 
 			pClientInfo = (StorageClientInfo *)pTask->arg;
 			pClientInfo->sock = quit_sock;
-			pClientInfo->thread_index = pThreadData - g_thread_data;
+			pClientInfo->thread_index = pThreadData - g_nio_thread_data;
 
 			task_addr = (long)pTask;
 			if (write(pThreadData->pipe_fds[1], &task_addr, \
@@ -238,7 +238,7 @@ void storage_accept_loop(int server_sock)
 	long task_addr;
 	struct fast_task_info *pTask;
 	StorageClientInfo *pClientInfo;
-	struct storage_thread_data *pThreadData;
+	struct storage_nio_thread_data *pThreadData;
 
 	while (g_continue_flag)
 	{
@@ -294,7 +294,7 @@ void storage_accept_loop(int server_sock)
 		pClientInfo->sock = incomesock;
 		pClientInfo->stage = FDFS_STORAGE_STAGE_NIO_RECV;
 		pClientInfo->thread_index = pClientInfo->sock % g_work_threads;
-		pThreadData = g_thread_data + pClientInfo->thread_index;
+		pThreadData = g_nio_thread_data + pClientInfo->thread_index;
 
 		strcpy(pTask->client_ip, szClientIp);
 		strcpy(pClientInfo->tracker_client_ip, szClientIp);
@@ -323,10 +323,10 @@ package format:
 data buff (struct)
 */
 	int result;
-	struct storage_thread_data *pThreadData;
+	struct storage_nio_thread_data *pThreadData;
 	struct event ev_notify;
 	
-	pThreadData = (struct storage_thread_data *)arg;
+	pThreadData = (struct storage_nio_thread_data *)arg;
 	if (g_check_file_duplicate)
 	{
 		if ((result=fdht_copy_group_array(&(pThreadData->group_array),\
@@ -660,7 +660,7 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 	{
 		if (g_check_file_duplicate)
 		{
-			pGroupArray=&((g_thread_data+pClientInfo->thread_index)\
+			pGroupArray=&((g_nio_thread_data+pClientInfo->thread_index)\
 					->group_array);
 			int nSigLen;
 			char szFileSig[FILE_SIGNATURE_SIZE];
@@ -996,7 +996,7 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 
 	if (pSrcFileInfo != NULL && g_check_file_duplicate)   //create link
 	{
-		pGroupArray=&((g_thread_data + pClientInfo->thread_index) \
+		pGroupArray=&((g_nio_thread_data + pClientInfo->thread_index) \
 				->group_array);
 		*create_flag = STORAGE_CREATE_FLAG_LINK;
 
@@ -2784,7 +2784,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask, int *delete_
 	src_file_nlink = -1;
 	if (g_check_file_duplicate)
 	{
-		pGroupArray=&((g_thread_data+pClientInfo->thread_index)\
+		pGroupArray=&((g_nio_thread_data+pClientInfo->thread_index)\
 				->group_array);
 		memset(&key_info_sig, 0, sizeof(key_info_sig));
 		key_info_sig.namespace_len = g_namespace_len;
@@ -2953,7 +2953,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask, int *delete_
 	{
 		char *pSeperator;
 
-		pGroupArray=&((g_thread_data+pClientInfo->thread_index)\
+		pGroupArray=&((g_nio_thread_data+pClientInfo->thread_index)\
 				->group_array);
 		if ((result=fdht_delete_ex(pGroupArray, g_keep_alive, \
 						&key_info_sig)) != 0)
@@ -3251,7 +3251,7 @@ static int storage_create_link(struct fast_task_info *pTask)
 
 		if (g_check_file_duplicate)
 		{
-			pGroupArray=&((g_thread_data+pClientInfo->thread_index)\
+			pGroupArray=&((g_nio_thread_data+pClientInfo->thread_index)\
 					->group_array);
 			//clean invalid entry
 			memset(&key_info, 0, sizeof(key_info));

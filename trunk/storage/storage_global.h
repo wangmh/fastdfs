@@ -28,6 +28,8 @@
 #define STORAGE_BEAT_DEF_INTERVAL    30
 #define STORAGE_REPORT_DEF_INTERVAL  300
 #define STORAGE_DEF_SYNC_WAIT_MSEC   100
+#define DEFAULT_DISK_READER_THREADS  1
+#define DEFAULT_DISK_WRITER_THREADS  1
 #define DEFAULT_SYNC_STAT_FILE_INTERVAL  300
 #define DEFAULT_DATA_DIR_COUNT_PER_PATH	 256
 #define DEFAULT_UPLOAD_PRIORITY           10
@@ -61,6 +63,11 @@ extern char g_http_domain[FDFS_DOMAIN_NAME_MAX_SIZE];  //http server domain name
 extern int g_max_connections;
 extern int g_work_threads;
 extern int g_buff_size;
+
+extern bool g_disk_rw_separated;  //if disk read / write separated
+extern int g_disk_reader_threads; //disk reader thread count per store base path
+extern int g_disk_writer_threads; //disk writer thread count per store base path
+
 extern int g_file_distribute_path_mode;
 extern int g_file_distribute_rotate_count;
 extern int g_fsync_after_written_bytes;
@@ -135,7 +142,8 @@ extern int g_http_trunk_size;
 extern char g_exe_name[256];
 #endif
 
-extern struct storage_thread_data *g_thread_data;
+extern struct storage_nio_thread_data *g_nio_thread_data;  //network io thread data
+extern struct storage_dio_thread_data *g_dio_thread_data;  //disk io thread data
 
 int storage_cmp_by_ip_addr(const void *p1, const void *p2);
 

@@ -1017,6 +1017,65 @@ int storage_func_init(const char *filename, \
                         break;
 		}
 	
+		g_disk_rw_separated = iniGetBoolValue(NULL, \
+				"disk_rw_separated", &iniContext, false);
+
+		g_disk_reader_threads = iniGetIntValue(NULL, \
+				"disk_reader_threads", \
+				&iniContext, DEFAULT_DISK_READER_THREADS);
+		if (g_disk_reader_threads < 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"item \"disk_reader_threads\" is invalid, " \
+				"value: %d < 0!", __LINE__, \
+				g_disk_reader_threads);
+			result = EINVAL;
+                        break;
+		}
+
+		g_disk_writer_threads = iniGetIntValue(NULL, \
+				"disk_writer_threads", \
+				&iniContext, DEFAULT_DISK_WRITER_THREADS);
+		if (g_disk_writer_threads < 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"item \"disk_writer_threads\" is invalid, " \
+				"value: %d < 0!", __LINE__, \
+				g_disk_writer_threads);
+			result = EINVAL;
+                        break;
+		}
+
+		if (g_disk_rw_separated)
+		{
+			if (g_disk_reader_threads == 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"item \"disk_reader_threads\" is " \
+					"invalid, value = 0!", __LINE__);
+				result = EINVAL;
+				break;
+			}
+
+			if (g_disk_writer_threads == 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"item \"disk_writer_threads\" is " \
+					"invalid, value = 0!", __LINE__);
+				result = EINVAL;
+				break;
+			}
+		}
+		else if (g_disk_reader_threads + g_disk_writer_threads == 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"item \"disk_reader_threads\" and " \
+				"\"disk_writer_threads\" are " \
+				"invalid, both value = 0!", __LINE__);
+			result = EINVAL;
+			break;
+		}
+
 		pRunByGroup = iniGetStrValue(NULL, "run_by_group", &iniContext);
 		pRunByUser = iniGetStrValue(NULL, "run_by_user", &iniContext);
 		if (pRunByGroup == NULL)
@@ -1235,6 +1294,8 @@ int storage_func_init(const char *filename, \
 			"connect_timeout=%ds, network_timeout=%ds, "\
 			"port=%d, bind_addr=%s, client_bind=%d, " \
 			"max_connections=%d, work_threads=%d, "    \
+			"disk_rw_separated=%d, disk_reader_threads=%d, " \
+			"disk_writer_threads=%d, " \
 			"buff_size=%dKB, heart_beat_interval=%ds, " \
 			"stat_report_interval=%ds, tracker_server_count=%d, " \
 			"sync_wait_msec=%dms, sync_interval=%dms, " \
@@ -1258,7 +1319,9 @@ int storage_func_init(const char *filename, \
 			g_group_name, g_fdfs_connect_timeout, \
 			g_fdfs_network_timeout, g_server_port, bind_addr, \
 			g_client_bind_addr, g_max_connections, \
-			g_work_threads, g_buff_size / 1024, \
+			g_work_threads, g_disk_rw_separated, \
+			g_disk_reader_threads, g_disk_writer_threads, \
+			g_buff_size / 1024, \
 			g_heart_beat_interval, g_stat_report_interval, \
 			g_tracker_group.server_count, g_sync_wait_usec / 1000, \
 			g_sync_interval / 1000, \

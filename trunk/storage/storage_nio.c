@@ -78,10 +78,10 @@ void recv_notify_read(int sock, short event, void *arg)
 
 		if (pClientInfo->sock < 0)  //quit flag
 		{
-			struct storage_thread_data *pThreadData;
+			struct storage_nio_thread_data *pThreadData;
 			struct timeval tv;
 
-			pThreadData = g_thread_data + pClientInfo->thread_index;
+			pThreadData = g_nio_thread_data + pClientInfo->thread_index;
                         tv.tv_sec = 1;
                         tv.tv_usec = 0;
 			event_base_loopexit(pThreadData->ev_base, &tv);
@@ -113,10 +113,10 @@ static int trigger_nio_recv(struct fast_task_info *pTask)
 {
 	int result;
 	StorageClientInfo *pClientInfo;
-	struct storage_thread_data *pThreadData;
+	struct storage_nio_thread_data *pThreadData;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
-	pThreadData = g_thread_data + pClientInfo->thread_index;
+	pThreadData = g_nio_thread_data + pClientInfo->thread_index;
 	event_set(&pTask->ev_read, pClientInfo->sock, EV_READ, \
 			client_sock_read, pTask);
 	if ((result=event_base_set(pThreadData->ev_base, &pTask->ev_read)) != 0)
