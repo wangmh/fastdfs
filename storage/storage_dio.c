@@ -82,9 +82,9 @@ int storage_dio_init()
 				pThreadData->count, errno, strerror(errno));
 			return errno != 0 ? errno : ENOMEM;
 		}
-
 		pThreadData->reader=pThreadData->contexts;
 		pThreadData->writer=pThreadData->contexts+g_disk_reader_threads;
+
 		pContextEnd = pThreadData->contexts + pThreadData->count;
 		for (pContext=pThreadData->contexts; pContext<pContextEnd; \
 			pContext++)
@@ -96,6 +96,16 @@ int storage_dio_init()
 
 			if ((result=init_pthread_lock(&(pContext->lock))) != 0)
 			{
+				return result;
+			}
+
+			result = pthread_cond_init(&(pContext->cond), NULL);
+			if (result != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"pthread_cond_init fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, result, strerror(result));
 				return result;
 			}
 
@@ -124,16 +134,128 @@ int storage_dio_init()
 	return result;
 }
 
+static int dio_deal_task(struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	int result;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext = &(pClientInfo->file_context);
+
+	if (pFileContext->fd < 0)
+	{
+		if (pFileContext->op == FDFS_STORAGE_FILE_OP_READ)
+		{
+			pFileContext->fd=open(pFileContext->filename, O_RDONLY);
+		}
+		else
+		{
+			pFileContext->fd = open(pFileContext->filename, \
+					O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		}
+
+		if (pFileContext->fd < 0)
+		{
+			result = errno != 0 ? errno : EACCES;
+			logError("file: "__FILE__", line: %d, " \
+				"open file: %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pFileContext->filename, \
+				result, strerror(result));
+			return result;
+		}
+
+		if (pFileContext->offset > 0 && lseek(pFileContext->fd, \
+			pFileContext->offset, SEEK_SET) < 0)
+		{
+			result = errno != 0 ? errno : EIO;
+			logError("file: "__FILE__", line: %d, " \
+				"lseek file: %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pFileContext->filename, \
+				result, strerror(result));
+			return result;
+		}
+	}
+
+	if (pFileContext->op == FDFS_STORAGE_FILE_OP_READ)
+	{
+		int64_t remain_bytes;
+		int capacity_bytes;
+		int read_bytes;
+
+		remain_bytes = pFileContext->end - pFileContext->offset;
+		capacity_bytes = pTask->size - pTask->length;
+		read_bytes = (capacity_bytes < remain_bytes) ? \
+				capacity_bytes : remain_bytes;
+
+		if (read(pFileContext->fd, pTask->data + pTask->length, \
+			read_bytes) != read_bytes)
+		{
+			result = errno != 0 ? errno : EIO;
+			logError("file: "__FILE__", line: %d, " \
+				"read from file: %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pFileContext->filename, \
+				result, strerror(result));
+
+			return result;
+		}
+
+		pTask->length += read_bytes;
+		pFileContext->offset += read_bytes;
+	}
+	else
+	{
+		int write_bytes;
+
+		write_bytes = pTask->length - pTask->offset;
+		if (write(pFileContext->fd, pTask->data + pTask->offset, \
+			write_bytes) != write_bytes)
+		{
+			result = errno != 0 ? errno : EIO;
+			logError("file: "__FILE__", line: %d, " \
+				"write to file: %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pFileContext->filename, \
+				result, strerror(result));
+
+			return result;
+		}
+
+		pFileContext->offset += write_bytes;
+	}
+
+	return 0;
+}
+
 static void *dio_thread_entrance(void* arg) 
 {
-	int result; 
+	int result;
 	struct storage_dio_context *pContext; 
+	struct fast_task_info *pTask;
 
 	pContext = (struct storage_dio_context *)arg; 
 
+	pthread_mutex_lock(&(pContext->lock));
 	while (g_continue_flag)
 	{
+		if ((result=pthread_cond_wait(&(pContext->cond), \
+			&(pContext->lock))) != 0)
+		{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_cond_wait fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, strerror(result));
+		}
+
+		while ((pTask=task_queue_pop(&(pContext->queue))) != NULL)
+		{
+			dio_deal_task(pTask);
+		}
 	}
+	pthread_mutex_unlock(&(pContext->lock));
 
 	if ((result=pthread_mutex_lock(&g_dio_thread_lock)) != 0)
 	{
