@@ -21,30 +21,35 @@
 #include "fdht_types.h"
 
 
-#define FDFS_STORAGE_STAGE_NIO_RECV    11
-#define FDFS_STORAGE_STAGE_NIO_SEND    12
-#define FDFS_STORAGE_STAGE_DIO_READ    21
-#define FDFS_STORAGE_STAGE_DIO_WRITE   22
+#define FDFS_STORAGE_STAGE_NIO_RECV   'r'
+#define FDFS_STORAGE_STAGE_NIO_SEND   's'
 
-#define FDFS_STORAGE_FILE_OP_WRITE    'w'
 #define FDFS_STORAGE_FILE_OP_READ     'r'
+#define FDFS_STORAGE_FILE_OP_WRITE    'w'
+
+typedef struct
+{
+	char filename[MAX_PATH_SIZE + 128];
+	char op;        //w for writing, r for reading
+	int fd;         //file description no
+	int64_t start;  //file start offset
+	int64_t end;    //file end offset
+	int64_t offset; //file current offset
+} StorageFileContext;
 
 typedef struct
 {
 	int thread_index;
-	int stage;
 	int sock;
+	char stage;  //nio stage
+	char sync_flag;
 	char ip_addr[IP_ADDRESS_SIZE];  //to be removed
 	char tracker_client_ip[IP_ADDRESS_SIZE];
 
+	StorageFileContext file_context;
+
 	int64_t total_length;   //pkg total length
 	int64_t total_offset;   //pkg current offset
-
-	char sync_flag;
-	char file_op;     //w for writing, r for reading
-	int fd;           //file description no
-	int64_t file_size;   //file size
-	int64_t file_offset; //file offset
 
 	int src_sync_timestamp;
 	FDFSStorageServer *pSrcStorage;

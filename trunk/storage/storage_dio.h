@@ -22,6 +22,7 @@ struct storage_dio_context
 {
 	struct fast_task_queue queue;
 	pthread_mutex_t lock;
+	pthread_cond_t cond;
 };
 
 struct storage_dio_thread_data

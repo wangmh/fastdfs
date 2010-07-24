@@ -1061,10 +1061,11 @@ static int storage_write_to_file(struct fast_task_info *pTask, \
 		const char *filename, const char *file_buff, \
 		const int buff_size)
 {
+	/*
 	StorageClientInfo *pClientInfo;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
-	pClientInfo->fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, 0644);
+	pClientInfo->fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (pClientInfo->fd < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1081,6 +1082,7 @@ static int storage_write_to_file(struct fast_task_info *pTask, \
 	pClientInfo->file_size = buff_size;
 	pClientInfo->file_op = FDFS_STORAGE_FILE_OP_WRITE;
 	pClientInfo->stage = FDFS_STORAGE_STAGE_DIO_WRITE;
+	*/
 
 	return 0;
 }
