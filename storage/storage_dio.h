@@ -20,6 +20,7 @@
 
 struct storage_dio_context
 {
+	int thread_index;
 	struct fast_task_queue queue;
 	pthread_mutex_t lock;
 	pthread_cond_t cond;
@@ -41,6 +42,9 @@ extern "C" {
 #endif
 
 extern int g_dio_thread_count;
+
+int storage_dio_init();
+void storage_dio_terminate();
 
 #ifdef __cplusplus
 }

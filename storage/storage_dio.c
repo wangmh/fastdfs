@@ -27,8 +27,11 @@
 #include "sockopt.h"
 #include "storage_dio.h"
 #include "storage_nio.h"
+#include "storage_service.h"
 
 static pthread_mutex_t g_dio_thread_lock;
+static struct storage_dio_context *g_dio_contexts = NULL;
+
 int g_dio_thread_count = 0;
 
 static void *dio_thread_entrance(void* arg);
@@ -36,6 +39,8 @@ static void *dio_thread_entrance(void* arg);
 int storage_dio_init()
 {
 	int result;
+	int threads_count_per_path;
+	int context_count;
 	struct storage_dio_thread_data *pThreadData;
 	struct storage_dio_thread_data *pDataEnd;
 	struct storage_dio_context *pContext;
@@ -66,22 +71,27 @@ int storage_dio_init()
 		return errno != 0 ? errno : ENOMEM;
 	}
 
+	threads_count_per_path = g_disk_reader_threads + g_disk_writer_threads;
+	context_count = threads_count_per_path * g_path_count;
+	g_dio_contexts = (struct storage_dio_context *)malloc(\
+			sizeof(struct storage_dio_context) * context_count);
+	if (g_dio_contexts == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			(int)sizeof(struct storage_dio_context) * \
+			context_count, errno, strerror(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
 	g_dio_thread_count = 0;
 	pDataEnd = g_dio_thread_data + g_path_count;
 	for (pThreadData=g_dio_thread_data; pThreadData<pDataEnd; pThreadData++)
 	{
-		pThreadData->count=g_disk_reader_threads+g_disk_writer_threads;
-		pThreadData->contexts = (struct storage_dio_context *)malloc(\
-			sizeof(struct storage_dio_context) * pThreadData->count);
-		if (pThreadData->contexts == NULL)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail, " \
-				"errno: %d, error info: %s", __LINE__, \
-				(int)sizeof(struct storage_dio_context) * \
-				pThreadData->count, errno, strerror(errno));
-			return errno != 0 ? errno : ENOMEM;
-		}
+		pThreadData->count = threads_count_per_path;
+		pThreadData->contexts = g_dio_contexts + (pThreadData - \
+				g_dio_thread_data) * threads_count_per_path;
 		pThreadData->reader=pThreadData->contexts;
 		pThreadData->writer=pThreadData->contexts+g_disk_reader_threads;
 
@@ -89,6 +99,7 @@ int storage_dio_init()
 		for (pContext=pThreadData->contexts; pContext<pContextEnd; \
 			pContext++)
 		{
+			pContext->thread_index = g_dio_thread_count;
 			if ((result=task_queue_init(&(pContext->queue))) != 0)
 			{
 				return result;
@@ -134,6 +145,23 @@ int storage_dio_init()
 	return result;
 }
 
+void storage_dio_terminate()
+{
+	struct storage_dio_context *pContext;
+	struct storage_dio_context *pContextEnd;
+
+	pContextEnd = g_dio_contexts + g_dio_thread_count;
+	for (pContext=g_dio_contexts; pContext<pContextEnd; pContext++)
+	{
+		pthread_cond_signal(&(pContext->cond));
+	}
+
+	while (g_dio_thread_count > 0)
+	{
+		sleep(1);
+	}
+}
+
 static int dio_deal_task(struct fast_task_info *pTask)
 {
 	StorageFileContext *pFileContext;
@@ -149,7 +177,7 @@ static int dio_deal_task(struct fast_task_info *pTask)
 		{
 			pFileContext->fd=open(pFileContext->filename, O_RDONLY);
 		}
-		else
+		else  //write
 		{
 			pFileContext->fd = open(pFileContext->filename, \
 					O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -237,8 +265,10 @@ static int dio_deal_task(struct fast_task_info *pTask)
 			close(pFileContext->fd);
 			pFileContext->fd = -1;
 		}
+
+		storage_nio_notify(pTask);  //notify nio to deal
 	}
-	else
+	else //error
 	{
 		task_finish_clean_up(pTask);
 	}
