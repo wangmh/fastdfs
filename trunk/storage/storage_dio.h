@@ -18,15 +18,28 @@
 #include "tracker_types.h"
 #include "fast_task_queue.h"
 
-struct storage_dio_thread_data
+struct storage_dio_context
 {
 	struct fast_task_queue queue;
-	pthread_mutex_t signal_lock;
+	pthread_mutex_t lock;
+};
+
+struct storage_dio_thread_data
+{
+	/* for mixed read / write */
+	struct storage_dio_context *contexts;
+	int count;  //context count
+
+	/* for separated read / write */
+	struct storage_dio_context *reader;
+	struct storage_dio_context *writer;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+extern int g_dio_thread_count;
 
 #ifdef __cplusplus
 }
