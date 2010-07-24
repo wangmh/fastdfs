@@ -13,7 +13,7 @@ SHARED_OBJS = ../common/hash.o ../common/chain.o \
               ../common/http_func.o ../common/md5.o ../common/pthread_func.o \
               ../tracker/tracker_proto.o ../tracker/fast_task_queue.o \
               tracker_client_thread.o storage_global.o storage_func.o \
-              storage_service.o storage_sync.o storage_nio.o \
+              storage_service.o storage_sync.o storage_nio.o storage_dio.o \
               storage_ip_changed_dealer.o storage_param_getter.o \
               ../client/client_global.o ../client/tracker_client.o \
               ../client/storage_client.o ../client/client_func.o \

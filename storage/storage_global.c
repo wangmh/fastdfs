@@ -27,6 +27,11 @@ int g_last_http_port = 0;
 int g_max_connections = DEFAULT_MAX_CONNECTONS;
 int g_work_threads = DEFAULT_WORK_THREADS;
 int g_buff_size = STORAGE_DEFAULT_BUFF_SIZE;
+
+bool g_disk_rw_separated = false;
+int g_disk_reader_threads = DEFAULT_DISK_READER_THREADS;
+int g_disk_writer_threads = DEFAULT_DISK_WRITER_THREADS;
+
 int g_file_distribute_path_mode = FDFS_FILE_DIST_PATH_ROUND_ROBIN;
 int g_file_distribute_rotate_count = FDFS_FILE_DIST_DEFAULT_ROTATE_COUNT;
 int g_fsync_after_written_bytes = -1;
@@ -102,7 +107,8 @@ int g_http_trunk_size = 64 * 1024;
 char g_exe_name[256] = {0};
 #endif
 
-struct storage_thread_data *g_thread_data = NULL;
+struct storage_nio_thread_data *g_nio_thread_data = NULL;
+struct storage_dio_thread_data *g_dio_thread_data = NULL;
 
 int storage_cmp_by_ip_addr(const void *p1, const void *p2)
 {
