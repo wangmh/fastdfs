@@ -39,6 +39,7 @@
 #include "tracker_client.h"
 #include "storage_client.h"
 #include "storage_nio.h"
+#include "storage_dio.h"
 
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
@@ -57,6 +58,16 @@ extern int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		const char *file_ext_name, \
 		char *meta_buff, const int meta_size, \
 		char *remote_filename, int *filename_len);
+
+static int storage_write_to_file(struct fast_task_info *pTask, \
+		const int64_t file_offset, const int64_t upload_bytes, \
+		const int buff_offset, const int store_path_index);
+
+static int storage_read_from_file(struct fast_task_info *pTask, \
+		const int64_t file_offset, const int64_t download_bytes, \
+		const int store_path_index);
+
+#define STORAGE_STATUS_READ_WRITE_FILE	 123456   //status for read or write file
 
 #define FDHT_KEY_NAME_FILE_ID	"fid"
 #define FDHT_KEY_NAME_REF_COUNT	"ref"
@@ -515,17 +526,6 @@ static int storage_sort_metadata_buff(char *meta_buff, const int meta_size)
 	{
 		return result;
 	}
-
-	/*
-	{
-	int i;
-	//printf("meta_count=%d\n", meta_count);
-	for (i=0; i<meta_count; i++)
-	{
-		//printf("%d. %s=%s\n", i+1, meta_list[i].name, meta_list[i].value);
-	}
-	}
-	*/
 
 	qsort((void *)meta_list, meta_count, sizeof(FDFSMetaData), \
 		metadata_cmp_by_name);
@@ -1078,40 +1078,11 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 	return 0;
 }
 
-static int storage_write_to_file(struct fast_task_info *pTask, \
-		const char *filename, const char *file_buff, \
-		const int buff_size)
-{
-	/*
-	StorageClientInfo *pClientInfo;
-
-	pClientInfo = (StorageClientInfo *)pTask->arg;
-	pClientInfo->fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (pClientInfo->fd < 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"open file %s fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, filename, \
-			errno, strerror(errno));
-
-		pClientInfo->total_length = sizeof(TrackerHeader);
-		return errno != 0 ? errno : EACCES;
-	}
-
-	memcpy(pTask->data + sizeof(TrackerHeader), file_buff, buff_size);
-	pClientInfo->file_size = buff_size;
-	pClientInfo->file_op = FDFS_STORAGE_FILE_OP_WRITE;
-	pClientInfo->stage = FDFS_STORAGE_STAGE_DIO_WRITE;
-	*/
-
-	return 0;
-}
-
 static int storage_do_set_metadata(struct fast_task_info *pTask,
-		const char *full_meta_filename, char *meta_buff, \
-		const int meta_bytes, const char op_flag)
+		const int meta_offset, const char op_flag, \
+		const int store_path_index)
 {
+	StorageFileContext *pFileContext;
 	FDFSMetaData *old_meta_list;
 	FDFSMetaData *new_meta_list;
 	FDFSMetaData *all_meta_list;
@@ -1120,31 +1091,34 @@ static int storage_do_set_metadata(struct fast_task_info *pTask,
 	FDFSMetaData *pAllMeta;
 	FDFSMetaData *pOldMetaEnd;
 	FDFSMetaData *pNewMetaEnd;
+	char *meta_buff;
 	char *file_buff;
 	char *all_meta_buff;
 	StorageClientInfo *pClientInfo;
 	int64_t file_bytes;
+	int meta_bytes;
 	int old_meta_count;
 	int new_meta_count;
 	int all_meta_bytes;
 	int result;
-	char sync_flag;
+
+	pFileContext =  &(((StorageClientInfo *)pTask->arg)->file_context);
+	meta_buff = pTask->data + meta_offset;
+	meta_bytes = pTask->size - meta_offset;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
-	sync_flag = '\0';
-	do
-	{
+	pClientInfo->sync_flag = '\0';
+
 	if (op_flag == STORAGE_SET_METADATA_FLAG_OVERWRITE)
 	{
 		if (meta_bytes == 0)
 		{
-			if (!fileExists(full_meta_filename))
+			if (!fileExists(pFileContext->filename))
 			{
-				result = 0;
-				break;
+				return 0;
 			}
 
-			if (unlink(full_meta_filename) != 0)
+			if (unlink(pFileContext->filename) != 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"client ip: %s, " \
@@ -1152,25 +1126,23 @@ static int storage_do_set_metadata(struct fast_task_info *pTask,
 					"errno: %d, error info: %s", \
 					__LINE__, \
 					pTask->client_ip, \
-					full_meta_filename, \
+					pFileContext->filename, \
 					errno, strerror(errno));
 
-				result = errno != 0 ? errno : EACCES;
-				break;
+				return errno != 0 ? errno : EACCES;
 			}
 
-			sync_flag = STORAGE_OP_TYPE_SOURCE_DELETE_FILE;
-			result = 0;
-			break;
+			pClientInfo->sync_flag = STORAGE_OP_TYPE_SOURCE_DELETE_FILE;
+			return 0;
 		}
 
 		if ((result=storage_sort_metadata_buff(meta_buff, \
 				meta_bytes)) != 0)
 		{
-			break;
+			return result;
 		}
 
-		if (fileExists(full_meta_filename))
+		if (fileExists(pFileContext->filename))
 		{
 			pClientInfo->sync_flag = STORAGE_OP_TYPE_SOURCE_UPDATE_FILE;
 		}
@@ -1179,39 +1151,38 @@ static int storage_do_set_metadata(struct fast_task_info *pTask,
 			pClientInfo->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
 		}
 
-		return storage_write_to_file(pTask, full_meta_filename, \
-				meta_buff, meta_bytes);
+		return storage_write_to_file(pTask, 0, meta_bytes, \
+					meta_offset, store_path_index);
 	}
 
-	result = getFileContent(full_meta_filename, &file_buff, &file_bytes);
+	result = getFileContent(pFileContext->filename, &file_buff, &file_bytes);
 	if (result == ENOENT)
 	{
 		if (meta_bytes == 0)
 		{
-			result = 0;
-			break;
+			return 0;
 		}
 
 		if ((result=storage_sort_metadata_buff(meta_buff, \
 				meta_bytes)) != 0)
 		{
-			break;
+			return result;
 		}
 
 		pClientInfo->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
-		return storage_write_to_file(pTask, full_meta_filename, \
-				meta_buff, meta_bytes);
+		return storage_write_to_file(pTask, 0, meta_bytes, \
+					meta_offset, store_path_index);
 	}
 	else if (result != 0)
 	{
-		break;
+		return result;
 	}
 
 	old_meta_list = fdfs_split_metadata(file_buff, &old_meta_count, &result);
 	if (old_meta_list == NULL)
 	{
 		free(file_buff);
-		break;
+		return result;
 	}
 
 	new_meta_list = fdfs_split_metadata(meta_buff, &new_meta_count, &result);
@@ -1219,7 +1190,7 @@ static int storage_do_set_metadata(struct fast_task_info *pTask,
 	{
 		free(file_buff);
 		free(old_meta_list);
-		break;
+		return result;
 	}
 
 	all_meta_list = (FDFSMetaData *)malloc(sizeof(FDFSMetaData) * \
@@ -1234,8 +1205,7 @@ static int storage_do_set_metadata(struct fast_task_info *pTask,
 			"malloc %d bytes fail", __LINE__, \
 			(int)sizeof(FDFSMetaData) \
 			 * (old_meta_count + new_meta_count));
-		result = ENOMEM;
-		break;
+		return errno != 0 ? errno : ENOMEM;
 	}
 
 	qsort((void *)new_meta_list, new_meta_count, sizeof(FDFSMetaData), \
@@ -1292,40 +1262,26 @@ static int storage_do_set_metadata(struct fast_task_info *pTask,
 	free(all_meta_list);
 	if (all_meta_buff == NULL)
 	{
-		result = ENOMEM;
-		break;
+		return errno != 0 ? errno : ENOMEM;
 	}
 
-	if (all_meta_bytes >= pTask->size - (int)sizeof(TrackerHeader))
+	if (all_meta_bytes >= pTask->size - meta_offset)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"meta data file size: %d is too large, " \
 			"exceeds %d bytes", __LINE__, all_meta_bytes, \
-			pTask->size - (int)sizeof(TrackerHeader));
-		result = ENOSPC;
-		break;
+			pTask->size - meta_offset);
+		return ENOSPC;
 	}
 
 	pClientInfo->sync_flag = STORAGE_OP_TYPE_SOURCE_UPDATE_FILE;
-	result = storage_write_to_file(pTask, full_meta_filename, \
-				all_meta_buff, all_meta_bytes);
+
+	memcpy(meta_buff, all_meta_list, all_meta_bytes);
+	pTask->length = meta_offset + all_meta_bytes;
 	free(all_meta_buff);
-	return result;
-	}
-	while (0);
 
-	pClientInfo->total_length = sizeof(TrackerHeader);
-
-	/*    //to do ...
-	if (result == 0 && sync_flag != '\0')
-	{
-		sprintf(meta_filename,"%s"STORAGE_META_FILE_EXT,filename);
-		resp.status = storage_binlog_write( \
-				time(NULL), sync_flag, meta_filename);
-	}
-	*/
-
-	return result;
+	return storage_write_to_file(pTask, 0, all_meta_bytes, \
+					meta_offset, store_path_index);
 }
 
 /**
@@ -1342,25 +1298,27 @@ meta data bytes: each meta data seperated by \x01,
 static int storage_server_set_metadata(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
 	int64_t nInPackLen;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char filename[128];
 	char true_filename[128];
 	char meta_filename[128+sizeof(STORAGE_META_FILE_EXT)];
-	char full_filename[MAX_PATH_SIZE + 64 + sizeof(STORAGE_META_FILE_EXT)];
 	char op_flag;
 	char *p;
 	char *meta_buff;
 	int meta_bytes;
-	char *pBasePath;
 	int filename_len;
 	int true_filename_len;
 	int result;
+	int store_path_index;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
-	pClientInfo->stage = FDFS_STORAGE_STAGE_NIO_SEND;
+	pFileContext =  &(pClientInfo->file_context);
 
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
+
 	if (nInPackLen <= 2 * FDFS_PROTO_PKG_LEN_SIZE + 1 + \
 			FDFS_GROUP_NAME_MAX_LEN)
 	{
@@ -1373,11 +1331,10 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			2 * FDFS_PROTO_PKG_LEN_SIZE + 1 \
 			+ FDFS_GROUP_NAME_MAX_LEN);
 
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
-	if (pClientInfo->total_length >= pTask->size)
+	if (nInPackLen + sizeof(TrackerHeader) >= pTask->size)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
@@ -1387,7 +1344,6 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			pTask->client_ip,  nInPackLen, \
 			pTask->size - (int)sizeof(TrackerHeader));
 
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -1402,7 +1358,6 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			"client ip:%s, invalid filename length: %d", \
 			__LINE__, pTask->client_ip, filename_len);
 
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -1415,7 +1370,6 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			"invalid operation flag: 0x%02X", \
 			__LINE__, pTask->client_ip, op_flag);
 
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -1427,7 +1381,6 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			"client ip:%s, invalid meta bytes: %d", \
 			__LINE__, pTask->client_ip, meta_bytes);
 
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -1441,7 +1394,6 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			"not correct, should be: %s", \
 			__LINE__, pTask->client_ip, \
 			group_name, g_group_name);
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -1449,38 +1401,45 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 	p += filename_len;
 	*(filename + filename_len) = '\0';
 	true_filename_len = filename_len;
-	if ((result=storage_split_filename(filename, \
-		&true_filename_len, true_filename, &pBasePath)) != 0)
+	if ((result=storage_split_filename_ex(filename, \
+		&true_filename_len, true_filename, &store_path_index)) != 0)
 	{
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 	if ((result=fdfs_check_data_filename(true_filename, \
 			true_filename_len)) != 0)
 	{
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 
 	meta_buff = p;
 	*(meta_buff + meta_bytes) = '\0';
 
-	sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
-	if (!fileExists(full_filename))
+	sprintf(pFileContext->filename, "%s/data/%s", \
+		g_store_paths[store_path_index], true_filename);
+	if (!fileExists(pFileContext->filename))
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip:%s, filename: %s not exist", \
-			__LINE__, pTask->client_ip, true_filename);
+			__LINE__, pTask->client_ip, pFileContext->filename);
 
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 
 	sprintf(meta_filename,"%s"STORAGE_META_FILE_EXT, true_filename);
-	strcat(full_filename, STORAGE_META_FILE_EXT);
+	strcat(pFileContext->filename, STORAGE_META_FILE_EXT);
 
-	return storage_do_set_metadata(pTask, full_filename, \
-			meta_buff, meta_bytes, op_flag);
+	/*    //to do ...
+	if (result == 0 && sync_flag != '\0')
+	{
+		sprintf(meta_filename,"%s"STORAGE_META_FILE_EXT,filename);
+		resp.status = storage_binlog_write( \
+				time(NULL), sync_flag, meta_filename);
+	}
+	*/
+
+	return storage_do_set_metadata(pTask, meta_buff - pTask->data, \
+			op_flag, store_path_index);
 }
 
 /**
@@ -2375,19 +2334,21 @@ filename
 static int storage_server_get_metadata(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
 	char *p;
 	int result;
+	int store_path_index;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char full_filename[MAX_PATH_SIZE+256];
 	char true_filename[128];
+	struct stat stat_buf;
 	char *filename;
-	char *pBasePath;
-	char *file_buff;
 	int filename_len;
 	int64_t file_bytes;
 	int64_t nInPackLen;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 	pClientInfo->total_length = sizeof(TrackerHeader);
 
@@ -2432,8 +2393,8 @@ static int storage_server_get_metadata(struct fast_task_info *pTask)
 	filename = p;
 	filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
 	*(filename + filename_len) = '\0';
-	if ((result=storage_split_filename(filename, \
-		&filename_len, true_filename, &pBasePath)) != 0)
+	if ((result=storage_split_filename_ex(filename, \
+		&filename_len, true_filename, &store_path_index)) != 0)
 	{
 		return result;
 	}
@@ -2443,30 +2404,42 @@ static int storage_server_get_metadata(struct fast_task_info *pTask)
 		return result;
 	}
 
-	sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
-	if (!fileExists(full_filename))
+	sprintf(pFileContext->filename, "%s/data/%s", \
+			g_store_paths[store_path_index], true_filename);
+	if (!fileExists(pFileContext->filename))
 	{
 		return ENOENT;
 	}
 
-	file_buff = NULL;
-	file_bytes = 0;
-	strcat(full_filename, STORAGE_META_FILE_EXT);
-	result = getFileContent(full_filename, \
-			&file_buff, &file_bytes);
-	if (result != 0)
+	strcat(pFileContext->filename, STORAGE_META_FILE_EXT);
+	if (stat(pFileContext->filename, &stat_buf) == 0)
 	{
-		if (file_buff != NULL)
+		if (!S_ISREG(stat_buf.st_mode))
 		{
-			free(file_buff);
+			logError("file: "__FILE__", line: %d, " \
+				"%s is not a regular file", \
+				__LINE__, pFileContext->filename);
+			return EISDIR;
 		}
+
+		file_bytes = stat_buf.st_size;
+	}
+	else
+	{
+		result = errno != 0 ? errno : ENOENT;
+		if (result != ENOENT)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"call stat fail, file: %s, "\
+				"error no: %d, error info: %s", \
+				__LINE__, pFileContext->filename, \
+				result, strerror(result));
+		}
+
 		return result;
 	}
 
-	pClientInfo->total_length += file_bytes;
-	free(file_buff);
-
-	return result;
+	return storage_read_from_file(pTask, 0, file_bytes, store_path_index);
 }
 
 /**
@@ -2480,12 +2453,12 @@ filename
 static int storage_server_download_file(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
 	char *p;
 	int result;
+	int store_path_index;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char full_filename[MAX_PATH_SIZE+256];
 	char true_filename[128];
-	char *pBasePath;
 	char *filename;
 	int filename_len;
 	int64_t file_offset;
@@ -2495,6 +2468,8 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 	int64_t nInPackLen;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 	pClientInfo->total_length = sizeof(TrackerHeader);
 
@@ -2562,8 +2537,8 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 	filename_len = nInPackLen - (16 + FDFS_GROUP_NAME_MAX_LEN);
 	*(filename + filename_len) = '\0';
 
-	if ((result=storage_split_filename(filename, \
-		&filename_len, true_filename, &pBasePath)) != 0)
+	if ((result=storage_split_filename_ex(filename, \
+		&filename_len, true_filename, &store_path_index)) != 0)
 	{
 		return result;
 	}
@@ -2572,14 +2547,15 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 		return result;
 	}
 
-	sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
-	if (stat(full_filename, &stat_buf) == 0)
+	sprintf(pFileContext->filename, "%s/data/%s", \
+			g_store_paths[store_path_index], true_filename);
+	if (stat(pFileContext->filename, &stat_buf) == 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))
 		{
 			logError("file: "__FILE__", line: %d, " \
-					"%s is not a regular file", \
-					__LINE__, full_filename);
+				"%s is not a regular file", \
+				__LINE__, pFileContext->filename);
 			return EISDIR;
 		}
 
@@ -2591,10 +2567,10 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 		result = errno != 0 ? errno : ENOENT;
 
 		logError("file: "__FILE__", line: %d, " \
-				"call stat fail, file: %s, "\
-				"error no: %d, error info: %s", \
-				__LINE__, full_filename, \
-				result, strerror(result));
+			"call stat fail, file: %s, "\
+			"error no: %d, error info: %s", \
+			__LINE__, pFileContext->filename, \
+			result, strerror(result));
 		return result;
 	}
 
@@ -2613,14 +2589,73 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
-	/*
-	result = tcpsendfile_ex(pClientInfo->sock, full_filename, \
-			file_offset, download_bytes, g_fdfs_network_timeout);
-	*/
+	return storage_read_from_file(pTask, file_offset, \
+			download_bytes, store_path_index);
+}
 
-	pClientInfo->total_length += download_bytes;
+static int storage_read_from_file(struct fast_task_info *pTask, \
+		const int64_t file_offset, const int64_t download_bytes, \
+		const int store_path_index)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	TrackerHeader *pHeader;
+	int result;
 
-	return 0;
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+
+	pClientInfo->total_length = sizeof(TrackerHeader) + download_bytes;
+	pClientInfo->total_offset = 0;
+
+	pFileContext->fd = -1;
+	pFileContext->op = FDFS_STORAGE_FILE_OP_READ;
+	pFileContext->offset = file_offset;
+	pFileContext->start = file_offset;
+	pFileContext->end = file_offset + download_bytes;
+	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
+		pTask, store_path_index, pFileContext->op);
+
+	pTask->length = sizeof(TrackerHeader);
+
+	pHeader = (TrackerHeader *)pTask->data;
+	pHeader->status = 0;
+	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
+	long2buff(download_bytes, pHeader->pkg_len);
+
+	if ((result=storage_dio_queue_push(pTask)) != 0)
+	{
+		return result;
+	}
+
+	return STORAGE_STATUS_READ_WRITE_FILE;
+}
+
+static int storage_write_to_file(struct fast_task_info *pTask, \
+		const int64_t file_offset, const int64_t upload_bytes, \
+		const int buff_offset, const int store_path_index)
+{
+	StorageFileContext *pFileContext;
+	int result;
+
+	pFileContext =  &(((StorageClientInfo *)pTask->arg)->file_context);
+
+	pFileContext->fd = -1;
+	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
+	pFileContext->offset = file_offset;
+	pFileContext->start = file_offset;
+	pFileContext->end = file_offset + upload_bytes;
+	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
+		pTask, store_path_index, pFileContext->op);
+
+	pTask->offset = buff_offset;
+
+	if ((result=storage_dio_queue_push(pTask)) != 0)
+	{
+		return result;
+	}
+
+	return STORAGE_STATUS_READ_WRITE_FILE;
 }
 
 /**
@@ -3699,10 +3734,12 @@ int storage_deal_task(struct fast_task_info *pTask)
 			break;
 	}
 
+	pClientInfo->total_offset = 0;
 	pHeader = (TrackerHeader *)pTask->data;
 	pHeader->status = result;
 	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
-	long2buff(pTask->length - sizeof(TrackerHeader), pHeader->pkg_len);
+	long2buff(pClientInfo->total_length - sizeof(TrackerHeader), \
+				pHeader->pkg_len);
 
 	send_add_event(pTask);
 
