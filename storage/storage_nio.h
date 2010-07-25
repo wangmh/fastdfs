@@ -16,6 +16,7 @@
 #include <string.h>
 #include <event.h>
 #include "tracker_types.h"
+#include "storage_func.h"
 #include "fast_task_queue.h"
 #include "storage_global.h"
 #include "fdht_types.h"
@@ -27,16 +28,28 @@
 
 #define FDFS_STORAGE_FILE_OP_READ     'r'
 #define FDFS_STORAGE_FILE_OP_WRITE    'w'
+#define FDFS_STORAGE_FILE_OP_DELETE   'd'
+
+typedef void (*DeleteFileLogCallback)(struct fast_task_info *pTask, \
+		const int err_no);
+
+typedef void (*FileDealDoneCallback)(struct fast_task_info *pTask, \
+		const int err_no);
 
 typedef struct
 {
-	int dio_thread_index;
-	char filename[MAX_PATH_SIZE + 128];
-	char op;        //w for writing, r for reading
+	char filename[MAX_PATH_SIZE + 128];  	//full filename
+	char fname2log[128+sizeof(STORAGE_META_FILE_EXT)];  //filename to log
+	char op;        //w for writing, r for reading, d for deleting
+	char sync_flag;
+	int dio_thread_index;		//dio thread index
+	int timestamp2log;			//timestamp to log
 	int fd;         //file description no
 	int64_t start;  //file start offset
 	int64_t end;    //file end offset
 	int64_t offset; //file current offset
+	FileDealDoneCallback done_callback;
+	DeleteFileLogCallback log_callback;
 } StorageFileContext;
 
 typedef struct
@@ -44,7 +57,6 @@ typedef struct
 	int nio_thread_index;
 	int sock;
 	char stage;  //nio stage
-	char sync_flag;
 	char ip_addr[IP_ADDRESS_SIZE];  //to be removed
 	char tracker_client_ip[IP_ADDRESS_SIZE];
 
