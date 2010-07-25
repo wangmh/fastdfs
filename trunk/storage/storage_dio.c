@@ -184,7 +184,7 @@ int storage_dio_queue_push(struct fast_task_info *pTask)
 	return 0;
 }
 
-void storage_dio_get_thread_index(struct fast_task_info *pTask, \
+int storage_dio_get_thread_index(struct fast_task_info *pTask, \
 		const int store_path_index, const char file_op)
 {
 	StorageClientInfo *pClientInfo;
@@ -218,7 +218,7 @@ void storage_dio_get_thread_index(struct fast_task_info *pTask, \
 	}
 
 	pContext = contexts + (pClientInfo->sock % count);
-	pFileContext->dio_thread_index = pContext - g_dio_contexts;
+	return pContext - g_dio_contexts;
 }
 
 static int dio_deal_task(struct fast_task_info *pTask)
@@ -357,13 +357,7 @@ static void *dio_thread_entrance(void* arg)
 
 		while ((pTask=task_queue_pop(&(pContext->queue))) != NULL)
 		{
-			if (dio_deal_task(pTask) == 0)
-			{
-				//if (
-			}
-			else
-			{
-			}
+			dio_deal_task(pTask);
 		}
 	}
 	pthread_mutex_unlock(&(pContext->lock));
