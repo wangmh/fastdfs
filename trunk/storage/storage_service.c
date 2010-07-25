@@ -59,6 +59,11 @@ extern int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		char *meta_buff, const int meta_size, \
 		char *remote_filename, int *filename_len);
 
+static int storage_do_delete_file(struct fast_task_info *pTask, \
+		DeleteFileLogCallback log_callback, \
+		FileDealDoneCallback done_callback, \
+		const int store_path_index);
+
 static int storage_write_to_file(struct fast_task_info *pTask, \
 		const int64_t file_offset, const int64_t upload_bytes, \
 		const int buff_offset, const int store_path_index);
@@ -67,11 +72,80 @@ static int storage_read_from_file(struct fast_task_info *pTask, \
 		const int64_t file_offset, const int64_t download_bytes, \
 		const int store_path_index);
 
-#define STORAGE_STATUS_READ_WRITE_FILE	 123456   //status for read or write file
+#define STORAGE_STATUE_DEAL_FILE	 123456   //status for read or write file
 
 #define FDHT_KEY_NAME_FILE_ID	"fid"
 #define FDHT_KEY_NAME_REF_COUNT	"ref"
 #define FDHT_KEY_NAME_FILE_SIG	"sig"
+
+static void storage_delete_file_log_error(struct fast_task_info *pTask, \
+			const int err_no)
+{
+	StorageFileContext *pFileContext;
+
+	pFileContext =  &(((StorageClientInfo *)pTask->arg)->file_context);
+	logError("file: "__FILE__", line: %d, " \
+		"client ip: %s, delete file %s fail," \
+		"errno: %d, error info: %s", __LINE__, \
+		pTask->client_ip, pFileContext->filename, \
+		err_no, strerror(err_no));
+}
+
+static void storage_sync_delete_file_log_error(struct fast_task_info *pTask, \
+			const int err_no)
+{
+	StorageFileContext *pFileContext;
+
+	pFileContext =  &(((StorageClientInfo *)pTask->arg)->file_context);
+	if (err_no == ENOENT)
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, " \
+			"file %s not exist, " \
+			"maybe delete later?", __LINE__, \
+			STORAGE_PROTO_CMD_SYNC_DELETE_FILE, \
+			pTask->client_ip, pFileContext->filename);
+	}
+	else
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, delete file %s fail," \
+			"errno: %d, error info: %s", \
+			__LINE__, pTask->client_ip, \
+			pFileContext->filename, err_no, strerror(err_no));
+	}
+}
+
+static void storage_delete_file_done_callback(struct fast_task_info *pTask, \
+			const int err_no)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	TrackerHeader *pHeader;
+	int result;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+	if (err_no == 0 && pFileContext->sync_flag != '\0')
+	{
+		result = storage_binlog_write(time(NULL), \
+				pFileContext->sync_flag, pFileContext->fname2log);
+	}
+	else
+	{
+		result = err_no;
+	}
+
+	pClientInfo->total_length = sizeof(TrackerHeader);
+	pClientInfo->total_offset = 0;
+	pHeader = (TrackerHeader *)pTask->data;
+	pHeader->status = result;
+	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
+	long2buff(pClientInfo->total_length - sizeof(TrackerHeader), \
+			pHeader->pkg_len);
+
+	storage_nio_notify(pTask);
+}
 
 int storage_service_init()
 {
@@ -1102,12 +1176,12 @@ static int storage_do_set_metadata(struct fast_task_info *pTask,
 	int all_meta_bytes;
 	int result;
 
-	pFileContext =  &(((StorageClientInfo *)pTask->arg)->file_context);
 	meta_buff = pTask->data + meta_offset;
 	meta_bytes = pTask->size - meta_offset;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
-	pClientInfo->sync_flag = '\0';
+	pFileContext =  &(pClientInfo->file_context);
+	pFileContext->sync_flag = '\0';
 
 	if (op_flag == STORAGE_SET_METADATA_FLAG_OVERWRITE)
 	{
@@ -1118,22 +1192,12 @@ static int storage_do_set_metadata(struct fast_task_info *pTask,
 				return 0;
 			}
 
-			if (unlink(pFileContext->filename) != 0)
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"client ip: %s, " \
-					"delete meta file %s fail," \
-					"errno: %d, error info: %s", \
-					__LINE__, \
-					pTask->client_ip, \
-					pFileContext->filename, \
-					errno, strerror(errno));
-
-				return errno != 0 ? errno : EACCES;
-			}
-
-			pClientInfo->sync_flag = STORAGE_OP_TYPE_SOURCE_DELETE_FILE;
-			return 0;
+			pFileContext->timestamp2log = time(NULL);
+			pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_DELETE_FILE;
+			return storage_do_delete_file(pTask, \
+					storage_delete_file_log_error, \
+					storage_delete_file_done_callback, \
+					store_path_index);
 		}
 
 		if ((result=storage_sort_metadata_buff(meta_buff, \
@@ -1144,11 +1208,11 @@ static int storage_do_set_metadata(struct fast_task_info *pTask,
 
 		if (fileExists(pFileContext->filename))
 		{
-			pClientInfo->sync_flag = STORAGE_OP_TYPE_SOURCE_UPDATE_FILE;
+			pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_UPDATE_FILE;
 		}
 		else
 		{
-			pClientInfo->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
+			pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
 		}
 
 		return storage_write_to_file(pTask, 0, meta_bytes, \
@@ -1169,7 +1233,7 @@ static int storage_do_set_metadata(struct fast_task_info *pTask,
 			return result;
 		}
 
-		pClientInfo->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
+		pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
 		return storage_write_to_file(pTask, 0, meta_bytes, \
 					meta_offset, store_path_index);
 	}
@@ -1274,14 +1338,14 @@ static int storage_do_set_metadata(struct fast_task_info *pTask,
 		return ENOSPC;
 	}
 
-	pClientInfo->sync_flag = STORAGE_OP_TYPE_SOURCE_UPDATE_FILE;
+	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_UPDATE_FILE;
 
 	memcpy(meta_buff, all_meta_list, all_meta_bytes);
 	pTask->length = meta_offset + all_meta_bytes;
 	free(all_meta_buff);
 
 	return storage_write_to_file(pTask, 0, all_meta_bytes, \
-					meta_offset, store_path_index);
+			meta_offset, store_path_index);
 }
 
 /**
@@ -1303,7 +1367,6 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char filename[128];
 	char true_filename[128];
-	char meta_filename[128+sizeof(STORAGE_META_FILE_EXT)];
 	char op_flag;
 	char *p;
 	char *meta_buff;
@@ -1426,20 +1489,13 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 		return result;
 	}
 
-	sprintf(meta_filename,"%s"STORAGE_META_FILE_EXT, true_filename);
+	sprintf(pFileContext->fname2log,"%s"STORAGE_META_FILE_EXT, filename);
 	strcat(pFileContext->filename, STORAGE_META_FILE_EXT);
 
-	/*    //to do ...
-	if (result == 0 && sync_flag != '\0')
-	{
-		sprintf(meta_filename,"%s"STORAGE_META_FILE_EXT,filename);
-		resp.status = storage_binlog_write( \
-				time(NULL), sync_flag, meta_filename);
-	}
-	*/
-
-	return storage_do_set_metadata(pTask, meta_buff - pTask->data, \
+	result = storage_do_set_metadata(pTask, meta_buff - pTask->data, \
 			op_flag, store_path_index);
+
+	return result;
 }
 
 /**
@@ -1621,8 +1677,6 @@ static int storage_upload_file(struct fast_task_info *pTask, int *create_flag)
 	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	pMetaData = meta_buff;
-	*filename = '\0';
-	filename_len = 0;
 	if (nInPackLen < 1 + 2 * FDFS_PROTO_PKG_LEN_SIZE + 
 			FDFS_FILE_EXT_NAME_MAX_LEN)
 	{
@@ -1697,6 +1751,8 @@ static int storage_upload_file(struct fast_task_info *pTask, int *create_flag)
 		*pMetaData = '\0';
 	}
 
+	*filename = '\0';
+	filename_len = 0;
 	result = storage_save_file(pTask, store_path_index, \
 			file_bytes, NULL, NULL, file_ext_name, \
 			pMetaData, meta_bytes, filename, &filename_len, \
@@ -2593,6 +2649,30 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 			download_bytes, store_path_index);
 }
 
+static int storage_do_delete_file(struct fast_task_info *pTask, \
+		DeleteFileLogCallback log_callback, \
+		FileDealDoneCallback done_callback, \
+		const int store_path_index)
+{
+	StorageFileContext *pFileContext;
+	int result;
+
+	pFileContext =  &(((StorageClientInfo *)pTask->arg)->file_context);
+	pFileContext->fd = -1;
+	pFileContext->op = FDFS_STORAGE_FILE_OP_DELETE;
+	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
+		pTask, store_path_index, pFileContext->op);
+	pFileContext->log_callback = log_callback;
+	pFileContext->done_callback = done_callback;
+
+	if ((result=storage_dio_queue_push(pTask)) != 0)
+	{
+		return result;
+	}
+
+	return STORAGE_STATUE_DEAL_FILE;
+}
+
 static int storage_read_from_file(struct fast_task_info *pTask, \
 		const int64_t file_offset, const int64_t download_bytes, \
 		const int store_path_index)
@@ -2628,7 +2708,7 @@ static int storage_read_from_file(struct fast_task_info *pTask, \
 		return result;
 	}
 
-	return STORAGE_STATUS_READ_WRITE_FILE;
+	return STORAGE_STATUE_DEAL_FILE;
 }
 
 static int storage_write_to_file(struct fast_task_info *pTask, \
@@ -2655,7 +2735,7 @@ static int storage_write_to_file(struct fast_task_info *pTask, \
 		return result;
 	}
 
-	return STORAGE_STATUS_READ_WRITE_FILE;
+	return STORAGE_STATUE_DEAL_FILE;
 }
 
 /**
@@ -2668,18 +2748,19 @@ filename
 static int storage_sync_delete_file(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
 	char *p;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char full_filename[MAX_PATH_SIZE+256];
 	char true_filename[128];
-	char *pBasePath;
 	char *filename;
 	int filename_len;
 	int result;
-	int timestamp;
+	int store_path_index;
 	int64_t nInPackLen;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 	pClientInfo->total_length = sizeof(TrackerHeader);
 
@@ -2707,7 +2788,7 @@ static int storage_sync_delete_file(struct fast_task_info *pTask)
 	}
 
 	p = pTask->data + sizeof(TrackerHeader);
-	timestamp = buff2int(p);
+	pFileContext->timestamp2log = buff2int(p);
 	p += 4;
 	memcpy(group_name, p, FDFS_GROUP_NAME_MAX_LEN);
 	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
@@ -2725,8 +2806,8 @@ static int storage_sync_delete_file(struct fast_task_info *pTask)
 	filename = p;
 	filename_len = nInPackLen - (4 + FDFS_GROUP_NAME_MAX_LEN);
 	*(filename + filename_len) = '\0';
-	if ((result=storage_split_filename(filename, \
-		&filename_len, true_filename, &pBasePath)) != 0)
+	if ((result=storage_split_filename_ex(filename, \
+		&filename_len, true_filename, &store_path_index)) != 0)
 	{
 		return result;
 	}
@@ -2735,32 +2816,13 @@ static int storage_sync_delete_file(struct fast_task_info *pTask)
 		return result;
 	}
 
-	sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
-	if (unlink(full_filename) != 0)
-	{
-		if (errno == ENOENT)
-		{
-			logWarning("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, " \
-				"file %s not exist, " \
-				"maybe delete later?", __LINE__, \
-				STORAGE_PROTO_CMD_SYNC_DELETE_FILE, \
-				pTask->client_ip, full_filename);
-		}
-		else
-		{
-			result = errno != 0 ? errno : EACCES;
-			logError("file: "__FILE__", line: %d, " \
-				"client ip: %s, delete file %s fail," \
-				"errno: %d, error info: %s", \
-				__LINE__, pTask->client_ip, \
-				full_filename, result, strerror(result));
-			return result;
-		}
-	}
+	sprintf(pFileContext->filename, "%s/data/%s", \
+			g_store_paths[store_path_index], true_filename);
 
-	return storage_binlog_write(timestamp, \
-			STORAGE_OP_TYPE_REPLICA_DELETE_FILE, filename);
+	strcpy(pFileContext->fname2log, filename);
+	pFileContext->sync_flag = STORAGE_OP_TYPE_REPLICA_DELETE_FILE;
+	return storage_do_delete_file(pTask, storage_sync_delete_file_log_error, \
+			storage_delete_file_done_callback, store_path_index);
 }
 
 /**
@@ -2785,12 +2847,12 @@ static int storage_server_delete_file(struct fast_task_info *pTask, int *delete_
 	FDHTKeyInfo key_info_sig;
 	char *pValue;
 	int value_len;
-	char *pBasePath;
 	char *filename;
 	int filename_len;
 	int src_file_nlink;
 	struct stat stat_buf;
 	int result;
+	int store_path_index;
 	int64_t nInPackLen;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
@@ -2931,8 +2993,8 @@ static int storage_server_delete_file(struct fast_task_info *pTask, int *delete_
 		}
 	}
 
-	if ((result=storage_split_filename(filename, \
-		&filename_len, true_filename, &pBasePath)) != 0)
+	if ((result=storage_split_filename_ex(filename, \
+		&filename_len, true_filename, &store_path_index)) != 0)
 	{
 		return result;
 	}
@@ -2941,7 +3003,8 @@ static int storage_server_delete_file(struct fast_task_info *pTask, int *delete_
 		return result;
 	}
 
-	sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
+	sprintf(full_filename, "%s/data/%s", \
+			g_store_paths[store_path_index], true_filename);
 	if (lstat(full_filename, &stat_buf) != 0)
 	{
 		result = errno != 0 ? errno : ENOENT;
@@ -3075,8 +3138,8 @@ static int storage_server_delete_file(struct fast_task_info *pTask, int *delete_
 		value_len = key_info_ref.obj_id_len - (pSeperator - \
 				key_info_ref.szObjectId);
 		memcpy(value, pSeperator, value_len + 1);
-		if ((result=storage_split_filename(value, &value_len, \
-				true_filename, &pBasePath)) != 0)
+		if ((result=storage_split_filename_ex(value, &value_len, \
+				true_filename, &store_path_index)) != 0)
 		{
 			return result;
 		}
@@ -3086,8 +3149,8 @@ static int storage_server_delete_file(struct fast_task_info *pTask, int *delete_
 			return result;
 		}
 
-		sprintf(full_filename, "%s/data/%s", pBasePath, \
-				true_filename);
+		sprintf(full_filename, "%s/data/%s", \
+				g_store_paths[store_path_index], true_filename);
 		if (unlink(full_filename) != 0)
 		{
 			logWarning("file: "__FILE__", line: %d, " \
@@ -3734,15 +3797,18 @@ int storage_deal_task(struct fast_task_info *pTask)
 			break;
 	}
 
-	pClientInfo->total_offset = 0;
-	pHeader = (TrackerHeader *)pTask->data;
-	pHeader->status = result;
-	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
-	long2buff(pClientInfo->total_length - sizeof(TrackerHeader), \
+	if (result != STORAGE_STATUE_DEAL_FILE)
+	{
+		pClientInfo->total_offset = 0;
+		pHeader = (TrackerHeader *)pTask->data;
+		pHeader->status = result;
+		pHeader->cmd = STORAGE_PROTO_CMD_RESP;
+		long2buff(pClientInfo->total_length - sizeof(TrackerHeader), \
 				pHeader->pkg_len);
 
-	send_add_event(pTask);
+		send_add_event(pTask);
+	}
 
-	return 0;
+	return result;
 }
 

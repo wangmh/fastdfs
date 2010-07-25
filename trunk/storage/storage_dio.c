@@ -230,6 +230,21 @@ static int dio_deal_task(struct fast_task_info *pTask)
 
 	do
 	{
+	if (pFileContext->op == FDFS_STORAGE_FILE_OP_DELETE)
+	{
+		if (unlink(pFileContext->filename) != 0)
+		{
+			result = errno != 0 ? errno : EACCES;
+			pFileContext->log_callback(pTask, result);
+		}
+		else
+		{
+			result = 0;
+		}
+
+		break;
+	}
+
 	if (pFileContext->fd < 0)
 	{
 		if (pFileContext->op == FDFS_STORAGE_FILE_OP_READ)
