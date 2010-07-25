@@ -43,7 +43,9 @@ typedef struct
 	char op;        //w for writing, r for reading, d for deleting
 	char sync_flag;
 	int dio_thread_index;		//dio thread index
-	int timestamp2log;			//timestamp to log
+	int timestamp2log;		//timestamp to log
+	int delete_flag;     //delete file flag
+	int create_flag;    //create file flag
 	int fd;         //file description no
 	int64_t start;  //file start offset
 	int64_t end;    //file end offset
