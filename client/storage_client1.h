@@ -119,7 +119,7 @@ int storage_delete_file1(TrackerServerInfo *pTrackerServer, \
 int storage_set_metadata1(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const char *file_id, \
-			FDFSMetaData *meta_list, const int meta_count, \
+			const FDFSMetaData *meta_list, const int meta_count, \
 			const char op_flag);
 
 /**
