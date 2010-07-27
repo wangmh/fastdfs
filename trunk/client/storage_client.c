@@ -798,11 +798,8 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader *pHeader;
 	int result;
 	char out_buff[sizeof(TrackerHeader)+1+3*FDFS_PROTO_PKG_LEN_SIZE+\
-		FDFS_FILE_PREFIX_MAX_LEN+FDFS_FILE_EXT_NAME_MAX_LEN+\
-		sizeof(FDFSMetaData) * MAX_STATIC_META_DATA_COUNT + 2];
-	char *pOutBuff;
+		FDFS_FILE_PREFIX_MAX_LEN+FDFS_FILE_EXT_NAME_MAX_LEN+2];
 	char *p;
-	int meta_bytes;
 	int64_t in_bytes;
 	char in_buff[128];
 	char *pInBuff;
@@ -861,57 +858,8 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 
 	do
 	{
-	if (meta_count <= MAX_STATIC_META_DATA_COUNT)
-	{
-		pOutBuff = out_buff;
-	}
-	else
-	{
-		int malloc_bytes;
-
-		malloc_bytes = sizeof(TrackerHeader) + 1 + 3 * \
-			FDFS_PROTO_PKG_LEN_SIZE + FDFS_FILE_PREFIX_MAX_LEN + \
-			FDFS_FILE_EXT_NAME_MAX_LEN + master_filename_len + \
-			sizeof(FDFSMetaData) * meta_count + 2;
-		pOutBuff = (char *)malloc(malloc_bytes);
-		if (pOutBuff == NULL)
-		{
-			result= errno != 0 ? errno : ENOMEM;
-
-			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail", __LINE__, \
-				malloc_bytes);
-			break;
-		}
-	}
-
-	if (meta_count > 0)
-	{
-		char *pMetaData;
-
-		if (bUploadSlave)
-		{
-			pMetaData = pOutBuff + sizeof(TrackerHeader) + 3 * \
-				FDFS_PROTO_PKG_LEN_SIZE + \
-				FDFS_FILE_PREFIX_MAX_LEN + \
-				FDFS_FILE_EXT_NAME_MAX_LEN+master_filename_len;
-		}
-		else
-		{
-			pMetaData = pOutBuff + sizeof(TrackerHeader) + 1 + 2 *\
-				FDFS_PROTO_PKG_LEN_SIZE + \
-				FDFS_FILE_EXT_NAME_MAX_LEN;
-		}
-
-		fdfs_pack_metadata(meta_list,meta_count,pMetaData,&meta_bytes);
-	}
-	else
-	{
-		meta_bytes = 0;
-	}
-
-	pHeader = (TrackerHeader *)pOutBuff;
-	p = pOutBuff + sizeof(TrackerHeader);
+	pHeader = (TrackerHeader *)out_buff;
+	p = out_buff + sizeof(TrackerHeader);
 	if (bUploadSlave)
 	{
 		long2buff(master_filename_len, p);
@@ -922,8 +870,6 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 		*p++ = (char)new_store_path;
 	}
 
-	long2buff(meta_bytes, p);
-	p += FDFS_PROTO_PKG_LEN_SIZE;
 	long2buff(file_size, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 
@@ -967,16 +913,15 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 		memcpy(p, master_filename, master_filename_len);
 		p += master_filename_len;
 	}
-	p += meta_bytes;
 
-	long2buff((p - pOutBuff) + file_size - sizeof(TrackerHeader), \
+	long2buff((p - out_buff) + file_size - sizeof(TrackerHeader), \
 		pHeader->pkg_len);
 	pHeader->cmd = bUploadSlave ? STORAGE_PROTO_CMD_UPLOAD_SLAVE_FILE : \
 			STORAGE_PROTO_CMD_UPLOAD_FILE;
 	pHeader->status = 0;
 
-	if ((result=tcpsenddata_nb(pStorageServer->sock, pOutBuff, \
-		p - pOutBuff, g_fdfs_network_timeout)) != 0)
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
+		p - out_buff, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \
@@ -1043,6 +988,21 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 
 	} while (0);
 
+	if (result == 0 && meta_count > 0)
+	{
+		result = storage_set_metadata(pTrackerServer, \
+			pStorageServer, group_name, remote_filename, \
+			meta_list, meta_count, \
+			STORAGE_SET_METADATA_FLAG_OVERWRITE);
+		if (result != 0)  //rollback
+		{
+			storage_delete_file(pTrackerServer, pStorageServer, \
+				group_name, remote_filename);
+			*group_name = '\0';
+			*remote_filename = '\0';
+		}
+	}
+
 	if (new_connection)
 	{
 		fdfs_quit(pStorageServer);
@@ -1055,11 +1015,6 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 			close(pStorageServer->sock);
 			pStorageServer->sock = -1;
 		}
-	}
-
-	if (pOutBuff != NULL && pOutBuff != out_buff)
-	{
-		free(pOutBuff);
 	}
 
 	return result;
@@ -1165,7 +1120,7 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 int storage_set_metadata1(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const char *file_id, \
-			FDFSMetaData *meta_list, const int meta_count, \
+			const FDFSMetaData *meta_list, const int meta_count, \
 			const char op_flag)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
@@ -1189,7 +1144,7 @@ meta data bytes: each meta data seperated by \x01,
 int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const char *group_name, const char *filename, \
-			FDFSMetaData *meta_list, const int meta_count, \
+			const FDFSMetaData *meta_list, const int meta_count, \
 			const char op_flag)
 {
 	TrackerHeader *pHeader;
@@ -1360,15 +1315,12 @@ Header
 8 bytes: master filename len
 8 bytes: source filename len
 8 bytes: source file signature len
-8 bytes: meta data bytes
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 FDFS_FILE_PREFIX_MAX_LEN bytes  : filename prefix, can be empty
 FDFS_FILE_EXT_NAME_MAX_LEN bytes: file ext name, do not include dot (.)
 master filename len: master filename
 source filename len: source filename without group name
 source file signature len: source file signature
-meta data bytes: each meta data seperated by \x01,
-		 name and value seperated by \x02
 **/
 int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const char *master_filename,\
@@ -1376,7 +1328,6 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 		const char *src_file_sig, const int src_file_sig_len, \
 		const char *group_name, const char *prefix_name, \
 		const char *file_ext_name, \
-		char *meta_buff, const int meta_size, \
 		char *remote_filename, int *filename_len)
 {
 	TrackerHeader *pHeader;
@@ -1424,8 +1375,6 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	long2buff(src_filename_len, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 	long2buff(src_file_sig_len, p);
-	p += FDFS_PROTO_PKG_LEN_SIZE;
-	long2buff(meta_size, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 
 	group_name_len = strlen(group_name);
@@ -1479,22 +1428,10 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	p += src_file_sig_len;
 
 	pHeader = (TrackerHeader *)out_buff;
-	long2buff(p - out_buff - sizeof(TrackerHeader) + meta_size, \
-		pHeader->pkg_len);
+	long2buff(p - out_buff - sizeof(TrackerHeader), pHeader->pkg_len);
 	pHeader->cmd = STORAGE_PROTO_CMD_CREATE_LINK;
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		p - out_buff, g_fdfs_network_timeout)) != 0)
-	{
-		logError("send data to storage server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, \
-			result, strerror(result));
-		break;
-	}
-
-	if (meta_size > 0 && (result=tcpsenddata_nb(pStorageServer->sock, \
-		meta_buff, meta_size, g_fdfs_network_timeout)) != 0)
 	{
 		logError("send data to storage server %s:%d fail, " \
 			"errno: %d, error info: %s", \

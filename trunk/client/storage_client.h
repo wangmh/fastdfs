@@ -249,7 +249,7 @@ int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
 int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const char *group_name, const char *filename, \
-			FDFSMetaData *meta_list, const int meta_count, \
+			const FDFSMetaData *meta_list, const int meta_count, \
 			const char op_flag);
 
 /**
