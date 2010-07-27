@@ -2608,6 +2608,7 @@ source filename length: source filename
 static int storage_sync_link_file(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
+	//StorageFileContext *pFileContext;
 	char *p;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char dest_filename[128];
@@ -2616,15 +2617,17 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 	char src_true_filename[128];
 	char dest_full_filename[MAX_PATH_SIZE];
 	char src_full_filename[MAX_PATH_SIZE];
-	char *pDestBasePath;
-	char *pSrcBasePath;
 	int64_t nInPackLen;
 	int dest_filename_len;
 	int src_filename_len;
 	int result;
+	int src_store_path_index;
+	int dest_store_path_index;
 	int timestamp;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
+	//pFileContext =  &(pClientInfo->file_context);
+
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 	pClientInfo->total_length = sizeof(TrackerHeader);
 
@@ -2671,6 +2674,7 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 	}
 
 	timestamp = buff2int(p);
+	//pFileContext->timestamp2log = buff2int(p);
 	p += 4;
 
 	memcpy(group_name, p, FDFS_GROUP_NAME_MAX_LEN);
@@ -2707,8 +2711,9 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 	*(src_filename + src_filename_len) = '\0';
 	p += src_filename_len;
 
-	if ((result=storage_split_filename(dest_filename, \
-		&dest_filename_len, dest_true_filename, &pDestBasePath)) != 0)
+	if ((result=storage_split_filename_ex(dest_filename, \
+		&dest_filename_len, dest_true_filename, \
+		&dest_store_path_index)) != 0)
 	{
 		return result;
 	}
@@ -2718,10 +2723,11 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 		return result;
 	}
 	snprintf(dest_full_filename, sizeof(dest_full_filename), \
-			"%s/data/%s", pDestBasePath, dest_true_filename);
+			"%s/data/%s", g_store_paths[dest_store_path_index], \
+			dest_true_filename);
 
-	if ((result=storage_split_filename(src_filename, &src_filename_len,
-			 src_true_filename, &pSrcBasePath)) != 0)
+	if ((result=storage_split_filename_ex(src_filename, &src_filename_len,
+			 src_true_filename, &src_store_path_index)) != 0)
 	{
 		return result;
 	}
@@ -2731,7 +2737,8 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 		return result;
 	}
 	snprintf(src_full_filename, sizeof(src_full_filename), \
-			"%s/data/%s", pSrcBasePath, src_true_filename);
+			"%s/data/%s", g_store_paths[src_store_path_index], \
+			src_true_filename);
 
 	if (fileExists(dest_full_filename))
 	{
@@ -2758,6 +2765,12 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 			result, strerror(result));
 		return result;
 	}
+
+	/*
+	pFileContext->sync_flag = STORAGE_OP_TYPE_REPLICA_CREATE_LINK;
+	strcpy(pFileContext->fname2log, dest_filename);
+	strcpy(pFileContext->filename, dest_full_filename);
+	*/
 
 	return storage_binlog_write(timestamp, \
 			STORAGE_OP_TYPE_REPLICA_CREATE_LINK, \
