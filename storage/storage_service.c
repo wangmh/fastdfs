@@ -1185,36 +1185,17 @@ static int storage_sort_metadata_buff(char *meta_buff, const int meta_size)
 	return 0;
 }
 
-static int storage_deal_file(struct fast_task_info *pTask, \
-		const int store_path_index, const SourceFileInfo *pSrcFileInfo,\
-		const int64_t file_size, const char *master_filename, \
-		 const char *prefix_name, const char *file_ext_name,  \
-		char *filename, int *filename_len)
+static int storage_get_filename(StorageClientInfo *pClientInfo, \
+		const int start_time, const char *pStorePath, \
+		const int64_t file_size, const char *file_ext_name, \
+		char *filename, int *filename_len, const bool bGenFilename, \
+		char *szFormattedExt, char *full_filename)
 {
-	int result;
 	int i;
-	StorageClientInfo *pClientInfo;
-	StorageFileContext *pFileContext;
-	GroupArray *pGroupArray;
-	char *pStorePath;
-	char src_full_filename[MAX_PATH_SIZE+64];
-	char full_filename[MAX_PATH_SIZE+64];
-	char szFormattedExt[FDFS_FILE_EXT_NAME_MAX_LEN + 2];
-	char *p;
+	int result;
 	int ext_name_len;
 	int pad_len;
-	time_t start_time;
-	unsigned int file_hash_codes[4];
-	FDHTKeyInfo key_info;
-	char value[128];
-	bool bGenFilename;
-	char *pValue;
-	int value_len;
-
-	pClientInfo = (StorageClientInfo *)pTask->arg;
-	pFileContext =  &(pClientInfo->file_context);
-
-	pFileContext->create_flag = STORAGE_CREATE_FLAG_NONE;
+	char *p;
 
 	ext_name_len = strlen(file_ext_name);
 	if (ext_name_len == 0)
@@ -1240,11 +1221,6 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 	}
 	*p = '\0';
 
-	pStorePath = g_store_paths[store_path_index];
-	start_time = time(NULL);
-
-        bGenFilename = (*filename_len == 0 || (pSrcFileInfo == NULL && \
-			g_check_file_duplicate));
 	if (bGenFilename)
 	{
 		for (i=0; i<10; i++)
@@ -1284,6 +1260,49 @@ static int storage_deal_file(struct fast_task_info *pTask, \
 				__LINE__, full_filename);
 			return EEXIST;
 		}
+	}
+
+	return 0;
+}
+
+static int storage_deal_file(struct fast_task_info *pTask, \
+		const int store_path_index, const SourceFileInfo *pSrcFileInfo,\
+		const int64_t file_size, const char *master_filename, \
+		const char *prefix_name, const char *file_ext_name,  \
+		char *filename, int *filename_len)
+{
+	int result;
+	int i;
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	GroupArray *pGroupArray;
+	char *pStorePath;
+	char src_full_filename[MAX_PATH_SIZE+64];
+	char full_filename[MAX_PATH_SIZE+64];
+	char szFormattedExt[FDFS_FILE_EXT_NAME_MAX_LEN + 2];
+	time_t start_time;
+	unsigned int file_hash_codes[4];
+	FDHTKeyInfo key_info;
+	char value[128];
+	bool bGenFilename;
+	char *pValue;
+	int value_len;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+
+	pFileContext->create_flag = STORAGE_CREATE_FLAG_NONE;
+	start_time = time(NULL);
+        bGenFilename = (*filename_len == 0 || (pSrcFileInfo == NULL && \
+			g_check_file_duplicate));
+
+	pStorePath = g_store_paths[store_path_index];
+	if ((result=storage_get_filename(pClientInfo, start_time, \
+			pStorePath, file_size, file_ext_name, filename, \
+			filename_len, bGenFilename, \
+			szFormattedExt, full_filename)) != 0)
+	{
+		return result;
 	}
 
 	memset(&key_info, 0, sizeof(key_info));
