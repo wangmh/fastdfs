@@ -221,15 +221,13 @@ int storage_dio_get_thread_index(struct fast_task_info *pTask, \
 	return pContext - g_dio_contexts;
 }
 
-static int dio_deal_task(struct fast_task_info *pTask)
+int dio_deal_task(struct fast_task_info *pTask)
 {
 	StorageFileContext *pFileContext;
 	int result;
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 
-	do
-	{
 	if (pFileContext->op == FDFS_STORAGE_FILE_OP_DELETE)
 	{
 		if (unlink(pFileContext->filename) != 0)
@@ -242,9 +240,12 @@ static int dio_deal_task(struct fast_task_info *pTask)
 			result = 0;
 		}
 
-		break;
+		pFileContext->done_callback(pTask, result);
+		return result;
 	}
 
+	do
+	{
 	if (pFileContext->fd < 0)
 	{
 		if (pFileContext->op == FDFS_STORAGE_FILE_OP_READ)
@@ -338,13 +339,17 @@ static int dio_deal_task(struct fast_task_info *pTask)
 			/* file read/write done, close it */
 			close(pFileContext->fd);
 			pFileContext->fd = -1;
-		}
 
-		storage_nio_notify(pTask);  //notify nio to deal
+			pFileContext->done_callback(pTask, result);
+		}
+		else
+		{
+			storage_nio_notify(pTask);  //notify nio to deal
+		}
 	}
 	else //error
 	{
-		task_finish_clean_up(pTask);
+		pFileContext->done_callback(pTask, result);
 	}
 
 	return result;
@@ -372,7 +377,7 @@ static void *dio_thread_entrance(void* arg)
 
 		while ((pTask=task_queue_pop(&(pContext->queue))) != NULL)
 		{
-			dio_deal_task(pTask);
+			((StorageClientInfo *)pTask->arg)->deal_func(pTask);
 		}
 	}
 	pthread_mutex_unlock(&(pContext->lock));
