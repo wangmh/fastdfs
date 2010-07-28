@@ -274,6 +274,8 @@ static void storage_get_metadata_done_callback(struct fast_task_info *pTask, \
 		pthread_mutex_lock(&stat_count_thread_lock);
 		g_storage_stat.total_get_meta_count++;
 		pthread_mutex_unlock(&stat_count_thread_lock);
+
+		task_finish_clean_up(pTask);
 	}
 	else
 	{
@@ -291,6 +293,8 @@ static void storage_download_file_done_callback(struct fast_task_info *pTask, \
 		pthread_mutex_lock(&stat_count_thread_lock);
 		g_storage_stat.total_download_count++;
 		pthread_mutex_unlock(&stat_count_thread_lock);
+
+		task_finish_clean_up(pTask);
 	}
 	else
 	{
@@ -3103,10 +3107,15 @@ static int storage_do_delete_file(struct fast_task_info *pTask, \
 		FileDealDoneCallback done_callback, \
 		const int store_path_index)
 {
+	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
 	int result;
 
-	pFileContext =  &(((StorageClientInfo *)pTask->arg)->file_context);
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+
+	pClientInfo->deal_func = dio_deal_task;
+
 	pFileContext->fd = -1;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_DELETE;
 	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
@@ -3135,6 +3144,7 @@ static int storage_read_from_file(struct fast_task_info *pTask, \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
+	pClientInfo->deal_func = dio_deal_task;
 	pClientInfo->total_length = sizeof(TrackerHeader) + download_bytes;
 	pClientInfo->total_offset = 0;
 
@@ -3167,10 +3177,14 @@ static int storage_write_to_file(struct fast_task_info *pTask, \
 		const int buff_offset, FileDealDoneCallback done_callback, \
 		const int store_path_index)
 {
+	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
 	int result;
 
-	pFileContext =  &(((StorageClientInfo *)pTask->arg)->file_context);
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+
+	pClientInfo->deal_func = dio_deal_task;
 
 	pFileContext->fd = -1;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;

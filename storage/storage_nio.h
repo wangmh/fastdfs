@@ -30,6 +30,8 @@
 #define FDFS_STORAGE_FILE_OP_WRITE    'w'
 #define FDFS_STORAGE_FILE_OP_DELETE   'd'
 
+typedef int (*TaskDealFunc)(struct fast_task_info *pTask);
+
 typedef void (*DeleteFileLogCallback)(struct fast_task_info *pTask, \
 		const int err_no);
 
@@ -69,6 +71,7 @@ typedef struct
 
 	int src_sync_timestamp;
 	FDFSStorageServer *pSrcStorage;
+	TaskDealFunc deal_func;
 } StorageClientInfo;
 
 struct storage_nio_thread_data
