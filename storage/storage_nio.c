@@ -63,18 +63,19 @@ void task_finish_clean_up(struct fast_task_info *pTask)
 					errno, strerror(errno));
 			}
 		}
+
+		pFileContext->fd = -1;
 	}
 
 	close(pClientInfo->sock);
 
 	memset(pTask->arg, 0, sizeof(StorageClientInfo));
-	pFileContext->fd = -1;
 	pFileContext->dio_thread_index = -1;
 
 	free_queue_push(pTask);
 }
 
-void recv_notify_read(int sock, short event, void *arg)
+void storage_recv_notify_read(int sock, short event, void *arg)
 {
 	struct fast_task_info *pTask;
 	StorageClientInfo *pClientInfo;
@@ -104,6 +105,8 @@ void recv_notify_read(int sock, short event, void *arg)
 		pTask = (struct fast_task_info *)task_addr;
 		pClientInfo = (StorageClientInfo *)pTask->arg;
 
+		logInfo("notify, index=%d!", pClientInfo->nio_thread_index);
+
 		if (pClientInfo->sock < 0)  //quit flag
 		{
 			struct storage_nio_thread_data *pThreadData;
@@ -130,7 +133,7 @@ void recv_notify_read(int sock, short event, void *arg)
 				}
 				break;
 			case FDFS_STORAGE_STAGE_NIO_SEND:
-				result = send_add_event(pTask);
+				result = storage_send_add_event(pTask);
 				break;
 			default:
 				logError("file: "__FILE__", line: %d, " \
@@ -184,7 +187,7 @@ static int storage_nio_init(struct fast_task_info *pTask)
 	return 0;
 }
 
-int send_add_event(struct fast_task_info *pTask)
+int storage_send_add_event(struct fast_task_info *pTask)
 {
 	pTask->offset = 0;
 
