@@ -40,10 +40,19 @@ typedef void (*FileDealDoneCallback)(struct fast_task_info *pTask, \
 
 typedef struct
 {
+	bool gen_filename;	//if upload generate filename
+	int store_path_index;
+	int start_time;		//upload start timestamp
+} StorageUploadInfo;
+
+typedef struct
+{
 	char filename[MAX_PATH_SIZE + 128];  	//full filename
 	char fname2log[128+sizeof(STORAGE_META_FILE_EXT)];  //filename to log
 	char op;        //w for writing, r for reading, d for deleting
 	char sync_flag;
+	unsigned int file_hash_codes[4];
+	StorageUploadInfo upload_info;
 	int dio_thread_index;		//dio thread index
 	int timestamp2log;		//timestamp to log
 	int delete_flag;     //delete file flag
