@@ -41,6 +41,9 @@ typedef void (*FileDealDoneCallback)(struct fast_task_info *pTask, \
 typedef struct
 {
 	bool gen_filename;	//if upload generate filename
+	char master_filename[128];
+	char file_ext_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
+	char prefix_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
 	int store_path_index;
 	int start_time;		//upload start timestamp
 } StorageUploadInfo;
