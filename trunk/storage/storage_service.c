@@ -839,13 +839,13 @@ int storage_terminate_threads()
 	long task_addr;
         int quit_sock;
 
-        if (g_nio_thread_data != NULL)
-        {
-                pDataEnd = g_nio_thread_data + g_work_threads;
-                quit_sock = 0;
+	if (g_nio_thread_data != NULL)
+	{
+		pDataEnd = g_nio_thread_data + g_work_threads;
+		quit_sock = 0;
 
 		for (pThreadData=g_nio_thread_data; pThreadData<pDataEnd; \
-			pThreadData++)
+				pThreadData++)
 		{
 			quit_sock--;
 			pTask = free_queue_pop();
@@ -863,15 +863,15 @@ int storage_terminate_threads()
 
 			task_addr = (long)pTask;
 			if (write(pThreadData->pipe_fds[1], &task_addr, \
-				sizeof(task_addr)) != sizeof(task_addr))
+					sizeof(task_addr)) != sizeof(task_addr))
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"call write failed, " \
 					"errno: %d, error info: %s", \
 					__LINE__, errno, strerror(errno));
 			}
-                }
-        }
+		}
+	}
 
         return 0;
 }
@@ -994,7 +994,7 @@ data buff (struct)
 	int result;
 	struct storage_nio_thread_data *pThreadData;
 	struct event ev_notify;
-	
+
 	pThreadData = (struct storage_nio_thread_data *)arg;
 	if (g_check_file_duplicate)
 	{
@@ -1011,7 +1011,7 @@ data buff (struct)
 	do
 	{
 		event_set(&ev_notify, pThreadData->pipe_fds[0], \
-			EV_READ | EV_PERSIST, recv_notify_read, NULL);
+			EV_READ | EV_PERSIST, storage_recv_notify_read, NULL);
 		if ((result=event_base_set(pThreadData->ev_base, &ev_notify)) != 0)
 		{
 			logCrit("file: "__FILE__", line: %d, " \
@@ -1051,6 +1051,10 @@ data buff (struct)
 			__LINE__, result, strerror(result));
 	}
 	g_storage_thread_count--;
+	logInfo("file: "__FILE__", line: %d, " \
+		"nio thread exited, thread count: %d", \
+		__LINE__, g_storage_thread_count);
+
 	if ((result=pthread_mutex_unlock(&g_storage_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -3831,7 +3835,7 @@ int storage_deal_task(struct fast_task_info *pTask)
 		long2buff(pClientInfo->total_length - sizeof(TrackerHeader), \
 				pHeader->pkg_len);
 
-		send_add_event(pTask);
+		storage_send_add_event(pTask);
 	}
 
 	return result;

@@ -153,6 +153,7 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
+	//logInfo("log fd=%d", g_log_context.log_fd);
 	daemon_init(true);
 	umask(0);
 
@@ -304,7 +305,6 @@ int main(int argc, char *argv[])
 		log_destroy();
 		return result;
 	}
-
 	log_set_cache(true);
 
 	storage_accept_loop(sock);
@@ -353,6 +353,8 @@ static void sigQuitHandler(int sig)
 	if (!bTerminateFlag)
 	{
 		bTerminateFlag = true;
+		g_continue_flag = false;
+
 		logCrit("file: "__FILE__", line: %d, " \
 			"catch signal %d, program exiting...", \
 			__LINE__, sig);
@@ -381,6 +383,8 @@ static void sigSegvHandler(int signum, siginfo_t *info, void *ptr)
 	if (!bTerminateFlag)
 	{
 		bTerminateFlag = true;
+		g_continue_flag = false;
+
 		logCrit("file: "__FILE__", line: %d, " \
 			"catch signal %d, program exiting...", \
 			__LINE__, signum);

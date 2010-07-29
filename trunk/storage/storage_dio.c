@@ -390,6 +390,10 @@ static void *dio_thread_entrance(void* arg)
 			__LINE__, result, strerror(result));
 	}
 	g_dio_thread_count--;
+	logInfo("file: "__FILE__", line: %d, " \
+		"dio thread exited, thread count: %d", \
+		__LINE__, g_dio_thread_count);
+
 	if ((result=pthread_mutex_unlock(&g_dio_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
