@@ -44,7 +44,7 @@ void task_finish_clean_up(struct fast_task_info *pTask)
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext = &(pClientInfo->file_context);
 
-	if (pFileContext->fd >= 0)
+	if (pFileContext->fd > 0)
 	{
 		close(pFileContext->fd);
 
@@ -68,7 +68,6 @@ void task_finish_clean_up(struct fast_task_info *pTask)
 	close(pClientInfo->sock);
 
 	memset(pTask->arg, 0, sizeof(StorageClientInfo));
-	pFileContext->fd = -1;
 
 	free_queue_push(pTask);
 }

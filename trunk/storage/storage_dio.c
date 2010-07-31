@@ -343,7 +343,6 @@ int dio_deal_task(struct fast_task_info *pTask)
 			close(pFileContext->fd);
 			pFileContext->fd = -1;
 
-			logInfo("done_callback1 fd=%d\n", pFileContext->fd);
 			pFileContext->done_callback(pTask, result);
 		}
 		else

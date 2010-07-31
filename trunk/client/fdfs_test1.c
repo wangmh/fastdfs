@@ -264,6 +264,8 @@ int main(int argc, char *argv[])
 				token, (int)ts);
 		}
 
+		printf("file url: %s\n", file_url);
+
 		fdfs_get_file_info(file_id, &file_info);
 		printf("source ip address: %s\n", file_info.source_ip_addr);
 		printf("file timestamp=%s\n", formatDatetime(
@@ -274,6 +276,7 @@ int main(int argc, char *argv[])
 
 		strcpy(master_file_id, file_id);
 		*file_id = '\0';
+
 		if (upload_type == FDFS_UPLOAD_BY_FILE)
 		{
 			prefix_name = "_big";
