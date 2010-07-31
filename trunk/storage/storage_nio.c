@@ -70,7 +70,6 @@ void task_finish_clean_up(struct fast_task_info *pTask)
 	close(pClientInfo->sock);
 
 	memset(pTask->arg, 0, sizeof(StorageClientInfo));
-	pFileContext->dio_thread_index = -1;
 
 	free_queue_push(pTask);
 }
@@ -85,6 +84,7 @@ void storage_recv_notify_read(int sock, short event, void *arg)
 
 	while (1)
 	{
+		logInfo("before read...");
 		if ((bytes=read(sock, &task_addr, sizeof(task_addr))) < 0)
 		{
 			if (!(errno == EAGAIN || errno == EWOULDBLOCK))
@@ -101,6 +101,8 @@ void storage_recv_notify_read(int sock, short event, void *arg)
 		{
 			break;
 		}
+
+		logInfo("after read, bytes=%d", bytes);
 
 		pTask = (struct fast_task_info *)task_addr;
 		pClientInfo = (StorageClientInfo *)pTask->arg;

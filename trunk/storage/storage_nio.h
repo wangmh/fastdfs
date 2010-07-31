@@ -73,7 +73,6 @@ typedef struct
 	int nio_thread_index;
 	int sock;
 	char stage;  //nio stage
-	char ip_addr[IP_ADDRESS_SIZE];  //to be removed
 	char tracker_client_ip[IP_ADDRESS_SIZE];
 
 	StorageFileContext file_context;
