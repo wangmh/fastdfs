@@ -740,6 +740,8 @@ int storage_service_init()
 		return result;
 	}
 
+	logInfo("g_buff_size=%d, sizeof(StorageClientInfo)=%d", g_buff_size, sizeof(StorageClientInfo));
+
 	if ((result=free_queue_init(g_max_connections, g_buff_size, \
                 g_buff_size, sizeof(StorageClientInfo))) != 0)
 	{
@@ -761,7 +763,6 @@ int storage_service_init()
 	pDataEnd = g_nio_thread_data + g_work_threads;
 	for (pThreadData=g_nio_thread_data; pThreadData<pDataEnd; pThreadData++)
 	{
-		pThreadData->dealing_file_count = 0;
 		pThreadData->ev_base = event_base_new();
 		if (pThreadData->ev_base == NULL)
 		{
@@ -928,6 +929,8 @@ void storage_accept_loop(int server_sock)
 			continue;
 		}
 
+		logInfo("accept client ip0=%s", szClientIp);
+
 		pTask = free_queue_pop();
 		if (pTask == NULL)
 		{
@@ -938,6 +941,8 @@ void storage_accept_loop(int server_sock)
 			continue;
 		}
 
+		logInfo("accept client ip00=%s", szClientIp);
+
 		pClientInfo = (StorageClientInfo *)pTask->arg;
 		pClientInfo->sock = incomesock;
 		pClientInfo->stage = FDFS_STORAGE_STAGE_NIO_INIT;
@@ -946,6 +951,8 @@ void storage_accept_loop(int server_sock)
 
 		strcpy(pTask->client_ip, szClientIp);
 		strcpy(pClientInfo->tracker_client_ip, szClientIp);
+
+		logInfo("accept client ip1=%s", szClientIp);
 
 		task_addr = (long)pTask;
 		if (write(pThreadData->pipe_fds[1], &task_addr, \
@@ -958,6 +965,8 @@ void storage_accept_loop(int server_sock)
 				"errno: %d, error info: %s", \
 				__LINE__, errno, strerror(errno));
 		}
+
+		logInfo("accept client ip2=%s", szClientIp);
 	}
 }
 
@@ -984,13 +993,6 @@ void storage_nio_notify(struct fast_task_info *pTask)
 
 static void *work_thread_entrance(void* arg)
 {
-/*
-package format:
-8 bytes length (hex string)
-1 bytes cmd (char)
-1 bytes status(char)
-data buff (struct)
-*/
 	int result;
 	struct storage_nio_thread_data *pThreadData;
 	struct event ev_notify;
@@ -1007,6 +1009,8 @@ data buff (struct)
 			return NULL;
 		}
 	}
+
+	logInfo("pThreadData=%p", pThreadData);
 
 	do
 	{
