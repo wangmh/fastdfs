@@ -794,11 +794,9 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 		const FDFSMetaData *meta_list, const int meta_count, \
 		char *group_name, char *remote_filename)
 {
-#define MAX_STATIC_META_DATA_COUNT 32
 	TrackerHeader *pHeader;
 	int result;
-	char out_buff[sizeof(TrackerHeader)+1+3*FDFS_PROTO_PKG_LEN_SIZE+\
-		FDFS_FILE_PREFIX_MAX_LEN+FDFS_FILE_EXT_NAME_MAX_LEN+2];
+	char out_buff[512];
 	char *p;
 	int64_t in_bytes;
 	char in_buff[128];

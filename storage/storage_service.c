@@ -2291,6 +2291,8 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 	pClientInfo->total_length = sizeof(TrackerHeader);
 
+	logInfo("storage_upload_slave_file nInPackLen=%ld", nInPackLen);
+
 	if (nInPackLen <= 2 * FDFS_PROTO_PKG_LEN_SIZE + \
 			FDFS_FILE_PREFIX_MAX_LEN + FDFS_FILE_EXT_NAME_MAX_LEN)
 	{
@@ -2344,9 +2346,9 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
-	memcpy(file_ext_name, p, FDFS_FILE_PREFIX_MAX_LEN);
+	memcpy(file_ext_name, p, FDFS_FILE_EXT_NAME_MAX_LEN);
 	*(file_ext_name + FDFS_FILE_EXT_NAME_MAX_LEN) = '\0';
-	p += FDFS_FILE_PREFIX_MAX_LEN;
+	p += FDFS_FILE_EXT_NAME_MAX_LEN;
 
 	memcpy(master_filename, p, master_filename_len);
 	*(master_filename + master_filename_len) = '\0';
@@ -2392,6 +2394,8 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	}
 
         pFileContext->upload_info.gen_filename = g_check_file_duplicate;
+
+	logInfo("####file_bytes=%ld, buff offset=%d, master_filename=%s, prefix_name=%s, file_ext_name=%s", file_bytes, (int)(p - pTask->data), master_filename, prefix_name, file_ext_name);
 
 	return storage_service_do_upload_file(pTask, store_path_index, \
 			file_bytes, p - pTask->data, master_filename, \
