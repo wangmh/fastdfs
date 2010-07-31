@@ -282,6 +282,8 @@ int dio_deal_task(struct fast_task_info *pTask)
 		}
 	}
 
+	logInfo("dio_deal_task fd=%d\n", pFileContext->fd);
+
 	if (pFileContext->op == FDFS_STORAGE_FILE_OP_READ)
 	{
 		int64_t remain_bytes;
@@ -334,12 +336,14 @@ int dio_deal_task(struct fast_task_info *pTask)
 
 	if (result == 0)
 	{
+		logInfo("dio_deal_task, pFileContext->offset=%ld, pFileContext->end=%ld, stage=%d\n", pFileContext->offset, pFileContext->end, ((StorageClientInfo *)pTask->arg)->stage);
 		if (pFileContext->offset >= pFileContext->end)
 		{
 			/* file read/write done, close it */
 			close(pFileContext->fd);
 			pFileContext->fd = -1;
 
+			logInfo("done_callback1 fd=%d\n", pFileContext->fd);
 			pFileContext->done_callback(pTask, result);
 		}
 		else
@@ -349,6 +353,7 @@ int dio_deal_task(struct fast_task_info *pTask)
 	}
 	else //error
 	{
+		logInfo("done_callback2 fd=%d\n", pFileContext->fd);
 		pFileContext->done_callback(pTask, result);
 	}
 
@@ -390,10 +395,6 @@ static void *dio_thread_entrance(void* arg)
 			__LINE__, result, strerror(result));
 	}
 	g_dio_thread_count--;
-	logInfo("file: "__FILE__", line: %d, " \
-		"dio thread exited, thread count: %d", \
-		__LINE__, g_dio_thread_count);
-
 	if ((result=pthread_mutex_unlock(&g_dio_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -401,6 +402,10 @@ static void *dio_thread_entrance(void* arg)
 			"errno: %d, error info: %s", \
 			__LINE__, result, strerror(result));
 	}
+
+	logDebug("file: "__FILE__", line: %d, " \
+		"dio thread exited, thread count: %d", \
+		__LINE__, g_dio_thread_count);
 
 	return NULL;
 }

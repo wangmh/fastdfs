@@ -86,8 +86,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	log_init();
 	g_up_time = time(NULL);
+	log_init();
 
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
 	if (getExeAbsoluteFilename(argv[0], g_exe_name, \
@@ -118,6 +118,19 @@ int main(int argc, char *argv[])
 	{
 		log_destroy();
 		return result;
+	}
+
+	daemon_init(true);
+	umask(0);
+
+	if (dup2(g_log_context.log_fd, STDOUT_FILENO) < 0 || \
+		dup2(g_log_context.log_fd, STDERR_FILENO) < 0)
+	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"call dup2 fail, errno: %d, error info: %s, " \
+			"program exit!", __LINE__, errno, strerror(errno));
+		g_continue_flag = false;
+		return errno;
 	}
 
 	if ((result=storage_sync_init()) != 0)
@@ -151,20 +164,6 @@ int main(int argc, char *argv[])
 			"set_rand_seed fail, program exit!", __LINE__);
 		g_continue_flag = false;
 		return result;
-	}
-
-	//logInfo("log fd=%d", g_log_context.log_fd);
-	daemon_init(true);
-	umask(0);
-
-	if (dup2(g_log_context.log_fd, STDOUT_FILENO) < 0 || \
-		dup2(g_log_context.log_fd, STDERR_FILENO) < 0)
-	{
-		logCrit("file: "__FILE__", line: %d, " \
-			"call dup2 fail, errno: %d, error info: %s, " \
-			"program exit!", __LINE__, errno, strerror(errno));
-		g_continue_flag = false;
-		return errno;
 	}
 
 	memset(&act, 0, sizeof(act));
