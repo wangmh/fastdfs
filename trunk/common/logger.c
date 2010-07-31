@@ -70,7 +70,7 @@ int log_init_ex(LogContext *pContext)
 	}
 	pContext->pcurrent_buff = pContext->log_buff;
 
-	if ((result=init_pthread_lock(&pContext->log_thread_lock)) != 0)
+	if ((result=init_pthread_lock(&(pContext->log_thread_lock))) != 0)
 	{
 		return result;
 	}
@@ -167,8 +167,8 @@ static int log_fsync(LogContext *pContext, const bool bNeedLock)
 	}
 
 	result = 0;
-	if (bNeedLock && (result=pthread_mutex_lock( \
-			&pContext->log_thread_lock)) != 0)
+	if (bNeedLock && ((result=pthread_mutex_lock( \
+			&(pContext->log_thread_lock))) != 0))
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -198,8 +198,8 @@ static int log_fsync(LogContext *pContext, const bool bNeedLock)
 	}
 
 	pContext->pcurrent_buff = pContext->log_buff;
-	if (bNeedLock && (result=pthread_mutex_unlock( \
-			&pContext->log_thread_lock)) != 0)
+	if (bNeedLock && ((result=pthread_mutex_unlock( \
+			&(pContext->log_thread_lock))) != 0))
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
@@ -233,7 +233,7 @@ static void doLog(LogContext *pContext, const char *caption, \
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"log buff size: %d < log text length: %d ", \
 			__LINE__, LOG_BUFF_SIZE, text_len + 64);
-		pthread_mutex_unlock(&pContext->log_thread_lock);
+		pthread_mutex_unlock(&(pContext->log_thread_lock));
 		return;
 	}
 
@@ -257,7 +257,7 @@ static void doLog(LogContext *pContext, const char *caption, \
 		log_fsync(pContext, false);
 	}
 
-	if ((result=pthread_mutex_unlock(&pContext->log_thread_lock)) != 0)
+	if ((result=pthread_mutex_unlock(&(pContext->log_thread_lock))) != 0)
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \

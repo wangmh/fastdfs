@@ -63,13 +63,12 @@ void task_finish_clean_up(struct fast_task_info *pTask)
 					errno, strerror(errno));
 			}
 		}
-
-		pFileContext->fd = -1;
 	}
 
 	close(pClientInfo->sock);
 
 	memset(pTask->arg, 0, sizeof(StorageClientInfo));
+	pFileContext->fd = -1;
 
 	free_queue_push(pTask);
 }
@@ -84,7 +83,6 @@ void storage_recv_notify_read(int sock, short event, void *arg)
 
 	while (1)
 	{
-		logInfo("before read...");
 		if ((bytes=read(sock, &task_addr, sizeof(task_addr))) < 0)
 		{
 			if (!(errno == EAGAIN || errno == EWOULDBLOCK))
@@ -99,15 +97,13 @@ void storage_recv_notify_read(int sock, short event, void *arg)
 		}
 		else if (bytes == 0)
 		{
+			logError("file: "__FILE__", line: %d, " \
+				"call read failed, end of file", __LINE__);
 			break;
 		}
 
-		logInfo("after read, bytes=%d", bytes);
-
 		pTask = (struct fast_task_info *)task_addr;
 		pClientInfo = (StorageClientInfo *)pTask->arg;
-
-		logInfo("notify, index=%d!", pClientInfo->nio_thread_index);
 
 		if (pClientInfo->sock < 0)  //quit flag
 		{
@@ -191,6 +187,18 @@ static int storage_nio_init(struct fast_task_info *pTask)
 
 int storage_send_add_event(struct fast_task_info *pTask)
 {
+	/*
+	StorageClientInfo *pClientInfo;
+
+        pClientInfo = (StorageClientInfo *)pTask->arg;
+
+	pTask->length = pClientInfo->total_length - pClientInfo->total_offset;
+	if (pTask->length > pTask->size)
+	{
+		pTask->length = pTask->size;
+	}
+	*/
+
 	pTask->offset = 0;
 
 	/* direct send */
@@ -327,6 +335,14 @@ static void client_sock_read(int sock, short event, void *arg)
 		pTask->offset += bytes;
 		if (pTask->offset >= pTask->length) //recv current pkg done
 		{
+			if (pClientInfo->total_offset + pTask->length >= \
+					pClientInfo->total_length)
+			{
+				/* current req recv done */
+				pClientInfo->stage = FDFS_STORAGE_STAGE_NIO_SEND;
+				pTask->req_count++;
+			}
+
 			if (pClientInfo->total_offset == 0)
 			{
 				pClientInfo->total_offset = pTask->length;
@@ -335,14 +351,6 @@ static void client_sock_read(int sock, short event, void *arg)
 			else
 			{
 				pClientInfo->total_offset += pTask->length;
-				if (pClientInfo->total_offset >= \
-					pClientInfo->total_length)
-				{
-					/* current req recv done */
-					pClientInfo->stage = \
-						FDFS_STORAGE_STAGE_NIO_SEND;
-					pTask->req_count++;
-				}
 
 				/* continue to write to file */
 				storage_dio_queue_push(pTask);
