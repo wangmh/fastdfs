@@ -329,11 +329,15 @@ static void client_sock_read(int sock, short event, void *arg)
 			{
 				pTask->length = pClientInfo->total_length;
 			}
+
+			logInfo("total_length=====%ld", pClientInfo->total_length);
 		}
 
 		pTask->offset += bytes;
 		if (pTask->offset >= pTask->length) //recv current pkg done
 		{
+			logInfo("total_length=%ld, offset=%ld", pClientInfo->total_length, pClientInfo->total_offset);
+
 			if (pClientInfo->total_offset + pTask->length >= \
 					pClientInfo->total_length)
 			{

@@ -347,6 +347,7 @@ int dio_deal_task(struct fast_task_info *pTask)
 		}
 		else
 		{
+			logInfo("######continue deal nio");
 			storage_nio_notify(pTask);  //notify nio to deal
 		}
 	}
