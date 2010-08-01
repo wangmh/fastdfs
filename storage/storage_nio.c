@@ -203,17 +203,6 @@ static int storage_nio_init(struct fast_task_info *pTask)
 
 int storage_send_add_event(struct fast_task_info *pTask)
 {
-	/*
-	StorageClientInfo *pClientInfo;
-
-        pClientInfo = (StorageClientInfo *)pTask->arg;
-
-	pTask->length = pClientInfo->total_length - pClientInfo->total_offset;
-	if (pTask->length > pTask->size)
-	{
-		pTask->length = pTask->size;
-	}
-	*/
 
 	pTask->offset = 0;
 
@@ -454,7 +443,7 @@ static void client_sock_write(int sock, short event, void *arg)
 				pClientInfo->total_length = 0;
 				pClientInfo->total_offset = 0;
 				pTask->offset = 0;
-				pTask->length  = 0;
+				pTask->length = 0;
 
 				pClientInfo->stage = FDFS_STORAGE_STAGE_NIO_RECV;
 				if ((result=event_add(&pTask->ev_read, \
@@ -469,6 +458,7 @@ static void client_sock_write(int sock, short event, void *arg)
 			}
 			else  //continue to send file content
 			{
+				pTask->length = 0;
 				storage_dio_queue_push(pTask);
 			}
 
