@@ -125,7 +125,7 @@ void storage_recv_notify_read(int sock, short event, void *arg)
 				result = storage_nio_init(pTask);
 				break;
 			case FDFS_STORAGE_STAGE_NIO_RECV:
-				logInfo("event_add(&pTask->ev_read rrrrrrrrr");
+				logInfo("event_add(&pTask->ev_read rrrrrrrrr, pClientInfo->total_length=%ld, pClientInfo->total_offset=%ld", pClientInfo->total_length, pClientInfo->total_offset);
 				pTask->offset = 0;
 				pTask->length = pClientInfo->total_length - pClientInfo->total_offset;
 				if (pTask->length > pTask->size)
