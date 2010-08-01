@@ -60,10 +60,10 @@ typedef struct
 {
 	char filename[MAX_PATH_SIZE + 128];  	//full filename
 	char fname2log[128+sizeof(STORAGE_META_FILE_EXT)];  //filename to log
-	char op;        //w for writing, r for reading, d for deleting
-	char sync_flag;
+	char op;        //w for writing, r for reading, d for deleting etc.
+	char sync_flag;  //sync flag log to binlog
 	bool calc_file_hash;   //if calculate file content hash code
-	unsigned int file_hash_codes[4];
+	unsigned int file_hash_codes[4];  //file hash code
 
 	union
 	{
@@ -75,7 +75,7 @@ typedef struct
 	int timestamp2log;		//timestamp to log
 	int delete_flag;     //delete file flag
 	int create_flag;    //create file flag
-	int buff_offset;    //buffer offset
+	int buff_offset;    //buffer offset after recv to write to file
 	int fd;         //file description no
 	int64_t start;  //file start offset
 	int64_t end;    //file end offset
@@ -96,7 +96,6 @@ typedef struct
 	int64_t total_length;   //pkg total length
 	int64_t total_offset;   //pkg current offset
 
-	int src_sync_timestamp;
 	FDFSStorageServer *pSrcStorage;
 	TaskDealFunc deal_func;
 } StorageClientInfo;
