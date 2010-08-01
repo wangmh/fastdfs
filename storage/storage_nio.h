@@ -26,9 +26,10 @@
 #define FDFS_STORAGE_STAGE_NIO_RECV   'r'
 #define FDFS_STORAGE_STAGE_NIO_SEND   's'
 
-#define FDFS_STORAGE_FILE_OP_READ     'r'
-#define FDFS_STORAGE_FILE_OP_WRITE    'w'
-#define FDFS_STORAGE_FILE_OP_DELETE   'd'
+#define FDFS_STORAGE_FILE_OP_READ     'R'
+#define FDFS_STORAGE_FILE_OP_WRITE    'W'
+#define FDFS_STORAGE_FILE_OP_DELETE   'D'
+#define FDFS_STORAGE_FILE_OP_DISCARD  'd'
 
 typedef int (*TaskDealFunc)(struct fast_task_info *pTask);
 
@@ -50,12 +51,26 @@ typedef struct
 
 typedef struct
 {
+	char op_flag;
+	char *meta_buff;
+	int meta_bytes;
+} StorageSetMetaInfo;
+
+typedef struct
+{
 	char filename[MAX_PATH_SIZE + 128];  	//full filename
 	char fname2log[128+sizeof(STORAGE_META_FILE_EXT)];  //filename to log
 	char op;        //w for writing, r for reading, d for deleting
 	char sync_flag;
+	bool calc_file_hash;   //if calculate file content hash code
 	unsigned int file_hash_codes[4];
-	StorageUploadInfo upload_info;
+
+	union
+	{
+		StorageUploadInfo upload;
+		StorageSetMetaInfo setmeta;
+	} extra_info;
+
 	int dio_thread_index;		//dio thread index
 	int timestamp2log;		//timestamp to log
 	int delete_flag;     //delete file flag

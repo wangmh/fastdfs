@@ -244,6 +244,23 @@ int dio_deal_task(struct fast_task_info *pTask)
 		return result;
 	}
 
+	if (pFileContext->op == FDFS_STORAGE_FILE_OP_DISCARD)
+	{
+		pFileContext->offset+=pTask->length - pFileContext->buff_offset;
+		if (pFileContext->offset >= pFileContext->end)
+		{
+			pFileContext->done_callback(pTask, 0);
+		}
+		else
+		{
+			logInfo("######continue deal nio");
+			pFileContext->buff_offset = 0;
+			storage_nio_notify(pTask);  //notify nio to deal
+		}
+
+		return 0;
+	}
+
 	do
 	{
 	if (pFileContext->fd < 0)
@@ -314,10 +331,11 @@ int dio_deal_task(struct fast_task_info *pTask)
 	else
 	{
 		int write_bytes;
+		char *pDataBuff;
 
+		pDataBuff = pTask->data + pFileContext->buff_offset;
 		write_bytes = pTask->length - pFileContext->buff_offset;
-		if (write(pFileContext->fd, pTask->data + \
-			pFileContext->buff_offset, write_bytes) != write_bytes)
+		if (write(pFileContext->fd,pDataBuff,write_bytes)!=write_bytes)
 		{
 			result = errno != 0 ? errno : EIO;
 			logError("file: "__FILE__", line: %d, " \
@@ -326,6 +344,12 @@ int dio_deal_task(struct fast_task_info *pTask)
 				__LINE__, pFileContext->filename, \
 				result, strerror(result));
 			break;
+		}
+
+		if (g_check_file_duplicate)
+		{
+			CALC_HASH_CODES4(pDataBuff, write_bytes, \
+					pFileContext->file_hash_codes)
 		}
 
 		logInfo("###dio write bytes: %d, pTask->length=%d, buff_offset=%d", \
