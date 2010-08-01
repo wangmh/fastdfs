@@ -140,7 +140,7 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 		if (pClientInfo->pSrcStorage != NULL) \
 		{ \
 			pClientInfo->pSrcStorage->last_sync_src_timestamp = \
-					pClientInfo->src_sync_timestamp; \
+					pFileContext->timestamp2log; \
 			g_sync_change_count++; \
 		} \
 \
