@@ -312,6 +312,9 @@ int dio_deal_task(struct fast_task_info *pTask)
 		read_bytes = (capacity_bytes < remain_bytes) ? \
 				capacity_bytes : remain_bytes;
 
+		logInfo("###before dio read bytes: %d, pTask->length=%d, file offset=%ld", \
+			read_bytes, pTask->length, pFileContext->offset);
+
 		if (read(pFileContext->fd, pTask->data + pTask->length, \
 			read_bytes) != read_bytes)
 		{
@@ -326,6 +329,11 @@ int dio_deal_task(struct fast_task_info *pTask)
 
 		pTask->length += read_bytes;
 		pFileContext->offset += read_bytes;
+
+		logInfo("###after dio read bytes: %d, pTask->length=%d, file offset=%ld", \
+			read_bytes, pTask->length, pFileContext->offset);
+
+		storage_nio_notify(pTask);  //notify nio to deal
 		result = 0;
 	}
 	else
@@ -356,10 +364,17 @@ int dio_deal_task(struct fast_task_info *pTask)
 			write_bytes, pTask->length, pFileContext->buff_offset);
 
 		pFileContext->offset += write_bytes;
+
+		if (pFileContext->offset < pFileContext->end)
+		{
+			logInfo("######continue deal nio");
+			pFileContext->buff_offset = 0;
+			storage_nio_notify(pTask);  //notify nio to deal
+		}
+
 		result = 0;
 	}
-	}
-	while (0);
+	} while (0);
 
 	if (result == 0)
 	{
@@ -375,16 +390,12 @@ int dio_deal_task(struct fast_task_info *pTask)
 
 			pFileContext->done_callback(pTask, result);
 		}
-		else
-		{
-			logInfo("######continue deal nio");
-			pFileContext->buff_offset = 0;
-			storage_nio_notify(pTask);  //notify nio to deal
-		}
 	}
 	else //error
 	{
 		/* file read/write done, close it */
+		if (pFileContext->fd > 0)
+		{
 		close(pFileContext->fd);
 		pFileContext->fd = -1;
 		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
@@ -396,6 +407,7 @@ int dio_deal_task(struct fast_task_info *pTask)
 					"errno: %d, error info: %s", \
 					__LINE__, errno, strerror(errno));
 			}
+		}
 		}
 
 		pFileContext->done_callback(pTask, result);
