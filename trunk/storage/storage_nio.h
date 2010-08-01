@@ -60,6 +60,7 @@ typedef struct
 	int timestamp2log;		//timestamp to log
 	int delete_flag;     //delete file flag
 	int create_flag;    //create file flag
+	int buff_offset;    //buffer offset
 	int fd;         //file description no
 	int64_t start;  //file start offset
 	int64_t end;    //file end offset
