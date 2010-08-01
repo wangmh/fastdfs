@@ -1940,11 +1940,13 @@ static void* storage_sync_thread_entrance(void* arg)
 	time_t current_time;
 	time_t start_time;
 	time_t end_time;
+	time_t last_keep_alive_time;
 	
 	memset(local_ip_addr, 0, sizeof(local_ip_addr));
 	memset(&reader, 0, sizeof(reader));
 
 	current_time =  time(NULL);
+	last_keep_alive_time = 0;
 	start_time = 0;
 	end_time = 0;
 
@@ -2200,11 +2202,6 @@ static void* storage_sync_thread_entrance(void* arg)
 			(pStorage->status == FDFS_STORAGE_STATUS_ACTIVE || \
 			pStorage->status == FDFS_STORAGE_STATUS_SYNCING))
 		{
-			if (g_sync_part_time)
-			{
-				current_time = time(NULL);
-			}
-
 			read_result = storage_binlog_read(&reader, \
 					&record, &record_len);
 			if (read_result == ENOENT)
@@ -2247,10 +2244,28 @@ static void* storage_sync_thread_entrance(void* arg)
 					}
 				}
 
+				current_time = time(NULL);
+				if (current_time - last_keep_alive_time >= \
+					g_heart_beat_interval)
+				{
+					if (fdfs_active_test(&storage_server)!=0)
+					{
+						break;
+					}
+
+					last_keep_alive_time = current_time;
+				}
+
 				usleep(g_sync_wait_usec);
 				continue;
 			}
-			else if (read_result != 0)
+
+			if (g_sync_part_time)
+			{
+				current_time = time(NULL);
+			}
+
+			if (read_result != 0)
 			{
 				sleep(5);
 				continue;
