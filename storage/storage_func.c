@@ -804,12 +804,14 @@ int storage_func_init(const char *filename, \
 	char *pRunByUser;
 	char *pFsyncAfterWrittenBytes;
 	char *pThreadStackSize;
+	char *pBuffSize;
 	char *pIfAliasPrefix;
 	char *pHttpDomain;
 	IniContext iniContext;
 	int result;
 	int64_t fsync_after_written_bytes;
 	int64_t thread_stack_size;
+	int64_t buff_size;
 
 	/*
 	while (nThreadCount > 0)
@@ -1005,18 +1007,27 @@ int storage_func_init(const char *filename, \
                         break;
 		}
 
-		g_buff_size = iniGetIntValue(NULL, "buff_size", \
-				&iniContext, STORAGE_DEFAULT_BUFF_SIZE);
-		if (g_buff_size < 8 * 1024)
+		pBuffSize = iniGetStrValue(NULL, \
+			"buff_size", &iniContext);
+		if (pBuffSize == NULL)
+		{
+			buff_size = STORAGE_DEFAULT_BUFF_SIZE;
+		}
+		else if ((result=parse_bytes(pBuffSize, 1, &buff_size)) != 0)
+		{
+			return result;
+		}
+		g_buff_size = buff_size;
+		if (g_buff_size < 4 * 1024)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"buffer_size=%d is invalid, must >= 8KB", \
-				__LINE__, g_buff_size);
-
+				"item \"buff_size\" is too small, " \
+				"value: %d < %d!", __LINE__, \
+				g_buff_size, 4 * 1024);
 			result = EINVAL;
                         break;
 		}
-	
+
 		g_disk_rw_separated = iniGetBoolValue(NULL, \
 				"disk_rw_separated", &iniContext, false);
 

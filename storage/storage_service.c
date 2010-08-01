@@ -2162,8 +2162,9 @@ static int storage_upload_file(struct fast_task_info *pTask)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, pkg length is not correct, " \
-			"invalid file bytes: "INT64_PRINTF_FORMAT"", \
-			__LINE__, pTask->client_ip, file_bytes);
+			"invalid file bytes: "INT64_PRINTF_FORMAT \
+			", total body length: "INT64_PRINTF_FORMAT, \
+			__LINE__, pTask->client_ip, file_bytes, nInPackLen);
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
@@ -3140,14 +3141,13 @@ static int storage_write_to_file(struct fast_task_info *pTask, \
 
 	pFileContext->fd = -1;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
+	pFileContext->buff_offset = buff_offset;
 	pFileContext->offset = file_offset;
 	pFileContext->start = file_offset;
 	pFileContext->end = file_offset + upload_bytes;
 	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
 		pTask, store_path_index, pFileContext->op);
 	pFileContext->done_callback = done_callback;
-
-	pTask->offset = buff_offset;
 
 	if ((result=storage_dio_queue_push(pTask)) != 0)
 	{
@@ -3843,8 +3843,6 @@ int storage_deal_task(struct fast_task_info *pTask)
 		long2buff(pClientInfo->total_length - sizeof(TrackerHeader), \
 				pHeader->pkg_len);
 		storage_send_add_event(pTask);
-
-		logInfo("pClientInfo->total_length1=%ld", pClientInfo->total_length);
 	}
 
 	return result;

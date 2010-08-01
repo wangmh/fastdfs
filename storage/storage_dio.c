@@ -315,9 +315,9 @@ int dio_deal_task(struct fast_task_info *pTask)
 	{
 		int write_bytes;
 
-		write_bytes = pTask->length - pTask->offset;
-		if (write(pFileContext->fd, pTask->data + pTask->offset, \
-			write_bytes) != write_bytes)
+		write_bytes = pTask->length - pFileContext->buff_offset;
+		if (write(pFileContext->fd, pTask->data + \
+			pFileContext->buff_offset, write_bytes) != write_bytes)
 		{
 			result = errno != 0 ? errno : EIO;
 			logError("file: "__FILE__", line: %d, " \
@@ -328,6 +328,9 @@ int dio_deal_task(struct fast_task_info *pTask)
 			break;
 		}
 
+		logInfo("###dio write bytes: %d, pTask->length=%d, buff_offset=%d", \
+			write_bytes, pTask->length, pFileContext->buff_offset);
+
 		pFileContext->offset += write_bytes;
 		result = 0;
 	}
@@ -336,7 +339,10 @@ int dio_deal_task(struct fast_task_info *pTask)
 
 	if (result == 0)
 	{
-		logInfo("dio_deal_task, pFileContext->offset=%ld, pFileContext->end=%ld, stage=%d\n", pFileContext->offset, pFileContext->end, ((StorageClientInfo *)pTask->arg)->stage);
+		logInfo("dio_deal_task, pFileContext->offset=%ld, " \
+			"pFileContext->end=%ld, stage=%d\n", \
+			 pFileContext->offset, pFileContext->end, \
+			((StorageClientInfo *)pTask->arg)->stage);
 		if (pFileContext->offset >= pFileContext->end)
 		{
 			/* file read/write done, close it */
@@ -348,12 +354,26 @@ int dio_deal_task(struct fast_task_info *pTask)
 		else
 		{
 			logInfo("######continue deal nio");
+			pFileContext->buff_offset = 0;
 			storage_nio_notify(pTask);  //notify nio to deal
 		}
 	}
 	else //error
 	{
-		logInfo("done_callback2 fd=%d\n", pFileContext->fd);
+		/* file read/write done, close it */
+		close(pFileContext->fd);
+		pFileContext->fd = -1;
+		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
+		{
+			if (unlink(pFileContext->filename) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"delete file: %s fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, errno, strerror(errno));
+			}
+		}
+
 		pFileContext->done_callback(pTask, result);
 	}
 
