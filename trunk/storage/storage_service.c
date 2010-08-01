@@ -2446,7 +2446,6 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	pFileContext =  &(pClientInfo->file_context);
 
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
-	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	if (nInPackLen <= 2 * FDFS_PROTO_PKG_LEN_SIZE + \
 		4 + FDFS_GROUP_NAME_MAX_LEN)
@@ -2457,6 +2456,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 			"expect length > %d", __LINE__, \
 			proto_cmd, pTask->client_ip, nInPackLen, \
 			2 * FDFS_PROTO_PKG_LEN_SIZE + 4+FDFS_GROUP_NAME_MAX_LEN);
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -2473,6 +2473,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 			"filename length: %d is invalid, " \
 			"which < 0 or >= %d", __LINE__, pTask->client_ip, \
 			filename_len,  (int)sizeof(filename));
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -2482,6 +2483,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 			"client ip: %s, in request pkg, " \
 			"file size: "INT64_PRINTF_FORMAT" is invalid, "\
 			"which < 0", __LINE__, pTask->client_ip, file_bytes);
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -2497,6 +2499,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 			"client ip:%s, group_name: %s " \
 			"not correct, should be: %s", __LINE__, \
 			pTask->client_ip, group_name, g_group_name);
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -2510,6 +2513,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 			__LINE__, pTask->client_ip, file_bytes, \
 			nInPackLen - (2*FDFS_PROTO_PKG_LEN_SIZE + \
 			FDFS_GROUP_NAME_MAX_LEN + filename_len));
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -2519,10 +2523,12 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	if ((result=storage_split_filename_ex(filename, \
 		&filename_len, true_filename, &store_path_index)) != 0)
 	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 	if ((result=fdfs_check_data_filename(true_filename, filename_len)) != 0)
 	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 
