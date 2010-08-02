@@ -253,7 +253,6 @@ int dio_deal_task(struct fast_task_info *pTask)
 		}
 		else
 		{
-			logInfo("######continue deal nio");
 			pFileContext->buff_offset = 0;
 			storage_nio_notify(pTask);  //notify nio to deal
 		}
@@ -299,8 +298,6 @@ int dio_deal_task(struct fast_task_info *pTask)
 		}
 	}
 
-	logInfo("dio_deal_task fd=%d\n", pFileContext->fd);
-
 	if (pFileContext->op == FDFS_STORAGE_FILE_OP_READ)
 	{
 		int64_t remain_bytes;
@@ -312,8 +309,10 @@ int dio_deal_task(struct fast_task_info *pTask)
 		read_bytes = (capacity_bytes < remain_bytes) ? \
 				capacity_bytes : remain_bytes;
 
+		/*
 		logInfo("###before dio read bytes: %d, pTask->length=%d, file offset=%ld", \
 			read_bytes, pTask->length, pFileContext->offset);
+		*/
 
 		if (read(pFileContext->fd, pTask->data + pTask->length, \
 			read_bytes) != read_bytes)
@@ -330,8 +329,10 @@ int dio_deal_task(struct fast_task_info *pTask)
 		pTask->length += read_bytes;
 		pFileContext->offset += read_bytes;
 
+		/*
 		logInfo("###after dio read bytes: %d, pTask->length=%d, file offset=%ld", \
 			read_bytes, pTask->length, pFileContext->offset);
+		*/
 
 		storage_nio_notify(pTask);  //notify nio to deal
 		result = 0;
@@ -360,14 +361,15 @@ int dio_deal_task(struct fast_task_info *pTask)
 					pFileContext->file_hash_codes)
 		}
 
+		/*
 		logInfo("###dio write bytes: %d, pTask->length=%d, buff_offset=%d", \
 			write_bytes, pTask->length, pFileContext->buff_offset);
+		*/
 
 		pFileContext->offset += write_bytes;
 
 		if (pFileContext->offset < pFileContext->end)
 		{
-			logInfo("######continue deal nio");
 			pFileContext->buff_offset = 0;
 			storage_nio_notify(pTask);  //notify nio to deal
 		}
@@ -378,10 +380,12 @@ int dio_deal_task(struct fast_task_info *pTask)
 
 	if (result == 0)
 	{
+		/*
 		logInfo("dio_deal_task, pFileContext->offset=%ld, " \
 			"pFileContext->end=%ld, stage=%d\n", \
 			 pFileContext->offset, pFileContext->end, \
 			((StorageClientInfo *)pTask->arg)->stage);
+		*/
 		if (pFileContext->offset >= pFileContext->end)
 		{
 			/* file read/write done, close it */
