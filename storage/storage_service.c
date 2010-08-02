@@ -1352,9 +1352,11 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		}
 		else if (result == ENOENT)
 		{
+			char src_filename[128];
 			FDHTKeyInfo ref_count_key;
 
-			filename_len = strlen(pFileContext->fname2log);
+			filename_len = sprintf(src_filename, "%s", \
+					pFileContext->fname2log);
 			value_len = sprintf(value, "%s/%s", \
 					g_group_name, pFileContext->fname2log);
 			if ((result=fdht_set_ex(pGroupArray, g_keep_alive, \
@@ -1398,7 +1400,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 
 			result = storage_binlog_write(pFileContext->timestamp2log, \
 					STORAGE_OP_TYPE_SOURCE_CREATE_FILE, \
-					pFileContext->fname2log);
+					src_filename);
 			if (result != 0)
 			{
 				unlink(pFileContext->filename);
@@ -1407,7 +1409,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 
 			result=storage_client_create_link(&trackerServer,NULL,\
 				pFileContext->extra_info.upload.master_filename, \
-				pFileContext->fname2log, filename_len, szFileSig, nSigLen,\
+				src_filename, filename_len, szFileSig, nSigLen,\
 				g_group_name, pFileContext->extra_info.upload.prefix_name, \
 				pFileContext->extra_info.upload.file_ext_name, \
 				pFileContext->fname2log, &filename_len);
@@ -1418,11 +1420,15 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 				fdht_delete_ex(pGroupArray, g_keep_alive, &ref_count_key);
 
 				unlink(pFileContext->filename);
-				return result;
 			}
 
 			fdfs_quit(&trackerServer);
 			tracker_disconnect_server(&trackerServer);
+
+			if (result != 0)
+			{
+				return result;
+			}
 
 			pFileContext->create_flag = STORAGE_CREATE_FLAG_FILE | \
 						    STORAGE_CREATE_FLAG_LINK;
