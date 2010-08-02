@@ -1272,7 +1272,6 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		int value_len;
 		int nSigLen;
 		char szFileSig[FILE_SIGNATURE_SIZE];
-		char src_filename[MAX_PATH_SIZE];
 		TrackerServerInfo trackerServer;
 
 		memset(&key_info, 0, sizeof(key_info));
@@ -1353,13 +1352,11 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		}
 		else if (result == ENOENT)
 		{
-			filename_len = sprintf(src_filename, "%c" \
-				STORAGE_DATA_DIR_FORMAT"/%s", \
-				STORAGE_STORE_PATH_PREFIX_CHAR, \
-				pFileContext->extra_info.upload.store_path_index, \
-				pFileContext->fname2log);
+			FDHTKeyInfo ref_count_key;
+
+			filename_len = strlen(pFileContext->fname2log);
 			value_len = sprintf(value, "%s/%s", \
-					g_group_name, src_filename);
+					g_group_name, pFileContext->fname2log);
 			if ((result=fdht_set_ex(pGroupArray, g_keep_alive, \
 						&key_info, FDHT_EXPIRES_NEVER, \
 						value, value_len)) != 0)
@@ -1374,13 +1371,14 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 				return result;
 			}
 
-			key_info.obj_id_len = value_len;
-			memcpy(key_info.szObjectId, value, value_len);
-			key_info.key_len = sizeof(FDHT_KEY_NAME_REF_COUNT) - 1;
-			memcpy(key_info.szKey, FDHT_KEY_NAME_REF_COUNT, \
-					key_info.key_len);
+			memcpy(&ref_count_key, &key_info, sizeof(FDHTKeyInfo));
+			ref_count_key.obj_id_len = value_len;
+			memcpy(ref_count_key.szObjectId, value, value_len);
+			ref_count_key.key_len = sizeof(FDHT_KEY_NAME_REF_COUNT) - 1;
+			memcpy(ref_count_key.szKey, FDHT_KEY_NAME_REF_COUNT, \
+					ref_count_key.key_len);
 			if ((result=fdht_set_ex(pGroupArray, g_keep_alive, \
-				&key_info, FDHT_EXPIRES_NEVER, "0", 1)) != 0)
+				&ref_count_key, FDHT_EXPIRES_NEVER, "0", 1)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, "\
 					"client ip: %s, fdht_set fail,"\
@@ -1400,7 +1398,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 
 			result = storage_binlog_write(pFileContext->timestamp2log, \
 					STORAGE_OP_TYPE_SOURCE_CREATE_FILE, \
-					src_filename);
+					pFileContext->fname2log);
 			if (result != 0)
 			{
 				unlink(pFileContext->filename);
@@ -1409,19 +1407,22 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 
 			result=storage_client_create_link(&trackerServer,NULL,\
 				pFileContext->extra_info.upload.master_filename, \
-				src_filename, filename_len, szFileSig, nSigLen,\
+				pFileContext->fname2log, filename_len, szFileSig, nSigLen,\
 				g_group_name, pFileContext->extra_info.upload.prefix_name, \
 				pFileContext->extra_info.upload.file_ext_name, \
 				pFileContext->fname2log, &filename_len);
 
-			fdfs_quit(&trackerServer);
-			tracker_disconnect_server(&trackerServer);
-
 			if (result != 0)
 			{
+				fdht_delete_ex(pGroupArray, g_keep_alive, &key_info);
+				fdht_delete_ex(pGroupArray, g_keep_alive, &ref_count_key);
+
 				unlink(pFileContext->filename);
 				return result;
 			}
+
+			fdfs_quit(&trackerServer);
+			tracker_disconnect_server(&trackerServer);
 
 			pFileContext->create_flag = STORAGE_CREATE_FLAG_FILE | \
 						    STORAGE_CREATE_FLAG_LINK;
@@ -3723,7 +3724,6 @@ static int storage_create_link(struct fast_task_info *pTask)
 	pFileContext =  &(pClientInfo->file_context);
 
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
-	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	if (nInPackLen <= 3 * FDFS_PROTO_PKG_LEN_SIZE + \
 		FDFS_GROUP_NAME_MAX_LEN + FDFS_FILE_PREFIX_MAX_LEN + \
@@ -3737,6 +3737,7 @@ static int storage_create_link(struct fast_task_info *pTask)
 			 nInPackLen, 4 * FDFS_PROTO_PKG_LEN_SIZE + \
 			FDFS_GROUP_NAME_MAX_LEN + FDFS_FILE_PREFIX_MAX_LEN + \
 			FDFS_FILE_EXT_NAME_MAX_LEN);
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -3749,6 +3750,7 @@ static int storage_create_link(struct fast_task_info *pTask)
 			"client ip: %s, pkg length is not correct, " \
 			"invalid filename length: %d", \
 			__LINE__, pTask->client_ip, src_filename_len);
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -3760,6 +3762,7 @@ static int storage_create_link(struct fast_task_info *pTask)
 	if ((result=storage_split_filename_ex(src_filename, \
 		&src_filename_len, src_true_filename, &store_path_index)) != 0)
 	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 
@@ -3772,6 +3775,7 @@ static int storage_create_link(struct fast_task_info *pTask)
 
 	if ((result=storage_dio_queue_push(pTask)) != 0)
 	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 
