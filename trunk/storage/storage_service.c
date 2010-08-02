@@ -603,8 +603,6 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
-	logInfo("storage_upload_file_done_callback pFileContext->fname2log=%s", pFileContext->fname2log);
-
 	if (err_no == 0)
 	{
 		result = storage_service_upload_file_done(pTask);
@@ -656,8 +654,6 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 
 		pClientInfo->total_length = sizeof(TrackerHeader);
 	}
-
-	logInfo("pClientInfo->total_length upload=%ld, pClientInfo->stage=%d", pClientInfo->total_length, pClientInfo->stage);
 
 	pClientInfo->total_offset = 0;
 	pTask->length = pClientInfo->total_length;
@@ -1953,8 +1949,6 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 	meta_buff = p;
 	*(meta_buff + meta_bytes) = '\0';
 
-	logInfo("==meta: %s", meta_buff);
-
 	sprintf(pFileContext->filename, "%s/data/%s", \
 		g_store_paths[store_path_index], true_filename);
 	if (!fileExists(pFileContext->filename))
@@ -3191,8 +3185,6 @@ static int storage_write_to_file(struct fast_task_info *pTask, \
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
-
-	logInfo("storage_write_to_file pTask->offset=%d, pFileContext->offset=%ld, pFileContext->end=%ld\n", pTask->offset, pFileContext->offset, pFileContext->end);
 
 	return STORAGE_STATUE_DEAL_FILE;
 }

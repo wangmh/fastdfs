@@ -116,16 +116,15 @@ void storage_recv_notify_read(int sock, short event, void *arg)
 			return;
 		}
 
-		logInfo("=====thread index: %d, pClientInfo->sock=%d", pClientInfo->nio_thread_index, pClientInfo->sock);
+		//logInfo("=====thread index: %d, pClientInfo->sock=%d", pClientInfo->nio_thread_index, pClientInfo->sock);
 
 		switch (pClientInfo->stage)
 		{
 			case FDFS_STORAGE_STAGE_NIO_INIT:
-				logInfo("storage_nio_init........");
+				//logInfo("storage_nio_init........");
 				result = storage_nio_init(pTask);
 				break;
 			case FDFS_STORAGE_STAGE_NIO_RECV:
-				logInfo("event_add(&pTask->ev_read rrrrrrrrr, pClientInfo->total_length=%ld, pClientInfo->total_offset=%ld", pClientInfo->total_length, pClientInfo->total_offset);
 				pTask->offset = 0;
 				pTask->length = pClientInfo->total_length - pClientInfo->total_offset;
 				if (pTask->length > pTask->size)
@@ -144,7 +143,6 @@ void storage_recv_notify_read(int sock, short event, void *arg)
 				*/
 				break;
 			case FDFS_STORAGE_STAGE_NIO_SEND:
-				logInfo("storage_send_add_event sssssssss");
 				result = storage_send_add_event(pTask);
 				break;
 			default:
@@ -259,7 +257,7 @@ static void client_sock_read(int sock, short event, void *arg)
 			recv_bytes = pTask->length - pTask->offset;
 		}
 
-		logInfo("recv_bytes=%d, pTask->length=%d, pTask->offset=%d", recv_bytes, pTask->length, pTask->offset);
+		//logInfo("recv_bytes=%d, pTask->length=%d, pTask->offset=%d", recv_bytes, pTask->length, pTask->offset);
 
 		bytes = recv(sock, pTask->data + pTask->offset, recv_bytes, 0);
 		if (bytes < 0)
@@ -337,15 +335,11 @@ static void client_sock_read(int sock, short event, void *arg)
 			{
 				pTask->length = pClientInfo->total_length;
 			}
-
-			logInfo("total_length=====%ld", pClientInfo->total_length);
 		}
 
 		pTask->offset += bytes;
 		if (pTask->offset >= pTask->length) //recv current pkg done
 		{
-			logInfo("total_length=%ld, offset=%ld", pClientInfo->total_length, pClientInfo->total_offset);
-
 			if (pClientInfo->total_offset + pTask->length >= \
 					pClientInfo->total_length)
 			{
