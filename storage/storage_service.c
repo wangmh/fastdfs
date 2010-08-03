@@ -2732,7 +2732,6 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 	pFileContext =  &(pClientInfo->file_context);
 
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
-	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	if (nInPackLen <= 2 * FDFS_PROTO_PKG_LEN_SIZE + \
 			4 + FDFS_GROUP_NAME_MAX_LEN)
@@ -2744,6 +2743,7 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 			pTask->client_ip,  nInPackLen, \
 			2 * FDFS_PROTO_PKG_LEN_SIZE + \
 			4 + FDFS_GROUP_NAME_MAX_LEN);
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -2763,6 +2763,7 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 			"which < 0 or >= %d", \
 			__LINE__, pTask->client_ip, \
 			dest_filename_len, (int)sizeof(dest_filename));
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -2778,6 +2779,7 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 			nInPackLen, 2 * FDFS_PROTO_PKG_LEN_SIZE + \
 			FDFS_GROUP_NAME_MAX_LEN + dest_filename_len + \
 			src_filename_len);
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -2789,11 +2791,13 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 		&dest_filename_len, dest_true_filename, \
 		&dest_store_path_index)) != 0)
 	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 	if ((result=fdfs_check_data_filename(dest_true_filename, \
 			dest_filename_len)) != 0)
 	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
@@ -2813,6 +2817,7 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 
 	if ((result=storage_dio_queue_push(pTask)) != 0)
 	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 
