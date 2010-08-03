@@ -1338,8 +1338,8 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 				&trackerServer, NULL, \
 				pFileContext->extra_info.upload.master_filename, \
 				pSrcFilename, value_len-(pSrcFilename-value),\
-				key_info.szObjectId, \
-				key_info.obj_id_len, pGroupName, \
+				key_info.szObjectId, key_info.obj_id_len, \
+				pGroupName, \
 				pFileContext->extra_info.upload.prefix_name, \
 				pFileContext->extra_info.upload.file_ext_name,\
 				pFileContext->fname2log, &filename_len);
@@ -1425,13 +1425,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 			fdfs_quit(&trackerServer);
 			tracker_disconnect_server(&trackerServer);
 
-			if (result != 0)
-			{
-				return result;
-			}
-
-			pFileContext->create_flag = STORAGE_CREATE_FLAG_FILE | \
-						    STORAGE_CREATE_FLAG_LINK;
+			pFileContext->create_flag = STORAGE_CREATE_FLAG_LINK;
 			return result;
 		}
 		else //error
@@ -1854,7 +1848,6 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 	pFileContext =  &(pClientInfo->file_context);
 
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
-	pClientInfo->total_length = sizeof(TrackerHeader);
 
 	if (nInPackLen <= 2 * FDFS_PROTO_PKG_LEN_SIZE + 1 + \
 			FDFS_GROUP_NAME_MAX_LEN)
@@ -1868,6 +1861,7 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			2 * FDFS_PROTO_PKG_LEN_SIZE + 1 \
 			+ FDFS_GROUP_NAME_MAX_LEN);
 
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -1881,6 +1875,7 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			pTask->client_ip,  nInPackLen, \
 			pTask->size - (int)sizeof(TrackerHeader));
 
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -1895,6 +1890,7 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			"client ip:%s, invalid filename length: %d", \
 			__LINE__, pTask->client_ip, filename_len);
 
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -1910,6 +1906,7 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			__LINE__, pTask->client_ip, \
 			pFileContext->extra_info.setmeta.op_flag);
 
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -1921,6 +1918,7 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			"client ip:%s, invalid meta bytes: %d", \
 			__LINE__, pTask->client_ip, meta_bytes);
 
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -1934,6 +1932,7 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			"not correct, should be: %s", \
 			__LINE__, pTask->client_ip, \
 			group_name, g_group_name);
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -1945,11 +1944,13 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 	if ((result=storage_split_filename_ex(filename, \
 		&true_filename_len, true_filename, &store_path_index)) != 0)
 	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 	if ((result=fdfs_check_data_filename(true_filename, \
 			true_filename_len)) != 0)
 	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 
@@ -1964,7 +1965,8 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			"client ip:%s, filename: %s not exist", \
 			__LINE__, pTask->client_ip, pFileContext->filename);
 
-		return result;
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return ENOENT;
 	}
 
 	pFileContext->timestamp2log = time(NULL);
@@ -2379,13 +2381,38 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 		return ENOENT;
 	}
 
+	pFileContext->extra_info.upload.start_time = time(NULL);
+	pFileContext->extra_info.upload.gen_filename = g_check_file_duplicate;
+	if (pFileContext->extra_info.upload.gen_filename)
+	{
+	*filename = '\0';
+	filename_len = 0;
+	if ((result=storage_get_filename(pClientInfo, \
+			pFileContext->extra_info.upload.start_time, \
+			store_path_index, file_bytes, \
+			file_ext_name, filename, \
+			&filename_len, pFileContext->filename)) != 0)
+	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return result;
+	}
+
+	if (*pFileContext->filename == '\0')
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"Can't generate uniq filename", __LINE__);
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return EBUSY;
+	}
+	}
+	else
+	{
 	if ((result=fdfs_gen_slave_filename(true_filename, \
 		prefix_name, file_ext_name, filename, &filename_len)) != 0)
 	{
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
-
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
 		"%s/data/%s", g_store_paths[store_path_index], filename);
 	if (fileExists(pFileContext->filename))
@@ -2397,19 +2424,18 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EEXIST;
 	}
+	}
 
 	sprintf(pFileContext->fname2log, "%c"STORAGE_DATA_DIR_FORMAT"/%s", \
 			STORAGE_STORE_PATH_PREFIX_CHAR, \
 			store_path_index, filename);
 
 	pFileContext->calc_file_hash = g_check_file_duplicate;
-	pFileContext->extra_info.upload.gen_filename = g_check_file_duplicate;
 
 	strcpy(pFileContext->extra_info.upload.master_filename, master_filename);
 	strcpy(pFileContext->extra_info.upload.prefix_name, prefix_name);
 	strcpy(pFileContext->extra_info.upload.file_ext_name, file_ext_name);
 
-	pFileContext->extra_info.upload.start_time = time(NULL);
 
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
@@ -3673,6 +3699,11 @@ static int storage_do_create_link(struct fast_task_info *pTask)
 			result = EEXIST;
 			break;
 		}
+	}
+	else
+	{
+		*filename = '\0';
+		filename_len = 0;
 	}
 
 	result = storage_service_do_create_link(pTask, store_path_index, \

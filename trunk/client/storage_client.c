@@ -989,12 +989,12 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	if (result == 0 && meta_count > 0)
 	{
 		result = storage_set_metadata(pTrackerServer, \
-			pStorageServer, group_name, remote_filename, \
+			NULL, group_name, remote_filename, \
 			meta_list, meta_count, \
 			STORAGE_SET_METADATA_FLAG_OVERWRITE);
 		if (result != 0)  //rollback
 		{
-			storage_delete_file(pTrackerServer, pStorageServer, \
+			storage_delete_file(pTrackerServer, NULL, \
 				group_name, remote_filename);
 			*group_name = '\0';
 			*remote_filename = '\0';
