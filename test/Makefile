@@ -2,7 +2,7 @@
 
 COMPILE = $(CC) -g -Wall -D_FILE_OFFSET_BITS=64 -DDEBUG
 INC_PATH = -I/usr/local/include
-LIB_PATH = -L/usr/local/lib -lfdfsclient
+LIB_PATH = -L/usr/local/lib -lfastcommon -lfdfsclient
 TARGET_PATH = $(TARGET_PREFIX)/bin
 
 SHARED_OBJS = common_func.o dfs_func.o
