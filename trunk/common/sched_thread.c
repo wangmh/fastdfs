@@ -219,6 +219,9 @@ static void *sched_thread_entrance(void *args)
 
 	g_schedule_flag = false;
 
+	logDebug("file: "__FILE__", line: %d, " \
+		"schedule thread exit", __LINE__);
+
 	return NULL;
 }
 

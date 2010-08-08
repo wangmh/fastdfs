@@ -375,3 +375,52 @@ char *fdfs_pack_metadata(const FDFSMetaData *meta_list, const int meta_count, \
 	return meta_buff;
 }
 
+void tracker_disconnect_server(TrackerServerInfo *pTrackerServer)
+{
+	if (pTrackerServer->sock >= 0)
+	{
+		close(pTrackerServer->sock);
+		pTrackerServer->sock = -1;
+	}
+}
+
+int tracker_connect_server_ex(TrackerServerInfo *pTrackerServer, \
+		const int connect_timeout)
+{
+	int result;
+
+	if (pTrackerServer->sock >= 0)
+	{
+		close(pTrackerServer->sock);
+	}
+	pTrackerServer->sock = socket(AF_INET, SOCK_STREAM, 0);
+	if(pTrackerServer->sock < 0)
+	{
+		logError("socket create failed, errno: %d, " \
+			"error info: %s", errno, strerror(errno));
+		return errno != 0 ? errno : EPERM;
+	}
+
+	if ((result=tcpsetnonblockopt(pTrackerServer->sock)) != 0)
+	{
+		close(pTrackerServer->sock);
+		pTrackerServer->sock = -1;
+		return result;
+	}
+
+	if ((result=connectserverbyip_nb(pTrackerServer->sock, \
+		pTrackerServer->ip_addr, pTrackerServer->port, \
+		connect_timeout)) != 0)
+	{
+		logError("connect to %s:%d fail, errno: %d, " \
+			"error info: %s", pTrackerServer->ip_addr, \
+			pTrackerServer->port, result, strerror(result));
+
+		close(pTrackerServer->sock);
+		pTrackerServer->sock = -1;
+		return result;
+	}
+
+	return 0;
+}
+

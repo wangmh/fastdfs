@@ -145,6 +145,26 @@ typedef struct
 extern "C" {
 #endif
 
+#define tracker_connect_server(pTrackerServer) \
+	tracker_connect_server_ex(pTrackerServer, g_fdfs_connect_timeout)
+/**
+* connect to the tracker server
+* params:
+*	pTrackerServer: tracker server
+*	connect_timeout: connect timeout in seconds
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_connect_server_ex(TrackerServerInfo *pTrackerServer, \
+		const int connect_timeout);
+
+/**
+* close all connections to tracker servers
+* params:
+*	pTrackerServer: tracker server
+* return:
+**/
+void tracker_disconnect_server(TrackerServerInfo *pTrackerServer);
+
 int fdfs_validate_group_name(const char *group_name);
 int metadata_cmp_by_name(const void *p1, const void *p2);
 

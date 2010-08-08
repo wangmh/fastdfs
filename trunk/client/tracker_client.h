@@ -10,6 +10,7 @@
 #define TRACKER_CLIENT_H
 
 #include "tracker_types.h"
+#include "tracker_proto.h"
 #include "client_global.h"
 
 #ifdef __cplusplus
@@ -60,22 +61,6 @@ TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup);
 **/
 int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 		TrackerServerInfo *pTrackerServer);
-
-/**
-* connect to the tracker server
-* params:
-*	pTrackerServer: tracker server
-* return: 0 success, !=0 fail, return the error code
-**/
-int tracker_connect_server(TrackerServerInfo *pTrackerServer);
-
-/**
-* close all connections to tracker servers
-* params:
-*	pTrackerServer: tracker server
-* return:
-**/
-void tracker_disconnect_server(TrackerServerInfo *pTrackerServer);
 
 #define tracker_get_all_connections() \
 	tracker_get_all_connections_ex((&g_tracker_group))

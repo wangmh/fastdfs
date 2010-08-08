@@ -26,54 +26,6 @@
 #include "tracker_client.h"
 #include "client_global.h"
 
-void tracker_disconnect_server(TrackerServerInfo *pTrackerServer)
-{
-	if (pTrackerServer->sock >= 0)
-	{
-		close(pTrackerServer->sock);
-		pTrackerServer->sock = -1;
-	}
-}
-
-int tracker_connect_server(TrackerServerInfo *pTrackerServer)
-{
-	int result;
-
-	if (pTrackerServer->sock >= 0)
-	{
-		close(pTrackerServer->sock);
-	}
-	pTrackerServer->sock = socket(AF_INET, SOCK_STREAM, 0);
-	if(pTrackerServer->sock < 0)
-	{
-		logError("socket create failed, errno: %d, " \
-			"error info: %s", errno, strerror(errno));
-		return errno != 0 ? errno : EPERM;
-	}
-
-	if ((result=tcpsetnonblockopt(pTrackerServer->sock)) != 0)
-	{
-		close(pTrackerServer->sock);
-		pTrackerServer->sock = -1;
-		return result;
-	}
-
-	if ((result=connectserverbyip_nb(pTrackerServer->sock, \
-		pTrackerServer->ip_addr, pTrackerServer->port, \
-		g_fdfs_connect_timeout)) != 0)
-	{
-		logError("connect to %s:%d fail, errno: %d, " \
-			"error info: %s", pTrackerServer->ip_addr, \
-			pTrackerServer->port, result, strerror(result));
-
-		close(pTrackerServer->sock);
-		pTrackerServer->sock = -1;
-		return result;
-	}
-
-	return 0;
-}
-
 int tracker_get_all_connections_ex(TrackerServerGroup *pTrackerGroup)
 {
 	TrackerServerInfo *pServer;

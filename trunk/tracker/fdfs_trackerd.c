@@ -31,6 +31,7 @@
 #include "tracker_mem.h"
 #include "tracker_service.h"
 #include "tracker_global.h"
+#include "tracker_proto.h"
 #include "tracker_func.h"
 
 #ifdef WITH_HTTPD
@@ -50,10 +51,12 @@ static bool bSegmentFault = false;
 #endif
 
 static bool bTerminateFlag = false;
+static bool bAcceptEndFlag = false;
 
 static void sigQuitHandler(int sig);
 static void sigHupHandler(int sig);
 static void sigUsrHandler(int sig);
+static void sigAlarmHandler(int sig);
 
 #if defined(DEBUG_FLAG)
 #if defined(OS_LINUX)
@@ -277,8 +280,10 @@ int main(int argc, char *argv[])
 	log_set_cache(true);
 
 	bTerminateFlag = false;
+	bAcceptEndFlag = false;
 
 	tracker_accept_loop(sock);
+	bAcceptEndFlag = true;
 	if (g_schedule_flag)
 	{
 		pthread_kill(schedule_tid, SIGINT);
@@ -320,15 +325,17 @@ static void sigSegvHandler(int signum, siginfo_t *info, void *ptr)
 
 	if (!bTerminateFlag)
 	{
+		set_timer(1, 1, sigAlarmHandler);
+
 		bTerminateFlag = true;
+		g_continue_flag = false;
+
 		logCrit("file: "__FILE__", line: %d, " \
 			"catch signal %d, program exiting...", \
 			__LINE__, signum);
 	
 		signal_stack_trace_print(signum, info, ptr);
 	}
-
-	g_continue_flag = false;
 }
 #endif
 
@@ -357,19 +364,49 @@ static void sigQuitHandler(int sig)
 {
 	if (!bTerminateFlag)
 	{
+		set_timer(1, 1, sigAlarmHandler);
+
 		bTerminateFlag = true;
+		g_continue_flag = false;
 		logCrit("file: "__FILE__", line: %d, " \
 			"catch signal %d, program exiting...", \
 			__LINE__, sig);
 	}
-
-	g_continue_flag = false;
 }
+
 
 static void sigHupHandler(int sig)
 {
 	logInfo("file: "__FILE__", line: %d, " \
 		"catch signal %d, ignore it", __LINE__, sig);
+}
+
+static void sigAlarmHandler(int sig)
+{
+	TrackerServerInfo server;
+
+	if (bAcceptEndFlag)
+	{
+		return;
+	}
+
+	logDebug("file: "__FILE__", line: %d, " \
+		"signal server to quit...", __LINE__);
+
+	strcpy(server.ip_addr, "127.0.0.1");
+	server.port = g_server_port;
+	server.sock = -1;
+
+	if (tracker_connect_server_ex(&server, 1) != 0)
+	{
+		return;
+	}
+
+	fdfs_quit(&server);
+	tracker_disconnect_server(&server);
+
+	logDebug("file: "__FILE__", line: %d, " \
+		"signal server to quit done", __LINE__);
 }
 
 static void sigUsrHandler(int sig)

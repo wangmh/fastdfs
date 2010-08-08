@@ -425,6 +425,16 @@ int parse_bytes(char *pStr, const int default_unit_bytes, int64_t *bytes);
 */
 int set_rand_seed();
 
+/** parse bytes
+ *  parameters:
+ *  	seconds: remain time for first time, in seconds
+ *  	interval: 
+ *  	sighandler: handler function
+ *  return: error no , 0 success, != 0 fail
+*/
+int set_timer(const int first_remain_seconds, const int interval, \
+		void (*sighandler)(int));
+
 #ifdef __cplusplus
 }
 #endif
