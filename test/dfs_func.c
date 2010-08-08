@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include "fdfs_global.h"
 #include "dfs_func.h"
 #include "fdfs_client.h"
 
