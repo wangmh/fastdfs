@@ -102,7 +102,7 @@ int kill_tracker_report_threads()
 			__LINE__, result, strerror(result));
 	}
 
-	kill_res = kill_work_threads(report_tids, g_tracker_group.server_count);
+	kill_res = kill_work_threads(report_tids, g_tracker_reporter_count);
 
 	if ((result=pthread_mutex_unlock(&reporter_thread_lock)) != 0)
 	{
