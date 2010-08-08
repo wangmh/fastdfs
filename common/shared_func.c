@@ -1858,3 +1858,34 @@ int getExecResult(const char *command, char *output, const int buff_size)
 	return 0;
 }
 
+int set_timer(const int first_remain_seconds, const int interval, \
+		void (*sighandler)(int))
+{
+	struct itimerval value;
+	struct sigaction act;
+
+	memset(&act, 0, sizeof(act));
+	sigemptyset(&act.sa_mask);
+	act.sa_handler = sighandler;
+	if(sigaction(SIGALRM, &act, NULL) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call sigaction fail, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EINVAL;
+	}
+
+	memset(&value, 0, sizeof(value));
+	value.it_interval.tv_sec = interval;
+	value.it_value.tv_sec = first_remain_seconds;
+	if (setitimer(ITIMER_REAL, &value, NULL) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call setitimer fail, errno: %d, error info: %s", \
+			__LINE__, errno, strerror(errno));
+		return errno != 0 ? errno : EINVAL;
+	}
+
+	return 0;
+}
+
