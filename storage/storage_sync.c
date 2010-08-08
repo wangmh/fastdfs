@@ -461,7 +461,8 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	pHeader->cmd = STORAGE_PROTO_CMD_SYNC_CREATE_LINK;
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
-		sizeof(TrackerHeader) + out_body_len, g_fdfs_network_timeout)) != 0)
+		sizeof(TrackerHeader) + out_body_len, \
+		g_fdfs_network_timeout)) != 0)
 	{
 		logError("FILE: "__FILE__", line: %d, " \
 			"send data to storage server %s:%d fail, " \

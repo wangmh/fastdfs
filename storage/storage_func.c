@@ -1186,12 +1186,12 @@ int storage_func_init(const char *filename, \
 		}
 		g_thread_stack_size = (int)thread_stack_size;
 
-		if (g_thread_stack_size < FDFS_WRITE_BUFF_SIZE + 64 * 1024)
+		if (g_thread_stack_size < 64 * 1024)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"item \"thread_stack_size\" %d is invalid, " \
 				"which < %d", __LINE__, g_thread_stack_size, \
-				FDFS_WRITE_BUFF_SIZE + 64 * 1024);
+				64 * 1024);
 			result = EINVAL;
 			break;
 		}

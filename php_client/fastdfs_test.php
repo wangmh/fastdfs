@@ -3,6 +3,13 @@
  $remote_filename = "M00/28/E3/U6Q-CkrMFUgAAAAAAAAIEBucRWc5452.h";
  $file_id = $group_name . FDFS_FILE_ID_SEPERATOR . $remote_filename;
 
+ /*
+ $file_id = $group_name . FDFS_FILE_ID_SEPERATOR . 'M00/00/02/wKjRbExc_qIAAAAAAABtNw6hsnM56585.part2.c';
+
+ var_dump(fastdfs_get_file_info($file_id));
+ exit(1);
+ */
+
  echo 'fastdfs_tracker_make_all_connections result: ' . fastdfs_tracker_make_all_connections() . "\n";
  var_dump(fastdfs_tracker_list_groups());
 
@@ -54,7 +61,7 @@
 
 	$master_filename = $remote_filename;
 	$prefix_name = '.part1';
-	$slave_file_info = fastdfs_storage_upload_slave_by_filename("/usr/include/stdlib.h", 
+	$slave_file_info = fastdfs_storage_upload_slave_by_filename("/usr/include/stdio.h", 
 		$group_name, $master_filename, $prefix_name);
         if ($slave_file_info !== false)
         {
@@ -81,7 +88,7 @@
  {
 	$master_file_id = $file_id;
 	$prefix_name = '.part2';
-	$slave_file_id = fastdfs_storage_upload_slave_by_filename1("/usr/include/string.h", 
+	$slave_file_id = fastdfs_storage_upload_slave_by_filename1("/usr/include/stdio.h", 
 		$master_file_id, $prefix_name);
 	if ($slave_file_id !== false)
 	{
@@ -233,7 +240,7 @@
 
 	$master_filename = $remote_filename;
 	$prefix_name = '.part1';
-	$slave_file_info = $fdfs->storage_upload_slave_by_filename("/usr/include/stdlib.h", 
+	$slave_file_info = $fdfs->storage_upload_slave_by_filename("/usr/include/stdio.h", 
 		$group_name, $master_filename, $prefix_name);
         if ($slave_file_info !== false)
         {
@@ -255,18 +262,19 @@
 	echo "delete file return: " . $fdfs->storage_delete_file($file_info['group_name'], $file_info['filename']) . "\n";
  }
 
- $file_id = $fdfs->storage_upload_by_filename1("/usr/include/stdio.h", "c", array('width'=>1024, 'height'=>800, 'font'=>'Aris'));
+ $file_ext_name = 'c';
+ $file_id = $fdfs->storage_upload_by_filename1("/usr/include/stdio.h", $file_ext_name, array('width'=>1024, 'height'=>800, 'font'=>'Aris'));
  if ($file_id)
  {
 	$master_file_id = $file_id;
 	$prefix_name = '.part2';
-	$slave_file_id = $fdfs->storage_upload_slave_by_filename1("/usr/include/string.h", 
-		$master_file_id, $prefix_name);
+	$slave_file_id = $fdfs->storage_upload_slave_by_filename1("/usr/include/stdio.h", 
+		$master_file_id, $prefix_name, $file_ext_name);
 	if ($slave_file_id !== false)
 	{
 	var_dump($slave_file_id);
 
-	$generated_file_id = $fdfs->gen_slave_filename($master_file_id, $prefix_name);
+	$generated_file_id = $fdfs->gen_slave_filename($master_file_id, $prefix_name, $file_ext_name);
 	if ($slave_file_id != $generated_file_id)
 	{
 		echo "${slave_file_id}\n != \n${generated_file_id}\n";

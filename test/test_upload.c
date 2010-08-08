@@ -352,8 +352,11 @@ static int test_init()
 
 	if (access("upload", 0) != 0 && mkdir("upload", 0755) != 0)
 	{
-		printf("mkdir fail, errno: %d, error info: %s\n", errno, strerror(errno));
-		return errno != 0 ? errno : EPERM;
+		if (errno != ENOENT)
+		{
+			printf("mkdir fail, errno: %d, error info: %s\n", errno, strerror(errno));
+			return errno != 0 ? errno : EPERM;
+		}
 	}
 
 	if (chdir("upload") != 0)

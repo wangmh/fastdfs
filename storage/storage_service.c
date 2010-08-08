@@ -299,28 +299,31 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 
 	sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, \
 			pFileContext->filename);
-	if (unlink(meta_filename) != 0)
+	if (fileExists(meta_filename))
 	{
-		if (errno != ENOENT)
+		if (unlink(meta_filename) != 0)
 		{
-			result = errno != 0 ? errno : EACCES;
-			logError("file: "__FILE__", line: %d, " \
-				"client ip: %s, delete file %s fail," \
-				"errno: %d, error info: %s", __LINE__, \
-				pTask->client_ip, meta_filename, \
-				result, strerror(result));
-			return result;
+			if (errno != ENOENT)
+			{
+				result = errno != 0 ? errno : EACCES;
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s, delete file %s fail," \
+					"errno: %d, error info: %s", __LINE__,\
+					pTask->client_ip, meta_filename, \
+					result, strerror(result));
+				return result;
+			}
 		}
-	}
-	else
-	{
-		sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, \
-				pFileContext->fname2log);
-		result = storage_binlog_write(time(NULL), \
-			STORAGE_OP_TYPE_SOURCE_DELETE_FILE, meta_filename);
-		if (result != 0)
+		else
 		{
-			return result;
+			sprintf(meta_filename, "%s"STORAGE_META_FILE_EXT, \
+					pFileContext->fname2log);
+			result = storage_binlog_write(time(NULL), \
+				STORAGE_OP_TYPE_SOURCE_DELETE_FILE, meta_filename);
+			if (result != 0)
+			{
+				return result;
+			}
 		}
 	}
 
