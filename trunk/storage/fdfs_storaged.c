@@ -382,7 +382,14 @@ static void sigAlarmHandler(int sig)
 	logDebug("file: "__FILE__", line: %d, " \
 		"signal server to quit...", __LINE__);
 
-	strcpy(server.ip_addr, "127.0.0.1");
+	if (*g_bind_addr != '\0')
+	{
+		strcpy(server.ip_addr, g_bind_addr);
+	}
+	else
+	{
+		strcpy(server.ip_addr, "127.0.0.1");
+	}
 	server.port = g_server_port;
 	server.sock = -1;
 

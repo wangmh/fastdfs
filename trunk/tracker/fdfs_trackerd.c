@@ -53,6 +53,8 @@ static bool bSegmentFault = false;
 static bool bTerminateFlag = false;
 static bool bAcceptEndFlag = false;
 
+static char bind_addr[IP_ADDRESS_SIZE];
+
 static void sigQuitHandler(int sig);
 static void sigHupHandler(int sig);
 static void sigUsrHandler(int sig);
@@ -71,7 +73,6 @@ static void sigDumpHandler(int sig);
 int main(int argc, char *argv[])
 {
 	char *conf_filename;
-	char bind_addr[IP_ADDRESS_SIZE];
 	int result;
 	int sock;
 	pthread_t schedule_tid;
@@ -393,7 +394,14 @@ static void sigAlarmHandler(int sig)
 	logDebug("file: "__FILE__", line: %d, " \
 		"signal server to quit...", __LINE__);
 
-	strcpy(server.ip_addr, "127.0.0.1");
+	if (*bind_addr != '\0')
+	{
+		strcpy(server.ip_addr, bind_addr);
+	}
+	else
+	{
+		strcpy(server.ip_addr, "127.0.0.1");
+	}
 	server.port = g_server_port;
 	server.sock = -1;
 
