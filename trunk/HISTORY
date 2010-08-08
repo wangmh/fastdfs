@@ -1,4 +1,4 @@
-Version 2.0  2010-08-01
+Version 2.0  2010-08-08
  * tracker network io use libevent instead of traditional io model
  * storage network io use libevent instead of traditional io model
  * storage disk read/write use separate threads
@@ -8,6 +8,7 @@ Version 2.0  2010-08-01
    storage_sync_file_max_time
  * client tracker_get_connection increase server_index correctly
  * storage sync to storage server adds active test
+ * test programs compile ok
 
 Version 1.29  2010-06-30
  * add files: tracker_dump.h and tracker_dump.c, tracker dump global vars
