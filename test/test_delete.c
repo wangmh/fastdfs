@@ -440,11 +440,6 @@ static int test_init()
 
 	if (access("delete", 0) != 0 && mkdir("delete", 0755) != 0)
 	{
-		if (errno != ENOENT)
-		{
-			printf("mkdir fail, errno: %d, error info: %s\n", errno, strerror(errno));
-			return errno != 0 ? errno : EPERM;
-		}
 	}
 
 	if (chdir("delete") != 0)
