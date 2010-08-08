@@ -476,11 +476,6 @@ static int test_init()
 
 	if (access("download", 0) != 0 && mkdir("download", 0755) != 0)
 	{
-		if (errno != ENOENT)
-		{
-			printf("mkdir fail, errno: %d, error info: %s\n", errno, strerror(errno));
-			return errno != 0 ? errno : EPERM;
-		}
 	}
 
 	if (chdir("download") != 0)
