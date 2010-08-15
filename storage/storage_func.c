@@ -1029,7 +1029,7 @@ int storage_func_init(const char *filename, \
 		}
 
 		g_disk_rw_separated = iniGetBoolValue(NULL, \
-				"disk_rw_separated", &iniContext, false);
+				"disk_rw_separated", &iniContext, true);
 
 		g_disk_reader_threads = iniGetIntValue(NULL, \
 				"disk_reader_threads", \

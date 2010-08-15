@@ -40,7 +40,7 @@ RETVAL=0
 
 start() {
  	echo -n $"Starting FastDFS storage server: "
-	$CMD
+	$CMD &
 	RETVAL=$?
 	echo
 	return $RETVAL
@@ -54,7 +54,7 @@ rhstatus() {
 	status fdfs_storaged
 }
 restart() {
-        /usr/local/bin/restart.sh $CMD
+        /usr/local/bin/restart.sh $CMD &
 }
 
 case "$1" in

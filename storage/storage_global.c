@@ -28,7 +28,7 @@ int g_max_connections = DEFAULT_MAX_CONNECTONS;
 int g_work_threads = DEFAULT_WORK_THREADS;
 int g_buff_size = STORAGE_DEFAULT_BUFF_SIZE;
 
-bool g_disk_rw_separated = false;
+bool g_disk_rw_separated = true;
 int g_disk_reader_threads = DEFAULT_DISK_READER_THREADS;
 int g_disk_writer_threads = DEFAULT_DISK_WRITER_THREADS;
 
