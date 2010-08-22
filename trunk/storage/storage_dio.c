@@ -409,7 +409,8 @@ int dio_deal_task(struct fast_task_info *pTask)
 				logError("file: "__FILE__", line: %d, " \
 					"delete file: %s fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, errno, strerror(errno));
+					__LINE__, pFileContext->filename, \
+					errno, strerror(errno));
 			}
 		}
 		}
