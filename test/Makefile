@@ -6,6 +6,7 @@ LIB_PATH = -L/usr/local/lib -lfdfsclient -lfastcommon
 TARGET_PATH = $(TARGET_PREFIX)/bin
 
 SHARED_OBJS = common_func.o dfs_func.o
+#SHARED_OBJS = common_func.o dfs_func_pc.o
 
 ALL_OBJS = $(SHARED_OBJS)
 
