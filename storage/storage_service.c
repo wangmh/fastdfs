@@ -1266,6 +1266,7 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 		char *remote_filename, int *filename_len)
 {
 	int result;
+	int src_store_path_index;
 	TrackerServerInfo trackerServer;
 	TrackerServerInfo storageServer;
 	TrackerServerInfo *pStorageServer;
@@ -1320,14 +1321,19 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 			src_file_sig_len);
 		*(sourceFileInfo.src_file_sig + src_file_sig_len) = '\0';
 
-		memcpy(sourceFileInfo.src_true_filename, src_filename, \
-			src_filename_len);
-		*(sourceFileInfo.src_true_filename + src_filename_len) = '\0';
+		*filename_len = src_filename_len;
+		if ((result=storage_split_filename_ex(src_filename, \
+			filename_len, sourceFileInfo.src_true_filename, \
+			&src_store_path_index)) != 0)
+		{
+			tracker_disconnect_server(&trackerServer);
+			return result;
+		}
 
 		result = storage_create_link_core(pTask, \
-			pFileContext->extra_info.upload.store_path_index, \
-			&sourceFileInfo, src_filename, master_filename, \
-			strlen(master_filename), prefix_name, file_ext_name, \
+			src_store_path_index, &sourceFileInfo, src_filename, \
+			master_filename, strlen(master_filename), \
+			prefix_name, file_ext_name, \
 			remote_filename, filename_len);
 	}
 	else
