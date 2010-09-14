@@ -24,42 +24,122 @@ static TrackerServerInfo *pTrackerServer;
 
 static int list_all_groups(const char *group_name);
 
+static void usage(char *argv[])
+{
+	printf("Usage: %s <config_file> [-h <tracker_server>] [list|delete <group_name> " \
+		"[storage_ip]]\n", argv[0]);
+}
+
 int main(int argc, char *argv[])
 {
 	char *conf_filename;
 	int result;
 	char *op_type;
+	char *tracker_server;
+	int arg_index;
+	char *group_name;
 
 	if (argc < 2)
 	{
-		printf("Usage: %s <config_file> [list|delete <group_name> " \
-			"[storage_ip]]\n", argv[0]);
+		usage(argv);
 		return 1;
 	}
 
-	if (argc == 2)
+	tracker_server = NULL;
+	conf_filename = argv[1];
+	arg_index = 2;
+
+	if (arg_index >= argc)
 	{
 		op_type = "list";
 	}
 	else
 	{
-		op_type = argv[2];
+		int len;
+
+		len = strlen(argv[arg_index]); 
+		if (len >= 2 && strncmp(argv[arg_index], "-h", 2) == 0)
+		{
+			if (len == 2)
+			{
+				arg_index++;
+				if (arg_index >= argc)
+				{
+					usage(argv);
+					return 1;
+				}
+
+				tracker_server = argv[arg_index++];
+			}
+			else
+			{
+				tracker_server = argv[arg_index] + 2;
+				arg_index++;
+			}
+
+			if (arg_index < argc)
+			{
+				op_type = argv[arg_index++];
+			}
+			else
+			{
+				op_type = "list";
+			}
+		}
+		else
+		{
+			op_type = argv[arg_index++];
+		}
 	}
 
 	log_init();
 	//log_set_cache(false);
 
-	conf_filename = argv[1];
 	if ((result=fdfs_client_init(conf_filename)) != 0)
 	{
 		return result;
 	}
 
-	if (g_tracker_group.server_count > 1)
+	if (tracker_server == NULL)
 	{
-		srand(time(NULL));
-		rand();  //discard the first
-		g_tracker_group.server_index = (int)((g_tracker_group.server_count * (double)rand()) / (double)RAND_MAX);
+		if (g_tracker_group.server_count > 1)
+		{
+			srand(time(NULL));
+			rand();  //discard the first
+			g_tracker_group.server_index = (int)( \
+				(g_tracker_group.server_count * (double)rand()) \
+				/ (double)RAND_MAX);
+		}
+	}
+	else
+	{
+		int i;
+		char ip_addr[IP_ADDRESS_SIZE];
+
+		*ip_addr = '\0';
+		if (getIpaddrByName(tracker_server, ip_addr, sizeof(ip_addr)) \
+			 == INADDR_NONE)
+		{
+			printf("resolve ip address of tracker server: %s " \
+				"fail!\n", tracker_server);
+			return 2;
+		}
+
+		for (i=0; i<g_tracker_group.server_count; i++)
+		{
+			if (strcmp(g_tracker_group.servers[i].ip_addr, \
+					ip_addr) == 0)
+			{
+				g_tracker_group.server_index = i;
+				break;
+			}
+		}
+
+		if (i == g_tracker_group.server_count)
+		{
+			printf("tracker server: %s not exists!\n", tracker_server);
+			return 2;
+		}
 	}
 
 	printf("server_count=%d, server_index=%d\n", g_tracker_group.server_count, g_tracker_group.server_index);
@@ -72,15 +152,24 @@ int main(int argc, char *argv[])
 	}
 	printf("\ntracker server is %s:%d\n\n", pTrackerServer->ip_addr, pTrackerServer->port);
 
+	if (arg_index < argc)
+	{
+		group_name = argv[arg_index++];
+	}
+	else
+	{
+		group_name = NULL;
+	}
+
 	if (strcmp(op_type, "list") == 0)
 	{
-		if (argc <= 3)
+		if (group_name == NULL)
 		{
 			result = list_all_groups(NULL);
 		}
 		else
 		{
-			result = list_all_groups(argv[3]);
+			result = list_all_groups(group_name);
 		}
 
 		if (fdfs_quit(pTrackerServer) != 0)
@@ -89,25 +178,32 @@ int main(int argc, char *argv[])
 	}
 	else if (strcmp(op_type, "delete") == 0)
 	{
-		if (argc < 5)
+		char *storage_ip;
+		if (arg_index >= argc)
 		{
-			printf("Usage: %s <config_file> delete <group_name> " \
-				"<storage_ip>\n", argv[0]);
+			usage(argv);
 			return 1;
 		}
 
+		storage_ip = argv[arg_index++];
+
 		if ((result=tracker_delete_storage(&g_tracker_group, \
-				argv[3], argv[4])) == 0)
+				group_name, storage_ip)) == 0)
 		{
 			printf("delete storage server %s::%s success\n", \
-				argv[3], argv[4]);
+				group_name, storage_ip);
 		}
 		else
 		{
 			printf("delete storage server %s::%s fail, " \
 				"error no: %d, error info: %s\n", \
-				argv[3], argv[4], result, strerror(result));
+				group_name, storage_ip, result, strerror(result));
 		}
+	}
+	else
+	{
+		printf("Invalid command %s\n\n", op_type);
+		usage(argv);
 	}
 
 	tracker_close_all_connections();
