@@ -4294,7 +4294,7 @@ static int load_config_files()
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"fastdht_client.ini must have item " \
-			"\"base_path\"!", __LINE__);
+			"\"%s\"!", __LINE__, ITEM_NAME_BASE_PATH);
 		return ENOENT;
 	}
 

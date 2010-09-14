@@ -1,4 +1,8 @@
-Version 2.0  2010-08-22
+
+Version 2.01  2010-09-14
+ * client/fdfs_monitor.c can specify tracker server
+
+Version 2.00  2010-08-22
  * tracker network io use libevent instead of traditional io model
  * storage network io use libevent instead of traditional io model
  * storage disk read/write use separate threads
