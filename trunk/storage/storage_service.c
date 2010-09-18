@@ -1577,7 +1577,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	strcpy(pFileContext->filename, new_full_filename);
 	sprintf(pFileContext->fname2log, \
 		"%c"STORAGE_DATA_DIR_FORMAT"/%s", \
-		STORAGE_STORE_PATH_PREFIX_CHAR, \
+		FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
 		pFileContext->extra_info.upload.store_path_index, new_filename);
 
 	return 0;
@@ -1629,7 +1629,7 @@ static int storage_service_do_create_link(struct fast_task_info *pTask, \
 	}
 
 	*filename_len=sprintf(full_filename, "%c"STORAGE_DATA_DIR_FORMAT"/%s", \
-			STORAGE_STORE_PATH_PREFIX_CHAR, \
+			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
 			store_path_index, filename);
 	memcpy(filename, full_filename, (*filename_len) + 1);
 
@@ -1650,7 +1650,7 @@ static int storage_service_do_create_link(struct fast_task_info *pTask, \
 		key_info.obj_id_len = snprintf(key_info.szObjectId, \
 			sizeof(key_info.szObjectId), \
 			"%s/%c"STORAGE_DATA_DIR_FORMAT"/%s", \
-			g_group_name, STORAGE_STORE_PATH_PREFIX_CHAR, \
+			g_group_name, FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
 			store_path_index, pSrcFileInfo->src_true_filename);
 
 		key_info.key_len = sizeof(FDHT_KEY_NAME_REF_COUNT) - 1;
@@ -2315,7 +2315,7 @@ static int storage_upload_file(struct fast_task_info *pTask)
 	}
 
 	sprintf(pFileContext->fname2log, "%c"STORAGE_DATA_DIR_FORMAT"/%s", \
-			STORAGE_STORE_PATH_PREFIX_CHAR, \
+			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
 			store_path_index, filename);
 
 	strcpy(pFileContext->extra_info.upload.file_ext_name, file_ext_name);
@@ -2518,7 +2518,7 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	}
 
 	sprintf(pFileContext->fname2log, "%c"STORAGE_DATA_DIR_FORMAT"/%s", \
-			STORAGE_STORE_PATH_PREFIX_CHAR, \
+			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
 			store_path_index, filename);
 
 	pFileContext->calc_file_hash = g_check_file_duplicate;
@@ -2922,7 +2922,7 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 			dest_true_filename);
 
 	sprintf(pFileContext->fname2log, "%c"STORAGE_DATA_DIR_FORMAT"/%s", \
-		STORAGE_STORE_PATH_PREFIX_CHAR, \
+		FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
 		dest_store_path_index, dest_true_filename);
 
 	pClientInfo->deal_func = storage_do_sync_link_file;

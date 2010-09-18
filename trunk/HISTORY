@@ -1,6 +1,8 @@
 
-Version 2.01  2010-09-14
+Version 2.01  2010-09-18
  * client/fdfs_monitor.c can specify tracker server
+ * micro STORAGE_STORE_PATH_PREFIX_CHAR change to 
+   FDFS_STORAGE_STORE_PATH_PREFIX_CHAR
 
 Version 2.00  2010-08-22
  * tracker network io use libevent instead of traditional io model

@@ -435,7 +435,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	}
 
 	sprintf(out_buff, "%c"STORAGE_DATA_DIR_FORMAT"/", \
-			STORAGE_STORE_PATH_PREFIX_CHAR, src_path_index);
+			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, src_path_index);
 	memcpy(pSrcFilename, out_buff, 4);
 
 	pHeader = (TrackerHeader *)out_buff;

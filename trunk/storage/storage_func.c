@@ -1464,7 +1464,7 @@ int storage_func_destroy()
 		return EINVAL; \
 	} \
  \
-	if (*logic_filename != STORAGE_STORE_PATH_PREFIX_CHAR) \
+	if (*logic_filename != FDFS_STORAGE_STORE_PATH_PREFIX_CHAR) \
 	{ /* version < V1.12 */ \
 		store_path_index = 0; \
 		memcpy(true_filename, logic_filename, (*filename_len)+1); \
