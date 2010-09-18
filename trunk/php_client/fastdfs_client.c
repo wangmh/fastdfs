@@ -4357,7 +4357,7 @@ static int load_config_files()
 	{
 		if (log_filename.value.str.len > 0)
 		{
-			log_set_prefix(g_fdfs_base_path, log_filename.value.str.val);
+			log_set_filename(log_filename.value.str.val);
 		}
 	}
 
