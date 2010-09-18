@@ -79,6 +79,8 @@
 
 #define FDFS_DOMAIN_NAME_MAX_SIZE	128
 
+#define FDFS_STORAGE_STORE_PATH_PREFIX_CHAR  'M'
+
 typedef struct
 {
 	char status;

@@ -27,7 +27,6 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 #define HTTPD_MAX_PARAMS   32
 	char *url;
 	char *file_id;
-	char uri[256];
 	int url_len;
 	int uri_len;
 	KeyValuePair params[HTTPD_MAX_PARAMS];
@@ -71,21 +70,10 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 		uri_len = url_len;
 	}
 
-	if (uri_len + 1 >= sizeof(uri))
+	if (uri_len + 1 >= 256)
 	{
 		evhttp_send_error(req, HTTP_BADREQUEST, "Bad request");
 		return;
-	}
-
-	if (*url != '/')
-	{
-		*uri = '/';
-		memcpy(uri+1, url, uri_len+1);
-		uri_len++;
-	}
-	else
-	{
-		memcpy(uri, url, uri_len+1);
 	}
 
 	param_count = http_parse_query(url, params, HTTPD_MAX_PARAMS);

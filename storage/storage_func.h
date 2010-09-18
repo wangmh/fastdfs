@@ -13,7 +13,6 @@
 
 #define STORAGE_DATA_DIR_FORMAT		"%02X"
 #define STORAGE_META_FILE_EXT		"-m"
-#define STORAGE_STORE_PATH_PREFIX_CHAR	'M'
 
 #ifdef __cplusplus
 extern "C" {
