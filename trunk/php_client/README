@@ -31,15 +31,11 @@ vi /etc/php/fastdfs_client.ini
 php fastdfs_test.php
 
 
-####parameters in fastdfs_client.ini####
-fastdfs_client.tracker_group_count: config file count, default value is 1
-fastdfs_client.tracker_group#: config filename, must include absolute path, 
-                             # means number, base 0,
-                             such as fastdfs_client.tracker_group0
-			     the config file is same as conf/client.conf
-
-
 FastDFS PHP functions:
+
+string fastdfs_client_version()
+return client library version
+
 
 long fastdfs_get_last_error_no()
 return last error no

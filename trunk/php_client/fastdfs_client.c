@@ -79,6 +79,7 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 
 // Every user visible function must have an entry in fastdfs_client_functions[].
 	function_entry fastdfs_client_functions[] = {
+		ZEND_FE(fastdfs_client_version, NULL)
 		ZEND_FE(fastdfs_active_test, NULL)
 		ZEND_FE(fastdfs_connect_server, NULL)
 		ZEND_FE(fastdfs_disconnect_server, NULL)
@@ -2859,6 +2860,21 @@ ZEND_FUNCTION(fastdfs_get_last_error_info)
 
 	error_info = strerror(php_context.err_no);
 	RETURN_STRINGL(error_info, strlen(error_info), 1);
+}
+
+/*
+string fastdfs_client_version()
+return client library version
+*/
+ZEND_FUNCTION(fastdfs_client_version)
+{
+	char szVersion[16];
+	int len;
+
+	len = sprintf(szVersion, "%d.%02d", \
+		g_fdfs_version.major, g_fdfs_version.minor);
+
+	RETURN_STRINGL(szVersion, len, 1);
 }
 
 /*

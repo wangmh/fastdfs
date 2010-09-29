@@ -1310,7 +1310,7 @@ int storage_func_init(const char *filename, \
 			"buff_size=%dKB, heart_beat_interval=%ds, " \
 			"stat_report_interval=%ds, tracker_server_count=%d, " \
 			"sync_wait_msec=%dms, sync_interval=%dms, " \
-			"sync_start_time=%02d:%02d, sync_end_time: %02d:%02d, "\
+			"sync_start_time=%02d:%02d, sync_end_time=%02d:%02d, "\
 			"write_mark_file_freq=%d, " \
 			"allow_ip_count=%d, " \
 			"file_distribute_path_mode=%d, " \
