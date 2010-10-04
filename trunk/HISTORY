@@ -4,6 +4,7 @@ Version 2.01  2010-10-04
  * micro STORAGE_STORE_PATH_PREFIX_CHAR change to 
    FDFS_STORAGE_STORE_PATH_PREFIX_CHAR
  * php extension can set log filename
+ * php extension add function: fastdfs_client_version
  * bug fixed: client/tracker_client.c tracker_get_connection_ex NULL pointer
 
 Version 2.00  2010-08-22

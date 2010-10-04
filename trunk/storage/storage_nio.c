@@ -109,24 +109,27 @@ void storage_recv_notify_read(int sock, short event, void *arg)
 			struct storage_nio_thread_data *pThreadData;
 			struct timeval tv;
 
-			pThreadData = g_nio_thread_data + pClientInfo->nio_thread_index;
+			pThreadData = g_nio_thread_data + \
+					pClientInfo->nio_thread_index;
                         tv.tv_sec = 1;
                         tv.tv_usec = 0;
 			event_base_loopexit(pThreadData->ev_base, &tv);
 			return;
 		}
 
-		//logInfo("=====thread index: %d, pClientInfo->sock=%d", pClientInfo->nio_thread_index, pClientInfo->sock);
+		/* //logInfo("=====thread index: %d, pClientInfo->sock=%d", \
+			pClientInfo->nio_thread_index, pClientInfo->sock);
+		*/
 
 		switch (pClientInfo->stage)
 		{
 			case FDFS_STORAGE_STAGE_NIO_INIT:
-				//logInfo("storage_nio_init........");
 				result = storage_nio_init(pTask);
 				break;
 			case FDFS_STORAGE_STAGE_NIO_RECV:
 				pTask->offset = 0;
-				pTask->length = pClientInfo->total_length - pClientInfo->total_offset;
+				pTask->length = pClientInfo->total_length - \
+						pClientInfo->total_offset;
 				if (pTask->length > pTask->size)
 				{
 					pTask->length = pTask->size;
@@ -201,7 +204,6 @@ static int storage_nio_init(struct fast_task_info *pTask)
 
 int storage_send_add_event(struct fast_task_info *pTask)
 {
-
 	pTask->offset = 0;
 
 	/* direct send */
@@ -257,7 +259,8 @@ static void client_sock_read(int sock, short event, void *arg)
 			recv_bytes = pTask->length - pTask->offset;
 		}
 
-		//logInfo("recv_bytes=%d, pTask->length=%d, pTask->offset=%d", recv_bytes, pTask->length, pTask->offset);
+		//logInfo("recv_bytes=%d, pTask->length=%d, pTask->offset=%d",
+		//		recv_bytes, pTask->length, pTask->offset);
 
 		bytes = recv(sock, pTask->data + pTask->offset, recv_bytes, 0);
 		if (bytes < 0)
@@ -441,7 +444,7 @@ static void client_sock_write(int sock, short event, void *arg)
 
 				pClientInfo->stage = FDFS_STORAGE_STAGE_NIO_RECV;
 				if ((result=event_add(&pTask->ev_read, \
-							&g_network_tv)) != 0)
+						&g_network_tv)) != 0)
 				{
 					task_finish_clean_up(pTask);
 
