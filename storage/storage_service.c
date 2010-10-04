@@ -911,7 +911,8 @@ void storage_accept_loop(int server_sock)
 	while (g_continue_flag)
 	{
 		sockaddr_len = sizeof(inaddr);
-		incomesock = accept(server_sock, (struct sockaddr*)&inaddr, &sockaddr_len);
+		incomesock = accept(server_sock, (struct sockaddr*)&inaddr, \
+					&sockaddr_len);
 		if (incomesock < 0) //error
 		{
 			if (!(errno == EINTR || errno == EAGAIN))
