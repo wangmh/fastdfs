@@ -60,6 +60,7 @@ void tracker_close_all_connections_ex(TrackerServerGroup *pTrackerGroup)
 TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
 {
 	TrackerServerInfo *pCurrentServer;
+	TrackerServerInfo *pResult;
 	TrackerServerInfo *pServer;
 	TrackerServerInfo *pEnd;
 	int server_index;
@@ -70,22 +71,24 @@ TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
 		server_index = 0;
 	}
 
+	pResult = NULL;
+
 	do
 	{
 	pCurrentServer = pTrackerGroup->servers + server_index;
 	if (pCurrentServer->sock >= 0 ||
 		tracker_connect_server(pCurrentServer) == 0)
 	{
+		pResult = pCurrentServer;
 		break;
 	}
 
-	pCurrentServer = NULL;
 	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pCurrentServer+1; pServer<pEnd; pServer++)
 	{
 		if (pServer->sock >= 0 || tracker_connect_server(pServer) == 0)
 		{
-			pCurrentServer = pServer;
+			pResult = pServer;
 			pTrackerGroup->server_index = pServer - \
 							pTrackerGroup->servers;
 			break;
@@ -96,7 +99,7 @@ TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
 	{
 		if (pServer->sock >= 0 || tracker_connect_server(pServer) == 0)
 		{
-			pCurrentServer = pServer;
+			pResult = pServer;
 			pTrackerGroup->server_index = pServer - \
 							pTrackerGroup->servers;
 			break;
@@ -110,7 +113,7 @@ TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
 		pTrackerGroup->server_index = 0;
 	}
 
-	return pCurrentServer;
+	return pResult;
 }
 
 int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
