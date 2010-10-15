@@ -44,11 +44,12 @@
 
 #if defined(DEBUG_FLAG) 
 
+/*
 #if defined(OS_LINUX)
 #include "linux_stack_trace.h"
-
 static bool bSegmentFault = false;
 #endif
+*/
 
 #include "storage_dump.h"
 #endif
@@ -63,9 +64,11 @@ static void sigAlarmHandler(int sig);
 
 #if defined(DEBUG_FLAG)
 
+/*
 #if defined(OS_LINUX)
 static void sigSegvHandler(int signum, siginfo_t *info, void *ptr);
 #endif
+*/
 
 static void sigDumpHandler(int sig);
 #endif
@@ -214,6 +217,7 @@ int main(int argc, char *argv[])
 
 #if defined(DEBUG_FLAG)
 
+/*
 #if defined(OS_LINUX)
 	memset(&act, 0, sizeof(act));
         act.sa_sigaction = sigSegvHandler;
@@ -227,6 +231,7 @@ int main(int argc, char *argv[])
 		return errno;
 	}
 #endif
+*/
 
 	memset(&act, 0, sizeof(act));
 	sigemptyset(&act.sa_mask);
@@ -333,6 +338,7 @@ int main(int argc, char *argv[])
 		g_schedule_flag)
 	{
 
+/*
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
 		if (bSegmentFault)
 		{
@@ -340,6 +346,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 #endif
+*/
 
 		usleep(50000);
 	}
@@ -419,6 +426,7 @@ static void sigUsrHandler(int sig)
 
 #if defined(DEBUG_FLAG)
 
+/*
 #if defined(OS_LINUX)
 static void sigSegvHandler(int signum, siginfo_t *info, void *ptr)
 {
@@ -439,6 +447,7 @@ static void sigSegvHandler(int signum, siginfo_t *info, void *ptr)
 	}
 }
 #endif
+*/
 
 static void sigDumpHandler(int sig)
 {

@@ -217,7 +217,7 @@ int storage_dio_get_thread_index(struct fast_task_info *pTask, \
 		count = pThreadData->count;
 	}
 
-	pContext = contexts + (pClientInfo->sock % count);
+	pContext = contexts + (((unsigned int)pClientInfo->sock) % count);
 	return pContext - g_dio_contexts;
 }
 
