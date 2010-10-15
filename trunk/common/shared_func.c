@@ -415,9 +415,21 @@ void daemon_init(bool bCloseFiles)
 	{
 		exit(0);
 	}
-	
+
+#ifdef DEBUG_FLAG
+	#define MAX_CORE_FILE_SIZE  (256 * 1024 * 1024)
+	if (set_rlimit(RLIMIT_CORE, MAX_CORE_FILE_SIZE) != 0)
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"set max core dump file size to %d MB fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, MAX_CORE_FILE_SIZE / (1024 * 1024), \
+			errno, strerror(errno));
+	}
+#else
 	chdir("/");
-	
+#endif
+
 	if (bCloseFiles)
 	{
 		for(i=0; i<=2; i++)

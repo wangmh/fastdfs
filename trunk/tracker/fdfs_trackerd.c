@@ -41,11 +41,12 @@
 
 #if defined(DEBUG_FLAG)
 
+/*
 #if defined(OS_LINUX)
 #include "linux_stack_trace.h"
 static bool bSegmentFault = false;
-
 #endif
+*/
 
 #include "tracker_dump.h"
 #endif
@@ -61,9 +62,11 @@ static void sigUsrHandler(int sig);
 static void sigAlarmHandler(int sig);
 
 #if defined(DEBUG_FLAG)
+/*
 #if defined(OS_LINUX)
 static void sigSegvHandler(int signum, siginfo_t *info, void *ptr);
 #endif
+*/
 
 static void sigDumpHandler(int sig);
 #endif
@@ -198,6 +201,7 @@ int main(int argc, char *argv[])
 	}
 
 #if defined(DEBUG_FLAG)
+/*
 #if defined(OS_LINUX)
 	memset(&act, 0, sizeof(act));
 	sigemptyset(&act.sa_mask);
@@ -212,6 +216,7 @@ int main(int argc, char *argv[])
 		return errno;
 	}
 #endif
+*/
 
 	memset(&act, 0, sizeof(act));
 	sigemptyset(&act.sa_mask);
@@ -298,6 +303,7 @@ int main(int argc, char *argv[])
 	while ((g_tracker_thread_count != 0) || g_schedule_flag)
 	{
 
+/*
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
 		if (bSegmentFault)
 		{
@@ -305,6 +311,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 #endif
+*/
 
 		usleep(50000);
 	}
@@ -319,6 +326,7 @@ int main(int argc, char *argv[])
 }
 
 #if defined(DEBUG_FLAG)
+/*
 #if defined(OS_LINUX)
 static void sigSegvHandler(int signum, siginfo_t *info, void *ptr)
 {
@@ -339,6 +347,7 @@ static void sigSegvHandler(int signum, siginfo_t *info, void *ptr)
 	}
 }
 #endif
+*/
 
 static void sigDumpHandler(int sig)
 {

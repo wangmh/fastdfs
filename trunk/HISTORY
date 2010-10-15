@@ -1,11 +1,12 @@
 
-Version 2.01  2010-10-04
+Version 2.01  2010-10-15
  * client/fdfs_monitor.c can specify tracker server
  * micro STORAGE_STORE_PATH_PREFIX_CHAR change to 
    FDFS_STORAGE_STORE_PATH_PREFIX_CHAR
  * php extension can set log filename
  * php extension add function: fastdfs_client_version
  * bug fixed: client/tracker_client.c tracker_get_connection_ex NULL pointer
+ * set max core dump file size to at least 256MB when DEBUG_FLAG is on
 
 Version 2.00  2010-08-22
  * tracker network io use libevent instead of traditional io model
