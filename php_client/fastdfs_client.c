@@ -1036,7 +1036,7 @@ static void php_fdfs_tracker_query_storage_store_list_impl( \
 
 		add_assoc_stringl_ex(server_info_array, "ip_addr", \
 				sizeof("ip_addr"), pServer->ip_addr, \
-				strlen(storage_server.ip_addr), 1);
+				strlen(pServer->ip_addr), 1);
 		add_assoc_long_ex(server_info_array, "port", sizeof("port"), \
 				pServer->port);
 		add_assoc_long_ex(server_info_array, "sock", sizeof("sock"), -1);
