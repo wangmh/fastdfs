@@ -150,6 +150,32 @@ int main(int argc, char *argv[])
 		}
 
 		store_path_index = 0;
+
+		{
+		TrackerServerInfo storageServers[FDFS_MAX_SERVERS_EACH_GROUP];
+		TrackerServerInfo *pServer;
+		TrackerServerInfo *pServerEnd;
+		int storage_count;
+
+		if ((result=tracker_query_storage_store_list_without_group( \
+			pTrackerServer, storageServers, \
+			FDFS_MAX_SERVERS_EACH_GROUP, &storage_count, \
+			&store_path_index)) == 0)
+		{
+			printf("tracker_query_storage_store_list_without_group: \n");
+			pServerEnd = storageServers + storage_count;
+			for (pServer=storageServers; pServer<pServerEnd; pServer++)
+			{
+				printf("\tserver %d. group_name=%s, " \
+				       "ip_addr=%s, port=%d\n", \
+					(int)(pServer - storageServers) + 1, \
+					pServer->group_name, \
+					pServer->ip_addr, pServer->port);
+			}
+			printf("\n");
+		}
+		}
+
 		if ((result=tracker_query_storage_store(pTrackerServer, \
 		                &storageServer, &store_path_index)) != 0)
 		{
