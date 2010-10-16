@@ -1192,7 +1192,8 @@ static int tracker_deal_service_query_storage( \
 	int write_path_index;
 	int avg_reserved_mb;
 
-	if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP)
+	if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP_ONE
+	 || cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP_ALL)
 	{
 		expect_pkg_len = FDFS_GROUP_NAME_MAX_LEN;
 	}
@@ -1220,7 +1221,8 @@ static int tracker_deal_service_query_storage( \
 		return ENOENT;
 	}
 
-	if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP)
+	if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP_ONE
+	 || cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP_ALL)
 	{
 		group_name = pTask->data + sizeof(TrackerHeader);
 		group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
@@ -1428,11 +1430,39 @@ static int tracker_deal_service_query_storage( \
 	memcpy(p, pStoreGroup->group_name, FDFS_GROUP_NAME_MAX_LEN);
 	p += FDFS_GROUP_NAME_MAX_LEN;
 
-	memcpy(p, pStorageServer->ip_addr, IP_ADDRESS_SIZE - 1);
-	p += IP_ADDRESS_SIZE - 1;
-	
-	long2buff(pStoreGroup->storage_port, p);
-	p += FDFS_PROTO_PKG_LEN_SIZE;
+	if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITHOUT_GROUP_ALL
+	 || cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP_ALL)
+	{
+		int active_count;
+		FDFSStorageDetail **ppServer;
+		FDFSStorageDetail **ppEnd;
+
+		active_count = pStoreGroup->active_count;
+		if (active_count == 0)
+		{
+			pTask->length = sizeof(TrackerHeader);
+			return ENOENT;
+		}
+
+		ppEnd = pStoreGroup->active_servers + active_count;
+		for (ppServer=pStoreGroup->active_servers; ppServer<ppEnd; \
+			ppServer++)
+		{
+			memcpy(p, (*ppServer)->ip_addr, IP_ADDRESS_SIZE - 1);
+			p += IP_ADDRESS_SIZE - 1;
+
+			long2buff(pStoreGroup->storage_port, p);
+			p += FDFS_PROTO_PKG_LEN_SIZE;
+		}
+	}
+	else
+	{
+		memcpy(p, pStorageServer->ip_addr, IP_ADDRESS_SIZE - 1);
+		p += IP_ADDRESS_SIZE - 1;
+
+		long2buff(pStoreGroup->storage_port, p);
+		p += FDFS_PROTO_PKG_LEN_SIZE;
+	}
 
 	*p++ = (char)write_path_index;
 
@@ -2162,11 +2192,19 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			result = tracker_deal_service_query_fetch_update( \
 					pTask, pHeader->cmd);
 			break;
-		case TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITHOUT_GROUP:
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITHOUT_GROUP_ONE:
 			result = tracker_deal_service_query_storage( \
 					pTask, pHeader->cmd);
 			break;
-		case TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP:
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP_ONE:
+			result = tracker_deal_service_query_storage( \
+					pTask, pHeader->cmd);
+			break;
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITHOUT_GROUP_ALL:
+			result = tracker_deal_service_query_storage( \
+					pTask, pHeader->cmd);
+			break;
+		case TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP_ALL:
 			result = tracker_deal_service_query_storage( \
 					pTask, pHeader->cmd);
 			break;
