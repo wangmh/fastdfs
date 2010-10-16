@@ -442,6 +442,18 @@ return assoc array for success, false for error. the assoc array including
        elements: ip_addr, port, sock and store_path_index
 
 
+array fastdfs_tracker_query_storage_store_list([string group_name, 
+		array tracker_server])
+get the storage server list to upload file
+parameters:
+	group_name: specify the group name
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return indexed storage server array for success, false for error.
+       each element is an ssoc array including elements: 
+       ip_addr, port, sock and store_path_index
+
+
 array fastdfs_tracker_query_storage_update(string group_name, 
 		string remote_filename [, array tracker_server])
 get the storage server info to set metadata
@@ -925,6 +937,18 @@ parameters:
                         ip_addr, port and sock
 return assoc array for success, false for error. the assoc array including
        elements: ip_addr, port, sock and store_path_index
+
+
+array FastDFS::tracker_query_storage_store_list([string group_name, 
+		array tracker_server])
+get the storage server list to upload file
+parameters:
+	group_name: specify the group name
+	tracker_server: the tracker server assoc array including elements:
+                        ip_addr, port and sock
+return indexed storage server array for success, false for error.
+       each element is an ssoc array including elements: 
+       ip_addr, port, sock and store_path_index
 
 
 array FastDFS::tracker_query_storage_update(string group_name, 
