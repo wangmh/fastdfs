@@ -90,6 +90,7 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 		ZEND_FE(fastdfs_tracker_close_all_connections, NULL)
 		ZEND_FE(fastdfs_tracker_list_groups, NULL)
 		ZEND_FE(fastdfs_tracker_query_storage_store, NULL)
+		ZEND_FE(fastdfs_tracker_query_storage_store_list, NULL)
 		ZEND_FE(fastdfs_tracker_query_storage_update, NULL)
 		ZEND_FE(fastdfs_tracker_query_storage_fetch, NULL)
 		ZEND_FE(fastdfs_tracker_query_storage_list, NULL)
@@ -928,6 +929,121 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 	add_assoc_long_ex(return_value, "store_path_index", \
 			sizeof("store_path_index"), \
 			store_path_index);
+}
+
+static void php_fdfs_tracker_query_storage_store_list_impl( \
+		INTERNAL_FUNCTION_PARAMETERS, \
+		FDFSPhpContext *pContext)
+{
+	int argc;
+	char *group_name;
+	int group_nlen;
+	zval *server_info_array;
+	zval *tracker_obj;
+	HashTable *tracker_hash;
+	TrackerServerInfo tracker_server;
+	TrackerServerInfo storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pServer;
+	TrackerServerInfo *pServerEnd;
+	int store_path_index;
+	int saved_tracker_sock;
+	int result;
+	int storage_count;
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc > 2)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker_query_storage_store_list parameters " \
+			"count: %d > 2", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	group_name = NULL;
+	group_nlen = 0;
+	tracker_obj = NULL;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sa", \
+			&group_name, &group_nlen, &tracker_obj) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (tracker_obj == NULL)
+	{
+		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		if (pTrackerServer == NULL)
+		{
+			pContext->err_no = ENOENT;
+			RETURN_BOOL(false);
+		}
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
+	}
+	else
+	{
+		pTrackerServer = &tracker_server;
+		tracker_hash = Z_ARRVAL_P(tracker_obj);
+		if ((result=php_fdfs_get_server_from_hash(tracker_hash, \
+				pTrackerServer)) != 0)
+		{
+			pContext->err_no = result;
+			RETURN_BOOL(false);
+		}
+		saved_tracker_sock = pTrackerServer->sock;
+	}
+
+	if (group_name != NULL && group_nlen > 0)
+	{
+		result = tracker_query_storage_store_list_with_group(pTrackerServer,\
+                	group_name, storage_servers, FDFS_MAX_SERVERS_EACH_GROUP, \
+			&storage_count, &store_path_index);
+	}
+	else
+	{
+		result = tracker_query_storage_store_list_without_group( \
+			pTrackerServer, storage_servers, \
+			FDFS_MAX_SERVERS_EACH_GROUP, &storage_count, \
+			&store_path_index);
+	}
+
+	if (tracker_hash != NULL && pTrackerServer->sock != \
+		saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
+	}
+
+	pContext->err_no = result;
+	if (result != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	array_init(return_value);
+
+	pServerEnd = storage_servers + storage_count;
+	for (pServer=storage_servers; pServer<pServerEnd; pServer++)
+	{
+		ALLOC_INIT_ZVAL(server_info_array);
+		array_init(server_info_array);
+
+		add_index_zval(return_value, pServer - storage_servers, \
+			server_info_array);
+
+		add_assoc_stringl_ex(server_info_array, "ip_addr", \
+				sizeof("ip_addr"), pServer->ip_addr, \
+				strlen(storage_server.ip_addr), 1);
+		add_assoc_long_ex(server_info_array, "port", sizeof("port"), \
+				pServer->port);
+		add_assoc_long_ex(server_info_array, "sock", sizeof("sock"), -1);
+		add_assoc_long_ex(server_info_array, "store_path_index", \
+				sizeof("store_path_index"), \
+				store_path_index);
+	}
 }
 
 static void php_fdfs_tracker_do_query_storage_impl( \
@@ -2899,6 +3015,17 @@ ZEND_FUNCTION(fastdfs_tracker_query_storage_store)
 }
 
 /*
+array fastdfs_tracker_query_storage_store_list([string group_name, 
+		array tracker_server])
+return array for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_tracker_query_storage_store_list)
+{
+	php_fdfs_tracker_query_storage_store_list_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &php_context);
+}
+
+/*
 array fastdfs_tracker_query_storage_update(string group_name, 
 		string remote_filename [, array tracker_server])
 return array for success, false for error
@@ -3430,6 +3557,22 @@ PHP_METHOD(FastDFS, tracker_query_storage_store)
 }
 
 /*
+array FastDFS::tracker_query_storage_store_list([string group_name, 
+		array tracker_server])
+return array for success, false for error
+*/
+PHP_METHOD(FastDFS, tracker_query_storage_store_list)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_tracker_query_storage_store_list_impl( \
+			INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+			&(i_obj->context));
+}
+
+/*
 array FastDFS::tracker_query_storage_update(string group_name, 
 		string remote_filename [, array tracker_server])
 return array for success, false for error
@@ -3924,13 +4067,18 @@ ZEND_ARG_INFO(0, server_info)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_tracker_list_groups, 0, 0, 0)
-ZEND_ARG_INFO(0, tracker_server)
 ZEND_ARG_INFO(0, group_name)
+ZEND_ARG_INFO(0, tracker_server)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_tracker_query_storage_store, 0, 0, 0)
-ZEND_ARG_INFO(0, tracker_server)
 ZEND_ARG_INFO(0, group_name)
+ZEND_ARG_INFO(0, tracker_server)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_tracker_query_storage_store_list, 0, 0, 0)
+ZEND_ARG_INFO(0, group_name)
+ZEND_ARG_INFO(0, tracker_server)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_tracker_query_storage_update, 0, 0, 2)
@@ -4159,6 +4307,7 @@ static zend_function_entry fdfs_class_methods[] = {
     FDFS_ME(disconnect_server,   arginfo_disconnect_server)
     FDFS_ME(tracker_list_groups,   arginfo_tracker_list_groups)
     FDFS_ME(tracker_query_storage_store,  arginfo_tracker_query_storage_store)
+    FDFS_ME(tracker_query_storage_store_list,  arginfo_tracker_query_storage_store_list)
     FDFS_ME(tracker_query_storage_update, arginfo_tracker_query_storage_update)
     FDFS_ME(tracker_query_storage_fetch,  arginfo_tracker_query_storage_fetch)
     FDFS_ME(tracker_query_storage_list,   arginfo_tracker_query_storage_list)

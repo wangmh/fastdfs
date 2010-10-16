@@ -29,6 +29,7 @@ ZEND_FUNCTION(fastdfs_tracker_make_all_connections);
 ZEND_FUNCTION(fastdfs_tracker_close_all_connections);
 ZEND_FUNCTION(fastdfs_tracker_list_groups);
 ZEND_FUNCTION(fastdfs_tracker_query_storage_store);
+ZEND_FUNCTION(fastdfs_tracker_query_storage_store_list);
 ZEND_FUNCTION(fastdfs_tracker_query_storage_update);
 ZEND_FUNCTION(fastdfs_tracker_query_storage_fetch);
 ZEND_FUNCTION(fastdfs_tracker_query_storage_list);

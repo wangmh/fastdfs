@@ -28,6 +28,8 @@
  var_dump($server);
 
 
+ var_dump(fastdfs_tracker_query_storage_store_list());
+
  $storage = fastdfs_tracker_query_storage_store();
  if (!$storage)
  {
@@ -218,6 +220,8 @@
  $server = $fdfs->connect_server($tracker['ip_addr'], $tracker['port']);
  var_dump($server);
  var_dump($fdfs->disconnect_server($server));
+
+ var_dump($fdfs->tracker_query_storage_store_list());
 
  //var_dump($fdfs->tracker_list_groups());
  //var_dump($fdfs->tracker_query_storage_store());
