@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 	int store_path_index;
 	FDFSFileInfo file_info;
 
-	printf("This is FastDFS client test program v%d.%d\n" \
+	printf("This is FastDFS client test program v%d.%02d\n" \
 "\nCopyright (C) 2008, Happy Fish / YuQing\n" \
 "\nFastDFS may be copied only under the terms of the GNU General\n" \
 "Public License V3, which may be found in the FastDFS source kit.\n" \

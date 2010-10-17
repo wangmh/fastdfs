@@ -275,7 +275,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_fdfs_connect_timeout=%ds\n"
 		"g_fdfs_network_timeout=%ds\n"
 		"g_fdfs_base_path=%s\n"
-		"g_fdfs_version=%d.%d\n"
+		"g_fdfs_version=%d.%02d\n"
 		"g_continue_flag=%d\n"
 		"g_schedule_flag=%d\n"
 		"g_server_port=%d\n"

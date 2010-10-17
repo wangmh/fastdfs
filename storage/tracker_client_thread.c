@@ -1251,7 +1251,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_JOIN;
 	strcpy(pReqBody->group_name, g_group_name);
 	strcpy(pReqBody->domain_name, g_http_domain);
-	snprintf(pReqBody->version, sizeof(pReqBody->version), "%d.%d", \
+	snprintf(pReqBody->version, sizeof(pReqBody->version), "%d.%02d", \
 		g_fdfs_version.major, g_fdfs_version.minor);
 	long2buff(g_server_port, pReqBody->storage_port);
 	long2buff(g_http_port, pReqBody->storage_http_port);
