@@ -248,38 +248,64 @@ static void storage_sync_file_done_callback(struct fast_task_info *pTask, \
 static void storage_get_metadata_done_callback(struct fast_task_info *pTask, \
 			const int err_no)
 {
+	TrackerHeader *pHeader;
+
 	if (err_no != 0)
 	{
 		pthread_mutex_lock(&stat_count_thread_lock);
 		g_storage_stat.total_get_meta_count++;
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
-		task_finish_clean_up(pTask);
+		if (pTask->length == sizeof(TrackerHeader)) //never response
+		{
+			pHeader = (TrackerHeader *)pTask->data;
+			pHeader->status = err_no;
+			storage_nio_notify(pTask);
+		}
+		else
+		{
+			task_finish_clean_up(pTask);
+		}
 	}
 	else
 	{
 		CHECK_AND_WRITE_TO_STAT_FILE2( \
 			g_storage_stat.total_get_meta_count, \
 			g_storage_stat.success_get_meta_count)
+
+		storage_nio_notify(pTask);
 	}
 }
 
 static void storage_download_file_done_callback(struct fast_task_info *pTask, \
 			const int err_no)
 {
+	TrackerHeader *pHeader;
+
 	if (err_no != 0)
 	{
 		pthread_mutex_lock(&stat_count_thread_lock);
 		g_storage_stat.total_download_count++;
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
-		task_finish_clean_up(pTask);
+		if (pTask->length == sizeof(TrackerHeader)) //never response
+		{
+			pHeader = (TrackerHeader *)pTask->data;
+			pHeader->status = err_no;
+			storage_nio_notify(pTask);
+		}
+		else
+		{
+			task_finish_clean_up(pTask);
+		}
 	}
 	else
 	{
 		CHECK_AND_WRITE_TO_STAT_FILE2( \
 			g_storage_stat.total_download_count, \
 			g_storage_stat.success_download_count)
+
+		storage_nio_notify(pTask);
 	}
 }
 
