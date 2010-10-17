@@ -1,15 +1,17 @@
 
-Version 2.01  2010-10-16
+Version 2.01  2010-10-17
  * client/fdfs_monitor.c can specify tracker server
  * micro STORAGE_STORE_PATH_PREFIX_CHAR change to 
    FDFS_STORAGE_STORE_PATH_PREFIX_CHAR
  * php extension can set log filename
  * php extension add function: fastdfs_client_version
  * bug fixed: client/tracker_client.c tracker_get_connection_ex NULL pointer
- * set max core dump file size to at least 256MB when DEBUG_FLAG is on
+ * set max core dump file size to at least 256MB when DEBUG_FLAG is on, 
+   make sure to generate core file when core dump with DEBUG_FLAG on
  * upload file can get available storage server list of the group, 
    add command TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITHOUT_GROUP_ALL and
    TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP_ALL
+ * bugfixed: storage core dump in some case
 
 Version 2.00  2010-08-22
  * tracker network io use libevent instead of traditional io model

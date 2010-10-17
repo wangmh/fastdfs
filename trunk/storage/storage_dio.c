@@ -334,8 +334,19 @@ int dio_deal_task(struct fast_task_info *pTask)
 			read_bytes, pTask->length, pFileContext->offset);
 		*/
 
-		storage_nio_notify(pTask);  //notify nio to deal
 		result = 0;
+		if (pFileContext->offset < pFileContext->end)
+		{
+			storage_nio_notify(pTask);  //notify nio to deal
+		}
+		else
+		{
+			/* file read done, close it */
+			close(pFileContext->fd);
+			pFileContext->fd = -1;
+
+			pFileContext->done_callback(pTask, result);
+		}
 	}
 	else
 	{
@@ -368,40 +379,31 @@ int dio_deal_task(struct fast_task_info *pTask)
 
 		pFileContext->offset += write_bytes;
 
+		result = 0;
 		if (pFileContext->offset < pFileContext->end)
 		{
 			pFileContext->buff_offset = 0;
 			storage_nio_notify(pTask);  //notify nio to deal
 		}
-
-		result = 0;
-	}
-	} while (0);
-
-	if (result == 0)
-	{
-		/*
-		logInfo("dio_deal_task, pFileContext->offset=%ld, " \
-			"pFileContext->end=%ld, stage=%d\n", \
-			 pFileContext->offset, pFileContext->end, \
-			((StorageClientInfo *)pTask->arg)->stage);
-		*/
-		if (pFileContext->offset >= pFileContext->end)
+		else
 		{
-			/* file read/write done, close it */
+			/* file write done, close it */
 			close(pFileContext->fd);
 			pFileContext->fd = -1;
 
 			pFileContext->done_callback(pTask, result);
 		}
 	}
-	else //error
+	} while (0);
+
+	if (result != 0) //error
 	{
 		/* file read/write done, close it */
 		if (pFileContext->fd > 0)
 		{
 		close(pFileContext->fd);
 		pFileContext->fd = -1;
+
 		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
 		{
 			if (unlink(pFileContext->filename) != 0)
