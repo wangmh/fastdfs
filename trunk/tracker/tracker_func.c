@@ -413,7 +413,7 @@ int tracker_load_from_conf_file(const char *filename, \
 
 #endif
 
-		logInfo("FastDFS v%d.%d, base_path=%s, " \
+		logInfo("FastDFS v%d.%02d, base_path=%s, " \
 			"connect_timeout=%ds, "    \
 			"network_timeout=%ds, "    \
 			"port=%d, bind_addr=%s, " \

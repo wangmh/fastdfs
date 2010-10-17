@@ -1300,7 +1300,7 @@ int storage_func_init(const char *filename, \
 		}
 #endif
 
-		logInfo("FastDFS v%d.%d, base_path=%s, store_path_count=%d, " \
+		logInfo("FastDFS v%d.%02d, base_path=%s, store_path_count=%d, " \
 			"subdir_count_per_path=%d, group_name=%s, " \
 			"connect_timeout=%ds, network_timeout=%ds, "\
 			"port=%d, bind_addr=%s, client_bind=%d, " \
