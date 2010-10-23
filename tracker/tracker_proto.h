@@ -12,6 +12,7 @@
 #define _TRACKER_PROTO_H_
 
 #include "tracker_types.h"
+#include "ini_file_reader.h"
 
 #define TRACKER_PROTO_CMD_STORAGE_JOIN              81
 #define FDFS_PROTO_CMD_QUIT			    82
@@ -190,6 +191,10 @@ char *fdfs_pack_metadata(const FDFSMetaData *meta_list, const int meta_count, \
 FDFSMetaData *fdfs_split_metadata_ex(char *meta_buff, \
 		const char recordSeperator, const char filedSeperator, \
 		int *meta_count, int *err_no);
+
+int fdfs_get_ini_context_from_tracker(TrackerServerGroup *pTrackerGroup, \
+                IniContext *iniContext, bool *continue_flag, \
+                const bool client_bind_addr, const char *bind_addr);
 
 #ifdef __cplusplus
 }

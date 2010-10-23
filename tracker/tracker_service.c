@@ -498,8 +498,10 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 
 	pTask->length = sizeof(TrackerHeader) + \
 		sprintf(pTask->data + sizeof(TrackerHeader), \
-			"storage_ip_changed_auto_adjust=%d\n", \
-			g_storage_ip_changed_auto_adjust);
+			"storage_ip_changed_auto_adjust=%d\n" \
+			"storage_sync_file_max_delay=%d\n", \
+			g_storage_ip_changed_auto_adjust, \
+			g_storage_sync_file_max_delay);
 
 	return 0;
 }

@@ -18,13 +18,6 @@
 extern "C" {
 #endif
 
-typedef struct
-{
-	int server_count;
-	int server_index;  //server index for roundrobin
-	TrackerServerInfo *servers;
-} TrackerServerGroup;
-
 extern int g_tracker_server_http_port;
 extern TrackerServerGroup g_tracker_group;
 
