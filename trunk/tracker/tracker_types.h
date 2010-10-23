@@ -299,5 +299,12 @@ struct tracker_thread_data
         int pipe_fds[2];
 };
 
+typedef struct
+{
+	int server_count;
+	int server_index;  //server index for roundrobin
+	TrackerServerInfo *servers;
+} TrackerServerGroup;
+
 #endif
 

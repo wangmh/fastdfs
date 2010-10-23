@@ -424,3 +424,140 @@ int tracker_connect_server_ex(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
+static int fdfs_do_parameter_req(TrackerServerInfo *pTrackerServer, \
+	char *buff, const int buff_size)
+{
+	char out_buff[sizeof(TrackerHeader)];
+	TrackerHeader *pHeader;
+	int64_t in_bytes;
+	int result;
+
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_PARAMETER_REQ;
+	if((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+		sizeof(TrackerHeader), g_fdfs_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, send data fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, strerror(result));
+		return result;
+	}
+
+	result = fdfs_recv_response(pTrackerServer, &buff, buff_size, &in_bytes);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	if (in_bytes >= buff_size)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"server: %s:%d, recv body bytes: " \
+			INT64_PRINTF_FORMAT" exceed max: %d", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, in_bytes, buff_size);
+		return ENOSPC;
+	}
+
+	*(buff + in_bytes) = '\0';
+	return 0;
+}
+
+int fdfs_get_ini_context_from_tracker(TrackerServerGroup *pTrackerGroup, \
+		IniContext *iniContext, bool *continue_flag, \
+		const bool client_bind_addr, const char *bind_addr)
+{
+	TrackerServerInfo *pGlobalServer;
+	TrackerServerInfo *pTServer;
+	TrackerServerInfo *pTServerEnd;
+	TrackerServerInfo trackerServer;
+	char in_buff[1024];
+	int result;
+	int i;
+	bool saved_continue_flag;
+
+	result = 0;
+	pTServer = &trackerServer;
+	pTServerEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
+	saved_continue_flag = *continue_flag;
+
+	do
+	{
+	for (pGlobalServer=pTrackerGroup->servers; pGlobalServer<pTServerEnd; \
+			pGlobalServer++)
+	{
+		memcpy(pTServer, pGlobalServer, sizeof(TrackerServerInfo));
+		for (i=0; i < 3; i++)
+		{
+			pTServer->sock = socket(AF_INET, SOCK_STREAM, 0);
+			if(pTServer->sock < 0)
+			{
+				result = errno != 0 ? errno : EPERM;
+				logError("file: "__FILE__", line: %d, " \
+					"socket create failed, errno: %d, " \
+					"error info: %s.", \
+					__LINE__, result, strerror(result));
+				sleep(5);
+				break;
+			}
+
+			if (client_bind_addr && (bind_addr != NULL && \
+						*bind_addr != '\0'))
+			{
+				socketBind(pTServer->sock, bind_addr, 0);
+			}
+
+			if (tcpsetnonblockopt(pTServer->sock) != 0)
+			{
+				close(pTServer->sock);
+				pTServer->sock = -1;
+				sleep(1);
+				continue;
+			}
+
+			if ((result=connectserverbyip_nb(pTServer->sock, \
+				pTServer->ip_addr, pTServer->port, \
+				g_fdfs_connect_timeout)) == 0)
+			{
+				break;
+			}
+
+			close(pTServer->sock);
+			pTServer->sock = -1;
+			sleep(1);
+		}
+
+		if (pTServer->sock < 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"connect to tracker server %s:%d fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pTServer->ip_addr, pTServer->port, \
+				result, strerror(result));
+
+			continue;
+		}
+
+		result = fdfs_do_parameter_req(pTServer, in_buff, \
+						sizeof(in_buff));
+		if (result == 0)
+		{
+			result = iniLoadFromBuffer(in_buff, iniContext);
+
+			close(pTServer->sock);
+			return result;
+		}
+
+		fdfs_quit(pTServer);
+		close(pTServer->sock);
+		sleep(1);
+	}
+	} while (*continue_flag);
+
+	return EINTR;
+}
+
