@@ -20,6 +20,7 @@
 #include "client_global.h"
 #include "fdht_types.h"
 #include "base64.h"
+#include "local_ip_func.h"
 
 #ifdef WITH_HTTPD
 #include "fdfs_http_shared.h"
@@ -35,8 +36,6 @@
 #define DEFAULT_UPLOAD_PRIORITY           10
 #define DEFAULT_SYNC_MARK_FILE_FREQ  500
 #define STORAGE_DEFAULT_BUFF_SIZE    (64 * 1024)
-#define STORAGE_MAX_LOCAL_IP_ADDRS	  4
-#define STORAGE_IF_ALIAS_PREFIX_MAX_SIZE 32
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,10 +104,6 @@ extern bool g_sync_old_done;
 extern char g_sync_src_ip_addr[IP_ADDRESS_SIZE];
 extern int g_sync_until_timestamp;
 
-extern int g_local_host_ip_count;
-extern char g_local_host_ip_addrs[STORAGE_MAX_LOCAL_IP_ADDRS * \
-				IP_ADDRESS_SIZE];
-
 extern char g_tracker_client_ip[IP_ADDRESS_SIZE]; //storage ip as tracker client
 extern char g_last_storage_ip[IP_ADDRESS_SIZE];	//the last storage ip address
 
@@ -131,7 +126,6 @@ extern bool g_thread_kill_done;
 extern int g_thread_stack_size;
 extern int g_upload_priority;
 extern time_t g_up_time;
-extern char g_if_alias_prefix[STORAGE_IF_ALIAS_PREFIX_MAX_SIZE];
 
 #ifdef WITH_HTTPD
 extern FDFSHTTPParams g_http_params;
@@ -147,13 +141,9 @@ extern struct storage_dio_thread_data *g_dio_thread_data;  //disk io thread data
 
 int storage_cmp_by_ip_addr(const void *p1, const void *p2);
 
-void load_local_host_ip_addrs();
-bool is_local_host_ip(const char *client_ip);
-int insert_into_local_host_ip(const char *client_ip);
-void print_local_host_ip_addrs();
-
 #ifdef __cplusplus
 }
 #endif
 
 #endif
+

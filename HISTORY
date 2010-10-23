@@ -2,6 +2,7 @@
 Version 2.02  2010-10-23
  * get parameters function from tracker server changed, 
    add paramter: storage_sync_file_max_delay
+ * local ip functions move to common/local_ip_func.c
 
 Version 2.01  2010-10-17
  * client/fdfs_monitor.c can specify tracker server
