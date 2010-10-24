@@ -5,6 +5,7 @@ Version 2.02  2010-10-24
  * local ip functions move to common/local_ip_func.c
  * when query all storage servers to store, do not increase the current
    write server index
+ * struct FDFSHTTPParams add field: need_find_content_type
 
 Version 2.01  2010-10-17
  * client/fdfs_monitor.c can specify tracker server

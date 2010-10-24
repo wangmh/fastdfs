@@ -115,6 +115,10 @@ int fdfs_http_params_load(IniContext *pIniContext, \
 		return 0;
 	}
 
+	pParams->need_find_content_type = iniGetBoolValue(NULL, \
+			"http.need_find_content_type", \
+			pIniContext, true);
+
 	pParams->server_port = iniGetIntValue(NULL, "http.server_port", \
 					pIniContext, 80);
 	if (pParams->server_port <= 0)
@@ -125,6 +129,8 @@ int fdfs_http_params_load(IniContext *pIniContext, \
 		return EINVAL;
 	}
 
+	if (pParams->need_find_content_type)
+	{
 	mime_types_filename = iniGetStrValue(NULL, "http.mime_types_filename", \
                                         pIniContext);
 	if (mime_types_filename == NULL || *mime_types_filename == '\0')
@@ -203,6 +209,7 @@ int fdfs_http_params_load(IniContext *pIniContext, \
 	}
 	memcpy(pParams->default_content_type, default_content_type, \
 			def_content_type_len);
+	}
 
 	pParams->anti_steal_token = iniGetBoolValue(NULL, \
 				"http.anti_steal.check_token", \
@@ -275,7 +282,10 @@ int fdfs_http_params_load(IniContext *pIniContext, \
 
 void fdfs_http_params_destroy(FDFSHTTPParams *pParams)
 {
-	hash_destroy(&pParams->content_type_hash);
+	if (pParams->need_find_content_type)
+	{
+		hash_destroy(&pParams->content_type_hash);
+	}
 }
 
 int fdfs_http_gen_token(const BufferInfo *secret_key, const char *file_id, \
