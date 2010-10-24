@@ -18,10 +18,15 @@
 #include "ini_file_reader.h"
 #include "hash.h"
 
-typedef struct 
+typedef struct
 {
 	bool disabled;
 	bool anti_steal_token;
+
+	/* if need find content type by file extension name */
+	bool need_find_content_type;
+
+	/* the web server port */
 	int server_port;
 
 	/* key is file ext name, value is content type */
