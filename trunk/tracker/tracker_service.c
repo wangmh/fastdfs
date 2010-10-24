@@ -1375,11 +1375,19 @@ static int tracker_deal_service_query_storage( \
 		return ENOENT;
 	}
 
-	pStorageServer = tracker_get_writable_storage(pStoreGroup);
-	if (pStorageServer == NULL)
+	if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP_ONE
+	  || cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITHOUT_GROUP_ONE)
 	{
-		pTask->length = sizeof(TrackerHeader);
-		return ENOENT;
+		pStorageServer = tracker_get_writable_storage(pStoreGroup);
+		if (pStorageServer == NULL)
+		{
+			pTask->length = sizeof(TrackerHeader);
+			return ENOENT;
+		}
+	}
+	else  //query store server list, use the first to check
+	{
+		pStorageServer = *(pStoreGroup->active_servers);
 	}
 
 	write_path_index = pStorageServer->current_write_path;
