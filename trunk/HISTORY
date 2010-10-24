@@ -6,6 +6,7 @@ Version 2.02  2010-10-24
  * when query all storage servers to store, do not increase the current
    write server index
  * struct FDFSHTTPParams add field: need_find_content_type
+ * symbol link client library to /usr/lib64 in 64 bits OS
 
 Version 2.01  2010-10-17
  * client/fdfs_monitor.c can specify tracker server

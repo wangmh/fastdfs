@@ -78,9 +78,9 @@ install:
 	cp -f $(FAST_HEADER_FILES) $(TARGET_INC)/fastcommon
 	cp -f $(FDFS_HEADER_FILES) $(TARGET_INC)/fastdfs
 
-	ln -fs $(TARGET_LIB)/libfastcommon.so.1 $(TARGET_LIB)/libfastcommon.so
-	ln -fs $(TARGET_LIB)/libfdfsclient.so.1 $(TARGET_LIB)/libfdfsclient.so
-	if [ "`id -u`" = "0" ]; then  ln -fs $(TARGET_LIB)/libfastcommon.so.1 /usr/lib/libfastcommon.so; fi
-	if [ "`id -u`" = "0" ]; then ln -fs $(TARGET_LIB)/libfdfsclient.so.1 /usr/lib/libfdfsclient.so; fi
+	#ln -fs $(TARGET_LIB)/libfastcommon.so.1 $(TARGET_LIB)/libfastcommon.so
+	#ln -fs $(TARGET_LIB)/libfdfsclient.so.1 $(TARGET_LIB)/libfdfsclient.so
+	sh ./fdfs_link_library.sh
 clean:
 	rm -f $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS)
+
