@@ -4355,7 +4355,7 @@ zend_object_value php_fdfs_new(zend_class_entry *ce TSRMLS_DC)
 	php_fdfs_t *i_obj;
 	zval *tmp;
 
-	i_obj = ecalloc(1, sizeof(php_fdfs_t));
+	i_obj = (php_fdfs_t *)ecalloc(1, sizeof(php_fdfs_t));
 
 	zend_object_std_init( &i_obj->zo, ce TSRMLS_CC );
 	zend_hash_copy(i_obj->zo.properties, &ce->default_properties, \

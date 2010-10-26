@@ -1,5 +1,5 @@
 
-Version 2.02  2010-10-24
+Version 2.02  2010-10-26
  * get parameters function from tracker server changed, 
    add paramter: storage_sync_file_max_delay
  * local ip functions move to common/local_ip_func.c
@@ -20,7 +20,7 @@ Version 2.01  2010-10-17
  * upload file can get available storage server list of the group, 
    add command TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITHOUT_GROUP_ALL and
    TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITH_GROUP_ALL
- * bugfixed: storage core dump in some case
+ * bug fixed: storage core dump in some case
 
 Version 2.00  2010-08-22
  * tracker network io use libevent instead of traditional io model
