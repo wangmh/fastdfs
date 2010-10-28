@@ -213,7 +213,19 @@ int main(int argc, char *argv[])
 		file_ext_name = strrchr(local_filename, '.');
 		if (file_ext_name != NULL)
 		{
-			file_ext_name++;
+			if (strchr(file_ext_name + 1, '/') != NULL)
+			{
+				file_ext_name = NULL;
+			}
+			else if (strlen(local_filename) - (file_ext_name - \
+			local_filename) <= FDFS_FILE_EXT_NAME_MAX_LEN + 1)
+			{
+				file_ext_name++;
+			}
+			else
+			{
+				file_ext_name = NULL;
+			}
 		}
 		strcpy(group_name, "");
 

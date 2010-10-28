@@ -1,5 +1,5 @@
 
-Version 2.02  2010-10-26
+Version 2.02  2010-10-28
  * get parameters function from tracker server changed, 
    add paramter: storage_sync_file_max_delay
  * local ip functions move to common/local_ip_func.c
@@ -7,6 +7,7 @@ Version 2.02  2010-10-26
    write server index
  * struct FDFSHTTPParams add field: need_find_content_type
  * symbol link client library to /usr/lib64 in 64 bits OS
+ * storage_client.c: deal file extension name correctly
 
 Version 2.01  2010-10-17
  * client/fdfs_monitor.c can specify tracker server
