@@ -1099,7 +1099,7 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 	if (file_ext_name == NULL)
 	{
 		pDot = strrchr(local_filename, '.');
-		if (pDot != NULL)
+		if (pDot != NULL && strchr(pDot + 1, '/') == NULL)
 		{
 			if (strlen(local_filename) - (pDot - local_filename) <=\
 				FDFS_FILE_EXT_NAME_MAX_LEN + 1)
@@ -1525,7 +1525,7 @@ int storage_upload_slave_by_filename(TrackerServerInfo *pTrackerServer, \
 	if (file_ext_name == NULL)
 	{
 		pDot = strrchr(local_filename, '.');
-		if (pDot != NULL)
+		if (pDot != NULL && strchr(pDot + 1, '/') == NULL)
 		{
 			if (strlen(local_filename) - (pDot - local_filename) <=\
 				FDFS_FILE_EXT_NAME_MAX_LEN + 1)
