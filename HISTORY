@@ -1,3 +1,6 @@
+Version 2.03  2010-11-05
+ * bug fixed: core dump when http.need_find_content_type=false and 
+   http.anti_steal.check_token=true
 
 Version 2.02  2010-10-28
  * get parameters function from tracker server changed, 
