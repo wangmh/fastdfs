@@ -632,7 +632,6 @@ int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
 int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 		TrackerServerInfo *pStorageServer, int *store_path_index)
 {
-
 	TrackerHeader header;
 	char in_buff[sizeof(TrackerHeader) + \
 		TRACKER_QUERY_STORAGE_STORE_BODY_LEN];

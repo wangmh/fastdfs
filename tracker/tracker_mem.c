@@ -20,6 +20,7 @@
 #include <pthread.h>
 #include "fdfs_define.h"
 #include "logger.h"
+#include "sockopt.h"
 #include "fdfs_global.h"
 #include "tracker_global.h"
 #include "tracker_proto.h"
@@ -37,6 +38,13 @@ static int changelog_fd = -1;  //storage server change log fd for write
 
 static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup);
 
+char *g_tracker_sys_filenames[TRACKER_SYS_FILE_COUNT] = {
+	STORAGE_GROUPS_LIST_FILENAME,
+	STORAGE_SERVERS_LIST_FILENAME,
+	STORAGE_SYNC_TIMESTAMP_FILENAME,
+	STORAGE_SERVERS_CHANGELOG_FILENAME
+};      
+   
 int tracker_mem_pthread_lock()
 {
 	int result;
@@ -2404,8 +2412,164 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 	return 0;
 }
 
+static int tracker_mem_get_sys_files(TrackerServerInfo *pTrackerServer)
+{
+	TrackerHeader header;
+	char *pInBuff;
+	char *p;
+	int64_t in_bytes;
+	int64_t total_fsize;
+	int64_t file_sizes[TRACKER_SYS_FILE_COUNT];
+	char full_filename[MAX_PATH_SIZE];
+	int result;
+	int i;
+	int k;
+
+	pTrackerServer->sock = -1;
+	if ((result=tracker_connect_server(pTrackerServer)) != 0)
+	{
+		return result;
+	}
+
+	pInBuff = NULL;
+	memset(&header, 0, sizeof(header));
+	header.cmd = TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES;
+	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, \
+			sizeof(header), g_fdfs_network_timeout)) != 0)
+	{
+		logError("send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, strerror(result));
+
+		result = (result == ENOENT ? EACCES : result);
+	}
+	else
+	{
+		result = fdfs_recv_response(pTrackerServer, \
+				&pInBuff, 0, &in_bytes);
+	}
+
+	close(pTrackerServer->sock);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	if (in_bytes <= TRACKER_SYS_FILE_COUNT * FDFS_PROTO_PKG_LEN_SIZE)
+	{
+		free(pInBuff);
+
+		logError("tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid, " \
+			"expect length > %d.", pTrackerServer->ip_addr, \
+			pTrackerServer->port, in_bytes, \
+			TRACKER_SYS_FILE_COUNT * FDFS_PROTO_PKG_LEN_SIZE);
+		return EINVAL;
+	}
+
+	total_fsize = 0;
+	p = pInBuff;
+	for (i=0; i<TRACKER_SYS_FILE_COUNT; i++)
+	{
+		file_sizes[i] = buff2long(p);
+		p += FDFS_PROTO_PKG_LEN_SIZE;
+
+		total_fsize += file_sizes[i];
+	}
+
+	if (in_bytes != TRACKER_SYS_FILE_COUNT * FDFS_PROTO_PKG_LEN_SIZE + \
+		total_fsize)
+	{
+		free(pInBuff);
+
+		logError("tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid, " \
+			"expect length: "INT64_PRINTF_FORMAT".", \
+			pTrackerServer->ip_addr, pTrackerServer->port, \
+			in_bytes, TRACKER_SYS_FILE_COUNT * \
+			FDFS_PROTO_PKG_LEN_SIZE + total_fsize);
+		return EINVAL;
+	}
+
+	for (i=0; i<TRACKER_SYS_FILE_COUNT; i++)
+	{
+		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
+			g_fdfs_base_path, g_tracker_sys_filenames[i]);
+		result = writeToFile(full_filename, p, file_sizes[i]);
+		if (result != 0)
+		{
+			result = (result == ENOENT ? EACCES : result);
+			break;
+		}
+
+		p += (long)file_sizes[i];
+	}
+
+	free(pInBuff);
+
+	if (result != 0)  //rollback
+	{
+		for (k=0; k<i; k++)
+		{
+		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
+			g_fdfs_base_path, g_tracker_sys_filenames[k]);
+		unlink(full_filename);
+		}
+	}
+
+	return result;
+}
+
+static int tracker_mem_get_sys_files_from_others( \
+		FDFSStorageJoinBody *pJoinBody)
+{
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pTrackerEnd;
+	int r;
+	int result;
+
+	result = 0;
+	pTrackerEnd = pJoinBody->other_tracker_servers + \
+                      pJoinBody->other_tracker_count;
+        for (pTrackerServer=pJoinBody->other_tracker_servers; \
+                pTrackerServer<pTrackerEnd; pTrackerServer++)
+	{
+		r = tracker_mem_get_sys_files(pTrackerServer);
+		if (r == 0)
+		{
+			logInfo("file: "__FILE__", line: %d, " \
+				"sys files loaded from tracker server %s:%d", \
+				__LINE__, pTrackerServer->ip_addr, \
+				pTrackerServer->port);
+
+			//reconstruct the data
+			if ((result=tracker_load_data()) != 0)
+			{
+				return result;
+			}
+
+			if (changelog_fd >= 0)
+			{
+				close(changelog_fd);
+				changelog_fd = -1;
+			}
+
+			return tracker_open_changlog_file();
+		}
+
+		if (r != ENOENT)
+		{
+			result = r;
+		}
+	}
+
+	return result;
+}
+
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
-		const char *ip_addr, const FDFSStorageJoinBody *pJoinBody, \
+		const char *ip_addr, FDFSStorageJoinBody *pJoinBody, \
 		const bool bNeedSleep)
 {
 	int result;
@@ -2414,6 +2578,21 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	FDFSStorageDetail *pStorageServer;
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppEnd;
+
+	if (g_groups.count == 0 && pJoinBody->other_tracker_count > 0)
+	{
+		tracker_mem_file_lock();
+		if (g_groups.count == 0)
+		{
+			if ((result=tracker_mem_get_sys_files_from_others( \
+				pJoinBody)) != 0)
+			{
+				tracker_mem_file_unlock();
+				return result;
+			}
+		}
+		tracker_mem_file_unlock();
+	}
 
 	if ((result=tracker_mem_add_group(pClientInfo, pJoinBody->group_name, \
 				bNeedSleep, &bGroupInserted)) != 0)
