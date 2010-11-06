@@ -171,7 +171,8 @@ typedef struct StructFDFSStorageDetail
 	struct StructFDFSStorageDetail *psync_src_server;
 	time_t sync_until_timestamp;
 
-	time_t up_time;
+	time_t join_time;  //storage join timestamp (create timestamp)
+	time_t up_time;    //startup timestamp
 	int64_t total_mb;  //total disk storage in MB
 	int64_t free_mb;  //free disk storage in MB
 	int64_t changelog_offset;  //changelog file offset
@@ -183,7 +184,7 @@ typedef struct StructFDFSStorageDetail
 	int subdir_count_per_path;
 	int upload_priority; //storage upload priority
 
-	int storage_port;
+	int storage_port;   //storage server port
 	int storage_http_port; //storage http server port
 
 	int current_write_path; //current write path index
@@ -231,7 +232,7 @@ typedef struct
 
 	int **last_sync_timestamps;//row for src storage, col for dest storage
 
-	int chg_count;   //current group changed count 
+	int chg_count;   //current group changed count
 	time_t last_source_update;
 	time_t last_sync_update;
 } FDFSGroupInfo;
@@ -285,6 +286,7 @@ typedef struct
 	int store_path_count;
 	int subdir_count_per_path;
 	int upload_priority;
+	int join_time; //storage join timestamp (create timestamp)
 	int up_time;   //storage service started timestamp
         char version[FDFS_VERSION_SIZE];   //storage version
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];

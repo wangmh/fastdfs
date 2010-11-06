@@ -668,6 +668,7 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 	}
 
 	joinBody.upload_priority = (int)buff2long(pBody->upload_priority);
+	joinBody.join_time = (time_t)buff2long(pBody->join_time);
 	joinBody.up_time = (time_t)buff2long(pBody->up_time);
 
 	*(pBody->version + (sizeof(pBody->version) - 1)) = '\0';
@@ -1021,6 +1022,7 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 
 		strcpy(pDest->domain_name, (*ppServer)->domain_name);
 		strcpy(pDest->version, (*ppServer)->version);
+		long2buff((*ppServer)->join_time, pDest->sz_join_time);
 		long2buff((*ppServer)->up_time, pDest->sz_up_time);
 		long2buff((*ppServer)->total_mb, pDest->sz_total_mb);
 		long2buff((*ppServer)->free_mb, pDest->sz_free_mb);

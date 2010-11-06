@@ -27,7 +27,8 @@ typedef struct
 	int total_mb;  //total disk storage in MB
 	int free_mb;  //free disk storage in MB
 	int upload_priority;  //upload priority
-	time_t up_time;  //storage service started timestamp
+	time_t join_time; //storage join timestamp (create timestamp)
+	time_t up_time;   //storage service started timestamp
 	int store_path_count;  //store base path count of each storage server
 	int subdir_count_per_path;
 	int storage_port;

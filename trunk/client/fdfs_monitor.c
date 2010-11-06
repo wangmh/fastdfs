@@ -219,6 +219,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 	FDFSStorageInfo *pStorage;
 	FDFSStorageInfo *pStorageEnd;
 	FDFSStorageStat *pStorageStat;
+	char szJoinTime[32];
 	char szUpTime[32];
 	char szLastHeartBeatTime[32];
 	char szSrcUpdTime[32];
@@ -289,6 +290,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tip_addr = %s%s  %s\n" \
 			"\t\thttp domain = %s\n" \
 			"\t\tversion = %s\n" \
+			"\t\tjoin time = %s\n" \
 			"\t\tup time = %s\n" \
 			"\t\ttotal storage = %dGB\n" \
 			"\t\tfree storage = %dGB\n" \
@@ -320,7 +322,11 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			++k, pStorage->ip_addr, szHostnamePrompt, \
 			get_storage_status_caption(pStorage->status), \
 			pStorage->domain_name, \
-			pStorage->version, szUpTime, pStorage->total_mb / 1024,\
+			pStorage->version,  \
+			formatDatetime(pStorage->join_time, \
+				"%Y-%m-%d %H:%M:%S", \
+				szJoinTime, sizeof(szJoinTime)), \
+			szUpTime, pStorage->total_mb / 1024, \
 			pStorage->free_mb / 1024,  \
 			pStorage->upload_priority,  \
 			pStorage->store_path_count,  \
