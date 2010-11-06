@@ -23,7 +23,7 @@
 #endif
 
 #define TRACKER_SYNC_TO_FILE_FREQ 1000
-#define TRACKER_MAX_PACKAGE_SIZE  8 * 1024
+#define TRACKER_MAX_PACKAGE_SIZE  (8 * 1024)
 
 #ifdef __cplusplus
 extern "C" {

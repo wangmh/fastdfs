@@ -33,6 +33,9 @@ int tracker_mem_init_pthread_lock(pthread_mutex_t *pthread_lock);
 int tracker_mem_pthread_lock();
 int tracker_mem_pthread_unlock();
 
+int tracker_mem_file_lock();
+int tracker_mem_file_unlock();
+
 FDFSGroupInfo *tracker_mem_get_group(const char *group_name);
 FDFSStorageDetail *tracker_mem_get_storage(FDFSGroupInfo *pGroup, \
 				const char *ip_addr);
@@ -60,6 +63,7 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
                 FDFSStorageBrief *briefServers, const int server_count);
 int tracker_save_storages();
 int tracker_save_sync_timestamps();
+int tracker_save_sys_files();
 
 int tracker_get_group_file_count(FDFSGroupInfo *pGroup);
 int tracker_get_group_success_upload_count(FDFSGroupInfo *pGroup);

@@ -29,6 +29,8 @@
 #define TRACKER_PROTO_CMD_STORAGE_REPORT_STATUS     76  //report specified storage server status
 #define TRACKER_PROTO_CMD_STORAGE_PARAMETER_REQ	    75  //storage server request parameters
 
+#define TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES     61  //tracker get system data files
+
 #define TRACKER_PROTO_CMD_SERVER_LIST_GROUP			91
 #define TRACKER_PROTO_CMD_SERVER_LIST_STORAGE			92
 #define TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE			93
@@ -67,6 +69,7 @@
 
 #define FDFS_PROTO_PKG_LEN_SIZE		8
 #define FDFS_PROTO_CMD_SIZE		1
+#define FDFS_PROTO_IP_PORT_SIZE		(IP_ADDRESS_SIZE + 6)
 
 #define TRACKER_QUERY_STORAGE_FETCH_BODY_LEN	(FDFS_GROUP_NAME_MAX_LEN \
 			+ IP_ADDRESS_SIZE - 1 + FDFS_PROTO_PKG_LEN_SIZE)
@@ -94,6 +97,7 @@ typedef struct
 	char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE];
 	char init_flag;
 	signed char status;
+	char other_tracker_count[FDFS_PROTO_PKG_LEN_SIZE];  //tracker server count excluding current tracker
 } TrackerStorageJoinBody;
 
 typedef struct

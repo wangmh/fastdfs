@@ -67,7 +67,7 @@ int tracker_mem_pthread_unlock()
 	return 0;
 }
 
-static int tracker_mem_file_lock()
+int tracker_mem_file_lock()
 {
 	int result;
 	if ((result=pthread_mutex_lock(&mem_file_lock)) != 0)
@@ -82,7 +82,7 @@ static int tracker_mem_file_lock()
 	return 0;
 }
 
-static int tracker_mem_file_unlock()
+int tracker_mem_file_unlock()
 {
 	int result;
 	if ((result=pthread_mutex_unlock(&mem_file_lock)) != 0)
@@ -112,6 +112,8 @@ static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
 
 	if (write(changelog_fd, buff, len) != len)
 	{
+		tracker_mem_file_unlock();
+
 		result = errno != 0 ? errno : EIO;
 		logError("file: "__FILE__", line: %d, " \
 			"write to file: %s fail, " \
@@ -119,7 +121,6 @@ static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
 			__LINE__, STORAGE_SERVERS_CHANGELOG_FILENAME, \
 			result, strerror(result));
 
-		tracker_mem_file_unlock();
 		return result;
 	}
 
@@ -1152,10 +1153,14 @@ int tracker_save_sync_timestamps()
 	int k;
 	int result;
 
+	tracker_mem_file_lock();
+
 	snprintf(filename, sizeof(filename), "%s/data/%s", \
 		g_fdfs_base_path, STORAGE_SYNC_TIMESTAMP_FILENAME);
 	if ((fd=open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
+		tracker_mem_file_unlock();
+
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
 			"errno: %d, error info: %s", \
@@ -1213,7 +1218,26 @@ int tracker_save_sync_timestamps()
 	}
 
 	close(fd);
+	tracker_mem_file_unlock();
+
 	return result;
+}
+
+int tracker_save_sys_files()
+{
+	int result;
+
+	if ((result=tracker_save_groups()) != 0)
+	{
+		return result;
+	}
+
+	if ((result=tracker_save_storages()) != 0)
+	{
+		return result;
+	}
+
+	return tracker_save_sync_timestamps();
 }
 
 static int tracker_open_changlog_file()
