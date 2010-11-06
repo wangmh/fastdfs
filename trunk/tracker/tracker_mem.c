@@ -38,6 +38,10 @@ static int changelog_fd = -1;  //storage server change log fd for write
 
 static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup);
 
+static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
+	FDFSStorageDetail **ppStorageServer, const char *ip_addr, \
+	const bool bNeedSleep, bool *bInserted);
+
 char *g_tracker_sys_filenames[TRACKER_SYS_FILE_COUNT] = {
 	STORAGE_GROUPS_LIST_FILENAME,
 	STORAGE_SERVERS_LIST_FILENAME,
@@ -615,31 +619,8 @@ static int tracker_load_storages(const char *data_path)
 					sizeof(clientInfo.pStorage->version), 
 					 "%s", trim(fields[21]));
 				}
-				/*
-				else
-				{
-					clientInfo.pStorage->join_time = 0;
-				}
-				*/
 			}
-			/*
-			else
-			{
-				clientInfo.pStorage->storage_port = 0;
-				clientInfo.pStorage->storage_http_port = 0;
-				clientInfo.pStorage->join_time = 0;
-			}
-			*/
 		}
-		/*
-		else
-		{
-			clientInfo.pStorage->changelog_offset = 0;
-			clientInfo.pStorage->storage_port = 0;
-			clientInfo.pStorage->storage_http_port = 0;
-			clientInfo.pStorage->join_time = 0;
-		}
-		*/
 
 		if (*psync_src_ip_addr == '\0')
 		{
@@ -2287,12 +2268,13 @@ int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
 int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 		const char *old_storage_ip, const char *new_storage_ip)
 {
-	FDFSStorageDetail *pStorageServer;
-	FDFSStorageDetail **ppServer;
-	FDFSStorageDetail **ppEnd;
+	FDFSStorageDetail *pOldStorageServer;
+	FDFSStorageDetail *pNewStorageServer;
+	int result;
+	bool bInserted;
 
-	pStorageServer = tracker_mem_get_storage(pGroup, old_storage_ip);
-	if (pStorageServer == NULL || pStorageServer->status == \
+	pOldStorageServer = tracker_mem_get_storage(pGroup, old_storage_ip);
+	if (pOldStorageServer == NULL || pOldStorageServer->status == \
 		FDFS_STORAGE_STATUS_DELETED)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -2301,8 +2283,8 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 		return ENOENT;
 	}
 
-	if (pStorageServer->status == FDFS_STORAGE_STATUS_ONLINE || \
-	    pStorageServer->status == FDFS_STORAGE_STATUS_ACTIVE)
+	if (pOldStorageServer->status == FDFS_STORAGE_STATUS_ONLINE || \
+	    pOldStorageServer->status == FDFS_STORAGE_STATUS_ACTIVE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, old storage server: %s is online", \
@@ -2310,7 +2292,7 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 		return EBUSY;
 	}
 
-	if (pStorageServer->status == FDFS_STORAGE_STATUS_IP_CHANGED)
+	if (pOldStorageServer->status == FDFS_STORAGE_STATUS_IP_CHANGED)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, old storage server: %s " \
@@ -2319,29 +2301,74 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 		return EALREADY;
 	}
 
-	ppEnd = pGroup->all_servers + pGroup->count;
-	for (ppServer=pGroup->all_servers; ppServer<ppEnd; ppServer++)
+	pNewStorageServer = tracker_mem_get_storage(pGroup, new_storage_ip);
+	if (!(pNewStorageServer == NULL || pNewStorageServer->status == \
+		FDFS_STORAGE_STATUS_DELETED))
 	{
-		if ((*ppServer)->psync_src_server != NULL && \
-		strcmp((*ppServer)->psync_src_server->ip_addr, old_storage_ip) == 0)
-		{
-			(*ppServer)->psync_src_server = NULL;
-		}
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, new storage server: %s already exists",\
+			__LINE__, new_storage_ip, new_storage_ip);
+		return EEXIST;
 	}
 
-	tracker_mem_clear_storage_fields(pStorageServer);
+	result = _tracker_mem_add_storage(pGroup, \
+		&pNewStorageServer, new_storage_ip, true, &bInserted);
+	if (result != 0)
+	{
+		return result;
+	}
 
-	pStorageServer->status = FDFS_STORAGE_STATUS_IP_CHANGED;
+	if (!bInserted)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, new storage server: %s already exists",\
+			__LINE__, new_storage_ip, new_storage_ip);
+		return EEXIST;
+	}
+
+	pthread_mutex_lock(&mem_thread_lock);
+
+	//exchange old and new storage server
+	snprintf(pOldStorageServer->ip_addr, \
+		sizeof(pOldStorageServer->ip_addr), "%s", new_storage_ip);
+
+	snprintf(pNewStorageServer->ip_addr, \
+		sizeof(pNewStorageServer->ip_addr), "%s", old_storage_ip);
+	pNewStorageServer->status = FDFS_STORAGE_STATUS_IP_CHANGED;
+
 	pGroup->chg_count++;
 
-	tracker_write_to_changelog(pGroup, pStorageServer, new_storage_ip);
+	//need re-sort
+	qsort(pGroup->sorted_servers, pGroup->count, \
+		sizeof(FDFSStorageDetail *), tracker_mem_cmp_by_ip_addr);
+
+	pthread_mutex_unlock(&mem_thread_lock);
+
+	tracker_write_to_changelog(pGroup, pNewStorageServer, new_storage_ip);
 	return 0;
 }
 
 int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 		const char *ip_addr, const bool bNeedSleep, bool *bInserted)
 {
+	int result;
 	FDFSStorageDetail *pStorageServer;
+
+	pStorageServer = NULL;
+	result = _tracker_mem_add_storage(pClientInfo->pGroup, \
+			&pStorageServer, ip_addr, bNeedSleep, bInserted);
+	if (result == 0)
+	{
+		pClientInfo->pStorage = pStorageServer;
+	}
+
+	return result;
+}
+
+static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
+	FDFSStorageDetail **ppStorageServer, const char *ip_addr, \
+	const bool bNeedSleep, bool *bInserted)
+{
 	int result;
 
 	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
@@ -2357,41 +2384,35 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 	{
 		result = 0;
 		*bInserted = false;
-		pStorageServer = tracker_mem_get_storage(pClientInfo->pGroup, \
-					ip_addr);
-		if (pStorageServer != NULL)
+		*ppStorageServer = tracker_mem_get_storage(pGroup, ip_addr);
+		if (*ppStorageServer != NULL)
 		{
-			if (pStorageServer->status==FDFS_STORAGE_STATUS_DELETED \
-			 || pStorageServer->status==FDFS_STORAGE_STATUS_IP_CHANGED)
+			if ((*ppStorageServer)->status==FDFS_STORAGE_STATUS_DELETED \
+			 || (*ppStorageServer)->status==FDFS_STORAGE_STATUS_IP_CHANGED)
 			{
-			 	pStorageServer->status = FDFS_STORAGE_STATUS_INIT;
+			 	(*ppStorageServer)->status = FDFS_STORAGE_STATUS_INIT;
 			}
 
 			break;
 		}
 
-		if (pClientInfo->pGroup->count >= \
-				pClientInfo->pGroup->alloc_size)
+		if (pGroup->count >= pGroup->alloc_size)
 		{
 			result = tracker_mem_realloc_store_servers( \
-					pClientInfo->pGroup, 1, bNeedSleep);
+					pGroup, 1, bNeedSleep);
 			if (result != 0)
 			{
 				break;
 			}
 		}
 
-		pStorageServer = *(pClientInfo->pGroup->all_servers \
-					 + pClientInfo->pGroup->count);
-		memcpy(pStorageServer->ip_addr, ip_addr,
-				IP_ADDRESS_SIZE);
+		*ppStorageServer = *(pGroup->all_servers + pGroup->count);
+		memcpy((*ppStorageServer)->ip_addr, ip_addr, IP_ADDRESS_SIZE);
 
-		tracker_mem_insert_into_sorted_servers( \
-				pStorageServer, \
-				pClientInfo->pGroup->sorted_servers, \
-				pClientInfo->pGroup->count);
-		pClientInfo->pGroup->count++;
-		pClientInfo->pGroup->chg_count++;
+		tracker_mem_insert_into_sorted_servers(*ppStorageServer, \
+				pGroup->sorted_servers, pGroup->count);
+		pGroup->count++;
+		pGroup->chg_count++;
 
 		*bInserted = true;
 	} while (0);
@@ -2403,13 +2424,7 @@ int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 			__LINE__);
 	}
 
-	if (result != 0)
-	{
-		return result;
-	}
-
-	pClientInfo->pStorage = pStorageServer;
-	return 0;
+	return result;
 }
 
 static int tracker_mem_get_sys_files(TrackerServerInfo *pTrackerServer)
@@ -2931,8 +2946,10 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	}
 
 	logDebug("file: "__FILE__", line: %d, " \
-		"storage server %s::%s join in", \
-		__LINE__, pClientInfo->pGroup->group_name, ip_addr);
+		"storage server %s::%s join in, remain changelog bytes: " \
+		INT64_PRINTF_FORMAT, __LINE__, \
+		pClientInfo->pGroup->group_name, ip_addr, \
+	 	g_changelog_fsize - pStorageServer->changelog_offset);
 
 	return 0;
 }

@@ -4,6 +4,8 @@ Version 2.03  2010-11-06
  * storage server add join_time field (create timestamp of this storage)
  * tracker server fetch system files from other tracker server when 
    first storage server join in (tracker to tracker sync system files)
+ * tracker server changes the old ip address to the new address when the 
+   storage server ip address changed
 
 Version 2.02  2010-10-28
  * get parameters function from tracker server changed, 
