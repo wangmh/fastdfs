@@ -14,6 +14,7 @@
 #include <pthread.h>
 #include "tracker_types.h"
 
+#define TRACKER_SYS_FILE_COUNT  4
 #define STORAGE_GROUPS_LIST_FILENAME	   "storage_groups.dat"
 #define STORAGE_SERVERS_LIST_FILENAME	   "storage_servers.dat"
 #define STORAGE_SERVERS_CHANGELOG_FILENAME "storage_changelog.dat"
@@ -25,6 +26,7 @@ extern "C" {
 #endif
 
 extern int64_t g_changelog_fsize; //storage server change log file size
+extern char *g_tracker_sys_filenames[TRACKER_SYS_FILE_COUNT];
 
 int tracker_mem_init();
 int tracker_mem_destroy();
@@ -51,7 +53,7 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 		const char *old_storage_ip, const char *new_storage_ip);
 
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
-		const char *ip_addr, const FDFSStorageJoinBody *pJoinBody, \
+		const char *ip_addr, FDFSStorageJoinBody *pJoinBody, \
 		const bool bNeedSleep);
 
 int tracker_mem_offline_store_server(FDFSGroupInfo *pGroup, \

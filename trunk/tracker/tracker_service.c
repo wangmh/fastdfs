@@ -845,10 +845,8 @@ file size 2: storage_servers.dat content
 file size 3: storage_sync_timestamp.dat content
 file size 4: storage_changelog.dat content
 */
-static int tracker_deal_sync_data_files(struct fast_task_info *pTask)
+static int tracker_deal_get_data_files(struct fast_task_info *pTask)
 {
-#define TRACKER_SYS_FILE_COUNT  4
-
 	struct tracker_sys_file_info {
 		char *filename;
 		char *content;
@@ -888,10 +886,10 @@ static int tracker_deal_sync_data_files(struct fast_task_info *pTask)
 	}
 
 	memset(sys_file_info, 0, sizeof(sys_file_info));
-	sys_file_info[0].filename = STORAGE_GROUPS_LIST_FILENAME;
-	sys_file_info[1].filename = STORAGE_SERVERS_LIST_FILENAME;
-	sys_file_info[2].filename = STORAGE_SYNC_TIMESTAMP_FILENAME;
-	sys_file_info[3].filename = STORAGE_SERVERS_CHANGELOG_FILENAME;
+	for (i=0; i<TRACKER_SYS_FILE_COUNT; i++)
+	{
+		sys_file_info[i].filename = g_tracker_sys_filenames[i];
+	}
 
 	tracker_mem_file_lock();  //avoid to read dirty data
 
@@ -2454,7 +2452,7 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			result = tracker_deal_active_test(pTask);
 			break;
 		case TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES:
-			result = tracker_deal_sync_data_files(pTask);
+			result = tracker_deal_get_data_files(pTask);
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "  \
