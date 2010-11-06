@@ -586,19 +586,23 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 {
 	TrackerStorageJoinBodyResp *pJoinBodyResp;
 	TrackerStorageJoinBody *pBody;
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pTrackerEnd;
+	char *p;
+	char *pSeperator;
 	FDFSStorageJoinBody joinBody;
 	int result;
 	TrackerClientInfo *pClientInfo;
-	
+
 	pClientInfo = (TrackerClientInfo *)pTask->arg;
 
-	if (pTask->length - sizeof(TrackerHeader) != \
+	if (pTask->length - sizeof(TrackerHeader) < \
 			sizeof(TrackerStorageJoinBody))
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd: %d, client ip: %s, " \
 			"package size "PKG_LEN_PRINTF_FORMAT" " \
-			"is not correct, expect length: %d.", \
+			"is not correct, expect length >= %d.", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_JOIN, \
 			pTask->client_ip, pTask->length - \
 			(int)sizeof(TrackerHeader),
@@ -608,6 +612,39 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 	}
 
 	pBody = (TrackerStorageJoinBody *)(pTask->data + sizeof(TrackerHeader));
+	joinBody.other_tracker_count = buff2long(pBody->other_tracker_count);
+	if (joinBody.other_tracker_count < 0 || \
+		joinBody.other_tracker_count > FDFS_MAX_TRACKERS)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd: %d, client ip: %s, " \
+			"other_tracker_count: %d is invalid, it < 0 or > %d", \
+			__LINE__, TRACKER_PROTO_CMD_STORAGE_JOIN, \
+			pTask->client_ip, joinBody.other_tracker_count, \
+			FDFS_MAX_TRACKERS);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	if (pTask->length - sizeof(TrackerHeader) != \
+		sizeof(TrackerStorageJoinBody) + joinBody.other_tracker_count *\
+		FDFS_PROTO_IP_PORT_SIZE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd: %d, client ip: %s, " \
+			"package size "PKG_LEN_PRINTF_FORMAT" " \
+			"is not correct, expect length %d.", \
+			__LINE__, TRACKER_PROTO_CMD_STORAGE_JOIN, \
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader),
+			(int)sizeof(TrackerStorageJoinBody) + \
+			joinBody.other_tracker_count * FDFS_PROTO_IP_PORT_SIZE);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	logInfo("other_tracker_count=%d, sizeof(TrackerStorageJoinBody)=%d", \
+		joinBody.other_tracker_count, (int)sizeof(TrackerStorageJoinBody));
 
 	memcpy(joinBody.group_name, pBody->group_name, FDFS_GROUP_NAME_MAX_LEN);
 	joinBody.group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
@@ -665,6 +702,32 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 			joinBody.subdir_count_per_path);
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
+	}
+
+	if (joinBody.other_tracker_count > 0)
+	{
+	p = pTask->data+sizeof(TrackerHeader)+sizeof(TrackerStorageJoinBody);
+	pTrackerEnd = joinBody.other_tracker_servers + \
+		      joinBody.other_tracker_count;
+	for (pTrackerServer=joinBody.other_tracker_servers; \
+		pTrackerServer<pTrackerEnd; pTrackerServer++)
+	{
+		* (p + FDFS_PROTO_IP_PORT_SIZE - 1) = '\0';
+		if ((pSeperator=strchr(p, ':')) == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, invalid tracker server ip " \
+				"and port: %s", __LINE__, pTask->client_ip, p);
+			pTask->length = sizeof(TrackerHeader);
+			return EINVAL;
+		}
+
+		*pSeperator = '\0';
+		snprintf(pTrackerServer->ip_addr, \
+			sizeof(pTrackerServer->ip_addr), "%s", p);
+		pTrackerServer->port = atoi(pSeperator + 1);
+		pTrackerServer->sock = -1;
+	}
 	}
 
 	joinBody.upload_priority = (int)buff2long(pBody->upload_priority);
@@ -769,6 +832,139 @@ static int tracker_deal_active_test(struct fast_task_info *pTask)
 
 	pTask->length = sizeof(TrackerHeader);
 	return 0;
+}
+
+/**
+package format:
+FDFS_PROTO_PKG_LEN_SIZE bytes: storage_groups.dat file size
+FDFS_PROTO_PKG_LEN_SIZE bytes: storage_servers.dat file size
+FDFS_PROTO_PKG_LEN_SIZE bytes: storage_sync_timestamp.dat file size
+FDFS_PROTO_PKG_LEN_SIZE bytes: storage_changelog.dat file size
+file size 1: storage_groups.dat content
+file size 2: storage_servers.dat content
+file size 3: storage_sync_timestamp.dat content
+file size 4: storage_changelog.dat content
+*/
+static int tracker_deal_sync_data_files(struct fast_task_info *pTask)
+{
+#define TRACKER_SYS_FILE_COUNT  4
+
+	struct tracker_sys_file_info {
+		char *filename;
+		char *content;
+		int64_t file_size;
+	};
+
+	struct tracker_sys_file_info sys_file_info[TRACKER_SYS_FILE_COUNT];
+	int result;
+	int i;
+	int total_size;
+	char full_filename[MAX_PATH_SIZE];
+	char *p;
+
+	if (pTask->length - sizeof(TrackerHeader) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length 0", __LINE__, \
+			TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES, \
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader));
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	if (g_groups.count == 0)
+	{
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	if ((result=tracker_save_sys_files()) != 0)
+	{
+		pTask->length = sizeof(TrackerHeader);
+		return result == ENOENT ? EACCES: result;
+	}
+
+	memset(sys_file_info, 0, sizeof(sys_file_info));
+	sys_file_info[0].filename = STORAGE_GROUPS_LIST_FILENAME;
+	sys_file_info[1].filename = STORAGE_SERVERS_LIST_FILENAME;
+	sys_file_info[2].filename = STORAGE_SYNC_TIMESTAMP_FILENAME;
+	sys_file_info[3].filename = STORAGE_SERVERS_CHANGELOG_FILENAME;
+
+	tracker_mem_file_lock();  //avoid to read dirty data
+
+	p = pTask->data + sizeof(TrackerHeader);
+	total_size = 0;
+	for (i=0; i<TRACKER_SYS_FILE_COUNT; i++)
+	{
+		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
+			g_fdfs_base_path, sys_file_info[i].filename);
+
+		if ((result=getFileContent(full_filename, \
+				&(sys_file_info[i].content),\
+				&(sys_file_info[i].file_size))) != 0)
+		{
+			pTask->length = sizeof(TrackerHeader);
+			result = (result == ENOENT ? EACCES: result);
+			break;
+		}
+	
+		long2buff(sys_file_info[i].file_size, p);
+		p += FDFS_PROTO_PKG_LEN_SIZE;
+
+		total_size += sys_file_info[i].file_size;
+	}
+
+	tracker_mem_file_unlock();
+
+	do
+	{
+		if (result != 0)
+		{
+			break;
+		}
+
+		if ((p - pTask->data) + total_size >= TRACKER_MAX_PACKAGE_SIZE)
+		{
+			pTask->length = sizeof(TrackerHeader);
+			result = ENOSPC;
+
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip: %s, " \
+				"system data files are too large!" \
+				"you can increase the macro" \
+				"\"TRACKER_MAX_PACKAGE_SIZE\", " \
+				"current value is %d KB", __LINE__, \
+				TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES, \
+				pTask->client_ip, \
+				TRACKER_MAX_PACKAGE_SIZE / 1024);
+			break;
+		}
+
+		for (i=0; i<TRACKER_SYS_FILE_COUNT; i++)
+		{
+			if (sys_file_info[i].file_size > 0)
+			{
+				memcpy(p, sys_file_info[i].content, \
+					sys_file_info[i].file_size);
+				p += sys_file_info[i].file_size;
+			}
+		}
+
+		pTask->length = p - pTask->data;
+	} while(false);
+
+	for (i=0; i<TRACKER_SYS_FILE_COUNT; i++)
+	{
+		if (sys_file_info[i].content != NULL)
+		{
+			free(sys_file_info[i].content);
+		}
+	}
+
+	return result;
 }
 
 static int tracker_deal_storage_report_ip_changed(struct fast_task_info *pTask)
@@ -2256,6 +2452,9 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			return 0;
 		case FDFS_PROTO_CMD_ACTIVE_TEST:
 			result = tracker_deal_active_test(pTask);
+			break;
+		case TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES:
+			result = tracker_deal_sync_data_files(pTask);
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "  \

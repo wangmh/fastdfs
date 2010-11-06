@@ -1232,22 +1232,28 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 			const int tracker_index, const bool sync_old_done)
 {
-	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageJoinBody)];
+	char out_buff[sizeof(TrackerHeader) + sizeof(TrackerStorageJoinBody) + \
+			FDFS_MAX_TRACKERS * FDFS_PROTO_IP_PORT_SIZE];
 	TrackerHeader *pHeader;
 	TrackerStorageJoinBody *pReqBody;
 	TrackerStorageJoinBodyResp respBody;
 	char *pInBuff;
+	char *p;
+	TrackerServerInfo *pServer;
+	TrackerServerInfo *pServerEnd;
 	FDFSStorageServer *pTargetServer;
 	FDFSStorageServer **ppFound;
 	FDFSStorageServer targetServer;
+	int out_len;
+	int other_tracker_count;
 	int result;
+	int i;
 	int64_t in_bytes;
 
 	pHeader = (TrackerHeader *)out_buff;
 	pReqBody = (TrackerStorageJoinBody *)(out_buff+sizeof(TrackerHeader));
 
 	memset(out_buff, 0, sizeof(out_buff));
-	long2buff((int)sizeof(TrackerStorageJoinBody), pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_JOIN;
 	strcpy(pReqBody->group_name, g_group_name);
 	strcpy(pReqBody->domain_name, g_http_domain);
@@ -1277,7 +1283,6 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 	{
 		if (g_tracker_group.server_count > 1)
 		{
-			int i;
 			for (i=0; i<g_tracker_group.server_count; i++)
 			{
 				if (my_report_status[i] != EFAULT)
@@ -1301,8 +1306,28 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 		}
 	}
 
+	other_tracker_count = 0;
+	p = out_buff + sizeof(TrackerHeader) + sizeof(TrackerStorageJoinBody);
+	pServerEnd = g_tracker_group.servers + g_tracker_group.server_count;
+	for (pServer=g_tracker_group.servers; pServer<pServerEnd; pServer++)
+	{
+		if (strcmp(pServer->ip_addr, pTrackerServer->ip_addr) == 0 && \
+			pServer->port == pTrackerServer->port)
+		{
+			continue;
+		}
+
+		other_tracker_count++;
+		sprintf(p, "%s:%d", pServer->ip_addr, pServer->port);
+		p += FDFS_PROTO_IP_PORT_SIZE;
+	}
+
+	out_len = p - out_buff;
+	long2buff(other_tracker_count, pReqBody->other_tracker_count);
+	long2buff(out_len - (int)sizeof(TrackerHeader), pHeader->pkg_len);
+
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
-			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
+			out_len, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
