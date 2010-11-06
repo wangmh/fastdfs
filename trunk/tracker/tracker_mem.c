@@ -2588,7 +2588,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				pJoinBody)) != 0)
 			{
 				tracker_mem_file_unlock();
-				return result;
+				return EAGAIN;
 			}
 		}
 		tracker_mem_file_unlock();

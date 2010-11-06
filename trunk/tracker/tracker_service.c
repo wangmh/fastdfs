@@ -643,9 +643,6 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
-	logInfo("other_tracker_count=%d, sizeof(TrackerStorageJoinBody)=%d", \
-		joinBody.other_tracker_count, (int)sizeof(TrackerStorageJoinBody));
-
 	memcpy(joinBody.group_name, pBody->group_name, FDFS_GROUP_NAME_MAX_LEN);
 	joinBody.group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
 	if ((result=fdfs_validate_group_name(joinBody.group_name)) != 0)
@@ -845,7 +842,7 @@ file size 2: storage_servers.dat content
 file size 3: storage_sync_timestamp.dat content
 file size 4: storage_changelog.dat content
 */
-static int tracker_deal_get_data_files(struct fast_task_info *pTask)
+static int tracker_deal_get_sys_files(struct fast_task_info *pTask)
 {
 	struct tracker_sys_file_info {
 		char *filename;
@@ -2452,7 +2449,7 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			result = tracker_deal_active_test(pTask);
 			break;
 		case TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES:
-			result = tracker_deal_get_data_files(pTask);
+			result = tracker_deal_get_sys_files(pTask);
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "  \
