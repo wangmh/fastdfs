@@ -1258,6 +1258,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 	long2buff(g_path_count, pReqBody->store_path_count);
 	long2buff(g_subdir_count_per_path, pReqBody->subdir_count_per_path);
 	long2buff(g_upload_priority, pReqBody->upload_priority);
+	long2buff(g_storage_join_time, pReqBody->join_time);
 	long2buff(g_up_time, pReqBody->up_time);
 	pReqBody->init_flag = sync_old_done ? 0 : 1;
 

@@ -447,7 +447,7 @@ static int tracker_locate_storage_sync_server(FDFSStorageSync *pStorageSyncs, \
 
 static int tracker_load_storages(const char *data_path)
 {
-#define STORAGE_DATA_SERVER_FIELDS	20
+#define STORAGE_DATA_SERVER_FIELDS	22
 
 	FILE *fp;
 	char szLine[256];
@@ -488,16 +488,19 @@ static int tracker_load_storages(const char *data_path)
 				fields, STORAGE_DATA_SERVER_FIELDS);
 		if (cols != STORAGE_DATA_SERVER_FIELDS && \
 		    cols != STORAGE_DATA_SERVER_FIELDS - 2 && \
-		    cols != STORAGE_DATA_SERVER_FIELDS - 3)
+		    cols != STORAGE_DATA_SERVER_FIELDS - 4 && \
+		    cols != STORAGE_DATA_SERVER_FIELDS - 5)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"the format of the file \"%s/%s\" is invalid" \
-				", colums: %d != expect colums: %d or %d or %d",\
+				", colums: %d != expect colums: " \
+				"%d or %d or %d or %d", \
 				__LINE__, data_path, \
 				STORAGE_SERVERS_LIST_FILENAME, \
 				cols, STORAGE_DATA_SERVER_FIELDS, \
 				STORAGE_DATA_SERVER_FIELDS - 2, \
-				STORAGE_DATA_SERVER_FIELDS - 3);
+				STORAGE_DATA_SERVER_FIELDS - 4, \
+				STORAGE_DATA_SERVER_FIELDS - 5);
 			result = EINVAL;
 			break;
 		}
@@ -573,7 +576,7 @@ static int tracker_load_storages(const char *data_path)
 					trim_left(fields[15]));
 		clientInfo.pStorage->stat.last_sync_update = atoi( \
 					trim_left(fields[16]));
-		if (cols > STORAGE_DATA_SERVER_FIELDS - 3)
+		if (cols > STORAGE_DATA_SERVER_FIELDS - 5)
 		{
 			clientInfo.pStorage->changelog_offset = strtoll( \
 					trim_left(fields[17]), NULL, 10);
@@ -588,26 +591,46 @@ static int tracker_load_storages(const char *data_path)
 					g_changelog_fsize;
 			}
 
-			
-			if (cols > STORAGE_DATA_SERVER_FIELDS - 2)
+			if (cols > STORAGE_DATA_SERVER_FIELDS - 4)
 			{
 				clientInfo.pStorage->storage_port = \
 					atoi(trim_left(fields[18]));
 				clientInfo.pStorage->storage_http_port = \
 					atoi(trim_left(fields[19]));
+				if (cols > STORAGE_DATA_SERVER_FIELDS - 2)
+				{
+					clientInfo.pStorage->join_time = \
+					(time_t)atoi(trim_left(fields[20]));
+
+					snprintf(clientInfo.pStorage->version, \
+					sizeof(clientInfo.pStorage->version), 
+					 "%s", trim(fields[21]));
+				}
+				/*
+				else
+				{
+					clientInfo.pStorage->join_time = 0;
+				}
+				*/
 			}
+			/*
 			else
 			{
 				clientInfo.pStorage->storage_port = 0;
 				clientInfo.pStorage->storage_http_port = 0;
+				clientInfo.pStorage->join_time = 0;
 			}
+			*/
 		}
+		/*
 		else
 		{
 			clientInfo.pStorage->changelog_offset = 0;
 			clientInfo.pStorage->storage_port = 0;
 			clientInfo.pStorage->storage_http_port = 0;
+			clientInfo.pStorage->join_time = 0;
 		}
+		*/
 
 		if (*psync_src_ip_addr == '\0')
 		{
@@ -1048,7 +1071,9 @@ int tracker_save_storages()
 				"%d%c" \
 				INT64_PRINTF_FORMAT"%c" \
 				"%d%c" \
-				"%d\n", \
+				"%d%c" \
+				"%d%c" \
+				"%s\n",\
 				(*ppGroup)->group_name, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
 				pStorage->ip_addr, \
@@ -1088,8 +1113,12 @@ int tracker_save_storages()
 				STORAGE_DATA_FIELD_SEPERATOR, \
 				pStorage->storage_port, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				pStorage->storage_http_port
-	 		    );
+				pStorage->storage_http_port,  \
+				STORAGE_DATA_FIELD_SEPERATOR, \
+				(int)pStorage->join_time, \
+				STORAGE_DATA_FIELD_SEPERATOR, \
+				pStorage->version
+	 		     );
 
 			if (write(fd, buff, len) != len)
 			{
@@ -2543,6 +2572,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	pStorageServer->store_path_count = pJoinBody->store_path_count;
 	pStorageServer->subdir_count_per_path = pJoinBody->subdir_count_per_path;
 	pStorageServer->upload_priority = pJoinBody->upload_priority;
+	pStorageServer->join_time = pJoinBody->join_time;
 	pStorageServer->up_time = pJoinBody->up_time;
 	snprintf(pStorageServer->version, sizeof(pStorageServer->version), \
 		"%s", pJoinBody->version);
@@ -2679,6 +2709,10 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		}
 
 		if ((result=tracker_save_storages()) != 0)
+		{
+			return result;
+		}
+		if ((result=tracker_save_sync_timestamps()) != 0)
 		{
 			return result;
 		}

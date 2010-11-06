@@ -1,6 +1,7 @@
-Version 2.03  2010-11-05
+Version 2.03  2010-11-06
  * bug fixed: core dump when http.need_find_content_type=false and 
    http.anti_steal.check_token=true
+ * storage server add join_time field (create timestamp of this storage)
 
 Version 2.02  2010-10-28
  * get parameters function from tracker server changed, 

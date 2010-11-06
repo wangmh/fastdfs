@@ -147,6 +147,7 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer, 
 		char *buff, const int buffSize)
 {
+	char szJoinTime[32];
 	char szUpTime[32];
 	char szLastHeartBeatTime[32];
 	char szSrcUpdTime[32];
@@ -163,6 +164,7 @@ static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer,
 		"domain_name=%s\n"
 		"sync_src_server=%s\n"
 		"sync_until_timestamp=%s\n"
+		"join_time=%s\n"
 		"up_time=%s\n"
 		"total_mb="INT64_PRINTF_FORMAT" MB\n"
 		"free_mb="INT64_PRINTF_FORMAT" MB\n"
@@ -208,6 +210,9 @@ static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer,
 		formatDatetime(pServer->sync_until_timestamp, 
 			"%Y-%m-%d %H:%M:%S", 
 			szSyncUntilTimestamp, sizeof(szSyncUntilTimestamp)),
+		formatDatetime(pServer->join_time, 
+			"%Y-%m-%d %H:%M:%S", 
+			szJoinTime, sizeof(szJoinTime)),
 		formatDatetime(pServer->up_time, 
 			"%Y-%m-%d %H:%M:%S", 
 			szUpTime, sizeof(szUpTime)),

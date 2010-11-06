@@ -297,6 +297,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 				IP_ADDRESS_SIZE - 1);
 		strcpy(pDest->domain_name, pSrc->domain_name);
 		strcpy(pDest->version, pSrc->version);
+		pDest->join_time = buff2long(pSrc->sz_join_time);
 		pDest->up_time = buff2long(pSrc->sz_up_time);
 		pDest->total_mb = buff2long(pSrc->sz_total_mb);
 		pDest->free_mb = buff2long(pSrc->sz_free_mb);
