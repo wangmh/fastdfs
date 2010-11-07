@@ -35,6 +35,9 @@ int g_thread_stack_size = 64 * 1024;
 int g_storage_sync_file_max_delay = DEFAULT_STORAGE_SYNC_FILE_MAX_DELAY;
 int g_storage_sync_file_max_time = DEFAULT_STORAGE_SYNC_FILE_MAX_TIME;
 
+time_t g_up_time = 0;
+TrackerStatus g_tracker_last_status = {0, 0};
+
 #ifdef WITH_HTTPD
 FDFSHTTPParams g_http_params;
 int g_http_check_interval = 30;

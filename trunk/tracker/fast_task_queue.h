@@ -19,6 +19,10 @@
 #include "common_define.h"
 #include "chain.h"
 
+struct fast_task_info;
+
+typedef int (*TaskFinishCallBack) (struct fast_task_info *pTask);
+
 struct fast_task_info
 {
 	char client_ip[IP_ADDRESS_SIZE];
@@ -31,6 +35,7 @@ struct fast_task_info
 	int offset; //current offset
 	int req_count; //request count
 	struct fast_task_info *next;
+	TaskFinishCallBack finish_callback;
 };
 
 struct fast_task_queue

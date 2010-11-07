@@ -18,7 +18,7 @@ typedef struct tagScheduleEntry
 	int id;  //the task id
 
 	/* the time base to execute task, such as 00:00, interval is 3600,
-           means execute the task every hour as 1:00, 2:00, 3:00 etc. */ 
+           means execute the task every hour as 1:00, 2:00, 3:00 etc. */
 	TimeInfo time_base;
 
 	int interval;   //the interval for execute task, unit is second

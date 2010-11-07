@@ -14,16 +14,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "fdfs_define.h"
 #include "tracker_types.h"
+#include "tracker_status.h"
 #include "base64.h"
 
 #ifdef WITH_HTTPD
 #include "fdfs_http_shared.h"
 #endif
 
-#define TRACKER_SYNC_TO_FILE_FREQ 1000
-#define TRACKER_MAX_PACKAGE_SIZE  (8 * 1024)
+#define TRACKER_SYNC_TO_FILE_FREQ		1000
+#define TRACKER_MAX_PACKAGE_SIZE		(8 * 1024)
+#define TRACKER_SYNC_STATUS_FILE_INTERVAL	3600   //one hour
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,6 +57,9 @@ extern bool g_storage_ip_changed_auto_adjust;
 extern int g_thread_stack_size;
 extern int g_storage_sync_file_max_delay;
 extern int g_storage_sync_file_max_time;
+
+extern time_t g_up_time;
+extern TrackerStatus g_tracker_last_status;  //the status of last running
 
 #ifdef WITH_HTTPD
 extern FDFSHTTPParams g_http_params;

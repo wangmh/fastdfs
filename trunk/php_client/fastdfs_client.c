@@ -688,6 +688,10 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				strlen(pStorage->ip_addr)+1, server_info_array);
 
 			add_assoc_long_ex(server_info_array, \
+				"join_time", sizeof("join_time"), \
+				pStorage->join_time);
+
+			add_assoc_long_ex(server_info_array, \
 				"up_time", sizeof("up_time"), \
 				pStorage->up_time);
 

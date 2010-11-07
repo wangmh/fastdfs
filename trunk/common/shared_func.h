@@ -361,6 +361,17 @@ void chopPath(char *filePath);
 */
 int getFileContent(const char *filename, char **buff, int64_t *file_size);
 
+/** get file content
+ *  parameters:
+ *  	filename: the filename
+ *  	buff: the buff to store file content
+ *      offset: the start offset
+ *  	size: specify the size to fetch and return the fetched size
+ *  return: error no , 0 success, != 0 fail
+*/
+int getFileContentEx(const char *filename, char *buff, \
+		int64_t offset, int64_t *size);
+
 /** write to file
  *  parameters:
  *  	filename: the filename

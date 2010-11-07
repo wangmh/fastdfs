@@ -29,7 +29,9 @@
 #define TRACKER_PROTO_CMD_STORAGE_REPORT_STATUS     76  //report specified storage server status
 #define TRACKER_PROTO_CMD_STORAGE_PARAMETER_REQ	    75  //storage server request parameters
 
-#define TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES     61  //tracker get system data files
+#define TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_START 61  //start of tracker get system data files
+#define TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_END   62  //end of tracker get system data files
+#define TRACKER_PROTO_CMD_TRACKER_GET_ONE_SYS_FILE    63  //tracker get a system data file
 
 #define TRACKER_PROTO_CMD_SERVER_LIST_GROUP			91
 #define TRACKER_PROTO_CMD_SERVER_LIST_STORAGE			92
