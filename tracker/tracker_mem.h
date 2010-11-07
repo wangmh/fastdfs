@@ -11,6 +11,7 @@
 #ifndef _TRACKER_MEM_H_
 #define _TRACKER_MEM_H_
 
+#include <time.h>
 #include <pthread.h>
 #include "tracker_types.h"
 
@@ -20,6 +21,12 @@
 #define STORAGE_SERVERS_CHANGELOG_FILENAME "storage_changelog.dat"
 #define STORAGE_SYNC_TIMESTAMP_FILENAME	   "storage_sync_timestamp.dat"
 #define STORAGE_DATA_FIELD_SEPERATOR	   ','
+
+typedef struct {
+	TrackerServerInfo *pTrackerServer;
+	int running_time;     //running seconds, more means higher weight
+	int restart_interval; //restart interval, less mean higher weight
+} TrackerRunningStatus;
 
 #ifdef __cplusplus
 extern "C" {

@@ -871,6 +871,48 @@ static int tracker_lock_by_client(struct fast_task_info *pTask)
 	return 0;
 }
 
+/**
+request package format:
+	none
+response package format:
+	FDFS_PROTO_PKG_LEN_SIZE bytes: running time
+	FDFS_PROTO_PKG_LEN_SIZE bytes: startup interval
+*/
+static int tracker_deal_get_tracker_status(struct fast_task_info *pTask)
+{
+	char *p;
+
+	if (pTask->length - sizeof(TrackerHeader) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length %d", __LINE__, \
+			TRACKER_PROTO_CMD_TRACKER_GET_STATUS, \
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader), 0);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	pTask->length = sizeof(TrackerHeader);
+	if (g_groups.count <= 0)
+	{
+		return ENOENT;
+	}
+
+	pTask->length = sizeof(TrackerHeader) + 2 * FDFS_PROTO_PKG_LEN_SIZE;
+	p = pTask->data + sizeof(TrackerHeader);
+
+	long2buff(time(NULL) - g_up_time, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+
+	long2buff(g_up_time - g_tracker_last_status.last_check_time, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+
+	return tracker_lock_by_client(pTask);
+}
+
 static int tracker_deal_get_sys_files_start(struct fast_task_info *pTask)
 {
 	int result;
@@ -926,8 +968,8 @@ request package format:
 	1 byte: filename index based 0
 	FDFS_PROTO_PKG_LEN_SIZE bytes: offset
 response package format:
-FDFS_PROTO_PKG_LEN_SIZE bytes: file size
-file size: file content
+	FDFS_PROTO_PKG_LEN_SIZE bytes: file size
+	file size: file content
 */
 static int tracker_deal_get_one_sys_file(struct fast_task_info *pTask)
 {
@@ -2513,6 +2555,9 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			return 0;
 		case FDFS_PROTO_CMD_ACTIVE_TEST:
 			result = tracker_deal_active_test(pTask);
+			break;
+		case TRACKER_PROTO_CMD_TRACKER_GET_STATUS:
+			result = tracker_deal_get_tracker_status(pTask);
 			break;
 		case TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_START:
 			result = tracker_deal_get_sys_files_start(pTask);
