@@ -45,16 +45,16 @@ int tracker_mem_pthread_unlock();
 int tracker_mem_file_lock();
 int tracker_mem_file_unlock();
 
-FDFSGroupInfo *tracker_mem_get_group(const char *group_name);
+#define tracker_mem_get_group(group_name) \
+	tracker_mem_get_group_ex((&g_groups), group_name)
+
+FDFSGroupInfo *tracker_mem_get_group_ex(FDFSGroups *pGroups, \
+		const char *group_name);
 FDFSStorageDetail *tracker_mem_get_storage(FDFSGroupInfo *pGroup, \
 				const char *ip_addr);
 FDFSStorageDetail *tracker_mem_get_active_storage(FDFSGroupInfo *pGroup, \
 				const char *ip_addr);
 
-int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
-	const char *group_name, const bool bNeedSleep, bool *bInserted);
-int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
-		const char *ip_addr, const bool bNeedSleep, bool *bInserted);
 int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr);
 int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 		const char *old_storage_ip, const char *new_storage_ip);

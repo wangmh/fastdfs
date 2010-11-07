@@ -42,6 +42,13 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 	FDFSStorageDetail **ppStorageServer, const char *ip_addr, \
 	const bool bNeedSleep, bool *bInserted);
 
+static int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
+		const char *ip_addr, const bool bNeedSleep, bool *bInserted);
+
+static int tracker_mem_add_group_ex(FDFSGroups *pGroups, \
+	TrackerClientInfo *pClientInfo, const char *group_name, \
+	const bool bNeedSleep, bool *bInserted);
+
 char *g_tracker_sys_filenames[TRACKER_SYS_FILE_COUNT] = {
 	STORAGE_GROUPS_LIST_FILENAME,
 	STORAGE_SERVERS_LIST_FILENAME,
@@ -297,14 +304,14 @@ static int tracker_malloc_group_path_mbs(FDFSGroupInfo *pGroup)
 	return 0;
 }
 
-static int tracker_malloc_all_group_path_mbs()
+static int tracker_malloc_all_group_path_mbs(FDFSGroups *pGroups)
 {
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppEnd;
 	int result;
 
-	ppEnd = g_groups.groups + g_groups.alloc_size;
-	for (ppGroup=g_groups.groups; ppGroup<ppEnd; ppGroup++)
+	ppEnd = pGroups->groups + pGroups->alloc_size;
+	for (ppGroup=pGroups->groups; ppGroup<ppEnd; ppGroup++)
 	{
 		if ((*ppGroup)->store_path_count == 0)
 		{
@@ -320,7 +327,7 @@ static int tracker_malloc_all_group_path_mbs()
 	return 0;
 }
 
-static int tracker_load_groups(const char *data_path)
+static int tracker_load_groups(FDFSGroups *pGroups, const char *data_path)
 {
 #define STORAGE_DATA_GROUP_FIELDS	4
 
@@ -367,7 +374,7 @@ static int tracker_load_groups(const char *data_path)
 		memset(&clientInfo, 0, sizeof(TrackerClientInfo));
 		snprintf(group_name, sizeof(group_name),\
 				"%s", trim(fields[0]));
-		if ((result=tracker_mem_add_group(&clientInfo, \
+		if ((result=tracker_mem_add_group_ex(pGroups, &clientInfo, \
 				group_name, false, &bInserted)) != 0)
 		{
 			break;
@@ -404,7 +411,8 @@ static int tracker_load_groups(const char *data_path)
 	return result;
 }
 
-static int tracker_locate_storage_sync_server(FDFSStorageSync *pStorageSyncs, \
+static int tracker_locate_storage_sync_server(FDFSGroups *pGroups, \
+		FDFSStorageSync *pStorageSyncs, \
 		const int nStorageSyncCount, const bool bLoadFromFile)
 {
 	FDFSGroupInfo *pGroup;
@@ -415,7 +423,8 @@ static int tracker_locate_storage_sync_server(FDFSStorageSync *pStorageSyncs, \
 	pSyncEnd = pStorageSyncs + nStorageSyncCount;
 	for (pSyncServer=pStorageSyncs; pSyncServer<pSyncEnd; pSyncServer++)
 	{
-		pGroup = tracker_mem_get_group(pSyncServer->group_name);
+		pGroup = tracker_mem_get_group_ex(pGroups, \
+				pSyncServer->group_name);
 		if (pGroup == NULL)
 		{
 			continue;
@@ -458,7 +467,7 @@ static int tracker_locate_storage_sync_server(FDFSStorageSync *pStorageSyncs, \
 	return 0;
 }
 
-static int tracker_load_storages(const char *data_path)
+static int tracker_load_storages(FDFSGroups *pGroups, const char *data_path)
 {
 #define STORAGE_DATA_SERVER_FIELDS	22
 
@@ -521,7 +530,8 @@ static int tracker_load_storages(const char *data_path)
 		memset(&clientInfo, 0, sizeof(TrackerClientInfo));
 		snprintf(group_name, sizeof(group_name), "%s", trim(fields[0]));
 		snprintf(ip_addr, sizeof(ip_addr), "%s", trim(fields[1]));
-		if ((clientInfo.pGroup=tracker_mem_get_group(group_name)) == NULL)
+		if ((clientInfo.pGroup=tracker_mem_get_group_ex(pGroups, \
+						group_name)) == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"in the file \"%s/%s\", " \
@@ -668,13 +678,13 @@ static int tracker_load_storages(const char *data_path)
 		return result;
 	}
 
-	result = tracker_locate_storage_sync_server(pStorageSyncs, \
+	result = tracker_locate_storage_sync_server(pGroups, pStorageSyncs, \
 			nStorageSyncCount, true);
 	free(pStorageSyncs);
 	return result;
 }
 
-static int tracker_load_sync_timestamps(const char *data_path)
+static int tracker_load_sync_timestamps(FDFSGroups *pGroups, const char *data_path)
 {
 #define STORAGE_SYNC_TIME_MAX_FIELDS	2 + FDFS_MAX_SERVERS_EACH_GROUP
 
@@ -738,7 +748,8 @@ static int tracker_load_sync_timestamps(const char *data_path)
 		if (strcmp(group_name, previous_group_name) != 0 || \
 			pGroup == NULL)
 		{
-			if ((pGroup=tracker_mem_get_group(group_name)) == NULL)
+			if ((pGroup=tracker_mem_get_group_ex(pGroups, \
+						group_name)) == NULL)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"in the file \"%s/%s\", " \
@@ -808,8 +819,8 @@ static int tracker_load_sync_timestamps(const char *data_path)
 		return result;
 	}
 
-	ppEnd = g_groups.groups + g_groups.count;
-	for (ppGroup=g_groups.groups; ppGroup<ppEnd; ppGroup++)
+	ppEnd = pGroups->groups + pGroups->count;
+	for (ppGroup=pGroups->groups; ppGroup<ppEnd; ppGroup++)
 	{
 		if ((*ppGroup)->count <= 1)
 		{
@@ -818,7 +829,7 @@ static int tracker_load_sync_timestamps(const char *data_path)
 
 		for (dest_index=0; dest_index<(*ppGroup)->count; dest_index++)
 		{
-			if (g_groups.store_server == FDFS_STORE_SERVER_ROUND_ROBIN)
+			if (pGroups->store_server == FDFS_STORE_SERVER_ROUND_ROBIN)
 			{
 				int min_synced_timestamp;
 
@@ -888,7 +899,7 @@ static int tracker_load_sync_timestamps(const char *data_path)
 	return result;
 }
 
-static int tracker_load_data()
+static int tracker_load_data(FDFSGroups *pGroups)
 {
 	char data_path[MAX_PATH_SIZE];
 	int result;
@@ -920,22 +931,22 @@ static int tracker_load_data()
 		return 0;
 	}
 
-	if ((result=tracker_load_groups(data_path)) != 0)
+	if ((result=tracker_load_groups(pGroups, data_path)) != 0)
 	{
 		return result;
 	}
 
-	if ((result=tracker_load_storages(data_path)) != 0)
+	if ((result=tracker_load_storages(pGroups, data_path)) != 0)
 	{
 		return result;
 	}
 
-	if ((result=tracker_malloc_all_group_path_mbs()) != 0)
+	if ((result=tracker_malloc_all_group_path_mbs(pGroups)) != 0)
 	{
 		return result;
 	}
 
-	if ((result=tracker_load_sync_timestamps(data_path)) != 0)
+	if ((result=tracker_load_sync_timestamps(pGroups, data_path)) != 0)
 	{
 		return result;
 	}
@@ -1272,11 +1283,71 @@ static int tracker_open_changlog_file()
 	return 0;
 }
 
-int tracker_mem_init()
+static int tracker_mem_init_groups(FDFSGroups *pGroups)
 {
 	int result;
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppGroupEnd;
+
+	pGroups->alloc_size = TRACKER_MEM_ALLOC_ONCE;
+	pGroups->count = 0;
+	pGroups->current_write_group = 0;
+	pGroups->pStoreGroup = NULL;
+	pGroups->groups = (FDFSGroupInfo **)malloc( \
+			sizeof(FDFSGroupInfo *) * pGroups->alloc_size);
+	if (pGroups->groups == NULL)
+	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail!", __LINE__, \
+			(int)sizeof(FDFSGroupInfo *) * pGroups->alloc_size);
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	memset(pGroups->groups, 0, \
+		sizeof(FDFSGroupInfo *) * pGroups->alloc_size);
+
+	ppGroupEnd = pGroups->groups + pGroups->alloc_size;
+	for (ppGroup=pGroups->groups; ppGroup<ppGroupEnd; ppGroup++)
+	{
+		*ppGroup = (FDFSGroupInfo *)malloc(sizeof(FDFSGroupInfo));
+		if (*ppGroup == NULL)
+		{
+			logCrit("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail!", \
+				__LINE__, (int)sizeof(FDFSGroupInfo));
+			return errno != 0 ? errno : ENOMEM;
+		}
+
+		memset(*ppGroup, 0, sizeof(FDFSGroupInfo));
+	}
+
+	pGroups->sorted_groups = (FDFSGroupInfo **) \
+			malloc(sizeof(FDFSGroupInfo *) * pGroups->alloc_size);
+	if (pGroups->sorted_groups == NULL)
+	{
+		free(pGroups->groups);
+		pGroups->groups = NULL;
+
+		logCrit("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail!", __LINE__, \
+			(int)sizeof(FDFSGroupInfo *) * pGroups->alloc_size);
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	memset(pGroups->sorted_groups, 0, \
+		sizeof(FDFSGroupInfo *) * pGroups->alloc_size);
+
+	if ((result=tracker_load_data(pGroups)) != 0)
+	{
+		return result;
+	}
+
+	return 0;
+}
+
+int tracker_mem_init()
+{
+	int result;
 
 	if ((result=init_pthread_lock(&mem_thread_lock)) != 0)
 	{
@@ -1292,61 +1363,8 @@ int tracker_mem_init()
 	{
 		return result;
 	}
-	
-	g_groups.alloc_size = TRACKER_MEM_ALLOC_ONCE;
-	g_groups.count = 0;
-	g_groups.current_write_group = 0;
-	g_groups.pStoreGroup = NULL;
-	g_groups.groups = (FDFSGroupInfo **)malloc( \
-			sizeof(FDFSGroupInfo *) * g_groups.alloc_size);
-	if (g_groups.groups == NULL)
-	{
-		logCrit("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail, program exit!", __LINE__, \
-			(int)sizeof(FDFSGroupInfo *) * g_groups.alloc_size);
-		return errno != 0 ? errno : ENOMEM;
-	}
 
-	memset(g_groups.groups, 0, \
-		sizeof(FDFSGroupInfo *) * g_groups.alloc_size);
-
-	ppGroupEnd = g_groups.groups + g_groups.alloc_size;
-	for (ppGroup=g_groups.groups; ppGroup<ppGroupEnd; ppGroup++)
-	{
-		*ppGroup = (FDFSGroupInfo *)malloc(sizeof(FDFSGroupInfo));
-		if (*ppGroup == NULL)
-		{
-			logCrit("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail, program exit!", \
-				__LINE__, (int)sizeof(FDFSGroupInfo));
-			return errno != 0 ? errno : ENOMEM;
-		}
-
-		memset(*ppGroup, 0, sizeof(FDFSGroupInfo));
-	}
-
-	g_groups.sorted_groups = (FDFSGroupInfo **) \
-			malloc(sizeof(FDFSGroupInfo *) * g_groups.alloc_size);
-	if (g_groups.sorted_groups == NULL)
-	{
-		free(g_groups.groups);
-		g_groups.groups = NULL;
-
-		logCrit("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail, program exit!", __LINE__, \
-			(int)sizeof(FDFSGroupInfo *) * g_groups.alloc_size);
-		return errno != 0 ? errno : ENOMEM;
-	}
-
-	memset(g_groups.sorted_groups, 0, \
-		sizeof(FDFSGroupInfo *) * g_groups.alloc_size);
-
-	if ((result=tracker_load_data()) != 0)
-	{
-		return result;
-	}
-
-	return 0;
+	return tracker_mem_init_groups(&g_groups);
 }
 
 static void tracker_free_last_sync_timestamps(int **last_sync_timestamps, \
@@ -1557,35 +1575,55 @@ static int tracker_mem_init_group(FDFSGroupInfo *pGroup)
 	return err_no;
 }
 
-int tracker_mem_destroy()
+static int tracker_mem_destroy_groups(FDFSGroups *pGroups, const bool saveFiles)
 {
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppEnd;
 	int result;
 
-	if (g_groups.groups == NULL)
+	if (pGroups->groups == NULL)
 	{
 		result = 0;
 	}
 	else
 	{
-		result = tracker_save_storages();
-		result += tracker_save_sync_timestamps();
+		if (saveFiles)
+		{
+			result = tracker_save_storages();
+			if (result == 0)
+			{
+				result = tracker_save_sync_timestamps();
+			}
+		}
+		else
+		{
+			result = 0;
+		}
 
-		ppEnd = g_groups.groups + g_groups.count;
-		for (ppGroup=g_groups.groups; ppGroup<ppEnd; ppGroup++)
+		ppEnd = pGroups->groups + pGroups->count;
+		for (ppGroup=pGroups->groups; ppGroup<ppEnd; ppGroup++)
 		{
 			tracker_mem_free_group(*ppGroup);
 		}
 
-		if (g_groups.sorted_groups != NULL)
+		if (pGroups->sorted_groups != NULL)
 		{
-			free(g_groups.sorted_groups);
+			free(pGroups->sorted_groups);
+			pGroups->sorted_groups = NULL;
 		}
 
-		free(g_groups.groups);
-		g_groups.groups = NULL;
+		free(pGroups->groups);
+		pGroups->groups = NULL;
 	}
+
+	return result;
+}
+
+int tracker_mem_destroy()
+{
+	int result;
+
+	result = tracker_mem_destroy_groups(&g_groups, true);
 
 	if (changelog_fd >= 0)
 	{
@@ -1627,7 +1665,7 @@ static void tracker_mem_free_groups(FDFSGroupInfo **groups, const int count)
 	free(groups);
 }
 
-static int tracker_mem_realloc_groups(const bool bNeedSleep)
+static int tracker_mem_realloc_groups(FDFSGroups *pGroups, const bool bNeedSleep)
 {
 	FDFSGroupInfo **old_groups;
 	FDFSGroupInfo **old_sorted_groups;
@@ -1637,7 +1675,7 @@ static int tracker_mem_realloc_groups(const bool bNeedSleep)
 	FDFSGroupInfo **ppGroupEnd;
 	int new_size;
 
-	new_size = g_groups.alloc_size + TRACKER_MEM_ALLOC_ONCE;
+	new_size = pGroups->alloc_size + TRACKER_MEM_ALLOC_ONCE;
 	new_groups = (FDFSGroupInfo **)malloc(sizeof(FDFSGroupInfo *) * new_size);
 	if (new_groups == NULL)
 	{
@@ -1649,7 +1687,7 @@ static int tracker_mem_realloc_groups(const bool bNeedSleep)
 	memset(new_groups, 0, sizeof(FDFSGroupInfo *) * new_size);
 
 	ppGroupEnd = new_groups + new_size;
-	for (ppGroup=new_groups+g_groups.count; ppGroup<ppGroupEnd; ppGroup++)
+	for (ppGroup=new_groups+pGroups->count; ppGroup<ppGroupEnd; ppGroup++)
 	{
 		*ppGroup = (FDFSGroupInfo *)malloc(sizeof(FDFSGroupInfo));
 		if (*ppGroup == NULL)
@@ -1665,8 +1703,8 @@ static int tracker_mem_realloc_groups(const bool bNeedSleep)
 		memset(*ppGroup, 0, sizeof(FDFSGroupInfo));
 	}
 
-	memcpy(new_groups, g_groups.groups, \
-		sizeof(FDFSGroupInfo *) * g_groups.count);
+	memcpy(new_groups, pGroups->groups, \
+		sizeof(FDFSGroupInfo *) * pGroups->count);
 
 	new_sorted_groups = (FDFSGroupInfo **)malloc( \
 			sizeof(FDFSGroupInfo *) * new_size);
@@ -1681,14 +1719,14 @@ static int tracker_mem_realloc_groups(const bool bNeedSleep)
 	}
 
 	memset(new_sorted_groups, 0, sizeof(FDFSGroupInfo *) * new_size);
-	memcpy(new_sorted_groups, g_groups.sorted_groups, \
-		sizeof(FDFSGroupInfo *) * g_groups.count);
+	memcpy(new_sorted_groups, pGroups->sorted_groups, \
+		sizeof(FDFSGroupInfo *) * pGroups->count);
 
-	old_groups = g_groups.groups;
-	old_sorted_groups = g_groups.sorted_groups;
-	g_groups.alloc_size = new_size;
-	g_groups.groups = new_groups;
-	g_groups.sorted_groups = new_sorted_groups;
+	old_groups = pGroups->groups;
+	old_sorted_groups = pGroups->sorted_groups;
+	pGroups->alloc_size = new_size;
+	pGroups->groups = new_groups;
+	pGroups->sorted_groups = new_sorted_groups;
 
 	if (bNeedSleep)
 	{
@@ -1992,14 +2030,14 @@ static void tracker_mem_insert_into_sorted_servers( \
 	*ppServer = pTargetServer;
 }
 
-static void tracker_mem_insert_into_sorted_groups( \
+static void tracker_mem_insert_into_sorted_groups(FDFSGroups *pGroups, \
 		FDFSGroupInfo *pTargetGroup)
 {
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppEnd;
 
-	ppEnd = g_groups.sorted_groups + g_groups.count;
-	for (ppGroup=ppEnd; ppGroup > g_groups.sorted_groups; ppGroup--)
+	ppEnd = pGroups->sorted_groups + pGroups->count;
+	for (ppGroup=ppEnd; ppGroup > pGroups->sorted_groups; ppGroup--)
 	{
 		if (strcmp(pTargetGroup->group_name, \
 			   (*(ppGroup-1))->group_name) > 0)
@@ -2016,7 +2054,8 @@ static void tracker_mem_insert_into_sorted_groups( \
 	*ppGroup = pTargetGroup;
 }
 
-FDFSGroupInfo *tracker_mem_get_group(const char *group_name)
+FDFSGroupInfo *tracker_mem_get_group_ex(FDFSGroups *pGroups, \
+		const char *group_name)
 {
 	FDFSGroupInfo target_groups;
 	FDFSGroupInfo *pTargetGroups;
@@ -2026,8 +2065,8 @@ FDFSGroupInfo *tracker_mem_get_group(const char *group_name)
 	strcpy(target_groups.group_name, group_name);
 	pTargetGroups = &target_groups;
 	ppGroup = (FDFSGroupInfo **)bsearch(&pTargetGroups, \
-			g_groups.sorted_groups, \
-			g_groups.count, sizeof(FDFSGroupInfo *), \
+			pGroups->sorted_groups, \
+			pGroups->count, sizeof(FDFSGroupInfo *), \
 			tracker_mem_cmp_by_group_name);
 
 	if (ppGroup != NULL)
@@ -2040,8 +2079,9 @@ FDFSGroupInfo *tracker_mem_get_group(const char *group_name)
 	}
 }
 
-int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
-	const char *group_name, const bool bNeedSleep, bool *bInserted)
+static int tracker_mem_add_group_ex(FDFSGroups *pGroups, \
+	TrackerClientInfo *pClientInfo, const char *group_name, \
+	const bool bNeedSleep, bool *bInserted)
 {
 	FDFSGroupInfo *pGroup;
 	int result;
@@ -2059,22 +2099,22 @@ int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 	{	
 		result = 0;
 		*bInserted = false;
-		pGroup = tracker_mem_get_group(group_name);
+		pGroup = tracker_mem_get_group_ex(pGroups, group_name);
 		if (pGroup != NULL)
 		{
 			break;
 		}
 
-		if (g_groups.count >= g_groups.alloc_size)
+		if (pGroups->count >= pGroups->alloc_size)
 		{
-			result = tracker_mem_realloc_groups(bNeedSleep);
+			result = tracker_mem_realloc_groups(pGroups, bNeedSleep);
 			if (result != 0)
 			{
 				break;
 			}
 		}
 
-		pGroup = *(g_groups.groups + g_groups.count);
+		pGroup = *(pGroups->groups + pGroups->count);
 		result = tracker_mem_init_group(pGroup);
 		if (result != 0)
 		{
@@ -2082,16 +2122,16 @@ int tracker_mem_add_group(TrackerClientInfo *pClientInfo, \
 		}
 
 		strcpy(pGroup->group_name, group_name);
-		tracker_mem_insert_into_sorted_groups(pGroup);
-		g_groups.count++;
+		tracker_mem_insert_into_sorted_groups(pGroups, pGroup);
+		pGroups->count++;
 
-		if ((g_groups.store_lookup == \
+		if ((pGroups->store_lookup == \
 				FDFS_STORE_LOOKUP_SPEC_GROUP) && \
-				(g_groups.pStoreGroup == NULL) && \
-				(strcmp(g_groups.store_group, \
+				(pGroups->pStoreGroup == NULL) && \
+				(strcmp(pGroups->store_group, \
 					pGroup->group_name) == 0))
 		{
-			g_groups.pStoreGroup = pGroup;
+			pGroups->pStoreGroup = pGroup;
 		}
 
 		*bInserted = true;
@@ -2345,10 +2385,20 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 	pthread_mutex_unlock(&mem_thread_lock);
 
 	tracker_write_to_changelog(pGroup, pNewStorageServer, new_storage_ip);
+
+	if ((result=tracker_save_storages()) != 0)
+	{
+		return 0;
+	}
+	if ((result=tracker_save_sync_timestamps()) != 0)
+	{
+		return 0;
+	}
+
 	return 0;
 }
 
-int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
+static int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 		const char *ip_addr, const bool bNeedSleep, bool *bInserted)
 {
 	int result;
@@ -2742,6 +2792,8 @@ static int tracker_mem_get_sys_files_from_others( \
 {
 	int result;
 	TrackerServerInfo *pTrackerServer;
+	FDFSGroups newGroups;
+	FDFSGroups tempGroups;
 
 	pTrackerServer = tracker_mem_get_tracker_server(pJoinBody, &result);
 	if (pTrackerServer == NULL)
@@ -2760,11 +2812,24 @@ static int tracker_mem_get_sys_files_from_others( \
 		__LINE__, pTrackerServer->ip_addr, \
 		pTrackerServer->port);
 
-	//reconstruct the data
-	if ((result=tracker_load_data()) != 0)
+	memset(&newGroups, 0, sizeof(newGroups));
+	newGroups.store_lookup = g_groups.store_lookup;
+	newGroups.store_server = g_groups.store_server;
+	newGroups.download_server = g_groups.download_server;
+	newGroups.store_path = g_groups.store_path;
+	strcpy(newGroups.store_group, g_groups.store_group);
+	if ((result=tracker_mem_init_groups(&newGroups)) != 0)
 	{
+ 		tracker_mem_destroy_groups(&newGroups, false);
 		return result;
 	}
+
+	memcpy(&tempGroups, &g_groups, sizeof(FDFSGroups));
+	memcpy(&g_groups, &newGroups, sizeof(FDFSGroups));
+
+	usleep(100000);
+
+ 	tracker_mem_destroy_groups(&tempGroups, false);
 
 	if (changelog_fd >= 0)
 	{
@@ -2801,8 +2866,8 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		tracker_mem_file_unlock();
 	}
 
-	if ((result=tracker_mem_add_group(pClientInfo, pJoinBody->group_name, \
-				bNeedSleep, &bGroupInserted)) != 0)
+	if ((result=tracker_mem_add_group_ex(&g_groups, pClientInfo, \
+		pJoinBody->group_name, bNeedSleep, &bGroupInserted)) != 0)
 	{
 		return result;
 	}
