@@ -910,7 +910,7 @@ static int tracker_deal_get_tracker_status(struct fast_task_info *pTask)
 	long2buff(g_up_time - g_tracker_last_status.last_check_time, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 
-	return tracker_lock_by_client(pTask);
+	return 0;
 }
 
 static int tracker_deal_get_sys_files_start(struct fast_task_info *pTask)
