@@ -188,7 +188,10 @@ int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
 		int64_t *in_bytes);
 int fdfs_quit(TrackerServerInfo *pTrackerServer);
 
-int fdfs_active_test(TrackerServerInfo *pTrackerServer);
+#define fdfs_active_test(pTrackerServer) \
+	fdfs_no_body_cmd(pTrackerServer, FDFS_PROTO_CMD_ACTIVE_TEST)
+
+int fdfs_deal_no_body_cmd(TrackerServerInfo *pTrackerServer, const int cmd);
 
 #define fdfs_split_metadata(meta_buff, meta_count, err_no) \
 		fdfs_split_metadata_ex(meta_buff, FDFS_RECORD_SEPERATOR, \

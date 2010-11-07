@@ -94,6 +94,14 @@ int tracker_mem_check_alive(void *arg);
 int tracker_mem_get_storage_index(FDFSGroupInfo *pGroup, \
 		FDFSStorageDetail *pStorage);
 
+#define tracker_get_sys_files_start(pTrackerServer) \
+		 fdfs_deal_no_body_cmd(pTrackerServer, \
+		TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_START)
+
+#define tracker_get_sys_files_end(pTrackerServer) \
+		 fdfs_deal_no_body_cmd(pTrackerServer, \
+		TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_END)
+
 #ifdef __cplusplus
 }
 #endif
