@@ -2427,6 +2427,77 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 	return result;
 }
 
+static int tracker_mem_get_status(TrackerServerInfo *pTrackerServer, \
+		TrackerRunningStatus *pStatus)
+{
+	char in_buff[2 * FDFS_PROTO_PKG_LEN_SIZE];
+	TrackerHeader header;
+	char *pInBuff;
+	int64_t in_bytes;
+	int result;
+
+	pTrackerServer->sock = -1;
+	if ((result=tracker_connect_server(pTrackerServer)) != 0)
+	{
+		return result;
+	}
+
+	do
+	{
+	memset(&header, 0, sizeof(header));
+	header.cmd = TRACKER_PROTO_CMD_TRACKER_GET_STATUS;
+	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, \
+			sizeof(header), g_fdfs_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, strerror(result));
+
+		result = (result == ENOENT ? EACCES : result);
+		break;
+	}
+
+	pInBuff = in_buff;
+	result = fdfs_recv_response(pTrackerServer, &pInBuff, \
+				sizeof(in_buff), &in_bytes);
+	if (result != 0)
+	{
+		break;
+	}
+
+	if (in_bytes != sizeof(in_buff))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid, " \
+			"expect length: %d.", __LINE__, \
+			pTrackerServer->ip_addr, pTrackerServer->port, \
+			in_bytes, (int)sizeof(in_buff));
+		result = EINVAL;
+		break;
+	}
+
+	pStatus->running_time = buff2long(in_buff);
+	pStatus->restart_interval = buff2long(in_buff + FDFS_PROTO_PKG_LEN_SIZE);
+
+#define FDFS_TRIM_TIME(t, i) (t / i) * i
+
+	pStatus->running_time = FDFS_TRIM_TIME(pStatus->running_time, \
+					TRACKER_SYNC_STATUS_FILE_INTERVAL);
+	pStatus->restart_interval = FDFS_TRIM_TIME(pStatus->restart_interval, \
+					TRACKER_SYNC_STATUS_FILE_INTERVAL);
+
+	} while (0);
+
+	close(pTrackerServer->sock);
+	pTrackerServer->sock = -1;
+
+	return result;
+}
+
 static int tracker_mem_get_sys_file_piece(TrackerServerInfo *pTrackerServer, \
 	const int file_index, int fd, int64_t *offset, int64_t *file_size)
 {
@@ -2592,50 +2663,116 @@ static int tracker_mem_get_sys_files(TrackerServerInfo *pTrackerServer)
 	return result;
 }
 
-static int tracker_mem_get_sys_files_from_others( \
-		FDFSStorageJoinBody *pJoinBody)
+static int tracker_mem_cmp_tracker_running_status(const void *p1, const void *p2)
+{
+	TrackerRunningStatus *pStatus1;
+	TrackerRunningStatus *pStatus2;
+	int sub;
+
+	pStatus1 = (TrackerRunningStatus *)p1;
+	pStatus2 = (TrackerRunningStatus *)p2;
+
+	sub = pStatus1->running_time - pStatus2->running_time;
+	if (sub != 0)
+	{
+		return sub;
+	}
+
+	return pStatus2->restart_interval - pStatus1->restart_interval;
+}
+
+static TrackerServerInfo *tracker_mem_get_tracker_server( \
+		FDFSStorageJoinBody *pJoinBody, int *result)
 {
 	TrackerServerInfo *pTrackerServer;
 	TrackerServerInfo *pTrackerEnd;
+	TrackerRunningStatus trackerStatus[FDFS_MAX_TRACKERS];
+	TrackerRunningStatus *pTrackerStatus;
+	int count;
 	int r;
-	int result;
+	int i;
 
-	result = 0;
+	pTrackerStatus = trackerStatus;
+	*result = 0;
 	pTrackerEnd = pJoinBody->other_tracker_servers + \
                       pJoinBody->other_tracker_count;
         for (pTrackerServer=pJoinBody->other_tracker_servers; \
                 pTrackerServer<pTrackerEnd; pTrackerServer++)
 	{
-		r = tracker_mem_get_sys_files(pTrackerServer);
+		pTrackerStatus->pTrackerServer = pTrackerServer;
+		r = tracker_mem_get_status(pTrackerServer, pTrackerStatus);
 		if (r == 0)
 		{
-			logInfo("file: "__FILE__", line: %d, " \
-				"sys files loaded from tracker server %s:%d", \
-				__LINE__, pTrackerServer->ip_addr, \
-				pTrackerServer->port);
-
-			//reconstruct the data
-			if ((result=tracker_load_data()) != 0)
-			{
-				return result;
-			}
-
-			if (changelog_fd >= 0)
-			{
-				close(changelog_fd);
-				changelog_fd = -1;
-			}
-
-			return tracker_open_changlog_file();
+			pTrackerStatus++;
 		}
-
-		if (r != ENOENT)
+		else if (r != ENOENT)
 		{
-			result = r;
+			*result = r;
 		}
 	}
 
-	return result;
+	count = pTrackerStatus - trackerStatus;
+	if (count == 0)
+	{
+		return NULL;
+	}
+
+	*result = 0;
+	if (count == 1)
+	{
+		return trackerStatus[0].pTrackerServer;
+	}
+
+	qsort(trackerStatus, count, sizeof(TrackerRunningStatus), \
+		tracker_mem_cmp_tracker_running_status);
+
+	for (i=0; i<count; i++)
+	{
+		logInfo("%s running time: %d, restart interval: %d", \
+			trackerStatus[i].pTrackerServer, \
+			trackerStatus[i].running_time, \
+			trackerStatus[i].restart_interval);
+	}
+
+	return trackerStatus[count - 1].pTrackerServer;
+}
+
+static int tracker_mem_get_sys_files_from_others( \
+		FDFSStorageJoinBody *pJoinBody)
+{
+	int result;
+	TrackerServerInfo *pTrackerServer;
+
+	pTrackerServer = tracker_mem_get_tracker_server(pJoinBody, &result);
+	if (pTrackerServer == NULL)
+	{
+		return result;
+	}
+
+	result = tracker_mem_get_sys_files(pTrackerServer);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	logInfo("file: "__FILE__", line: %d, " \
+		"sys files loaded from tracker server %s:%d", \
+		__LINE__, pTrackerServer->ip_addr, \
+		pTrackerServer->port);
+
+	//reconstruct the data
+	if ((result=tracker_load_data()) != 0)
+	{
+		return result;
+	}
+
+	if (changelog_fd >= 0)
+	{
+		close(changelog_fd);
+		changelog_fd = -1;
+	}
+
+	return tracker_open_changlog_file();
 }
 
 int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
