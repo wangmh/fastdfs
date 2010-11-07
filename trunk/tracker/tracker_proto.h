@@ -189,7 +189,7 @@ int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
 int fdfs_quit(TrackerServerInfo *pTrackerServer);
 
 #define fdfs_active_test(pTrackerServer) \
-	fdfs_no_body_cmd(pTrackerServer, FDFS_PROTO_CMD_ACTIVE_TEST)
+	fdfs_deal_no_body_cmd(pTrackerServer, FDFS_PROTO_CMD_ACTIVE_TEST)
 
 int fdfs_deal_no_body_cmd(TrackerServerInfo *pTrackerServer, const int cmd);
 
