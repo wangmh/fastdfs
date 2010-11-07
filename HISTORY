@@ -1,4 +1,4 @@
-Version 2.03  2010-11-06
+Version 2.03  2010-11-07
  * bug fixed: core dump when http.need_find_content_type=false and 
    http.anti_steal.check_token=true
  * storage server add join_time field (create timestamp of this storage)
@@ -6,6 +6,7 @@ Version 2.03  2010-11-06
    first storage server join in (tracker to tracker sync system files)
  * tracker server changes the old ip address to the new address when the 
    storage server ip address changed
+ * tracker to tracker sync system data files in some case
 
 Version 2.02  2010-10-28
  * get parameters function from tracker server changed, 

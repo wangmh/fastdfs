@@ -971,6 +971,60 @@ int getFileContent(const char *filename, char **buff, int64_t *file_size)
 	return 0;
 }
 
+int getFileContentEx(const char *filename, char *buff, \
+		int64_t offset, int64_t *size)
+{
+	int fd;
+	int read_bytes;
+
+	if (*size <= 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"invalid size: "INT64_PRINTF_FORMAT, \
+			__LINE__, *size);
+		return EINVAL;
+	}
+	
+	fd = open(filename, O_RDONLY);
+	if (fd < 0)
+	{
+		*size = 0;
+		logError("file: "__FILE__", line: %d, " \
+			"open file %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			filename, errno, strerror(errno));
+		return errno != 0 ? errno : ENOENT;
+	}
+
+	if (offset > 0 && lseek(fd, offset, SEEK_SET) < 0)
+	{
+		*size = 0;
+		close(fd);
+		logError("file: "__FILE__", line: %d, " \
+			"lseek file %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			filename, errno, strerror(errno));
+		return errno != 0 ? errno : EIO;
+	}
+
+	if ((read_bytes=read(fd, buff, *size)) < 0)
+	{
+		*size = 0;
+		close(fd);
+		logError("file: "__FILE__", line: %d, " \
+			"read from file %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			filename, errno, strerror(errno));
+		return errno != 0 ? errno : EIO;
+	}
+
+	*size = read_bytes;
+	*(buff + (*size)) = '\0';
+	close(fd);
+
+	return 0;
+}
+
 int writeToFile(const char *filename, const char *buff, const int file_size)
 {
 	int fd;

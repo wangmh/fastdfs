@@ -40,6 +40,13 @@ void task_finish_clean_up(struct fast_task_info *pTask)
 	TrackerClientInfo *pClientInfo;
 
 	pClientInfo = (TrackerClientInfo *)pTask->arg;
+
+	if (pTask->finish_callback != NULL)
+	{
+		pTask->finish_callback(pTask);
+		pTask->finish_callback = NULL;
+	}
+
 	if (pClientInfo->pGroup != NULL)
 	{
 		if (pClientInfo->pStorage != NULL)

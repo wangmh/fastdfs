@@ -299,6 +299,9 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_changelog_fsize="INT64_PRINTF_FORMAT"\n"
 		"g_storage_sync_file_max_delay=%ds\n"
 		"g_storage_sync_file_max_time=%ds\n"
+		"g_up_time=%d\n"
+		"g_tracker_last_status.up_time=%d\n"
+		"g_tracker_last_status.last_check_time=%d\n"
 	#ifdef WITH_HTTPD
 		"g_http_params.disabled=%d\n"
 		"g_http_params.anti_steal_token=%d\n"
@@ -339,6 +342,9 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_changelog_fsize
 		, g_storage_sync_file_max_delay
 		, g_storage_sync_file_max_time
+		, (int)g_up_time
+		, (int)g_tracker_last_status.up_time
+		, (int)g_tracker_last_status.last_check_time
 	#ifdef WITH_HTTPD
 		, g_http_params.disabled
 		, g_http_params.anti_steal_token

@@ -33,6 +33,7 @@
 #include "tracker_global.h"
 #include "tracker_proto.h"
 #include "tracker_func.h"
+#include "tracker_status.h"
 
 #ifdef WITH_HTTPD
 #include "tracker_httpd.h"
@@ -71,7 +72,7 @@ static void sigSegvHandler(int signum, siginfo_t *info, void *ptr);
 static void sigDumpHandler(int sig);
 #endif
 
-#define SCHEDULE_ENTRIES_COUNT 2
+#define SCHEDULE_ENTRIES_COUNT 3
 
 int main(int argc, char *argv[])
 {
@@ -89,6 +90,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	g_up_time = time(NULL);
 	log_init();
 
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
@@ -104,6 +106,12 @@ int main(int argc, char *argv[])
 	memset(bind_addr, 0, sizeof(bind_addr));
 	if ((result=tracker_load_from_conf_file(conf_filename, \
 			bind_addr, sizeof(bind_addr))) != 0)
+	{
+		log_destroy();
+		return result;
+	}
+
+	if ((result=tracker_load_status_from_file(&g_tracker_last_status)) != 0)
 	{
 		log_destroy();
 		return result;
@@ -276,6 +284,13 @@ int main(int argc, char *argv[])
 	scheduleEntries[1].interval = g_check_active_interval;
 	scheduleEntries[1].task_func = tracker_mem_check_alive;
 	scheduleEntries[1].func_args = NULL;
+
+	scheduleEntries[2].id = 3;
+	scheduleEntries[2].time_base.hour = TIME_NONE;
+	scheduleEntries[2].time_base.minute = TIME_NONE;
+	scheduleEntries[2].interval = TRACKER_SYNC_STATUS_FILE_INTERVAL;
+	scheduleEntries[2].task_func = tracker_write_status_to_file;
+	scheduleEntries[2].func_args = NULL;
 	if ((result=sched_start(&scheduleArray, &schedule_tid, \
 		g_thread_stack_size, &g_continue_flag)) != 0)
 	{

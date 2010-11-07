@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +39,7 @@ static pthread_mutex_t tracker_thread_lock;
 static pthread_mutex_t lb_thread_lock;
 
 int g_tracker_thread_count = 0;
+static int lock_by_client_count = 0;
 
 static void *work_thread_entrance(void* arg);
 static void wait_for_work_threads_exit();
@@ -831,135 +833,199 @@ static int tracker_deal_active_test(struct fast_task_info *pTask)
 	return 0;
 }
 
-/**
-package format:
-FDFS_PROTO_PKG_LEN_SIZE bytes: storage_groups.dat file size
-FDFS_PROTO_PKG_LEN_SIZE bytes: storage_servers.dat file size
-FDFS_PROTO_PKG_LEN_SIZE bytes: storage_sync_timestamp.dat file size
-FDFS_PROTO_PKG_LEN_SIZE bytes: storage_changelog.dat file size
-file size 1: storage_groups.dat content
-file size 2: storage_servers.dat content
-file size 3: storage_sync_timestamp.dat content
-file size 4: storage_changelog.dat content
-*/
-static int tracker_deal_get_sys_files(struct fast_task_info *pTask)
+static int tracker_unlock_by_client(struct fast_task_info *pTask)
 {
-	struct tracker_sys_file_info {
-		char *filename;
-		char *content;
-		int64_t file_size;
-	};
+	if (lock_by_client_count <= 0 || pTask->finish_callback == NULL)
+	{  //already unlocked
+		return 0;
+	}
 
-	struct tracker_sys_file_info sys_file_info[TRACKER_SYS_FILE_COUNT];
+	pTask->finish_callback = NULL;
+	lock_by_client_count--;
+
+	tracker_mem_file_unlock();
+
+	logInfo("file: "__FILE__", line: %d, " \
+		"unlock by client: %s, locked count: %d", \
+		__LINE__, pTask->client_ip, lock_by_client_count);
+
+	return 0;
+}
+
+static int tracker_lock_by_client(struct fast_task_info *pTask)
+{
+	if (lock_by_client_count > 0)
+	{
+		return EBUSY;
+	}
+
+	tracker_mem_file_lock();  //avoid to read dirty data
+
+	pTask->finish_callback = tracker_unlock_by_client; //make sure to release lock
+	lock_by_client_count++;
+
+	logInfo("file: "__FILE__", line: %d, " \
+		"lock by client: %s, locked count: %d", \
+		__LINE__, pTask->client_ip, lock_by_client_count);
+
+	return 0;
+}
+
+static int tracker_deal_get_sys_files_start(struct fast_task_info *pTask)
+{
 	int result;
-	int i;
-	int total_size;
-	char full_filename[MAX_PATH_SIZE];
-	char *p;
 
 	if (pTask->length - sizeof(TrackerHeader) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
-			"expect length 0", __LINE__, \
-			TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES, \
+			"expect length %d", __LINE__, \
+			TRACKER_PROTO_CMD_TRACKER_GET_ONE_SYS_FILE, \
 			pTask->client_ip, pTask->length - \
-			(int)sizeof(TrackerHeader));
+			(int)sizeof(TrackerHeader), 0);
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
+	pTask->length = sizeof(TrackerHeader);
 	if (g_groups.count == 0)
 	{
-		pTask->length = sizeof(TrackerHeader);
 		return ENOENT;
 	}
 
 	if ((result=tracker_save_sys_files()) != 0)
 	{
-		pTask->length = sizeof(TrackerHeader);
 		return result == ENOENT ? EACCES: result;
 	}
 
-	memset(sys_file_info, 0, sizeof(sys_file_info));
-	for (i=0; i<TRACKER_SYS_FILE_COUNT; i++)
+	return tracker_lock_by_client(pTask);
+}
+
+static int tracker_deal_get_sys_files_end(struct fast_task_info *pTask)
+{
+	if (pTask->length - sizeof(TrackerHeader) != 0)
 	{
-		sys_file_info[i].filename = g_tracker_sys_filenames[i];
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length %d", __LINE__, \
+			TRACKER_PROTO_CMD_TRACKER_GET_ONE_SYS_FILE, \
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader), 0);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
 	}
 
-	tracker_mem_file_lock();  //avoid to read dirty data
+	pTask->length = sizeof(TrackerHeader);
+	return tracker_unlock_by_client(pTask);
+}
+
+/**
+request package format:
+	1 byte: filename index based 0
+	FDFS_PROTO_PKG_LEN_SIZE bytes: offset
+response package format:
+FDFS_PROTO_PKG_LEN_SIZE bytes: file size
+file size: file content
+*/
+static int tracker_deal_get_one_sys_file(struct fast_task_info *pTask)
+{
+#define TRACKER_READ_BYTES_ONCE  (TRACKER_MAX_PACKAGE_SIZE - \
+			FDFS_PROTO_PKG_LEN_SIZE - sizeof(TrackerHeader) - 1)
+	int result;
+	int index;
+	struct stat file_stat;
+	int64_t offset;
+	int64_t read_bytes;
+	int64_t bytes;
+	char full_filename[MAX_PATH_SIZE];
+	char *p;
+
+	if (pTask->length - sizeof(TrackerHeader) != 1+FDFS_PROTO_PKG_LEN_SIZE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length %d", __LINE__, \
+			TRACKER_PROTO_CMD_TRACKER_GET_ONE_SYS_FILE, \
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader), 1+FDFS_PROTO_PKG_LEN_SIZE);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
 
 	p = pTask->data + sizeof(TrackerHeader);
-	total_size = 0;
-	for (i=0; i<TRACKER_SYS_FILE_COUNT; i++)
+	index = *p++;
+	offset = buff2long(p);
+
+	if (index < 0 || index >= TRACKER_SYS_FILE_COUNT)
 	{
-		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
-			g_fdfs_base_path, sys_file_info[i].filename);
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid index: %d", \
+			__LINE__, pTask->client_ip, index);
 
-		if ((result=getFileContent(full_filename, \
-				&(sys_file_info[i].content),\
-				&(sys_file_info[i].file_size))) != 0)
-		{
-			pTask->length = sizeof(TrackerHeader);
-			result = (result == ENOENT ? EACCES: result);
-			break;
-		}
-	
-		long2buff(sys_file_info[i].file_size, p);
-		p += FDFS_PROTO_PKG_LEN_SIZE;
-
-		total_size += sys_file_info[i].file_size;
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
 	}
 
-	tracker_mem_file_unlock();
-
-	do
+	snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
+		g_fdfs_base_path, g_tracker_sys_filenames[index]);
+	if (stat(full_filename, &file_stat) != 0)
 	{
-		if (result != 0)
-		{
-			break;
-		}
-
-		if ((p - pTask->data) + total_size >= TRACKER_MAX_PACKAGE_SIZE)
-		{
-			pTask->length = sizeof(TrackerHeader);
-			result = ENOSPC;
-
-			logError("file: "__FILE__", line: %d, " \
-				"cmd=%d, client ip: %s, " \
-				"system data files are too large!" \
-				"you can increase the macro" \
-				"\"TRACKER_MAX_PACKAGE_SIZE\", " \
-				"current value is %d KB", __LINE__, \
-				TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES, \
-				pTask->client_ip, \
-				TRACKER_MAX_PACKAGE_SIZE / 1024);
-			break;
-		}
-
-		for (i=0; i<TRACKER_SYS_FILE_COUNT; i++)
-		{
-			if (sys_file_info[i].file_size > 0)
-			{
-				memcpy(p, sys_file_info[i].content, \
-					sys_file_info[i].file_size);
-				p += sys_file_info[i].file_size;
-			}
-		}
-
-		pTask->length = p - pTask->data;
-	} while(false);
-
-	for (i=0; i<TRACKER_SYS_FILE_COUNT; i++)
-	{
-		if (sys_file_info[i].content != NULL)
-		{
-			free(sys_file_info[i].content);
-		}
+		result = errno != 0 ? errno : ENOENT;
+		logError("file: "__FILE__", line: %d, " \
+			"client ip:%s, call stat file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pTask->client_ip, full_filename,
+			result, strerror(result));
+		return result;
 	}
 
-	return result;
+	if (offset < 0 || offset > file_stat.st_size)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid offset: "INT64_PRINTF_FORMAT
+			" < 0 or > "OFF_PRINTF_FORMAT,  \
+			__LINE__, pTask->client_ip, offset, \
+			file_stat.st_size);
+
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	read_bytes = file_stat.st_size - offset;
+	if (read_bytes > TRACKER_READ_BYTES_ONCE)
+	{
+		read_bytes = TRACKER_READ_BYTES_ONCE;
+	}
+
+	p = pTask->data + sizeof(TrackerHeader);
+	long2buff(file_stat.st_size, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+
+	bytes = read_bytes;
+	if (read_bytes > 0 && (result=getFileContentEx(full_filename, \
+					p, offset, &bytes)) != 0)
+	{
+		pTask->length = sizeof(TrackerHeader);
+		return result;
+	}
+
+	if (bytes != read_bytes)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, read bytes: "INT64_PRINTF_FORMAT
+			" != expect bytes: "INT64_PRINTF_FORMAT,  \
+			__LINE__, pTask->client_ip, bytes, read_bytes);
+
+		pTask->length = sizeof(TrackerHeader);
+		return EIO;
+	}
+
+	p += read_bytes;
+	pTask->length = p - pTask->data;
+	return 0;
 }
 
 static int tracker_deal_storage_report_ip_changed(struct fast_task_info *pTask)
@@ -2448,8 +2514,14 @@ int tracker_deal_task(struct fast_task_info *pTask)
 		case FDFS_PROTO_CMD_ACTIVE_TEST:
 			result = tracker_deal_active_test(pTask);
 			break;
-		case TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES:
-			result = tracker_deal_get_sys_files(pTask);
+		case TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_START:
+			result = tracker_deal_get_sys_files_start(pTask);
+			break;
+		case TRACKER_PROTO_CMD_TRACKER_GET_ONE_SYS_FILE:
+			result = tracker_deal_get_one_sys_file(pTask);
+			break;
+		case TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_END:
+			result = tracker_deal_get_sys_files_end(pTask);
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "  \
