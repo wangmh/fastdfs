@@ -6,7 +6,8 @@ Version 2.03  2010-11-07
    first storage server join in (tracker to tracker sync system files)
  * tracker server changes the old ip address to the new address when the 
    storage server ip address changed
- * tracker to tracker sync system data files in some case
+ * tracker to tracker sync system data files in some case, multi tracker
+   server supported well
 
 Version 2.02  2010-10-28
  * get parameters function from tracker server changed, 
