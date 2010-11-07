@@ -159,14 +159,14 @@ int fdfs_quit(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
-int fdfs_active_test(TrackerServerInfo *pTrackerServer)
+int fdfs_deal_no_body_cmd(TrackerServerInfo *pTrackerServer, const int cmd)
 {
 	TrackerHeader header;
 	int result;
 	int64_t in_bytes;
 
 	memset(&header, 0, sizeof(header));
-	header.cmd = FDFS_PROTO_CMD_ACTIVE_TEST;
+	header.cmd = cmd;
 	result = tcpsenddata_nb(pTrackerServer->sock, &header, \
 			sizeof(header), g_fdfs_network_timeout);
 	if(result != 0)
@@ -192,9 +192,8 @@ int fdfs_active_test(TrackerServerInfo *pTrackerServer)
 	else
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"tracker server ip: %s, " \
-			"expect body length 0, but received: " \
-			INT64_PRINTF_FORMAT, __LINE__, \
+			"server ip: %s, expect body length 0, " \
+			"but received: "INT64_PRINTF_FORMAT, __LINE__, \
 			pTrackerServer->ip_addr, in_bytes);
 		return EINVAL;
 	}

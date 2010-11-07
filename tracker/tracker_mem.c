@@ -2427,18 +2427,143 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 	return result;
 }
 
+static int tracker_mem_get_sys_file_piece(TrackerServerInfo *pTrackerServer, \
+	const int file_index, int fd, int64_t *offset, int64_t *file_size)
+{
+	char out_buff[sizeof(TrackerHeader) + 1 + FDFS_PROTO_PKG_LEN_SIZE];
+	char in_buff[TRACKER_MAX_PACKAGE_SIZE];
+	TrackerHeader *pHeader;
+	char *p;
+	char *pInBuff;
+	char *pContent;
+	int64_t in_bytes;
+	int64_t write_bytes;
+	int result;
+
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
+	pHeader->cmd = TRACKER_PROTO_CMD_TRACKER_GET_ONE_SYS_FILE;
+	long2buff(1 + FDFS_PROTO_PKG_LEN_SIZE, pHeader->pkg_len);
+
+	p = out_buff + sizeof(TrackerHeader);
+	*p++ = file_index;
+	long2buff(*offset, p);
+	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, strerror(result));
+
+		return (result == ENOENT ? EACCES : result);
+	}
+
+	pInBuff = in_buff;
+	result = fdfs_recv_response(pTrackerServer, &pInBuff, \
+				sizeof(in_buff), &in_bytes);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	if (in_bytes < FDFS_PROTO_PKG_LEN_SIZE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid, " \
+			"expect length >= %d.", __LINE__, \
+			pTrackerServer->ip_addr, pTrackerServer->port, \
+			in_bytes, FDFS_PROTO_PKG_LEN_SIZE);
+		return EINVAL;
+	}
+
+	*file_size = buff2long(in_buff);
+	write_bytes = in_bytes - FDFS_PROTO_PKG_LEN_SIZE;
+
+	if (*file_size < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, file size: "INT64_PRINTF_FORMAT\
+			" < 0", __LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, *file_size);
+		return EINVAL;
+	}
+
+	if (*file_size > 0 && write_bytes == 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, file size: "INT64_PRINTF_FORMAT\
+			" > 0, but file content is empty", __LINE__, \
+			pTrackerServer->ip_addr, pTrackerServer->port, \
+			*file_size);
+		return EINVAL;
+	}
+
+	pContent = pInBuff + FDFS_PROTO_PKG_LEN_SIZE;
+	if (write_bytes > 0 && write(fd, pContent, write_bytes) != write_bytes)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"write to file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, g_tracker_sys_filenames[file_index], \
+			errno, strerror(errno));
+		return errno != 0 ? errno : EIO;
+        }
+
+	*offset += write_bytes;
+	return 0;
+}
+
+static int tracker_mem_get_one_sys_file(TrackerServerInfo *pTrackerServer, \
+		const int file_index)
+{
+	char full_filename[MAX_PATH_SIZE];
+	int fd;
+	int result;
+	int64_t offset;
+	int64_t file_size;
+
+	snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
+			g_fdfs_base_path, g_tracker_sys_filenames[file_index]);
+	fd = open(full_filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (fd < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"open file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, full_filename, \
+			errno, strerror(errno));
+		return errno != 0 ? errno : EACCES;
+	}
+
+	offset = 0;
+	file_size = 0;
+	while (1)
+	{
+		result = tracker_mem_get_sys_file_piece(pTrackerServer, \
+			file_index, fd, &offset, &file_size);
+		if (result != 0)
+		{
+			break;
+		}
+
+		if (offset >= file_size)
+		{
+			break;
+		}
+	}
+
+	close(fd);
+	return result;
+}
+
 static int tracker_mem_get_sys_files(TrackerServerInfo *pTrackerServer)
 {
-	TrackerHeader header;
-	char *pInBuff;
-	char *p;
-	int64_t in_bytes;
-	int64_t total_fsize;
-	int64_t file_sizes[TRACKER_SYS_FILE_COUNT];
-	char full_filename[MAX_PATH_SIZE];
 	int result;
-	int i;
-	int k;
+	int index;
 
 	pTrackerServer->sock = -1;
 	if ((result=tracker_connect_server(pTrackerServer)) != 0)
@@ -2446,94 +2571,24 @@ static int tracker_mem_get_sys_files(TrackerServerInfo *pTrackerServer)
 		return result;
 	}
 
-	pInBuff = NULL;
-	memset(&header, 0, sizeof(header));
-	header.cmd = TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES;
-	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, \
-			sizeof(header), g_fdfs_network_timeout)) != 0)
+	if ((result=tracker_get_sys_files_start(pTrackerServer)) != 0)
 	{
-		logError("send data to tracker server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pTrackerServer->ip_addr, \
-			pTrackerServer->port, \
-			result, strerror(result));
-
-		result = (result == ENOENT ? EACCES : result);
-	}
-	else
-	{
-		result = fdfs_recv_response(pTrackerServer, \
-				&pInBuff, 0, &in_bytes);
-	}
-
-	close(pTrackerServer->sock);
-	if (result != 0)
-	{
+		close(pTrackerServer->sock);
 		return result;
 	}
 
-	if (in_bytes <= TRACKER_SYS_FILE_COUNT * FDFS_PROTO_PKG_LEN_SIZE)
+	for (index=0; index<TRACKER_SYS_FILE_COUNT; index++)
 	{
-		free(pInBuff);
-
-		logError("tracker server %s:%d response data " \
-			"length: "INT64_PRINTF_FORMAT" is invalid, " \
-			"expect length > %d.", pTrackerServer->ip_addr, \
-			pTrackerServer->port, in_bytes, \
-			TRACKER_SYS_FILE_COUNT * FDFS_PROTO_PKG_LEN_SIZE);
-		return EINVAL;
-	}
-
-	total_fsize = 0;
-	p = pInBuff;
-	for (i=0; i<TRACKER_SYS_FILE_COUNT; i++)
-	{
-		file_sizes[i] = buff2long(p);
-		p += FDFS_PROTO_PKG_LEN_SIZE;
-
-		total_fsize += file_sizes[i];
-	}
-
-	if (in_bytes != TRACKER_SYS_FILE_COUNT * FDFS_PROTO_PKG_LEN_SIZE + \
-		total_fsize)
-	{
-		free(pInBuff);
-
-		logError("tracker server %s:%d response data " \
-			"length: "INT64_PRINTF_FORMAT" is invalid, " \
-			"expect length: "INT64_PRINTF_FORMAT".", \
-			pTrackerServer->ip_addr, pTrackerServer->port, \
-			in_bytes, TRACKER_SYS_FILE_COUNT * \
-			FDFS_PROTO_PKG_LEN_SIZE + total_fsize);
-		return EINVAL;
-	}
-
-	for (i=0; i<TRACKER_SYS_FILE_COUNT; i++)
-	{
-		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
-			g_fdfs_base_path, g_tracker_sys_filenames[i]);
-		result = writeToFile(full_filename, p, file_sizes[i]);
+		result = tracker_mem_get_one_sys_file(pTrackerServer, index);
 		if (result != 0)
 		{
-			result = (result == ENOENT ? EACCES : result);
 			break;
 		}
-
-		p += (long)file_sizes[i];
 	}
 
-	free(pInBuff);
+	result = tracker_get_sys_files_end(pTrackerServer);
 
-	if (result != 0)  //rollback
-	{
-		for (k=0; k<i; k++)
-		{
-		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
-			g_fdfs_base_path, g_tracker_sys_filenames[k]);
-		unlink(full_filename);
-		}
-	}
-
+	close(pTrackerServer->sock);
 	return result;
 }
 

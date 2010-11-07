@@ -881,7 +881,7 @@ static int tracker_deal_get_sys_files_start(struct fast_task_info *pTask)
 			"cmd=%d, client ip: %s, package size " \
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
 			"expect length %d", __LINE__, \
-			TRACKER_PROTO_CMD_TRACKER_GET_ONE_SYS_FILE, \
+			TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_START, \
 			pTask->client_ip, pTask->length - \
 			(int)sizeof(TrackerHeader), 0);
 		pTask->length = sizeof(TrackerHeader);
@@ -910,7 +910,7 @@ static int tracker_deal_get_sys_files_end(struct fast_task_info *pTask)
 			"cmd=%d, client ip: %s, package size " \
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
 			"expect length %d", __LINE__, \
-			TRACKER_PROTO_CMD_TRACKER_GET_ONE_SYS_FILE, \
+			TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_END, \
 			pTask->client_ip, pTask->length - \
 			(int)sizeof(TrackerHeader), 0);
 		pTask->length = sizeof(TrackerHeader);
