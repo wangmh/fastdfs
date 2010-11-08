@@ -881,6 +881,7 @@ response package format:
 static int tracker_deal_get_tracker_status(struct fast_task_info *pTask)
 {
 	char *p;
+	TrackerRunningStatus runningStatus;
 
 	if (pTask->length - sizeof(TrackerHeader) != 0)
 	{
@@ -904,10 +905,12 @@ static int tracker_deal_get_tracker_status(struct fast_task_info *pTask)
 	pTask->length = sizeof(TrackerHeader) + 2 * FDFS_PROTO_PKG_LEN_SIZE;
 	p = pTask->data + sizeof(TrackerHeader);
 
-	long2buff(time(NULL) - g_up_time, p);
+	tracker_calc_running_times(&runningStatus);
+
+	long2buff(runningStatus.running_time, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 
-	long2buff(g_up_time - g_tracker_last_status.last_check_time, p);
+	long2buff(runningStatus.restart_interval, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 
 	return 0;
