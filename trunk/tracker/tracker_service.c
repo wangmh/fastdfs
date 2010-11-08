@@ -726,6 +726,8 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 			sizeof(pTrackerServer->ip_addr), "%s", p);
 		pTrackerServer->port = atoi(pSeperator + 1);
 		pTrackerServer->sock = -1;
+
+		p += FDFS_PROTO_IP_PORT_SIZE;
 	}
 	}
 
