@@ -1,4 +1,4 @@
-Version 2.03  2010-11-07
+Version 2.03  2010-11-08
  * bug fixed: core dump when http.need_find_content_type=false and 
    http.anti_steal.check_token=true
  * storage server add join_time field (create timestamp of this storage)
