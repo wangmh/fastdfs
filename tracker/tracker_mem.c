@@ -2798,8 +2798,9 @@ static int tracker_mem_get_tracker_server(FDFSStorageJoinBody *pJoinBody, \
 
 	for (i=0; i<count; i++)
 	{
-		logInfo("%s running time: %d, restart interval: %d", \
+		logInfo("%s:%d running time: %d, restart interval: %d", \
 			trackerStatus[i].pTrackerServer->ip_addr, \
+			trackerStatus[i].pTrackerServer->port, \
 			trackerStatus[i].running_time, \
 			trackerStatus[i].restart_interval);
 	}
@@ -2835,10 +2836,11 @@ static int tracker_mem_get_sys_files_from_others(FDFSStorageJoinBody *pJoinBody,
 							&trackerStatus) >= 0)
 		{
 			logDebug("file: "__FILE__", line: %d, " \
-				"%s running time: %d, restart interval: %d, " \
+				"%s:%d running time: %d, restart interval: %d, "\
 				"my running time: %d, restart interval: %d, " \
 				"do not need sync system files", __LINE__, \
 				trackerStatus.pTrackerServer->ip_addr, \
+				trackerStatus.pTrackerServer->port, \
 				trackerStatus.running_time, \
 				trackerStatus.restart_interval, \
 				pRunningStatus->running_time, \
@@ -2878,6 +2880,7 @@ static int tracker_mem_get_sys_files_from_others(FDFSStorageJoinBody *pJoinBody,
 	usleep(100000);
 
  	tracker_mem_destroy_groups(&tempGroups, false);
+	tracker_write_status_to_file(NULL);
 
 	if (changelog_fd >= 0)
 	{
