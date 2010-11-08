@@ -2798,7 +2798,9 @@ static int tracker_mem_get_tracker_server(FDFSStorageJoinBody *pJoinBody, \
 
 	for (i=0; i<count; i++)
 	{
-		logInfo("%s:%d running time: %d, restart interval: %d", \
+		logDebug("file: "__FILE__", line: %d, " \
+			"%s:%d running time: %d, restart interval: %d", \
+			__LINE__, \
 			trackerStatus[i].pTrackerServer->ip_addr, \
 			trackerStatus[i].pTrackerServer->port, \
 			trackerStatus[i].running_time, \
