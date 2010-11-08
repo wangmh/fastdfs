@@ -109,6 +109,8 @@ int tracker_mem_get_storage_index(FDFSGroupInfo *pGroup, \
 		 fdfs_deal_no_body_cmd(pTrackerServer, \
 		TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_END)
 
+void tracker_calc_running_times(TrackerRunningStatus *pStatus);
+
 #ifdef __cplusplus
 }
 #endif
