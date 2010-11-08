@@ -286,8 +286,8 @@ int main(int argc, char *argv[])
 	scheduleEntries[1].func_args = NULL;
 
 	scheduleEntries[2].id = 3;
-	scheduleEntries[2].time_base.hour = TIME_NONE;
-	scheduleEntries[2].time_base.minute = TIME_NONE;
+	scheduleEntries[2].time_base.hour = 0;
+	scheduleEntries[2].time_base.minute = 0;
 	scheduleEntries[2].interval = TRACKER_SYNC_STATUS_FILE_INTERVAL;
 	scheduleEntries[2].task_func = tracker_write_status_to_file;
 	scheduleEntries[2].func_args = NULL;
