@@ -199,7 +199,6 @@ int main(int argc, char *argv[])
 	act.sa_handler = sigQuitHandler;
 	if(sigaction(SIGINT, &act, NULL) < 0 || \
 		sigaction(SIGTERM, &act, NULL) < 0 || \
-		sigaction(SIGABRT, &act, NULL) < 0 || \
 		sigaction(SIGQUIT, &act, NULL) < 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
