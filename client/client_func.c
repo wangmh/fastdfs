@@ -117,6 +117,16 @@ static int copy_tracker_servers(TrackerServerGroup *pTrackerGroup, \
 			destServer.port = FDFS_TRACKER_SERVER_DEF_PORT;
 		}
 
+		if (strcmp(destServer.ip_addr, "127.0.0.1") == 0)
+		{
+			logError( \
+				"conf file \"%s\", " \
+				"host \"%s\" is invalid, " \
+				"tracker server ip can't be 127.0.0.1", \
+				filename, szHost);
+			return EINVAL;
+		}
+
 		if (bsearch(&destServer, pTrackerGroup->servers, \
 			pTrackerGroup->server_count, \
 			sizeof(TrackerServerInfo), \
