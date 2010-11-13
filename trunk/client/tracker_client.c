@@ -36,8 +36,13 @@ int tracker_get_all_connections_ex(TrackerServerGroup *pTrackerGroup)
 	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
 	{
-		if (pServer->sock >= 0 || tracker_connect_server(pServer) == 0)
+		if (pServer->sock >= 0)
 		{
+			success_count++;
+		}
+		else if (tracker_connect_server(pServer) == 0)
+		{
+			fdfs_active_test(pServer);
 			success_count++;
 		}
 	}

@@ -208,7 +208,7 @@ static void storage_sync_delete_file_log_error(struct fast_task_info *pTask, \
 	}
 }
 
-static void storage_sync_file_done_callback(struct fast_task_info *pTask, \
+static void storage_sync_delete_file_done_callback(struct fast_task_info *pTask, \
 			const int err_no)
 {
 	StorageClientInfo *pClientInfo;
@@ -221,7 +221,82 @@ static void storage_sync_file_done_callback(struct fast_task_info *pTask, \
 	if (err_no == 0 && pFileContext->sync_flag != '\0')
 	{
 		result = storage_binlog_write(pFileContext->timestamp2log, \
-				pFileContext->sync_flag, pFileContext->fname2log);
+			pFileContext->sync_flag, pFileContext->fname2log);
+	}
+	else
+	{
+		result = err_no;
+	}
+
+	if (result == 0)
+	{
+		CHECK_AND_WRITE_TO_STAT_FILE1
+	}
+
+	pClientInfo->total_length = sizeof(TrackerHeader);
+	pClientInfo->total_offset = 0;
+	pTask->length = pClientInfo->total_length;
+	pHeader = (TrackerHeader *)pTask->data;
+	pHeader->status = result;
+	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
+	long2buff(pClientInfo->total_length - sizeof(TrackerHeader), \
+			pHeader->pkg_len);
+
+	storage_nio_notify(pTask);
+}
+
+
+static int storage_sync_copy_file_rename_filename( \
+		StorageFileContext *pFileContext)
+{
+	char full_filename[MAX_PATH_SIZE + 256];
+	char true_filename[128];
+	int filename_len;
+	int result;
+	int store_path_index;
+
+	filename_len = strlen(pFileContext->fname2log);
+	if ((result=storage_split_filename_ex(pFileContext->fname2log, \
+		&filename_len, true_filename, &store_path_index)) != 0)
+	{
+		return result;
+	}
+
+	snprintf(full_filename, sizeof(full_filename), \
+			"%s/data/%s", g_store_paths[store_path_index], \
+			true_filename);
+	if (rename(pFileContext->filename, full_filename) != 0)
+	{
+		result = errno != 0 ? errno : EPERM;
+		logWarning("file: "__FILE__", line: %d, " \
+			"rename %s to %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pFileContext->filename, full_filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	return 0;
+}
+
+static void storage_sync_copy_file_done_callback(struct fast_task_info *pTask, \
+			const int err_no)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	TrackerHeader *pHeader;
+	int result;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+	if (err_no == 0)
+	{
+		result = storage_sync_copy_file_rename_filename(pFileContext);
+		if (result == 0 && pFileContext->sync_flag != '\0')
+		{
+			storage_binlog_write(pFileContext->timestamp2log, \
+			pFileContext->sync_flag, pFileContext->fname2log);
+		}
 	}
 	else
 	{
@@ -2579,6 +2654,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	StorageFileContext *pFileContext;
 	char *p;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char full_filename[MAX_PATH_SIZE + 256];
 	char true_filename[128];
 	char filename[128];
 	int filename_len;
@@ -2677,7 +2753,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 		return result;
 	}
 
-	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
+	snprintf(full_filename, sizeof(full_filename), \
 			"%s/data/%s", g_store_paths[store_path_index], \
 			true_filename);
 
@@ -2691,13 +2767,13 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	}
 
 	if ((proto_cmd == STORAGE_PROTO_CMD_SYNC_CREATE_FILE) && \
-			fileExists(pFileContext->filename))
+			fileExists(full_filename))
 	{
 		logWarning("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, data file: %s " \
 			"already exists, ignore it", \
 			__LINE__, proto_cmd, \
-			pTask->client_ip, pFileContext->filename);
+			pTask->client_ip, full_filename);
 
 		pFileContext->op = FDFS_STORAGE_FILE_OP_DISCARD;
 	}
@@ -2706,10 +2782,26 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 		pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 	}
 
+	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
+			"%s/data/fdfs_sync_copy.XXXXXX", \
+			g_store_paths[store_path_index]);
+	if (mkstemp(pFileContext->filename) != 0)
+	{
+		result = errno != 0 ? errno : EEXIST;
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, call mkstemp with %s, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pTask->client_ip, \
+			pFileContext->filename, \
+			result, STRERROR(result));
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return result;
+	}
+
 	pFileContext->calc_file_hash = false;
 	strcpy(pFileContext->fname2log, filename);
 	return storage_write_to_file(pTask, 0, file_bytes, p - pTask->data, \
-			storage_sync_file_done_callback, store_path_index);
+			storage_sync_copy_file_done_callback, store_path_index);
 }
 
 /**
@@ -3429,7 +3521,7 @@ static int storage_sync_delete_file(struct fast_task_info *pTask)
 	strcpy(pFileContext->fname2log, filename);
 	pFileContext->sync_flag = STORAGE_OP_TYPE_REPLICA_DELETE_FILE;
 	return storage_do_delete_file(pTask, storage_sync_delete_file_log_error, \
-			storage_sync_file_done_callback, store_path_index);
+		storage_sync_delete_file_done_callback, store_path_index);
 }
 
 /**
