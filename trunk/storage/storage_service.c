@@ -300,6 +300,11 @@ static void storage_sync_copy_file_done_callback(struct fast_task_info *pTask, \
 	}
 	else
 	{
+		if (fileExists(pFileContext->filename))
+		{
+			unlink(pFileContext->filename);  //delete the temp file
+		}
+
 		result = err_no;
 	}
 
@@ -2660,6 +2665,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	int filename_len;
 	int64_t nInPackLen;
 	int64_t file_bytes;
+	int fd;
 	int result;
 	int store_path_index;
 
@@ -2783,9 +2789,9 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	}
 
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-			"%s/data/fdfs_sync_copy.XXXXXX", \
-			g_store_paths[store_path_index]);
-	if (mkdtemp(pFileContext->filename) == NULL)
+			"%s/data/cp%08X.XXXXXX", \
+			g_store_paths[store_path_index], (int)time(NULL));
+	if ((fd=mkstemp(pFileContext->filename)) < 0)
 	{
 		result = errno != 0 ? errno : EEXIST;
 		logError("file: "__FILE__", line: %d, " \
@@ -2797,7 +2803,8 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
-
+	close(fd);
+	
 	pFileContext->calc_file_hash = false;
 	strcpy(pFileContext->fname2log, filename);
 	return storage_write_to_file(pTask, 0, file_bytes, p - pTask->data, \
