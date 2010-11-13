@@ -36,7 +36,7 @@ int fdfs_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes)
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		*in_bytes = 0;
 		return result;
 	}
@@ -124,7 +124,7 @@ int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		*in_bytes = 0;
 		if (bMalloced)
 		{
@@ -152,7 +152,7 @@ int fdfs_quit(TrackerServerInfo *pTrackerServer)
 			"tracker server ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -175,7 +175,7 @@ int fdfs_deal_no_body_cmd(TrackerServerInfo *pTrackerServer, const int cmd)
 			"tracker server ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -396,7 +396,7 @@ int tracker_connect_server_ex(TrackerServerInfo *pTrackerServer, \
 	if(pTrackerServer->sock < 0)
 	{
 		logError("socket create failed, errno: %d, " \
-			"error info: %s", errno, strerror(errno));
+			"error info: %s", errno, STRERROR(errno));
 		return errno != 0 ? errno : EPERM;
 	}
 
@@ -413,7 +413,7 @@ int tracker_connect_server_ex(TrackerServerInfo *pTrackerServer, \
 	{
 		logError("connect to %s:%d fail, errno: %d, " \
 			"error info: %s", pTrackerServer->ip_addr, \
-			pTrackerServer->port, result, strerror(result));
+			pTrackerServer->port, result, STRERROR(result));
 
 		close(pTrackerServer->sock);
 		pTrackerServer->sock = -1;
@@ -442,7 +442,7 @@ static int fdfs_do_parameter_req(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -499,7 +499,7 @@ int fdfs_get_ini_context_from_tracker(TrackerServerGroup *pTrackerGroup, \
 				logError("file: "__FILE__", line: %d, " \
 					"socket create failed, errno: %d, " \
 					"error info: %s.", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 				sleep(5);
 				break;
 			}
@@ -536,7 +536,7 @@ int fdfs_get_ini_context_from_tracker(TrackerServerGroup *pTrackerGroup, \
 				"connect to tracker server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pTServer->ip_addr, pTServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 
 			continue;
 		}

@@ -108,6 +108,7 @@ typedef char  bool;
 #endif
 
 #define IS_UPPER_HEX(ch) ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F'))
+#define STRERROR(no) (strerror(no) != NULL ? strerror(no) : "Unkown error")
 
 #ifdef __cplusplus
 extern "C" {

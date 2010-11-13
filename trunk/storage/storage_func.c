@@ -112,7 +112,7 @@ int storage_write_to_fd(int fd, get_filename_func filename_func, \
 			"truncate file \"%s\" to empty fail, " \
 			"error no: %d, error info: %s", \
 			__LINE__, filename_func(pArg, NULL), \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -122,7 +122,7 @@ int storage_write_to_fd(int fd, get_filename_func filename_func, \
 			"rewind file \"%s\" to start fail, " \
 			"error no: %d, error info: %s", \
 			__LINE__, filename_func(pArg, NULL), \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -132,7 +132,7 @@ int storage_write_to_fd(int fd, get_filename_func filename_func, \
 			"write to file \"%s\" fail, " \
 			"error no: %d, error info: %s", \
 			__LINE__, filename_func(pArg, NULL), \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -142,7 +142,7 @@ int storage_write_to_fd(int fd, get_filename_func filename_func, \
 			"sync file \"%s\" to disk fail, " \
 			"error no: %d, error info: %s", \
 			__LINE__, filename_func(pArg, NULL), \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -249,7 +249,7 @@ static int storage_open_stat_file()
 		logError("file: "__FILE__", line: %d, " \
 			"open stat file \"%s\" fail, " \
 			"error no: %d, error info: %s", \
-			__LINE__, full_filename, errno, strerror(errno));
+			__LINE__, full_filename, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -335,7 +335,7 @@ int storage_write_to_stat_file()
                 logError("file: "__FILE__", line: %d, " \
                         "call pthread_mutex_lock fail, " \
                         "errno: %d, error info: %s", \
-                        __LINE__, result, strerror(result));
+                        __LINE__, result, STRERROR(result));
         }
 
 	write_ret = storage_write_to_fd(storage_stat_fd, \
@@ -346,7 +346,7 @@ int storage_write_to_stat_file()
                 logError("file: "__FILE__", line: %d, " \
                         "call pthread_mutex_unlock fail, " \
                         "errno: %d, error info: %s", \
-                        __LINE__, result, strerror(result));
+                        __LINE__, result, STRERROR(result));
         }
 
 	return write_ret;
@@ -367,7 +367,7 @@ int storage_write_to_sync_ini_file()
 			"open file \"%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, full_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -392,7 +392,7 @@ int storage_write_to_sync_ini_file()
 			"write to file \"%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, full_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		close(fd);
 		return errno != 0 ? errno : EIO;
 	}
@@ -532,7 +532,7 @@ static int storage_check_and_make_data_dirs()
 					"mkdir \"%s\" fail, " \
 					"errno: %d, error info: %s", \
 					__LINE__, data_path, \
-					errno, strerror(errno));
+					errno, STRERROR(errno));
 				return errno != 0 ? errno : EPERM;
 			}
 		}
@@ -574,7 +574,7 @@ static int storage_make_data_dirs(const char *pBasePath)
 			logError("file: "__FILE__", line: %d, " \
 				"mkdir \"%s\" fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, data_path, errno, strerror(errno));
+				__LINE__, data_path, errno, STRERROR(errno));
 			return errno != 0 ? errno : EPERM;
 		}
 	}
@@ -584,7 +584,7 @@ static int storage_make_data_dirs(const char *pBasePath)
 		logError("file: "__FILE__", line: %d, " \
 			"chdir \"%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, data_path, errno, strerror(errno));
+			__LINE__, data_path, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -611,7 +611,7 @@ static int storage_make_data_dirs(const char *pBasePath)
 					"mkdir \"%s/%s\" fail, " \
 					"errno: %d, error info: %s", \
 					__LINE__, data_path, dir_name, \
-					errno, strerror(errno));
+					errno, STRERROR(errno));
 				return errno != 0 ? errno : ENOENT;
 			}
 		}
@@ -622,7 +622,7 @@ static int storage_make_data_dirs(const char *pBasePath)
 				"chdir \"%s/%s\" fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, data_path, dir_name, \
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
 
@@ -638,7 +638,7 @@ static int storage_make_data_dirs(const char *pBasePath)
 						"errno: %d, error info: %s", \
 						__LINE__, data_path, \
 						dir_name, sub_name, \
-						errno, strerror(errno));
+						errno, STRERROR(errno));
 					return errno != 0 ? errno : ENOENT;
 				}
 			}
@@ -650,7 +650,7 @@ static int storage_make_data_dirs(const char *pBasePath)
 				"chdir \"%s\" fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, data_path, \
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
 	}
@@ -670,7 +670,7 @@ static int init_fsync_pthread_cond()
 		logError("file: "__FILE__", line: %d, " \
 			"pthread_condattr_init failed, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -679,7 +679,7 @@ static int init_fsync_pthread_cond()
 		logError("file: "__FILE__", line: %d, " \
 			"pthread_cond_init failed, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -708,7 +708,7 @@ static int storage_load_paths(IniContext *pItemContext)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"\"%s\" can't be accessed, error info: %s", \
-			__LINE__, strerror(errno), g_fdfs_base_path);
+			__LINE__, STRERROR(errno), g_fdfs_base_path);
 		return errno != 0 ? errno : ENOENT;
 	}
 	if (!isDir(g_fdfs_base_path))
@@ -734,7 +734,7 @@ static int storage_load_paths(IniContext *pItemContext)
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
 			__LINE__, (int)sizeof(char *) *g_path_count, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 	memset(g_store_paths, 0, sizeof(char *) * g_path_count);
@@ -749,7 +749,7 @@ static int storage_load_paths(IniContext *pItemContext)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, (int)strlen(pPath), errno, strerror(errno));
+			__LINE__, (int)strlen(pPath), errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -770,7 +770,7 @@ static int storage_load_paths(IniContext *pItemContext)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"\"%s\" can't be accessed, error info: %s", \
-				__LINE__, strerror(errno), pPath);
+				__LINE__, STRERROR(errno), pPath);
 			return errno != 0 ? errno : ENOENT;
 		}
 		if (!isDir(pPath))
@@ -787,7 +787,7 @@ static int storage_load_paths(IniContext *pItemContext)
 			logError("file: "__FILE__", line: %d, " \
 				"malloc %d bytes fail, " \
 				"errno: %d, error info: %s", __LINE__, \
-				(int)strlen(pPath), errno, strerror(errno));
+				(int)strlen(pPath), errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOMEM;
 		}
 	}
@@ -1442,7 +1442,7 @@ int storage_func_destroy()
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_destroy fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -1541,7 +1541,7 @@ int write_serialized(int fd, const char *buff, size_t count, const bool bSync)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -1553,7 +1553,7 @@ int write_serialized(int fd, const char *buff, size_t count, const bool bSync)
 			logError("file: "__FILE__", line: %d, " \
 				"pthread_cond_wait failed, " \
 				"errno: %d, error info: %s", \
-				__LINE__, result, strerror(result));
+				__LINE__, result, STRERROR(result));
 			return result;
 		}
 	}
@@ -1565,7 +1565,7 @@ int write_serialized(int fd, const char *buff, size_t count, const bool bSync)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	if (write(fd, buff, count) == count)
@@ -1576,7 +1576,7 @@ int write_serialized(int fd, const char *buff, size_t count, const bool bSync)
 			logError("file: "__FILE__", line: %d, " \
 				"call fsync fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, fsync_ret, strerror(fsync_ret));
+				__LINE__, fsync_ret, STRERROR(fsync_ret));
 		}
 		else
 		{
@@ -1589,7 +1589,7 @@ int write_serialized(int fd, const char *buff, size_t count, const bool bSync)
 		logError("file: "__FILE__", line: %d, " \
 			"call write fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, fsync_ret, strerror(fsync_ret));
+			__LINE__, fsync_ret, STRERROR(fsync_ret));
 	}
 
 	if ((result=pthread_mutex_lock(&fsync_thread_mutex)) != 0)
@@ -1597,7 +1597,7 @@ int write_serialized(int fd, const char *buff, size_t count, const bool bSync)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	fsync_thread_count--;
@@ -1607,7 +1607,7 @@ int write_serialized(int fd, const char *buff, size_t count, const bool bSync)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	if ((result=pthread_cond_signal(&fsync_thread_cond)) != 0)
@@ -1615,7 +1615,7 @@ int write_serialized(int fd, const char *buff, size_t count, const bool bSync)
 		logError("file: "__FILE__", line: %d, " \
 			"pthread_cond_signal failed, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	return fsync_ret;
@@ -1631,7 +1631,7 @@ int fsync_serialized(int fd)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -1643,7 +1643,7 @@ int fsync_serialized(int fd)
 			logError("file: "__FILE__", line: %d, " \
 				"pthread_cond_wait failed, " \
 				"errno: %d, error info: %s", \
-				__LINE__, result, strerror(result));
+				__LINE__, result, STRERROR(result));
 			return result;
 		}
 	}
@@ -1655,7 +1655,7 @@ int fsync_serialized(int fd)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	if (fsync(fd) == 0)
@@ -1668,7 +1668,7 @@ int fsync_serialized(int fd)
 		logError("file: "__FILE__", line: %d, " \
 			"call fsync fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, fsync_ret, strerror(fsync_ret));
+			__LINE__, fsync_ret, STRERROR(fsync_ret));
 	}
 
 	if ((result=pthread_mutex_lock(&fsync_thread_mutex)) != 0)
@@ -1676,7 +1676,7 @@ int fsync_serialized(int fd)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	fsync_thread_count--;
@@ -1686,7 +1686,7 @@ int fsync_serialized(int fd)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	if ((result=pthread_cond_signal(&fsync_thread_cond)) != 0)
@@ -1694,7 +1694,7 @@ int fsync_serialized(int fd)
 		logError("file: "__FILE__", line: %d, " \
 			"pthread_cond_signal failed, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	return fsync_ret;

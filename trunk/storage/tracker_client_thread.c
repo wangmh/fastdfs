@@ -77,7 +77,7 @@ int tracker_report_destroy()
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_destroy fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -99,7 +99,7 @@ int kill_tracker_report_threads()
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	kill_res = kill_work_threads(report_tids, g_tracker_reporter_count);
@@ -109,7 +109,7 @@ int kill_tracker_report_threads()
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	return kill_res;
@@ -126,7 +126,7 @@ static void thracker_report_thread_exit(TrackerServerInfo *pTrackerServer)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	tid = pthread_self();
@@ -150,7 +150,7 @@ static void thracker_report_thread_exit(TrackerServerInfo *pTrackerServer)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	logDebug("file: "__FILE__", line: %d, " \
@@ -210,7 +210,7 @@ static void *tracker_report_thread_entrance(void *arg)
 			logCrit("file: "__FILE__", line: %d, " \
 				"socket create failed, errno: %d, " \
 				"error info: %s. program exit!", \
-				__LINE__, errno, strerror(errno));
+				__LINE__, errno, STRERROR(errno));
 			g_continue_flag = false;
 			break;
 		}
@@ -240,7 +240,7 @@ static void *tracker_report_thread_entrance(void *arg)
 					", errno: %d, error info: %s", \
 					__LINE__, pTrackerServer->ip_addr, \
 					pTrackerServer->port, \
-					result, strerror(result));
+					result, STRERROR(result));
 				previousCode = result;
 			}
 
@@ -327,7 +327,7 @@ static void *tracker_report_thread_entrance(void *arg)
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_lock fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 
 				fdfs_quit(pTrackerServer);
 				sleep(g_heart_beat_interval);
@@ -381,7 +381,7 @@ static void *tracker_report_thread_entrance(void *arg)
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_unlock fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 			}
 
 			sync_old_done = true;
@@ -503,7 +503,7 @@ static void *tracker_report_thread_entrance(void *arg)
 			", errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, nContinuousFail, \
-			result, strerror(result));
+			result, STRERROR(result));
 	}
 
 	thracker_report_thread_exit(pTrackerServer);
@@ -570,7 +570,7 @@ int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 			"trackert server %s:%d, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, result, strerror(result));
+			pTrackerServer->port, result, STRERROR(result));
 		return result;
 	}
 
@@ -581,7 +581,7 @@ int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 			"trackert server %s:%d, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, result, strerror(result));
+			pTrackerServer->port, result, STRERROR(result));
 		return result;
 	}
 
@@ -593,7 +593,7 @@ int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 			"tracker server %s:%d, recv data fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, result, strerror(result));
+			pTrackerServer->port, result, STRERROR(result));
 		return result;
 	}
 
@@ -637,7 +637,7 @@ int tracker_report_storage_status(TrackerServerInfo *pTrackerServer, \
 			"trackert server %s:%d, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, result, strerror(result));
+			pTrackerServer->port, result, STRERROR(result));
 		return result;
 	}
 
@@ -648,7 +648,7 @@ int tracker_report_storage_status(TrackerServerInfo *pTrackerServer, \
 			"tracker server %s:%d, recv data fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, result, strerror(result));
+			pTrackerServer->port, result, STRERROR(result));
 		return result;
 	}
 
@@ -778,7 +778,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 				logError("file: "__FILE__", line: %d, "\
 					"call pthread_mutex_lock fail,"\
 					" errno: %d, error info: %s", \
-					__LINE__, res, strerror(res));
+					__LINE__, res, STRERROR(res));
 			}
 
 			if (g_storage_count < FDFS_MAX_SERVERS_EACH_GROUP)
@@ -815,7 +815,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 				logError("file: "__FILE__", line: %d, "\
 				"call pthread_mutex_unlock fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, res, strerror(res));
+				__LINE__, res, STRERROR(res));
 			}
 
 			if (result != 0)
@@ -911,7 +911,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port,    \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -956,7 +956,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -1032,7 +1032,7 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -1091,7 +1091,7 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -1145,7 +1145,7 @@ static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer)
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -1207,7 +1207,7 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -1334,7 +1334,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -1412,7 +1412,7 @@ static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -1448,7 +1448,7 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
 				"malloc %d bytes fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, total_len, \
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOMEM;
 		}
 	}
@@ -1466,7 +1466,7 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"call statfs fail, errno: %d, error info: %s.",\
-				__LINE__, errno, strerror(errno));
+				__LINE__, errno, STRERROR(errno));
 
 			if (pBuff != out_buff)
 			{
@@ -1496,7 +1496,7 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -1570,7 +1570,7 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -1597,7 +1597,7 @@ static int tracker_storage_changelog_req(TrackerServerInfo *pTrackerServer)
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -1743,7 +1743,7 @@ int tracker_report_thread_start()
 			"errno: %d, error info: %s", \
 			__LINE__, (int)sizeof(pthread_t) * \
 			g_tracker_group.server_count, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 	memset(report_tids, 0, sizeof(pthread_t)*g_tracker_group.server_count);
@@ -1756,7 +1756,7 @@ int tracker_report_thread_start()
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			(int)sizeof(int) * g_tracker_group.server_count, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 	memset(src_storage_status,-1,sizeof(int)*g_tracker_group.server_count);
@@ -1769,7 +1769,7 @@ int tracker_report_thread_start()
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			(int)sizeof(signed char) * g_tracker_group.server_count, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 	memset(my_report_status, -1, sizeof(char)*g_tracker_group.server_count);
@@ -1785,7 +1785,7 @@ int tracker_report_thread_start()
 			logError("file: "__FILE__", line: %d, " \
 				"create thread failed, errno: %d, " \
 				"error info: %s.", \
-				__LINE__, result, strerror(result));
+				__LINE__, result, STRERROR(result));
 			return result;
 		}
 
@@ -1794,7 +1794,7 @@ int tracker_report_thread_start()
 			logError("file: "__FILE__", line: %d, " \
 				"call pthread_mutex_lock fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, result, strerror(result));
+				__LINE__, result, STRERROR(result));
 		}
 
 		report_tids[g_tracker_reporter_count] = tid;
@@ -1804,7 +1804,7 @@ int tracker_report_thread_start()
 			logError("file: "__FILE__", line: %d, " \
 				"call pthread_mutex_unlock fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, result, strerror(result));
+				__LINE__, result, STRERROR(result));
 		}
 	}
 

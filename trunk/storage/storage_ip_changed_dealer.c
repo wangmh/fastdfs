@@ -50,7 +50,7 @@ static int storage_do_changelog_req(TrackerServerInfo *pTrackerServer)
 			"errno: %d, error info: %s.", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -85,7 +85,7 @@ static int storage_report_ip_changed(TrackerServerInfo *pTrackerServer)
 			"tracker server %s:%d, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, result, strerror(result));
+			pTrackerServer->port, result, STRERROR(result));
 		return result;
 	}
 
@@ -104,7 +104,7 @@ static int storage_report_ip_changed(TrackerServerInfo *pTrackerServer)
 			"response status != 0, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, result, strerror(result));
+			pTrackerServer->port, result, STRERROR(result));
 		return result == EBUSY ? 0 : result;
 	}
 }
@@ -140,7 +140,7 @@ static int storage_report_storage_ip_addr()
 				logError("file: "__FILE__", line: %d, " \
 					"socket create failed, errno: %d, " \
 					"error info: %s.", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 				sleep(5);
 				break;
 			}
@@ -176,7 +176,7 @@ static int storage_report_storage_ip_addr()
 				"connect to tracker server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pTServer->ip_addr, pTServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 
 			continue;
 		}
@@ -234,7 +234,7 @@ static int storage_report_storage_ip_addr()
 				logError("file: "__FILE__", line: %d, " \
 					"socket create failed, errno: %d, " \
 					"error info: %s.", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 				sleep(5);
 				break;
 			}
@@ -270,7 +270,7 @@ static int storage_report_storage_ip_addr()
 				"connect to tracker server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pTServer->ip_addr, pTServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 
 			continue;
 		}
@@ -327,7 +327,7 @@ int storage_changelog_req()
 				logError("file: "__FILE__", line: %d, " \
 					"socket create failed, errno: %d, " \
 					"error info: %s.", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 				sleep(5);
 				break;
 			}
@@ -363,7 +363,7 @@ int storage_changelog_req()
 				"connect to tracker server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pTServer->ip_addr, pTServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 
 			continue;
 		}

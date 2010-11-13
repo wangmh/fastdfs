@@ -66,7 +66,7 @@ int tracker_mem_pthread_lock()
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -81,7 +81,7 @@ int tracker_mem_pthread_unlock()
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -96,7 +96,7 @@ int tracker_mem_file_lock()
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -111,7 +111,7 @@ int tracker_mem_file_unlock()
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -140,7 +140,7 @@ static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
 			"write to file: %s fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, STORAGE_SERVERS_CHANGELOG_FILENAME, \
-			result, strerror(result));
+			result, STRERROR(result));
 
 		return result;
 	}
@@ -154,7 +154,7 @@ static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
 			"call fsync of file: %s fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, STORAGE_SERVERS_CHANGELOG_FILENAME, \
-			result, strerror(result));
+			result, STRERROR(result));
 	}
 
 	tracker_mem_file_unlock();
@@ -180,7 +180,7 @@ static int tracker_malloc_storage_path_mbs(FDFSStorageDetail *pStorage, \
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, alloc_bytes, errno, strerror(errno));
+			__LINE__, alloc_bytes, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -193,7 +193,7 @@ static int tracker_malloc_storage_path_mbs(FDFSStorageDetail *pStorage, \
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, alloc_bytes, errno, strerror(errno));
+			__LINE__, alloc_bytes, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -224,7 +224,7 @@ static int tracker_realloc_storage_path_mbs(FDFSStorageDetail *pStorage, \
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, alloc_bytes, errno, strerror(errno));
+			__LINE__, alloc_bytes, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -236,7 +236,7 @@ static int tracker_realloc_storage_path_mbs(FDFSStorageDetail *pStorage, \
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, alloc_bytes, errno, strerror(errno));
+			__LINE__, alloc_bytes, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -348,7 +348,7 @@ static int tracker_load_groups(FDFSGroups *pGroups, const char *data_path)
 			"open file \"%s/%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, data_path, STORAGE_GROUPS_LIST_FILENAME, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -493,7 +493,7 @@ static int tracker_load_storages(FDFSGroups *pGroups, const char *data_path)
 			"open file \"%s/%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, data_path, STORAGE_SERVERS_LIST_FILENAME, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -716,7 +716,7 @@ static int tracker_load_sync_timestamps(FDFSGroups *pGroups, const char *data_pa
 			"open file \"%s/%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, data_path, STORAGE_SYNC_TIMESTAMP_FILENAME, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -914,7 +914,7 @@ static int tracker_load_data(FDFSGroups *pGroups)
 			logError("file: "__FILE__", line: %d, " \
 				"mkdir \"%s\" fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, data_path, errno, strerror(errno));
+				__LINE__, data_path, errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
 	}
@@ -924,7 +924,7 @@ static int tracker_load_data(FDFSGroups *pGroups)
 		logError("file: "__FILE__", line: %d, " \
 			"chdir \"%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, data_path, errno, strerror(errno));
+			__LINE__, data_path, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -977,7 +977,7 @@ static int tracker_save_groups()
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, filename, errno, strerror(errno));
+			__LINE__, filename, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -998,7 +998,7 @@ static int tracker_save_groups()
 			logError("file: "__FILE__", line: %d, " \
 				"write to file \"%s\" fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, filename, errno, strerror(errno));
+				__LINE__, filename, errno, STRERROR(errno));
 			result = errno != 0 ? errno : EIO;
 			break;
 		}
@@ -1034,7 +1034,7 @@ int tracker_save_storages()
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, filename, errno, strerror(errno));
+			__LINE__, filename, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -1129,7 +1129,7 @@ int tracker_save_storages()
 					"write to file \"%s\" fail, " \
 					"errno: %d, error info: %s", \
 					__LINE__, filename, \
-					errno, strerror(errno));
+					errno, STRERROR(errno));
 				result = errno != 0 ? errno : EIO;
 				break;
 			}
@@ -1166,7 +1166,7 @@ int tracker_save_sync_timestamps()
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, filename, errno, strerror(errno));
+			__LINE__, filename, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -1212,7 +1212,7 @@ int tracker_save_sync_timestamps()
 					"write to file \"%s\" fail, " \
 					"errno: %d, error info: %s", \
 					__LINE__, filename, \
-					errno, strerror(errno));
+					errno, STRERROR(errno));
 				result = errno != 0 ? errno : EIO;
 				break;
 			}
@@ -1255,7 +1255,7 @@ static int tracker_open_changlog_file()
 			logError("file: "__FILE__", line: %d, " \
 				"mkdir \"%s\" fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, data_path, errno, strerror(errno));
+				__LINE__, data_path, errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
 	}
@@ -1268,7 +1268,7 @@ static int tracker_open_changlog_file()
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, filename, errno, strerror(errno));
+			__LINE__, filename, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -1278,7 +1278,7 @@ static int tracker_open_changlog_file()
 		logError("file: "__FILE__", line: %d, " \
 			"lseek file \"%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, filename, errno, strerror(errno));
+			__LINE__, filename, errno, STRERROR(errno));
 		return errno != 0 ? errno : EIO;
 	}
 
@@ -2093,7 +2093,7 @@ static int tracker_mem_add_group_ex(FDFSGroups *pGroups, \
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -2428,7 +2428,7 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -2506,7 +2506,7 @@ static int tracker_mem_get_status(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", __LINE__, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 
 		result = (result == ENOENT ? EACCES : result);
 		break;
@@ -2594,7 +2594,7 @@ static int tracker_mem_get_sys_file_piece(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", __LINE__, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 
 		return (result == ENOENT ? EACCES : result);
 	}
@@ -2647,7 +2647,7 @@ static int tracker_mem_get_sys_file_piece(TrackerServerInfo *pTrackerServer, \
 			"write to file %s fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, g_tracker_sys_filenames[file_index], \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : EIO;
         }
 
@@ -2673,7 +2673,7 @@ static int tracker_mem_get_one_sys_file(TrackerServerInfo *pTrackerServer, \
 			"open file %s fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, full_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : EACCES;
 	}
 
@@ -3088,7 +3088,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -3312,7 +3312,7 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -3455,7 +3455,7 @@ int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -3492,7 +3492,7 @@ int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -3541,7 +3541,7 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -3578,7 +3578,7 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 

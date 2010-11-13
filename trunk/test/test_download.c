@@ -216,7 +216,7 @@ static int save_stats_by_file_type()
 	if ((fp=fopen(filename, "wb")) == NULL)
 	{
 		printf("open file %s fail, errno: %d, error info: %s\n", 
-			filename, errno, strerror(errno));
+			filename, errno, STRERROR(errno));
 		return errno != 0 ? errno : EPERM;
 	}
 
@@ -241,7 +241,7 @@ static int save_stats_by_storage_ip()
 	if ((fp=fopen(filename, "wb")) == NULL)
 	{
 		printf("open file %s fail, errno: %d, error info: %s\n", 
-			filename, errno, strerror(errno));
+			filename, errno, STRERROR(errno));
 		return errno != 0 ? errno : EPERM;
 	}
 
@@ -266,7 +266,7 @@ static int save_stats_by_overall()
 	if ((fp=fopen(filename, "wb")) == NULL)
 	{
 		printf("open file %s fail, errno: %d, error info: %s\n", 
-			filename, errno, strerror(errno));
+			filename, errno, STRERROR(errno));
 		return errno != 0 ? errno : EPERM;
 	}
 
@@ -350,7 +350,7 @@ static int load_file_ids()
 	{
 		printf("file: "__FILE__", line: %d, " 
 			"getFileContent %s fail, errno: %d, error info: %s\n", __LINE__, 
-			filename, errno, strerror(errno));
+			filename, errno, STRERROR(errno));
 
 		return result;
 	}
@@ -480,7 +480,7 @@ static int test_init()
 
 	if (chdir("download") != 0)
 	{
-		printf("chdir fail, errno: %d, error info: %s\n", errno, strerror(errno));
+		printf("chdir fail, errno: %d, error info: %s\n", errno, STRERROR(errno));
 		return errno != 0 ? errno : EPERM;
 	}
 
@@ -488,7 +488,7 @@ static int test_init()
 	if ((fpFail=fopen(filename, "wb")) == NULL)
 	{
 		printf("open file %s fail, errno: %d, error info: %s\n", 
-			filename, errno, strerror(errno));
+			filename, errno, STRERROR(errno));
 		return errno != 0 ? errno : EPERM;
 	}
 

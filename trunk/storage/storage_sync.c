@@ -111,7 +111,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 				"call stat fail, file: %s, "\
 				"error no: %d, error info: %s", \
 				__LINE__, full_filename, \
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 		}
 
 		return 0;
@@ -152,7 +152,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 				"errno: %d, error info: %s", \
 				__LINE__, pStorageServer->ip_addr, \
 				pStorageServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 
 			break;
 		}
@@ -166,7 +166,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 				"errno: %d, error info: %s", \
 				__LINE__, pStorageServer->ip_addr, \
 				pStorageServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 
 			break;
 		}
@@ -253,7 +253,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 			"errno: %d, error info: %s", \
 			__LINE__, pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -294,7 +294,7 @@ static int storage_report_client_ip(TrackerServerInfo *pStorageServer)
 			"errno: %d, error info: %s", \
 			__LINE__, pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -349,7 +349,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 				"call stat fail, file: %s, "\
 				"error no: %d, error info: %s", \
 				__LINE__, full_filename, \
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 		}
 
 		return 0;
@@ -375,7 +375,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 		logWarning("file: "__FILE__", line: %d, " \
 			"data file: %s, readlink fail, "\
 			"errno: %d, error info: %s", \
-			__LINE__, src_full_filename, errno, strerror(errno));
+			__LINE__, src_full_filename, errno, STRERROR(errno));
 		return 0;
 	}
 	*(src_full_filename + src_filename_len) = '\0';
@@ -469,7 +469,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 			"errno: %d, error info: %s", \
 			__LINE__, pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -574,7 +574,7 @@ static int write_to_binlog_index()
 			"open file \"%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, full_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -585,7 +585,7 @@ static int write_to_binlog_index()
 			"write to file \"%s\" fail, " \
 			"errno: %d, error info: %s",  \
 			__LINE__, full_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		close(fd);
 		return errno != 0 ? errno : EIO;
 	}
@@ -629,7 +629,7 @@ static int open_next_writable_binlog()
 				"unlink file \"%s\" fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, full_filename, \
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
 
@@ -645,7 +645,7 @@ static int open_next_writable_binlog()
 			"open file \"%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, full_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : EACCES;
 	}
 
@@ -671,7 +671,7 @@ int storage_sync_init()
 				"mkdir \"%s\" fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, data_path, \
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
 	}
@@ -686,7 +686,7 @@ int storage_sync_init()
 				"mkdir \"%s\" fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, sync_path, \
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
 	}
@@ -698,7 +698,7 @@ int storage_sync_init()
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, SYNC_BINLOG_WRITE_BUFF_SIZE, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -743,7 +743,7 @@ int storage_sync_init()
 			"open file \"%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, full_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : EACCES;
 	}
 
@@ -754,7 +754,7 @@ int storage_sync_init()
 			"ftell file \"%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, full_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		storage_sync_destroy();
 		return errno != 0 ? errno : EIO;
 	}
@@ -790,7 +790,7 @@ int storage_sync_destroy()
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_destroy fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -819,7 +819,7 @@ int kill_storage_sync_threads()
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	kill_res = kill_work_threads(sync_tids, g_storage_sync_thread_count);
@@ -829,7 +829,7 @@ int kill_storage_sync_threads()
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	return kill_res;
@@ -857,7 +857,7 @@ static int storage_binlog_fsync(const bool bNeedLock)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	if (binlog_write_cache_len == 0) //ignore
@@ -871,7 +871,7 @@ static int storage_binlog_fsync(const bool bNeedLock)
 			"write to binlog file \"%s\" fail, " \
 			"errno: %d, error info: %s",  \
 			__LINE__, get_writable_binlog_filename(NULL), \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		write_ret = errno != 0 ? errno : EIO;
 	}
 	else if (fsync(g_binlog_fd) != 0)
@@ -880,7 +880,7 @@ static int storage_binlog_fsync(const bool bNeedLock)
 			"sync to binlog file \"%s\" fail, " \
 			"errno: %d, error info: %s",  \
 			__LINE__, get_writable_binlog_filename(NULL), \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		write_ret = errno != 0 ? errno : EIO;
 	}
 	else
@@ -919,7 +919,7 @@ static int storage_binlog_fsync(const bool bNeedLock)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	return write_ret;
@@ -936,7 +936,7 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	binlog_write_cache_len += sprintf(binlog_write_cache_buff + \
@@ -958,7 +958,7 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	return write_ret;
@@ -998,7 +998,7 @@ static int storage_open_readable_binlog(BinLogReader *pReader)
 			"open binlog file \"%s\" fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, full_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -1009,7 +1009,7 @@ static int storage_open_readable_binlog(BinLogReader *pReader)
 			"seek binlog file \"%s\" fail, file offset=" \
 			INT64_PRINTF_FORMAT", errno: %d, error info: %s", \
 			__LINE__, full_filename, pReader->binlog_offset, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 
 		close(pReader->binlog_fd);
 		pReader->binlog_fd = -1;
@@ -1094,7 +1094,7 @@ static int storage_report_storage_status(const char *ip_addr, \
 				logError("file: "__FILE__", line: %d, " \
 					"socket create failed, errno: %d, " \
 					"error info: %s.", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 				sleep(5);
 				break;
 			}
@@ -1132,7 +1132,7 @@ static int storage_report_storage_status(const char *ip_addr, \
 				"connect to tracker server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pTServer->ip_addr, pTServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 
 			continue;
 		}
@@ -1202,7 +1202,7 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 				logCrit("file: "__FILE__", line: %d, " \
 					"socket create failed, errno: %d, " \
 					"error info: %s. program exit!", \
-					__LINE__, errno, strerror(errno));
+					__LINE__, errno, STRERROR(errno));
 				g_continue_flag = false;
 				result = errno != 0 ? errno : EPERM;
 				break;
@@ -1231,7 +1231,7 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 				"connect to tracker server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pTServer->ip_addr, pTServer->port, \
-				conn_ret, strerror(conn_ret));
+				conn_ret, STRERROR(conn_ret));
 
 			close(pTServer->sock);
 
@@ -1298,7 +1298,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, STORAGE_BINLOG_BUFFER_SIZE, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 	pReader->binlog_buff.current = pReader->binlog_buff.buffer;
@@ -1426,7 +1426,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 			"open mark file \"%s\" fail, " \
 			"error no: %d, error info: %s", \
 			__LINE__, full_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -1530,7 +1530,7 @@ static int rewind_to_prev_rec_end(BinLogReader *pReader)
 			"errno: %d, error info: %s", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -1575,7 +1575,7 @@ static int storage_binlog_preread(BinLogReader *pReader)
 			"error no: %d, error info: %s", __LINE__, \
 			get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset + pReader->binlog_buff.length, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : EIO;
 	}
 	else if (bytes_read == 0) //end of binlog file
@@ -1803,7 +1803,7 @@ int storage_unlink_mark_file(const char *ip_addr)
 			"rename file %s to %s fail" \
 			", errno: %d, error info: %s", \
 			__LINE__, old_filename, new_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : EACCES;
 	}
 
@@ -1840,7 +1840,7 @@ int storage_rename_mark_file(const char *old_ip_addr, const int old_port, \
 			"rename file %s to %s fail" \
 			", errno: %d, error info: %s", \
 			__LINE__, old_filename, new_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : EACCES;
 	}
 
@@ -1891,7 +1891,7 @@ static void storage_sync_thread_exit(TrackerServerInfo *pStorage)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	tid = pthread_self();
@@ -1916,7 +1916,7 @@ static void storage_sync_thread_exit(TrackerServerInfo *pStorage)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	logDebug("file: "__FILE__", line: %d, " \
@@ -2015,7 +2015,7 @@ static void* storage_sync_thread_entrance(void* arg)
 					" socket create fail, " \
 					"errno: %d, error info: %s. " \
 					"program exit!", __LINE__, \
-					errno, strerror(errno));
+					errno, STRERROR(errno));
 				g_continue_flag = false;
 				break;
 			}
@@ -2066,7 +2066,7 @@ static void* storage_sync_thread_entrance(void* arg)
 					", errno: %d, error info: %s", \
 					__LINE__, \
 					storage_server.ip_addr, g_server_port, \
-					conn_result, strerror(conn_result));
+					conn_result, STRERROR(conn_result));
 				previousCode = conn_result;
 			}
 
@@ -2089,7 +2089,7 @@ static void* storage_sync_thread_entrance(void* arg)
 				"try count: %d, errno: %d, error info: %s", \
 				__LINE__, storage_server.ip_addr, \
 				g_server_port, nContinuousFail, \
-				conn_result, strerror(conn_result));
+				conn_result, STRERROR(conn_result));
 		}
 
 		if ((!g_continue_flag) ||
@@ -2375,7 +2375,7 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage)
 		logError("file: "__FILE__", line: %d, " \
 			"create thread failed, errno: %d, " \
 			"error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 
 		pthread_attr_destroy(&pattr);
 		return result;
@@ -2386,7 +2386,7 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	g_storage_sync_thread_count++;
@@ -2399,7 +2399,7 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage)
 			"errno: %d, error info: %s", \
 			__LINE__, (int)sizeof(pthread_t) * \
 			g_storage_sync_thread_count, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 	}
 	else
 	{
@@ -2411,7 +2411,7 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	pthread_attr_destroy(&pattr);

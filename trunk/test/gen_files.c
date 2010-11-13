@@ -38,7 +38,7 @@ int main()
 		if (fp == NULL)
 		{
 			printf("open file %s fail, errno: %d, error info: %s\n", 
-				files[i].filename, errno, strerror(errno));
+				files[i].filename, errno, STRERROR(errno));
 			return 1;
 		}
 
@@ -53,7 +53,7 @@ int main()
 			if (fwrite(buff, BUFF_SIZE, 1, fp) != 1)
 			{
 				printf("write file %s fail, errno: %d, error info: %s\n", 
-					files[i].filename, errno, strerror(errno));
+					files[i].filename, errno, STRERROR(errno));
 				return 1;
 			}
 		}
@@ -62,7 +62,7 @@ int main()
 		if (fwrite(buff, BUFF_SIZE, 1, fp) != 1)
 		{
 			printf("write file %s fail, errno: %d, error info: %s\n", 
-				files[i].filename, errno, strerror(errno));
+				files[i].filename, errno, STRERROR(errno));
 			return 1;
 		}
 
