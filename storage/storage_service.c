@@ -180,7 +180,7 @@ static void storage_delete_file_log_error(struct fast_task_info *pTask, \
 		"client ip: %s, delete file %s fail," \
 		"errno: %d, error info: %s", __LINE__, \
 		pTask->client_ip, pFileContext->filename, \
-		err_no, strerror(err_no));
+		err_no, STRERROR(err_no));
 }
 
 static void storage_sync_delete_file_log_error(struct fast_task_info *pTask, \
@@ -204,7 +204,7 @@ static void storage_sync_delete_file_log_error(struct fast_task_info *pTask, \
 			"client ip: %s, delete file %s fail," \
 			"errno: %d, error info: %s", \
 			__LINE__, pTask->client_ip, \
-			pFileContext->filename, err_no, strerror(err_no));
+			pFileContext->filename, err_no, STRERROR(err_no));
 	}
 }
 
@@ -343,7 +343,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 					"client ip: %s, delete file %s fail," \
 					"errno: %d, error info: %s", __LINE__,\
 					pTask->client_ip, meta_filename, \
-					result, strerror(result));
+					result, STRERROR(result));
 				return result;
 			}
 		}
@@ -427,7 +427,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 						"client ip: %s, fdht_get fail," \
 						"errno: %d, error info: %s", \
 						__LINE__, pTask->client_ip, \
-						result, strerror(result));
+						result, STRERROR(result));
 					return result;
 				}
 			}
@@ -437,7 +437,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 					"client ip: %s, fdht_get fail," \
 					"errno: %d, error info: %s", \
 					__LINE__, pTask->client_ip, \
-					result, strerror(result));
+					result, STRERROR(result));
 				return result;
 			}
 		}
@@ -447,7 +447,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 					"client ip: %s, fdht_get fail," \
 					"errno: %d, error info: %s", \
 					__LINE__, pTask->client_ip, \
-					result, strerror(result));
+					result, STRERROR(result));
 			return result;
 		}
 	}
@@ -470,7 +470,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 				"client ip: %s, fdht_delete fail," \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, \
-				result, strerror(result));
+				result, STRERROR(result));
 		}
 
 		value_len = sizeof(value) - 1;
@@ -483,7 +483,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 				"client ip: %s, fdht_inc fail," \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, \
-				result, strerror(result));
+				result, STRERROR(result));
 			return result;
 		}
 
@@ -499,7 +499,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 				"client ip: %s, fdht_delete fail," \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, \
-				result, strerror(result));
+				result, STRERROR(result));
 		}
 		if ((result=fdht_delete_ex(pGroupArray, g_keep_alive, \
 						&key_info_ref)) != 0)
@@ -508,7 +508,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 				"client ip: %s, fdht_delete fail," \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, \
-				result, strerror(result));
+				result, STRERROR(result));
 		}
 
 		*(key_info_ref.szObjectId+key_info_ref.obj_id_len)='\0';
@@ -544,7 +544,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 				"client ip: %s, delete source file " \
 				"%s fail, errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, \
-				full_filename, errno, strerror(errno));
+				full_filename, errno, STRERROR(errno));
 			return 0;
 		}
 
@@ -800,7 +800,7 @@ int storage_service_init()
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
 			__LINE__, (int)sizeof(struct storage_nio_thread_data) * \
-			g_work_threads, errno, strerror(errno));
+			g_work_threads, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -823,7 +823,7 @@ int storage_service_init()
 			logError("file: "__FILE__", line: %d, " \
 				"call pipe fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, result, strerror(result));
+				__LINE__, result, STRERROR(result));
 			break;
 		}
 
@@ -839,7 +839,7 @@ int storage_service_init()
 				"create thread failed, startup threads: %d, " \
 				"errno: %d, error info: %s", \
 				__LINE__, g_storage_thread_count, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 		else
@@ -849,7 +849,7 @@ int storage_service_init()
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_lock fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 			}
 			g_storage_thread_count++;
 			if ((result=pthread_mutex_unlock(&g_storage_thread_lock)) != 0)
@@ -857,7 +857,7 @@ int storage_service_init()
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_lock fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 			}
 		}
 	}
@@ -914,7 +914,7 @@ int storage_terminate_threads()
 				logError("file: "__FILE__", line: %d, " \
 					"call write failed, " \
 					"errno: %d, error info: %s", \
-					__LINE__, errno, strerror(errno));
+					__LINE__, errno, STRERROR(errno));
 			}
 		}
 	}
@@ -946,7 +946,7 @@ void storage_accept_loop(int server_sock)
 				logError("file: "__FILE__", line: %d, " \
 					"accept failed, " \
 					"errno: %d, error info: %s", \
-					__LINE__, errno, strerror(errno));
+					__LINE__, errno, STRERROR(errno));
 			}
 
 			continue;
@@ -1003,7 +1003,7 @@ void storage_accept_loop(int server_sock)
 			logError("file: "__FILE__", line: %d, " \
 				"call write failed, " \
 				"errno: %d, error info: %s", \
-				__LINE__, errno, strerror(errno));
+				__LINE__, errno, STRERROR(errno));
 		}
 	}
 }
@@ -1024,7 +1024,7 @@ void storage_nio_notify(struct fast_task_info *pTask)
 		logError("file: "__FILE__", line: %d, " \
 			"call write failed, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		task_finish_clean_up(pTask);
 	}
 }
@@ -1088,7 +1088,7 @@ static void *work_thread_entrance(void* arg)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 	g_storage_thread_count--;
 	if ((result=pthread_mutex_unlock(&g_storage_thread_lock)) != 0)
@@ -1096,7 +1096,7 @@ static void *work_thread_entrance(void* arg)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	logDebug("file: "__FILE__", line: %d, " \
@@ -1149,7 +1149,7 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_lock fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 			}
 
 			++g_dist_path_index_low;
@@ -1172,7 +1172,7 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_unlock fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 			}
 		}
 	}  //random
@@ -1445,7 +1445,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 					"unlink %s fail, errno: %d, " \
 					"error info: %s", \
 					__LINE__, pFileContext->filename, \
-					result, strerror(result));
+					result, STRERROR(result));
 
 				return result;
 			}
@@ -1495,7 +1495,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 					"client ip: %s, fdht_set fail,"\
 					"errno: %d, error info: %s", \
 					__LINE__, pTask->client_ip, \
-					result, strerror(result));
+					result, STRERROR(result));
 
 				unlink(pFileContext->filename);
 				return result;
@@ -1514,7 +1514,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 					"client ip: %s, fdht_set fail,"\
 					"errno: %d, error info: %s", \
 					__LINE__, pTask->client_ip, \
-					result, strerror(result));
+					result, STRERROR(result));
 
 				unlink(pFileContext->filename);
 				return result;
@@ -1553,7 +1553,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 			logError("file: "__FILE__", line: %d, " \
 				"fdht_get fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, result, strerror(errno));
+				__LINE__, result, STRERROR(errno));
 
 			unlink(pFileContext->filename);
 			return result;
@@ -1596,7 +1596,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 			"rename %s to %s fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			pFileContext->filename, new_full_filename, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return 0;
 	}
 
@@ -1649,7 +1649,7 @@ static int storage_service_do_create_link(struct fast_task_info *pTask, \
 			"link file %s to %s fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			src_full_filename, full_filename, \
-			result, strerror(result));
+			result, STRERROR(result));
 		*filename = '\0';
 		*filename_len = 0;
 		return result;
@@ -1691,7 +1691,7 @@ static int storage_service_do_create_link(struct fast_task_info *pTask, \
 				"client ip: %s, fdht_inc fail," \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, \
-				result, strerror(result));
+				result, STRERROR(result));
 		}
 		else
 		{
@@ -1712,7 +1712,7 @@ static int storage_service_do_create_link(struct fast_task_info *pTask, \
 				"client ip: %s, fdht_set fail," \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, \
-				result, strerror(result));
+				result, STRERROR(result));
 		}
 
 		/*
@@ -1776,7 +1776,7 @@ static int storage_do_set_metadata(struct fast_task_info *pTask)
 					"client ip: %s, delete file %s fail," \
 					"errno: %d, error info: %s", __LINE__, \
 					pTask->client_ip, pFileContext->filename, \
-					errno, strerror(errno));
+					errno, STRERROR(errno));
 				result = errno != 0 ? errno : EPERM;
 			}
 			else
@@ -2227,7 +2227,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 				"client ip:%s, call lstat file %s fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, true_filename, 
-				result, strerror(result));
+				result, STRERROR(result));
 		return result;
 	}
 
@@ -2241,7 +2241,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 				"client ip:%s, call stat file %s fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, true_filename, 
-				result, strerror(result));
+				result, STRERROR(result));
 			return result;
 		}
 	}
@@ -2834,7 +2834,7 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 			"errno: %d, error info: %s", \
 			__LINE__, pTask->client_ip, \
 			src_full_filename, pFileContext->filename, \
-			result, strerror(result));
+			result, STRERROR(result));
 		break;
 	}
 
@@ -3076,7 +3076,7 @@ static int storage_server_get_metadata(struct fast_task_info *pTask)
 				"call stat fail, file: %s, "\
 				"error no: %d, error info: %s", \
 				__LINE__, pFileContext->filename, \
-				result, strerror(result));
+				result, STRERROR(result));
 		}
 
 		return result;
@@ -3214,7 +3214,7 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 			"call stat fail, file: %s, "\
 			"error no: %d, error info: %s", \
 			__LINE__, pFileContext->filename, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -3519,7 +3519,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 			"client ip: %s, stat file %s fail, " \
 			"errno: %d, error info: %s.", \
 			__LINE__, pTask->client_ip, \
-			pFileContext->filename, result, strerror(result));
+			pFileContext->filename, result, STRERROR(result));
 		return result;
 	}
 	if (S_ISREG(stat_buf.st_mode))
@@ -3573,7 +3573,7 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, \
 				src_full_filename, \
-				result, strerror(result));
+				result, STRERROR(result));
 
 
 		if (g_check_file_duplicate)

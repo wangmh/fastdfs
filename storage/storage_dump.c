@@ -303,7 +303,7 @@ static int fdfs_dump_storage_stat(char *buff, const int buffSize)
 	{ \
 		logError("file: "__FILE__", line: %d, " \
 			"write to file %s fail, errno: %d, error info: %s", \
-			__LINE__, filename, errno, strerror(errno)); \
+			__LINE__, filename, errno, STRERROR(errno)); \
 		result = errno; \
 		break; \
 	}
@@ -321,7 +321,7 @@ int fdfs_dump_storage_global_vars_to_file(const char *filename)
 	{
 		logError("file: "__FILE__", line: %d, "
 			"open file %s fail, errno: %d, error info: %s",
-			__LINE__, filename, errno, strerror(errno));
+			__LINE__, filename, errno, STRERROR(errno));
 		return errno;
 	}
 

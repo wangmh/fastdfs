@@ -198,7 +198,7 @@ static void *httpd_entrance(void *arg)
 			"evhttp_start fail, server port=%d, " \
 			"errno: %d, error info: %s", \
 			__LINE__, g_http_params.server_port, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		http_start_status = errno != 0 ? errno : EACCES;
 		return NULL;
 	}
@@ -222,7 +222,7 @@ int tracker_httpd_start(const char *bind_addr)
 		result = errno != 0 ? errno : ENOMEM;
 		logCrit("file: "__FILE__", line: %d, " \
 			"call evbuffer_new fail, errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -232,7 +232,7 @@ int tracker_httpd_start(const char *bind_addr)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"create thread failed, errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 

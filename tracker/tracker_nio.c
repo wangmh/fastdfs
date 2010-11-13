@@ -82,7 +82,7 @@ void recv_notify_read(int sock, short event, void *arg)
 				logError("file: "__FILE__", line: %d, " \
 					"call read failed, " \
 					"errno: %d, error info: %s", \
-					__LINE__, errno, strerror(errno));
+					__LINE__, errno, STRERROR(errno));
 			}
 
 			break;
@@ -254,7 +254,7 @@ static void client_sock_read(int sock, short event, void *arg)
 					"client ip: %s, recv failed, " \
 					"errno: %d, error info: %s", \
 					__LINE__, pTask->client_ip, \
-					errno, strerror(errno));
+					errno, STRERROR(errno));
 
 				close(pTask->ev_read.ev_fd);
 				task_finish_clean_up(pTask);
@@ -374,7 +374,7 @@ static void client_sock_write(int sock, short event, void *arg)
 					"client ip: %s, recv failed, " \
 					"errno: %d, error info: %s", \
 					__LINE__, pTask->client_ip, \
-					errno, strerror(errno));
+					errno, STRERROR(errno));
 
 				close(pTask->ev_write.ev_fd);
 				task_finish_clean_up(pTask);

@@ -69,7 +69,7 @@ static void *http_check_entrance(void *arg)
 				logError("file: "__FILE__", line: %d, " \
 					"socket create failed, errno: %d, " \
 					"error info: %s.", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 				sleep(1);
 				continue;
 			}
@@ -124,7 +124,7 @@ static void *http_check_entrance(void *arg)
 					"errno: %d, error info: %s", \
 					(*ppServer)->ip_addr, \
 					(*ppGroup)->storage_http_port, result, \
-					strerror(result));
+					STRERROR(result));
 
 				logError("file: "__FILE__", line: %d, %s", \
 					__LINE__, \
@@ -299,7 +299,7 @@ int tracker_http_check_start()
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"create thread failed, errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 

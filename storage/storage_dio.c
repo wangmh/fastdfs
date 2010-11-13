@@ -67,7 +67,7 @@ int storage_dio_init()
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
 			__LINE__, (int)sizeof(struct storage_dio_thread_data) * \
-			g_path_count, errno, strerror(errno));
+			g_path_count, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -81,7 +81,7 @@ int storage_dio_init()
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			(int)sizeof(struct storage_dio_context) * \
-			context_count, errno, strerror(errno));
+			context_count, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -115,7 +115,7 @@ int storage_dio_init()
 				logError("file: "__FILE__", line: %d, " \
 					"pthread_cond_init fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 				return result;
 			}
 
@@ -127,7 +127,7 @@ int storage_dio_init()
 					"startup threads: %d, " \
 					"errno: %d, error info: %s", \
 					__LINE__, g_dio_thread_count, \
-					result, strerror(result));
+					result, STRERROR(result));
 				return result;
 			}
 			else
@@ -175,7 +175,7 @@ int storage_dio_queue_push(struct fast_task_info *pTask)
 		logError("file: "__FILE__", line: %d, " \
 			"pthread_cond_signal fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 
 		task_finish_clean_up(pTask);
 		return result;
@@ -281,7 +281,7 @@ int dio_deal_task(struct fast_task_info *pTask)
 				"open file: %s fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pFileContext->filename, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -293,7 +293,7 @@ int dio_deal_task(struct fast_task_info *pTask)
 				"lseek file: %s fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pFileContext->filename, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 	}
@@ -322,7 +322,7 @@ int dio_deal_task(struct fast_task_info *pTask)
 				"read from file: %s fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pFileContext->filename, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -362,7 +362,7 @@ int dio_deal_task(struct fast_task_info *pTask)
 				"write to file: %s fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pFileContext->filename, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -412,7 +412,7 @@ int dio_deal_task(struct fast_task_info *pTask)
 					"delete file: %s fail, " \
 					"errno: %d, error info: %s", \
 					__LINE__, pFileContext->filename, \
-					errno, strerror(errno));
+					errno, STRERROR(errno));
 			}
 		}
 		}
@@ -440,7 +440,7 @@ static void *dio_thread_entrance(void* arg)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_cond_wait fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		}
 
 		while ((pTask=task_queue_pop(&(pContext->queue))) != NULL)
@@ -455,7 +455,7 @@ static void *dio_thread_entrance(void* arg)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 	g_dio_thread_count--;
 	if ((result=pthread_mutex_unlock(&g_dio_thread_lock)) != 0)
@@ -463,7 +463,7 @@ static void *dio_thread_entrance(void* arg)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	logDebug("file: "__FILE__", line: %d, " \

@@ -243,7 +243,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 	}
 	else
 	{
@@ -383,7 +383,7 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 	}
 	else
 	{
@@ -489,7 +489,7 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 	}
 	else
 	{
@@ -568,7 +568,7 @@ int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 	}
 	else
 	{
@@ -659,7 +659,7 @@ int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 			"errno: %d, error info: %s", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 	}
 	else
 	{
@@ -736,7 +736,7 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 	}
 	else
 	{
@@ -827,7 +827,7 @@ int tracker_query_storage_store_list_with_group( \
 			"errno: %d, error info: %s", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 	}
 	else
 	{
@@ -987,7 +987,7 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 				"errno: %d, error info: %s", \
 				tracker_server.ip_addr, \
 				tracker_server.port, \
-				result, strerror(result));
+				result, STRERROR(result));
 		}
 		else
 		{

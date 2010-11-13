@@ -144,7 +144,7 @@ static int combine_stat_by(const char *file_prefix, EntryStat *stats, const int 
 		if ((fp=fopen(filename, "r")) == NULL)
 		{
 			printf("open file %s fail, errno: %d, error info: %s\n", 
-				filename, errno, strerror(errno));
+				filename, errno, STRERROR(errno));
 			return errno != 0 ? errno : EPERM;
 		}
 
@@ -163,14 +163,14 @@ static int combine_stat_by(const char *file_prefix, EntryStat *stats, const int 
 					if (sscanf(buff+1, "%d %d %lld", &total_count, &success_count, &time_used) != 3)
 					{
 						printf("sscanf %s fail, errno: %d, error info: %s\n", 
-							filename, errno, strerror(errno));
+							filename, errno, STRERROR(errno));
 						return errno != 0 ? errno : EINVAL;
 					}
 				}
 				else
 				{
 					printf("sscanf %s fail, errno: %d, error info: %s\n", 
-						filename, errno, strerror(errno));
+						filename, errno, STRERROR(errno));
 					return errno != 0 ? errno : EINVAL;
 				}
 			}
@@ -233,7 +233,7 @@ static int combine_stat_overall(int *ptotal_count, int *psuccess_count, int *pti
 		if ((fp=fopen(filename, "r")) == NULL)
 		{
 			printf("open file %s fail, errno: %d, error info: %s\n", 
-				filename, errno, strerror(errno));
+				filename, errno, STRERROR(errno));
 			return errno != 0 ? errno : EPERM;
 		}
 
@@ -247,7 +247,7 @@ static int combine_stat_overall(int *ptotal_count, int *psuccess_count, int *pti
 			if (sscanf(buff, "%d %d %d", &total_count, &success_count, &time_used) != 3)
 			{
 				printf("sscanf %s fail, errno: %d, error info: %s\n", 
-					filename, errno, strerror(errno));
+					filename, errno, STRERROR(errno));
 				return errno != 0 ? errno : EINVAL;
 			}
 

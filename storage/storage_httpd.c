@@ -169,7 +169,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"stat file: %s fail, errno: %d, error info: %s", \
-			__LINE__, full_filename, errno, strerror(errno));
+			__LINE__, full_filename, errno, STRERROR(errno));
 		evhttp_send_error(req, HTTP_NOTFOUND, "Not found");
 		return;
 	}
@@ -187,7 +187,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 		logError("file: "__FILE__", line: %d, " \
 			"open file %s fail, " \
 			"errno: %d, error info: %s", __LINE__, \
-			full_filename, errno, strerror(errno));
+			full_filename, errno, STRERROR(errno));
 		evhttp_send_error(req, HTTP_SERVUNAVAIL, "Service unavail");
 		return;
 	}
@@ -209,7 +209,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 			logError("file: "__FILE__", line: %d, " \
 				"read from file %s fail, " \
 				"errno: %d, error info: %s", __LINE__, \
-				full_filename, errno, strerror(errno));
+				full_filename, errno, STRERROR(errno));
 			evhttp_send_error(req, HTTP_SERVUNAVAIL, "Service unavail");
 			return;
 		}
@@ -246,7 +246,7 @@ static void *httpd_entrance(void *arg)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"evhttp_start fail, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		http_start_status = errno != 0 ? errno : EACCES;
 		return NULL;
 	}
@@ -271,7 +271,7 @@ int storage_httpd_start(const char *bind_addr)
 		result = errno != 0 ? errno : ENOMEM;
 		logCrit("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, g_http_trunk_size, result, strerror(result));
+			__LINE__, g_http_trunk_size, result, STRERROR(result));
 		return result;
 	}
 
@@ -281,7 +281,7 @@ int storage_httpd_start(const char *bind_addr)
 		result = errno != 0 ? errno : ENOMEM;
 		logCrit("file: "__FILE__", line: %d, " \
 			"call evbuffer_new fail, errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -291,7 +291,7 @@ int storage_httpd_start(const char *bind_addr)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"create thread failed, errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 

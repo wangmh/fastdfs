@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
 			fdfs_client_destroy();
 			printf("tracker_query_storage fail, " \
 				"error no: %d, error info: %s\n", \
-				result, strerror(result));
+				result, STRERROR(result));
 			return result;
 		}
 
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
 		{
 			printf("upload file fail, " \
 				"error no: %d, error info: %s\n", \
-				result, strerror(result));
+				result, STRERROR(result));
 			fdfs_quit(&storageServer);
 			tracker_disconnect_server(&storageServer);
 			fdfs_client_destroy();
@@ -364,7 +364,7 @@ int main(int argc, char *argv[])
 		{
 			printf("upload slave file fail, " \
 				"error no: %d, error info: %s\n", \
-				result, strerror(result));
+				result, STRERROR(result));
 			fdfs_quit(&storageServer);
 			tracker_disconnect_server(&storageServer);
 			fdfs_client_destroy();
@@ -441,7 +441,7 @@ int main(int argc, char *argv[])
 				printf("tracker_query_storage_list1 fail, "\
 					"file_id=%s, " \
 					"error no: %d, error info: %s\n", \
-					file_id, result, strerror(result));
+					file_id, result, STRERROR(result));
 			}
 			else
 			{
@@ -467,7 +467,7 @@ int main(int argc, char *argv[])
 			printf("tracker_query_storage_fetch fail, " \
 				"file_id=%s, " \
 				"error no: %d, error info: %s\n", \
-				file_id, result, strerror(result));
+				file_id, result, STRERROR(result));
 			return result;
 		}
 
@@ -495,7 +495,7 @@ int main(int argc, char *argv[])
 					printf("open file \"%s\" fail, " \
 						"errno: %d, error info: %s", \
 						local_filename, result, \
-						strerror(result));
+						STRERROR(result));
 				}
 				else
 				{
@@ -550,7 +550,7 @@ int main(int argc, char *argv[])
 			{
 				printf("download file fail, " \
 					"error no: %d, error info: %s\n", \
-					result, strerror(result));
+					result, STRERROR(result));
 			}
 		}
 		else if (strcmp(operation, "getmeta") == 0)
@@ -574,7 +574,7 @@ int main(int argc, char *argv[])
 			{
 				printf("getmeta fail, " \
 					"error no: %d, error info: %s\n", \
-					result, strerror(result));
+					result, STRERROR(result));
 			}
 		}
 		else if (strcmp(operation, "setmeta") == 0)
@@ -621,7 +621,7 @@ int main(int argc, char *argv[])
 			{
 				printf("setmeta fail, " \
 					"error no: %d, error info: %s\n", \
-					result, strerror(result));
+					result, STRERROR(result));
 			}
 
 			free(meta_buff);
@@ -638,7 +638,7 @@ int main(int argc, char *argv[])
 			{
 				printf("delete file fail, " \
 					"error no: %d, error info: %s\n", \
-					result, strerror(result));
+					result, STRERROR(result));
 			}
 		}
 	}

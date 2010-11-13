@@ -168,7 +168,7 @@ static int fastdfs_convert_metadata_to_array(zval *metadata_obj, \
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			sizeof(FDFSMetaData) * (*meta_count), \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1501,7 +1501,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"emalloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, file_size + 1, errno, strerror(errno));
+			__LINE__, file_size + 1, errno, STRERROR(errno));
 		free(file_buff);
 		pContext->err_no = errno != 0 ? errno : ENOMEM;
 		RETURN_BOOL(false);
@@ -2978,7 +2978,7 @@ ZEND_FUNCTION(fastdfs_get_last_error_info)
 {
 	char *error_info;
 
-	error_info = strerror(php_context.err_no);
+	error_info = STRERROR(php_context.err_no);
 	RETURN_STRINGL(error_info, strlen(error_info), 1);
 }
 
@@ -3986,7 +3986,7 @@ PHP_METHOD(FastDFS, get_last_error_info)
 	php_fdfs_t *i_obj;
 
 	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
-	error_info = strerror(i_obj->context.err_no);
+	error_info = STRERROR(i_obj->context.err_no);
 	RETURN_STRINGL(error_info, strlen(error_info), 1);
 }
 
@@ -4473,7 +4473,7 @@ static int load_config_files()
 	if (!fileExists(g_fdfs_base_path))
 	{
 		logError("\"%s\" can't be accessed, error info: %s", \
-			g_fdfs_base_path, strerror(errno));
+			g_fdfs_base_path, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 	if (!isDir(g_fdfs_base_path))

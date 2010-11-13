@@ -263,7 +263,7 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 
 		break;
 	}
@@ -356,7 +356,7 @@ int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 
 		break;
 	}
@@ -459,7 +459,7 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		break;
 	}
 
@@ -561,7 +561,7 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		break;
 	}
 
@@ -623,7 +623,7 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 					"errno: %d, error info: %s", \
 					pStorageServer->ip_addr, \
 					pStorageServer->port, \
-					result, strerror(result));
+					result, STRERROR(result));
 				break;
 			}
 
@@ -925,7 +925,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		break;
 	}
 
@@ -946,7 +946,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 				"errno: %d, error info: %s", \
 				pStorageServer->ip_addr, \
 				pStorageServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 	}
@@ -1217,7 +1217,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 
 		break;
 	}
@@ -1229,7 +1229,7 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 
 		break;
 	}
@@ -1435,7 +1435,7 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 			"errno: %d, error info: %s", \
 			pStorageServer->ip_addr, \
 			pStorageServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		break;
 	}
 

@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 		{
 			printf("delete storage server %s::%s fail, " \
 				"error no: %d, error info: %s\n", \
-				group_name, storage_ip, result, strerror(result));
+				group_name, storage_ip, result, STRERROR(result));
 		}
 	}
 	else

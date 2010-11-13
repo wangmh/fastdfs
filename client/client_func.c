@@ -242,7 +242,7 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 		if (!fileExists(g_fdfs_base_path))
 		{
 			logError("\"%s\" can't be accessed, error info: %s", \
-				g_fdfs_base_path, strerror(errno));
+				g_fdfs_base_path, STRERROR(errno));
 			result = errno != 0 ? errno : ENOENT;
 			break;
 		}

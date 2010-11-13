@@ -82,7 +82,7 @@ int tracker_service_init()
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
 			__LINE__, (int)sizeof(struct tracker_thread_data) * \
-			g_work_threads, errno, strerror(errno));
+			g_work_threads, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -105,7 +105,7 @@ int tracker_service_init()
 			logError("file: "__FILE__", line: %d, " \
 				"call pipe fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, result, strerror(result));
+				__LINE__, result, STRERROR(result));
 			break;
 		}
 
@@ -121,7 +121,7 @@ int tracker_service_init()
 				"create thread failed, startup threads: %d, " \
 				"errno: %d, error info: %s", \
 				__LINE__, g_tracker_thread_count, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 		else
@@ -131,7 +131,7 @@ int tracker_service_init()
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_lock fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 			}
 			g_tracker_thread_count++;
 			if ((result=pthread_mutex_unlock(&tracker_thread_lock)) != 0)
@@ -139,7 +139,7 @@ int tracker_service_init()
 				logError("file: "__FILE__", line: %d, " \
 					"call pthread_mutex_lock fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, result, strerror(result));
+					__LINE__, result, STRERROR(result));
 			}
 		}
 	}
@@ -206,7 +206,7 @@ void tracker_accept_loop(int server_sock)
 				logError("file: "__FILE__", line: %d, " \
 					"accept failed, " \
 					"errno: %d, error info: %s", \
-					__LINE__, errno, strerror(errno));
+					__LINE__, errno, STRERROR(errno));
 			}
 
 			continue;
@@ -220,7 +220,7 @@ void tracker_accept_loop(int server_sock)
 			logError("file: "__FILE__", line: %d, " \
 				"call write failed, " \
 				"errno: %d, error info: %s", \
-				__LINE__, errno, strerror(errno));
+				__LINE__, errno, STRERROR(errno));
 		}
 	}
 }
@@ -262,7 +262,7 @@ static void *work_thread_entrance(void* arg)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 	g_tracker_thread_count--;
 	if ((result=pthread_mutex_unlock(&tracker_thread_lock)) != 0)
@@ -270,7 +270,7 @@ static void *work_thread_entrance(void* arg)
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	return NULL;
@@ -353,7 +353,7 @@ static int tracker_changelog_response(struct fast_task_info *pTask, \
 			"client ip: %s, open changelog file %s fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTask->client_ip, \
-			filename, result, strerror(result));
+			filename, result, STRERROR(result));
 		pTask->length = sizeof(TrackerHeader);
 		return result;
 	}
@@ -366,7 +366,7 @@ static int tracker_changelog_response(struct fast_task_info *pTask, \
 			"client ip: %s, lseek changelog file %s fail, "\
 			"errno: %d, error info: %s", \
 			__LINE__, pTask->client_ip, \
-			filename, result, strerror(result));
+			filename, result, STRERROR(result));
 		close(fd);
 		pTask->length = sizeof(TrackerHeader);
 		return result;
@@ -382,7 +382,7 @@ static int tracker_changelog_response(struct fast_task_info *pTask, \
 			"client ip: %s, read changelog file %s fail, "\
 			"errno: %d, error info: %s", \
 			__LINE__, pTask->client_ip, \
-			filename, result, strerror(result));
+			filename, result, STRERROR(result));
 
 		close(fd);
 		pTask->length = sizeof(TrackerHeader);
@@ -1025,7 +1025,7 @@ static int tracker_deal_get_one_sys_file(struct fast_task_info *pTask)
 			"client ip:%s, call stat file %s fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTask->client_ip, full_filename,
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -2335,7 +2335,7 @@ static int tracker_deal_storage_df_report(struct fast_task_info *pTask)
 			logError("file: "__FILE__", line: %d, " \
 				"call pthread_mutex_lock fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, result, strerror(result));
+				__LINE__, result, STRERROR(result));
 		}
 		tracker_find_max_free_space_group();
 		if ((result=pthread_mutex_unlock(&lb_thread_lock)) != 0)
@@ -2343,7 +2343,7 @@ static int tracker_deal_storage_df_report(struct fast_task_info *pTask)
 			logError("file: "__FILE__", line: %d, " \
 				"call pthread_mutex_unlock fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, result, strerror(result));
+				__LINE__, result, STRERROR(result));
 		}
 	}
 

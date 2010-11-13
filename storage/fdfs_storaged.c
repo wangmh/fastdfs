@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"call dup2 fail, errno: %d, error info: %s, " \
-			"program exit!", __LINE__, errno, strerror(errno));
+			"program exit!", __LINE__, errno, STRERROR(errno));
 		g_continue_flag = false;
 		return errno;
 	}
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno;
 	}
 
@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno;
 	}
 	
@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno;
 	}
 
@@ -210,7 +210,7 @@ int main(int argc, char *argv[])
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno;
 	}
 
@@ -226,7 +226,7 @@ int main(int argc, char *argv[])
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno;
 	}
 #endif
@@ -240,7 +240,7 @@ int main(int argc, char *argv[])
 	{
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno;
 	}
 #endif
