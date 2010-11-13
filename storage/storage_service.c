@@ -2785,8 +2785,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
 			"%s/data/fdfs_sync_copy.XXXXXX", \
 			g_store_paths[store_path_index]);
-	if (mktemp(pFileContext->filename) == NULL || 
-		*(pFileContext->filename) == '\0')
+	if (mkdtemp(pFileContext->filename) == NULL)
 	{
 		result = errno != 0 ? errno : EEXIST;
 		logError("file: "__FILE__", line: %d, " \
