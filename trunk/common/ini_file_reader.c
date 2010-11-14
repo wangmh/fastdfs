@@ -41,7 +41,7 @@ static int iniInitContext(IniContext *pContext)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"hash_init fail, errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	return result;
@@ -93,7 +93,7 @@ int iniLoadFromFile(const char *szFilename, IniContext *pContext)
 				logWarning("file: "__FILE__", line: %d, " \
 					"getcwd fail, errno: %d, " \
 					"error info: %s", \
-					__LINE__, errno, strerror(errno));
+					__LINE__, errno, STRERROR(errno));
 				*old_cwd = '\0';
 			}
 
@@ -114,7 +114,7 @@ int iniLoadFromFile(const char *szFilename, IniContext *pContext)
 						"file: %s fail, errno: %d, " \
 						"error info: %s", \
 						__LINE__, szFilename, \
-						errno, strerror(errno));
+						errno, STRERROR(errno));
 					return errno != 0 ? errno : ENOENT;
 				}
 			}
@@ -151,7 +151,7 @@ int iniLoadFromFile(const char *szFilename, IniContext *pContext)
 		logError("file: "__FILE__", line: %d, " \
 			"chdir to old path: %s fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, old_cwd, errno, strerror(errno));
+			__LINE__, old_cwd, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -354,7 +354,7 @@ static int iniDoLoadItemsFromBuffer(char *content, IniContext *pContext)
 						"errno: %d, error info: %s", \
 						__LINE__, \
 						(int)sizeof(IniSection), \
-						result, strerror(result));
+						result, STRERROR(result));
 					
 					break;
 				}
@@ -369,7 +369,7 @@ static int iniDoLoadItemsFromBuffer(char *content, IniContext *pContext)
 						"insert into hash table fail, "\
 						"errno: %d, error info: %s", \
 						__LINE__, result, \
-						strerror(result));
+						STRERROR(result));
 					break;
 				}
 				else

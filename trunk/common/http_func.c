@@ -103,7 +103,7 @@ int get_url_content(const char *url, const int connect_timeout, \
 		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"socket create failed, errno: %d, " \
 			"error info: %s", __LINE__, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : EPERM;
 	}
 
@@ -115,7 +115,7 @@ int get_url_content(const char *url, const int connect_timeout, \
 		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"connect to %s:%d fail, errno: %d, " \
 			"error info: %s", __LINE__, domain_name, \
-			port, result, strerror(result));
+			port, result, STRERROR(result));
 
 		return result;
 	}
@@ -132,7 +132,7 @@ int get_url_content(const char *url, const int connect_timeout, \
 		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"send data to %s:%d fail, errno: %d, " \
 			"error info: %s", __LINE__, domain_name, \
-			port, result, strerror(result));
+			port, result, STRERROR(result));
 
 		return result;
 	}
@@ -147,7 +147,7 @@ int get_url_content(const char *url, const int connect_timeout, \
 		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, " \
 			"error info: %s", __LINE__, alloc_size + 1, \
-			result, strerror(result));
+			result, STRERROR(result));
 
 		return result;
 	}
@@ -168,7 +168,7 @@ int get_url_content(const char *url, const int connect_timeout, \
 					"realloc %d bytes fail, errno: %d, " \
 					"error info: %s", __LINE__, \
 					alloc_size + 1, \
-					result, strerror(result));
+					result, STRERROR(result));
 
 				return result;
 			}
@@ -192,7 +192,7 @@ int get_url_content(const char *url, const int connect_timeout, \
 		sprintf(error_info, "file: "__FILE__", line: %d, " \
 			"recv data from %s:%d fail, errno: %d, " \
 			"error info: %s", __LINE__, domain_name, \
-			port, result, strerror(result));
+			port, result, STRERROR(result));
 
 		return result;
 	}

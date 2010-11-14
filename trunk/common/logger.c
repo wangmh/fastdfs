@@ -44,7 +44,7 @@ static int check_and_mk_log_dir(const char *base_path)
 		{
 			fprintf(stderr, "mkdir \"%s\" fail, " \
 				"errno: %d, error info: %s", \
-				data_path, errno, strerror(errno));
+				data_path, errno, STRERROR(errno));
 			return errno != 0 ? errno : EPERM;
 		}
 	}
@@ -65,7 +65,7 @@ int log_init_ex(LogContext *pContext)
 	{
 		fprintf(stderr, "malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
-			LOG_BUFF_SIZE, errno, strerror(errno));
+			LOG_BUFF_SIZE, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 	pContext->pcurrent_buff = pContext->log_buff;
@@ -97,7 +97,7 @@ int log_set_prefix_ex(LogContext *pContext, const char *base_path, \
 	{
 		fprintf(stderr, "open log file \"%s\" to write fail, " \
 			"errno: %d, error info: %s", \
-			logfile, errno, strerror(errno));
+			logfile, errno, STRERROR(errno));
 		pContext->log_fd = STDERR_FILENO;
 		return errno != 0 ? errno : EACCES;
 	}
@@ -112,7 +112,7 @@ int log_set_filename_ex(LogContext *pContext, const char *log_filename)
 	{
 		fprintf(stderr, "open log file \"%s\" to write fail, " \
 			"errno: %d, error info: %s", \
-			log_filename, errno, strerror(errno));
+			log_filename, errno, STRERROR(errno));
 		pContext->log_fd = STDERR_FILENO;
 		return errno != 0 ? errno : EACCES;
 	}
@@ -173,7 +173,7 @@ static int log_fsync(LogContext *pContext, const bool bNeedLock)
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	write_bytes = pContext->pcurrent_buff - pContext->log_buff;
@@ -183,7 +183,7 @@ static int log_fsync(LogContext *pContext, const bool bNeedLock)
 		result = errno != 0 ? errno : EIO;
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call write fail, errno: %d, error info: %s\n",\
-			 __LINE__, result, strerror(result));
+			 __LINE__, result, STRERROR(result));
 	}
 
 	if (pContext->log_fd != STDERR_FILENO)
@@ -193,7 +193,7 @@ static int log_fsync(LogContext *pContext, const bool bNeedLock)
 			result = errno != 0 ? errno : EIO;
 			fprintf(stderr, "file: "__FILE__", line: %d, " \
 				"call fsync fail, errno: %d, error info: %s\n",\
-				 __LINE__, result, strerror(result));
+				 __LINE__, result, STRERROR(result));
 		}
 	}
 
@@ -204,7 +204,7 @@ static int log_fsync(LogContext *pContext, const bool bNeedLock)
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	return result;
@@ -225,7 +225,7 @@ static void doLog(LogContext *pContext, const char *caption, \
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	if (text_len + 64 > LOG_BUFF_SIZE)
@@ -262,7 +262,7 @@ static void doLog(LogContext *pContext, const char *caption, \
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 }
 
