@@ -5,6 +5,7 @@ Version 2.04  2010-11-14
  * sync copy file use temp filename first, rename to the correct filename 
    when sync done
  * file id use 4 bytes CRC32 signature instead of random number
+ * add file: client/fdfs_crc32.c
 
 Version 2.03  2010-11-08
  * bug fixed: core dump when http.need_find_content_type=false and 
