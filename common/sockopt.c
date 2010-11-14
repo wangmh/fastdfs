@@ -729,7 +729,7 @@ int socketBind(int sock, const char *bind_ipaddr, const int port)
 		logError("file: "__FILE__", line: %d, " \
 			"bind port %d failed, " \
 			"errno: %d, error info: %s.", \
-			__LINE__, port, errno, strerror(errno));
+			__LINE__, port, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -747,7 +747,7 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no)
 		*err_no = errno != 0 ? errno : EMFILE;
 		logError("file: "__FILE__", line: %d, " \
 			"socket create failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return -1;
 	}
 
@@ -757,7 +757,7 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no)
 		*err_no = errno != 0 ? errno : ENOMEM;
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		close(sock);
 		return -2;
 	}
@@ -774,7 +774,7 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no)
 		logError("file: "__FILE__", line: %d, " \
 			"listen port %d failed, " \
 			"errno: %d, error info: %s", \
-			__LINE__, port, errno, strerror(errno));
+			__LINE__, port, errno, STRERROR(errno));
 		close(sock);
 		return -4;
 	}
@@ -1066,7 +1066,7 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s.", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		close(fd);
 		return errno != 0 ? errno : EIO;
 	}
@@ -1199,7 +1199,7 @@ int tcpsetserveropt(int fd, const int timeout)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -1211,7 +1211,7 @@ int tcpsetserveropt(int fd, const int timeout)
 	{
 		logWarning("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 	}
 
 	if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
@@ -1219,7 +1219,7 @@ int tcpsetserveropt(int fd, const int timeout)
 	{
 		logWarning("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 	}
 
 	/*
@@ -1234,7 +1234,7 @@ int tcpsetserveropt(int fd, const int timeout)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"getsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 	printf("send buff size: %d\n", bytes);
@@ -1244,7 +1244,7 @@ int tcpsetserveropt(int fd, const int timeout)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"getsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 	printf("recv buff size: %d\n", bytes);
@@ -1257,7 +1257,7 @@ int tcpsetserveropt(int fd, const int timeout)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
 
@@ -1285,7 +1285,7 @@ int tcpsetkeepalive(int fd, const int idleSeconds)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
 
@@ -1296,7 +1296,7 @@ int tcpsetkeepalive(int fd, const int idleSeconds)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
 
@@ -1306,7 +1306,7 @@ int tcpsetkeepalive(int fd, const int idleSeconds)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
 
@@ -1316,7 +1316,7 @@ int tcpsetkeepalive(int fd, const int idleSeconds)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
 #endif
@@ -1341,7 +1341,7 @@ int tcpprintkeepalive(int fd)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
 
@@ -1352,7 +1352,7 @@ int tcpprintkeepalive(int fd)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
 
@@ -1362,7 +1362,7 @@ int tcpprintkeepalive(int fd)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
 
@@ -1372,7 +1372,7 @@ int tcpprintkeepalive(int fd)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
 
@@ -1394,7 +1394,7 @@ int tcpsetnonblockopt(int fd)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"fcntl failed, errno: %d, error info: %s.", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EACCES;
 	}
 
@@ -1402,7 +1402,7 @@ int tcpsetnonblockopt(int fd)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"fcntl failed, errno: %d, error info: %s.", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EACCES;
 	}
 
@@ -1425,7 +1425,7 @@ int tcpsetnodelay(int fd, const int timeout)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"setsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EINVAL;
 	}
 
@@ -1453,7 +1453,7 @@ int gethostaddrs(char **if_alias_prefixes, const int prefix_count, \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"socket create failed, errno: %d, error info: %s.", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EMFILE;
 	}
 
@@ -1519,7 +1519,7 @@ int gethostaddrs(char **if_alias_prefixes, const int prefix_count, \
 		logError("file: "__FILE__", line: %d, " \
 			"call gethostname fail, " \
 			"error no: %d, error info: %s", \
-			__LINE__, errno, strerror(errno));
+			__LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EFAULT;
 	}
 
@@ -1529,7 +1529,7 @@ int gethostaddrs(char **if_alias_prefixes, const int prefix_count, \
 		logError("file: "__FILE__", line: %d, " \
 			"call gethostbyname fail, " \
 			"error no: %d, error info: %s", \
-			__LINE__, h_errno, strerror(h_errno));
+			__LINE__, h_errno, STRERROR(h_errno));
 		return h_errno != 0 ? h_errno : EFAULT;
 	}
 

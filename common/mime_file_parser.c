@@ -74,7 +74,7 @@ int load_mime_types_from_file(HashArray *pHash, const char *mime_filename)
 		free(content);
 		logError("file: "__FILE__", line: %d, " \
 			"hash_init_ex fail, errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
@@ -117,7 +117,7 @@ int load_mime_types_from_file(HashArray *pHash, const char *mime_filename)
 				logError("file: "__FILE__", line: %d, " \
 					"hash_insert_ex fail, errno: %d, " \
 					"error info: %s", __LINE__, \
-					result, strerror(result));
+					result, STRERROR(result));
 				return result;
 			}
 		}

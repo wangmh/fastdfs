@@ -243,7 +243,7 @@ int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid, \
 		logError("file: "__FILE__", line: %d, " \
 			"create thread failed, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, strerror(result));
+			__LINE__, result, STRERROR(result));
 	}
 
 	pthread_attr_destroy(&thread_attr);
