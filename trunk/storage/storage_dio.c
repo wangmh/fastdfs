@@ -230,6 +230,42 @@ int dio_deal_task(struct fast_task_info *pTask)
 
 	if (pFileContext->op == FDFS_STORAGE_FILE_OP_DELETE)
 	{
+
+		if ((pFileContext->delete_flag & STORAGE_DELETE_FLAG_LINK) && \
+			(!g_check_file_duplicate))
+		{
+			int len;
+			char full_filename[MAX_PATH_SIZE + 128];
+
+			if ((len=readlink(pFileContext->filename, \
+				full_filename, sizeof(full_filename))) < 0)
+			{
+				result = errno != 0 ? errno : EACCES;
+				logError("file: "__FILE__", line: %d, " \
+					"readlink file: %s fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, pFileContext->filename, \
+					result, STRERROR(result));
+
+				pFileContext->done_callback(pTask, result);
+				return result;
+			}
+
+			*(full_filename + len) = '\0';
+			if (unlink(full_filename) != 0)
+			{
+				result = errno != 0 ? errno : EACCES;
+				logError("file: "__FILE__", line: %d, " \
+					"unlink file: %s fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, full_filename, \
+					result, STRERROR(result));
+
+				pFileContext->done_callback(pTask, result);
+				return result;
+			}
+		}
+
 		if (unlink(pFileContext->filename) != 0)
 		{
 			result = errno != 0 ? errno : EACCES;
@@ -366,7 +402,13 @@ int dio_deal_task(struct fast_task_info *pTask)
 			break;
 		}
 
-		if (g_check_file_duplicate)
+		if (pFileContext->calc_crc32)
+		{
+			pFileContext->crc32 = CRC32_ex(pDataBuff, write_bytes, \
+						pFileContext->crc32);
+		}
+
+		if (pFileContext->calc_file_hash)
 		{
 			CALC_HASH_CODES4(pDataBuff, write_bytes, \
 					pFileContext->file_hash_codes)
@@ -390,6 +432,17 @@ int dio_deal_task(struct fast_task_info *pTask)
 			/* file write done, close it */
 			close(pFileContext->fd);
 			pFileContext->fd = -1;
+
+			if (pFileContext->calc_crc32)
+			{
+				pFileContext->crc32 = CRC32_FINAL( \
+							pFileContext->crc32);
+			}
+
+			if (pFileContext->calc_file_hash)
+			{
+				FINISH_HASH_CODES4(pFileContext->file_hash_codes)
+			}
 
 			pFileContext->done_callback(pTask, result);
 		}

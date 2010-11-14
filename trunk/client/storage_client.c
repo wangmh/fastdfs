@@ -315,7 +315,7 @@ int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
 	int result;
 	TrackerServerInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
-	char in_buff[2 * FDFS_PROTO_PKG_LEN_SIZE];
+	char in_buff[3 * FDFS_PROTO_PKG_LEN_SIZE];
 	int64_t in_bytes;
 	int filename_len;
 	char *pInBuff;
@@ -381,6 +381,7 @@ int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
         pFileInfo->file_size = buff2long(in_buff);
 	pFileInfo->create_timestamp = buff2long(in_buff + \
 				FDFS_PROTO_PKG_LEN_SIZE);
+	pFileInfo->crc32 = buff2long(in_buff + 2 * FDFS_PROTO_PKG_LEN_SIZE);
 	} while (0);
 
 	if (new_connection)
@@ -1730,6 +1731,8 @@ int fdfs_get_file_info(const char *file_id, FDFSFileInfo *pFileInfo)
 	ip_addr.s_addr = ntohl(buff2int(buff));
 	inet_ntop(AF_INET,&ip_addr,pFileInfo->source_ip_addr,IP_ADDRESS_SIZE);
 
+	printf("remote_filename==%s\n", remote_filename);
+
 	if (filename_len > FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH + \
 		FDFS_FILE_EXT_NAME_MAX_LEN + 1)  //slave file
 	{
@@ -1749,6 +1752,7 @@ int fdfs_get_file_info(const char *file_id, FDFSFileInfo *pFileInfo)
 	{
 		pFileInfo->create_timestamp = buff2int(buff+sizeof(int));
 		pFileInfo->file_size = buff2long(buff+sizeof(int)*2);
+		pFileInfo->crc32 = buff2int(buff+sizeof(int)*4);
 	}
 
 	return 0;

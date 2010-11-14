@@ -16,6 +16,7 @@
 
 typedef struct {
 	time_t create_timestamp;
+	int crc32;
 	int64_t file_size;
 	char source_ip_addr[IP_ADDRESS_SIZE];
 } FDFSFileInfo;

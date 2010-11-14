@@ -310,6 +310,7 @@ int main(int argc, char *argv[])
 			file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \
 			szDatetime, sizeof(szDatetime)));
 		printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
+		printf("file crc32=%u\n", file_info.crc32);
 		printf("file url: %s\n", file_url);
 
 		strcpy(master_file_id, file_id);
@@ -396,6 +397,7 @@ int main(int argc, char *argv[])
 			file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \
 			szDatetime, sizeof(szDatetime)));
 		printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
+		printf("file crc32=%u\n", file_info.crc32);
 		printf("file url: %s\n", file_url);
 
 		if (fdfs_gen_slave_filename(master_file_id, \
