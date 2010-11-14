@@ -2811,6 +2811,8 @@ static void php_fdfs_get_file_info_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	add_assoc_stringl_ex(return_value, "source_ip_addr", \
 		sizeof("source_ip_addr"), file_info.source_ip_addr, \
 		strlen(file_info.source_ip_addr), 1);
+	add_assoc_long_ex(return_value, "crc32", \
+		sizeof("crc32"), file_info.crc32);
 }
 
 /*
