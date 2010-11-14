@@ -62,8 +62,10 @@ typedef struct
 	char fname2log[128+sizeof(STORAGE_META_FILE_EXT)];  //filename to log
 	char op;        //w for writing, r for reading, d for deleting etc.
 	char sync_flag;  //sync flag log to binlog
+	bool calc_crc32;   //if calculate file content hash code
 	bool calc_file_hash;   //if calculate file content hash code
-	unsigned int file_hash_codes[4];  //file hash code
+	int file_hash_codes[4];  //file hash code
+	int crc32;   //file content crc32 signature
 
 	union
 	{

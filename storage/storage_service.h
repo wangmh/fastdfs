@@ -11,6 +11,14 @@
 #ifndef _STORAGE_SERVICE_H_
 #define _STORAGE_SERVICE_H_
 
+#define STORAGE_CREATE_FLAG_NONE  0
+#define STORAGE_CREATE_FLAG_FILE  1
+#define STORAGE_CREATE_FLAG_LINK  2
+
+#define STORAGE_DELETE_FLAG_NONE  0
+#define STORAGE_DELETE_FLAG_FILE  1
+#define STORAGE_DELETE_FLAG_LINK  2
+
 #include <event.h>
 #include "fdfs_define.h"
 #include "fast_task_queue.h"
