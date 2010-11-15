@@ -25,9 +25,6 @@ static void Encode (unsigned char *, UINT4 *, unsigned int);
 static void Decode (UINT4 *, unsigned char *, unsigned int);
 static void MD5_memcpy (POINTER, POINTER, unsigned int);
 static void MD5_memset (POINTER, int, unsigned int);
-void MD5Init (MD5_CTX *);
-void MD5Update (MD5_CTX *, unsigned char *, unsigned int);
-void MD5Final (unsigned char [16], MD5_CTX *);
 
 static unsigned char PADDING[64] = {
 	0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
