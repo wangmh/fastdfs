@@ -41,6 +41,12 @@ int MD5File(char *filename, unsigned char digest[16]);
 */
 int MD5Buffer(char *buffer, unsigned int len, unsigned char digest[16]);
 
+void MD5Init (MD5_CTX *);
+
+void MD5Update (MD5_CTX *, unsigned char *, unsigned int);
+
+void MD5Final (unsigned char [16], MD5_CTX *);
+
 #ifdef __cplusplus
 }
 #endif
