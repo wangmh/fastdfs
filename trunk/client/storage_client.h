@@ -359,14 +359,19 @@ int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
 			FDFSFileInfo *pFileInfo);
 
 
+#define fdfs_get_file_info(file_id, pFileInfo) \
+	fdfs_get_file_info_ex(file_id, true, pFileInfo);
+
 /**
 * get file info from the filename return by storage server
 * params:
 *       file_id: the file id return by storage server
+*       get_from_server: if get slave file info from storage server
 *       pFileInfo: return the file info
 * return: 0 success, !=0 fail, return the error code
 **/
-int fdfs_get_file_info(const char *file_id, FDFSFileInfo *pFileInfo);
+int fdfs_get_file_info_ex(const char *file_id, const bool get_from_server, \
+		FDFSFileInfo *pFileInfo);
 
 
 #ifdef __cplusplus

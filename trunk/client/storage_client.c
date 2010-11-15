@@ -1683,12 +1683,12 @@ int storage_upload_slave_by_callback1(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int fdfs_get_file_info(const char *file_id, FDFSFileInfo *pFileInfo)
+int fdfs_get_file_info_ex(const char *file_id, const bool get_from_server, \
+			FDFSFileInfo *pFileInfo)
 {
 	static struct base64_context context;
 	static int context_inited = 0;
 	struct in_addr ip_addr;
-	int file_id_len;
 	int filename_len;
 	int buff_len;
 	int result;
@@ -1704,14 +1704,7 @@ int fdfs_get_file_info(const char *file_id, FDFSFileInfo *pFileInfo)
 		base64_init_ex(&context, 0, '-', '_', '.');
 	}
 
-	file_id_len = snprintf(new_file_id, sizeof(new_file_id), \
-				"%s", file_id);
-	if (file_id_len <= FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
-			+ FDFS_FILE_EXT_NAME_MAX_LEN + 1)
-	{
-		return EINVAL;
-	}
-
+	snprintf(new_file_id, sizeof(new_file_id), "%s", file_id);
 	group_name = new_file_id;
 	remote_filename = strchr(new_file_id, '/');
 	if (remote_filename == NULL)
@@ -1722,6 +1715,11 @@ int fdfs_get_file_info(const char *file_id, FDFSFileInfo *pFileInfo)
 	*remote_filename = '\0';
 	remote_filename++;  //skip /
 	filename_len = strlen(remote_filename);
+	if (filename_len < FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
+			 + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
+	{
+		return EINVAL;
+	}
 
 	memset(buff, 0, sizeof(buff));
 	base64_decode_auto(&context, remote_filename + FDFS_FILE_PATH_LEN, \
@@ -1731,22 +1729,29 @@ int fdfs_get_file_info(const char *file_id, FDFSFileInfo *pFileInfo)
 	ip_addr.s_addr = ntohl(buff2int(buff));
 	inet_ntop(AF_INET,&ip_addr,pFileInfo->source_ip_addr,IP_ADDRESS_SIZE);
 
-	printf("remote_filename==%s\n", remote_filename);
-
 	if (filename_len > FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH + \
 		FDFS_FILE_EXT_NAME_MAX_LEN + 1)  //slave file
 	{
-		TrackerServerInfo trackerServer;
-		if ((result=tracker_get_connection_r(&trackerServer)) != 0)
+		if (get_from_server)
 		{
+			TrackerServerInfo trackerServer;
+
+			result = tracker_get_connection_r(&trackerServer);
+			if (result != 0)
+			{
+				return result;
+			}
+
+			result = storage_query_file_info(&trackerServer, \
+				NULL,  group_name, remote_filename, pFileInfo);
+			tracker_disconnect_server(&trackerServer);
+
 			return result;
 		}
-
-		result = storage_query_file_info(&trackerServer, \
-				NULL,  group_name, remote_filename, pFileInfo);
-		tracker_disconnect_server(&trackerServer);
-
-		return result;
+		else
+		{
+			return 0;
+		}
 	}
 	else  //master file (normal file)
 	{
