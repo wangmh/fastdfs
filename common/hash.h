@@ -267,7 +267,7 @@ int CRC32_ex(void *key, const int key_len, \
 #define CALC_HASH_CODES4(buff, buff_len, hash_codes) \
 	hash_codes[0] = CRC32_ex(buff, buff_len, hash_codes[0]); \
 	hash_codes[1] = ELFHash_ex(buff, buff_len, hash_codes[1]); \
-	hash_codes[2] = APHash_ex(buff, buff_len, hash_codes[2]); \
+	hash_codes[2] = simple_hash_ex(buff, buff_len, hash_codes[2]); \
 	hash_codes[3] = Time33Hash_ex(buff, buff_len, hash_codes[3]); \
 
 
