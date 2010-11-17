@@ -37,7 +37,7 @@ int fdht_recv_header(FDHTServerInfo *pServer, fdht_pkg_size_t *in_bytes)
 			"errno: %d, error info: %s", \
 			__LINE__, pServer->ip_addr, \
 			pServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		*in_bytes = 0;
 		return result;
 	}
@@ -120,7 +120,7 @@ int fdht_recv_response(FDHTServerInfo *pServer, \
 			"errno: %d, error info: %s", \
 			__LINE__, pServer->ip_addr, \
 			pServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		*in_bytes = 0;
 		if (bMalloced)
 		{
@@ -148,7 +148,7 @@ int fdht_quit(FDHTServerInfo *pServer)
 			"server ip: %s, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pServer->ip_addr, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -178,7 +178,7 @@ int fdht_connect_server_nb(FDHTServerInfo *pServer, const int connect_timeout)
 		logError("file: "__FILE__", line: %d, " \
 			"socket create failed, errno: %d, " \
 			"error info: %s", __LINE__, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : EPERM;
 	}
 
@@ -195,7 +195,7 @@ int fdht_connect_server_nb(FDHTServerInfo *pServer, const int connect_timeout)
 		logError("file: "__FILE__", line: %d, " \
 			"connect to %s:%d fail, errno: %d, " \
 			"error info: %s", __LINE__, pServer->ip_addr, \
-			pServer->port, result, strerror(result));
+			pServer->port, result, STRERROR(result));
 
 		close(pServer->sock);
 		pServer->sock = -1;
@@ -219,7 +219,7 @@ int fdht_connect_server(FDHTServerInfo *pServer)
 		logError("file: "__FILE__", line: %d, " \
 			"socket create failed, errno: %d, " \
 			"error info: %s", __LINE__, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : EPERM;
 	}
 
@@ -229,7 +229,7 @@ int fdht_connect_server(FDHTServerInfo *pServer)
 		logError("file: "__FILE__", line: %d, " \
 			"connect to %s:%d fail, errno: %d, " \
 			"error info: %s", __LINE__, pServer->ip_addr, \
-			pServer->port, result, strerror(result));
+			pServer->port, result, STRERROR(result));
 
 		close(pServer->sock);
 		pServer->sock = -1;
@@ -296,7 +296,7 @@ int fdht_client_set(FDHTServerInfo *pServer, const char keep_alive, \
 				"send data to server %s:%d fail, " \
 				"errno: %d, error info: %s", __LINE__, \
 				pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			return result;
 		}
 	}
@@ -309,7 +309,7 @@ int fdht_client_set(FDHTServerInfo *pServer, const char keep_alive, \
 				"send data to server %s:%d fail, " \
 				"errno: %d, error info: %s", __LINE__, \
 				pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			return result;
 		}
 
@@ -320,7 +320,7 @@ int fdht_client_set(FDHTServerInfo *pServer, const char keep_alive, \
 				"send data to server %s:%d fail, " \
 				"errno: %d, error info: %s", __LINE__, \
 				pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			return result;
 		}
 	}
@@ -331,7 +331,7 @@ int fdht_client_set(FDHTServerInfo *pServer, const char keep_alive, \
 			"recv data from server %s:%d fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			pServer->ip_addr, pServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -387,7 +387,7 @@ int fdht_client_delete(FDHTServerInfo *pServer, const char keep_alive, \
 			"send data to server %s:%d fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			pServer->ip_addr, pServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -399,7 +399,7 @@ int fdht_client_delete(FDHTServerInfo *pServer, const char keep_alive, \
 				"recv data from server %s:%d fail, " \
 				"errno: %d, error info: %s", __LINE__, \
 				pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 		}
 		else
 		{
@@ -407,7 +407,7 @@ int fdht_client_delete(FDHTServerInfo *pServer, const char keep_alive, \
 				"recv data from server %s:%d fail, " \
 				"errno: %d, error info: %s", __LINE__, \
 				pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 		}
 
 		return result;
@@ -442,7 +442,7 @@ int fdht_client_heart_beat(FDHTServerInfo *pServer)
 			"send data to server %s:%d fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			pServer->ip_addr, pServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 
@@ -452,7 +452,7 @@ int fdht_client_heart_beat(FDHTServerInfo *pServer)
 			"recv data from server %s:%d fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			pServer->ip_addr, pServer->port, \
-			result, strerror(result));
+			result, STRERROR(result));
 		return result;
 	}
 

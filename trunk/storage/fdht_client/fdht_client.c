@@ -90,7 +90,7 @@ int fdht_client_init(const char *filename)
 		if (!fileExists(g_fdht_base_path))
 		{
 			logError("\"%s\" can't be accessed, error info: %s", \
-				g_fdht_base_path, strerror(errno));
+				g_fdht_base_path, STRERROR(errno));
 			result = errno != 0 ? errno : ENOENT;
 			break;
 		}
@@ -407,7 +407,7 @@ int fdht_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 			logError("send data to server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -432,7 +432,7 @@ int fdht_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 				"errno: %d, error info: %s", \
 				__LINE__, pServer->ip_addr, \
 				pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -466,7 +466,7 @@ int fdht_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 				*value_len = 0;
 				logError("malloc %d bytes fail, " \
 					"errno: %d, error info: %s", \
-					*value_len + 1, errno, strerror(errno));
+					*value_len + 1, errno, STRERROR(errno));
 				result = errno != 0 ? errno : ENOMEM;
 				break;
 			}
@@ -480,7 +480,7 @@ int fdht_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 				"errno: %d, error info: %s", \
 				__LINE__, pServer->ip_addr, \
 				pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -577,7 +577,7 @@ int fdht_batch_set_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 			result = errno != 0 ? errno : ENOMEM;
 			logError("malloc %d bytes fail, " \
 				"errno: %d, error info: %s", \
-				pkg_total_len, result, strerror(result));
+				pkg_total_len, result, STRERROR(result));
 			return result;
 		}
 	}
@@ -616,7 +616,7 @@ int fdht_batch_set_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 			logError("send data to server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -641,7 +641,7 @@ int fdht_batch_set_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 				"server: %s:%d, recv data fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -769,7 +769,7 @@ int fdht_batch_delete_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 			logError("send data to server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -794,7 +794,7 @@ int fdht_batch_delete_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 				"server: %s:%d, recv data fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -920,7 +920,7 @@ int fdht_batch_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 			logError("send data to server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -947,7 +947,7 @@ int fdht_batch_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 					"malloc %d bytes fail, " \
 					"errno: %d, error info: %s", \
 					__LINE__, in_bytes, \
-					result, strerror(result));
+					result, STRERROR(result));
 				break;
 			}
 		}
@@ -959,7 +959,7 @@ int fdht_batch_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 				"server: %s:%d, recv data fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -1021,7 +1021,7 @@ int fdht_batch_get_ex1(GroupArray *pGroupArray, const bool bKeepAlive, \
 					logError("malloc %d bytes fail, " \
 						"errno: %d, error info: %s", \
 						value_len+1, errno, \
-						strerror(errno));
+						STRERROR(errno));
 				}
 				else
 				{
@@ -1196,7 +1196,7 @@ int fdht_inc_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 			logError("send data to server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -1207,7 +1207,7 @@ int fdht_inc_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 			logError("recv data from server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -1418,7 +1418,7 @@ int fdht_stat_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 			logError("send data to server %s:%d fail, " \
 				"errno: %d, error info: %s", \
 				pServer->ip_addr, pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 
@@ -1444,7 +1444,7 @@ int fdht_stat_ex(GroupArray *pGroupArray, const bool bKeepAlive, \
 				"errno: %d, error info: %s", \
 				__LINE__, pServer->ip_addr, \
 				pServer->port, \
-				result, strerror(result));
+				result, STRERROR(result));
 			break;
 		}
 	} while (0);
