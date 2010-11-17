@@ -868,10 +868,10 @@ static int storage_binlog_fsync(const bool bNeedLock)
 		binlog_write_cache_len) != binlog_write_cache_len)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"write to binlog file \"%s\" fail, " \
+			"write to binlog file \"%s\" fail, fd=%d, " \
 			"errno: %d, error info: %s",  \
 			__LINE__, get_writable_binlog_filename(NULL), \
-			errno, STRERROR(errno));
+			g_binlog_fd, errno, STRERROR(errno));
 		write_ret = errno != 0 ? errno : EIO;
 	}
 	else if (fsync(g_binlog_fd) != 0)
@@ -1945,6 +1945,8 @@ static void* storage_sync_thread_entrance(void* arg)
 	
 	memset(local_ip_addr, 0, sizeof(local_ip_addr));
 	memset(&reader, 0, sizeof(reader));
+	reader.mark_fd = -1;
+	reader.binlog_fd = -1;
 
 	current_time =  time(NULL);
 	last_keep_alive_time = 0;
