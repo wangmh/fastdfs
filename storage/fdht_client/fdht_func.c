@@ -51,7 +51,7 @@ int fdht_split_ids(const char *szIds, int **ppIds, int *id_count)
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s.", \
 			__LINE__, (int)sizeof(int) * alloc_count, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -61,7 +61,7 @@ int fdht_split_ids(const char *szIds, int **ppIds, int *id_count)
 		logError("file: "__FILE__", line: %d, " \
 			"strdup \"%s\" fail, errno: %d, error info: %s.", \
 			__LINE__, szIds, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		free(*ppIds);
 		*ppIds = NULL;
 		return errno != 0 ? errno : ENOMEM;
@@ -236,7 +236,7 @@ int fdht_split_ids(const char *szIds, int **ppIds, int *id_count)
 					"errno: %d, error info: %s.", \
 					__LINE__, \
 					(int)sizeof(int) * alloc_count,\
-					result, strerror(result));
+					result, STRERROR(result));
 
 				break;
 			}
@@ -370,7 +370,7 @@ int fdht_load_groups_ex(IniContext *pIniContext, \
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			(int)sizeof(ServerArray) * pGroupArray->group_count,\
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -382,7 +382,7 @@ int fdht_load_groups_ex(IniContext *pIniContext, \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
 			__LINE__, (int)sizeof(FDHTServerInfo *) * \
 			pGroupArray->group_count, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -395,7 +395,7 @@ int fdht_load_groups_ex(IniContext *pIniContext, \
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			(int)sizeof(FDHTServerInfo) * alloc_server_count, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -421,7 +421,7 @@ int fdht_load_groups_ex(IniContext *pIniContext, \
 				"malloc %d bytes fail, " \
 				"errno: %d, error info: %s", __LINE__, \
 				(int)sizeof(FDHTServerInfo)*pServerArray->count,
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOMEM;
 		}
 
@@ -433,7 +433,7 @@ int fdht_load_groups_ex(IniContext *pIniContext, \
 				"malloc %d bytes fail, " \
 				"errno: %d, error info: %s", __LINE__, \
 				(int)sizeof(FDHTServerInfo *)*pServerArray->count,
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOMEM;
 		}
 		memset(ppServers[group_id], 0, sizeof(FDHTServerInfo) * \
@@ -512,7 +512,7 @@ int fdht_load_groups_ex(IniContext *pIniContext, \
 							__LINE__, \
 							(int)sizeof(FDHTServerInfo) \
 							 * alloc_server_count, \
-							errno, strerror(errno));
+							errno, STRERROR(errno));
 						return errno!=0 ? errno:ENOMEM;
 					}
 				}
@@ -584,7 +584,7 @@ int fdht_load_groups_ex(IniContext *pIniContext, \
 				"errno: %d, error info: %s", \
 				__LINE__, (int)sizeof(FDHTServerInfo) * \
 				pGroupArray->server_count, \
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOMEM;
 		}
 	}
@@ -652,7 +652,7 @@ int fdht_copy_group_array(GroupArray *pDestGroupArray, \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
 			__LINE__, (int)sizeof(ServerArray) * \
 			pDestGroupArray->group_count, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
@@ -664,7 +664,7 @@ int fdht_copy_group_array(GroupArray *pDestGroupArray, \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
 			__LINE__, (int)sizeof(FDHTServerInfo) * \
 			pDestGroupArray->server_count, \
-			errno, strerror(errno));
+			errno, STRERROR(errno));
 
 		free(pDestGroupArray->groups);
 		pDestGroupArray->groups = NULL;
@@ -689,7 +689,7 @@ int fdht_copy_group_array(GroupArray *pDestGroupArray, \
 				"errno: %d, error info: %s", \
 				__LINE__, (int)sizeof(FDHTServerInfo *) * \
 				pServerArray->count, \
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOMEM;
 		}
 
