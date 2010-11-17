@@ -1158,10 +1158,10 @@ int storage_func_init(const char *filename, \
 
 		g_write_mark_file_freq = iniGetIntValue(NULL, \
 				"write_mark_file_freq", &iniContext, \
-				DEFAULT_SYNC_MARK_FILE_FREQ);
+				FDFS_DEFAULT_SYNC_MARK_FILE_FREQ);
 		if (g_write_mark_file_freq <= 0)
 		{
-			g_write_mark_file_freq = DEFAULT_SYNC_MARK_FILE_FREQ;
+			g_write_mark_file_freq = FDFS_DEFAULT_SYNC_MARK_FILE_FREQ;
 		}
 
 
