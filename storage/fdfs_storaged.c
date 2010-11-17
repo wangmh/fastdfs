@@ -315,9 +315,11 @@ int main(int argc, char *argv[])
 
 	bTerminateFlag = false;
 	bAcceptEndFlag = false;
-
+	
 	storage_accept_loop(sock);
 	bAcceptEndFlag = true;
+
+	fdfs_binlog_sync_func(NULL);  //binlog fsync
 
 	if (g_schedule_flag)
 	{

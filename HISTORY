@@ -1,4 +1,4 @@
-Version 2.04  2010-11-16
+Version 2.04  2010-11-17
  * tracker server ip can NOT be 127.0.0.1
  * do not catch signal SIGABRT
  * strerror change to STRERROR macro
@@ -8,6 +8,8 @@ Version 2.04  2010-11-16
  * add file: client/fdfs_crc32.c
  * one of file hash code signature function change from APHash_ex 
    to simple_hash_ex
+ * bug fixed: when fdfs_storaged quit, maybe write to binlog file fail,
+   the error info is "Bad file descriptor"
 
 Version 2.03  2010-11-08
  * bug fixed: core dump when http.need_find_content_type=false and 
