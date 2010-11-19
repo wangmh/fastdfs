@@ -1,5 +1,5 @@
-Version 2.04  2010-11-17
- * tracker server ip can NOT be 127.0.0.1
+Version 2.04  2010-11-19
+ * storage.conf: tracker server ip can NOT be 127.0.0.1
  * do not catch signal SIGABRT
  * strerror change to STRERROR macro
  * sync copy file use temp filename first, rename to the correct filename 
