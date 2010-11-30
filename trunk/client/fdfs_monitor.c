@@ -216,6 +216,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 	int result;
 	int storage_count;
 	FDFSStorageInfo storage_infos[FDFS_MAX_SERVERS_EACH_GROUP];
+	FDFSStorageInfo *p;
 	FDFSStorageInfo *pStorage;
 	FDFSStorageInfo *pStorageEnd;
 	FDFSStorageStat *pStorageStat;
@@ -225,9 +226,11 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 	char szSrcUpdTime[32];
 	char szSyncUpdTime[32];
 	char szSyncedTimestamp[32];
+	char szSyncedDelaySeconds[128];
 	char szHostname[128];
 	char szHostnamePrompt[128+8];
 	int k;
+	int max_last_source_update;
 
 	printf( "group name = %s\n" \
 		"free space = "INT64_PRINTF_FORMAT" GB\n" \
@@ -263,7 +266,70 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 	for (pStorage=storage_infos; pStorage<pStorageEnd; \
 		pStorage++)
 	{
+		max_last_source_update = 0;
+		for (p=storage_infos; p<pStorageEnd; p++)
+		{
+			if (p != pStorage && p->stat.last_source_update
+				> max_last_source_update)
+			{
+				max_last_source_update = \
+					p->stat.last_source_update;
+			}
+		}
+
 		pStorageStat = &(pStorage->stat);
+		if (max_last_source_update == 0)
+		{
+			*szSyncedDelaySeconds = '\0';
+		}
+		else
+		{
+			if (pStorageStat->last_synced_timestamp == 0)
+			{
+				strcpy(szSyncedDelaySeconds, "(never synced)");
+			}
+			else
+			{
+			int delay_seconds;
+			int remain_seconds;
+			int day;
+			int hour;
+			int minute;
+			int second;
+			char szDelayTime[64];
+			
+			delay_seconds = (int)(max_last_source_update - \
+				pStorageStat->last_synced_timestamp);
+			day = delay_seconds / (24 * 3600);
+			remain_seconds = delay_seconds % (24 * 3600);
+			hour = remain_seconds / 3600;
+			remain_seconds %= 3600;
+			minute = remain_seconds / 60;
+			second = remain_seconds % 60;
+
+			if (day != 0)
+			{
+				sprintf(szDelayTime, "%d days " \
+					"%02dh:%02dm:%02ds", \
+					day, hour, minute, second);
+			}
+			else if (hour != 0)
+			{
+				sprintf(szDelayTime, "%02dh:%02dm:%02ds", \
+					hour, minute, second);
+			}
+			else if (minute != 0)
+			{
+				sprintf(szDelayTime, "%02dm:%02ds", minute, second);
+			}
+			else
+			{
+				sprintf(szDelayTime, "%ds", second);
+			}
+
+			sprintf(szSyncedDelaySeconds, "(%s delay)", szDelayTime);
+			}
+		}
 
 		getHostnameByIp(pStorage->ip_addr, szHostname, sizeof(szHostname));
 		if (*szHostname != '\0')
@@ -318,7 +384,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tlast_heart_beat_time = %s\n" \
 			"\t\tlast_source_update = %s\n" \
 			"\t\tlast_sync_update = %s\n"   \
-			"\t\tlast_synced_timestamp= %s\n",  \
+			"\t\tlast_synced_timestamp= %s %s\n",  \
 			++k, pStorage->ip_addr, szHostnamePrompt, \
 			get_storage_status_caption(pStorage->status), \
 			pStorage->domain_name, \
@@ -360,8 +426,8 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 				szSyncUpdTime, sizeof(szSyncUpdTime)), \
 			formatDatetime(pStorageStat->last_synced_timestamp, \
 				"%Y-%m-%d %H:%M:%S", \
-				szSyncedTimestamp, sizeof(szSyncedTimestamp))
-		);
+				szSyncedTimestamp, sizeof(szSyncedTimestamp)),\
+			szSyncedDelaySeconds);
 	}
 
 	return 0;
