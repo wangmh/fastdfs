@@ -998,7 +998,7 @@ void storage_accept_loop(int server_sock)
 {
 	int incomesock;
 	struct sockaddr_in inaddr;
-	unsigned int sockaddr_len;
+	socklen_t sockaddr_len;
 	in_addr_t client_addr;
 	char szClientIp[IP_ADDRESS_SIZE];
 	long task_addr;
