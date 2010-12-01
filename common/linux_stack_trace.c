@@ -117,7 +117,7 @@ void signal_stack_trace_print(int signum, siginfo_t *info, void *ptr)
 		}
 #endif
 
-		sprintf(cmd, "addr2line -e %s %x", g_exe_name, ip);
+		sprintf(cmd, "addr2line -e %s %p", g_exe_name, ip);
 		if (getExecResult(cmd, buff, sizeof(buff)) != 0)
 		{
 			*buff = '0';

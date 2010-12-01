@@ -116,7 +116,7 @@ int free_queue_init(const int max_connections, const int min_buff_size, \
 		pTask->arg = p + sizeof(struct fast_task_info);
 		if (g_free_queue.malloc_whole_block)
 		{
-			pTask->data = pTask->arg + arg_size;
+			pTask->data = (char *)pTask->arg + arg_size;
 		}
 		else
 		{
