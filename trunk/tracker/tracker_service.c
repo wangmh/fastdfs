@@ -192,7 +192,7 @@ void tracker_accept_loop(int server_sock)
 {
 	int incomesock;
 	struct sockaddr_in inaddr;
-	unsigned int sockaddr_len;
+	socklen_t sockaddr_len;
 	struct tracker_thread_data *pThreadData;
 
 	while (g_continue_flag)
