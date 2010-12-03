@@ -163,8 +163,14 @@ int tracker_terminate_threads()
                         pThreadData++)
                 {
                         quit_sock--;
-                        write(pThreadData->pipe_fds[1], &quit_sock, \
-                                        sizeof(quit_sock));
+                        if (write(pThreadData->pipe_fds[1], &quit_sock, \
+                                        sizeof(quit_sock)) != sizeof(quit_sock))
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"write to pipe fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, errno, STRERROR(errno));
+			}
                 }
         }
 
