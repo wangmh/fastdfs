@@ -234,8 +234,8 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 
 	memset(out_buff, 0, sizeof(out_buff));
 	int2buff(pRecord->timestamp, out_buff + sizeof(TrackerHeader));
-	snprintf(out_buff + sizeof(TrackerHeader) + 4, sizeof(out_buff) - \
-		sizeof(TrackerHeader),  "%s", g_group_name);
+	memcpy(out_buff + sizeof(TrackerHeader) + 4, g_group_name, \
+		sizeof(g_group_name));
 	memcpy(out_buff + sizeof(TrackerHeader) + 4 + FDFS_GROUP_NAME_MAX_LEN, \
 		pRecord->filename, pRecord->filename_len);
 
