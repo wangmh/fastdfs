@@ -333,7 +333,7 @@ static int load_file_contents()
 		{
 			fprintf(stderr, "file: "__FILE__", line: %d, " \
 				"open file %s fail, " \
-				"errno: %d, error info: %s", __LINE__, \
+				"errno: %d, error info: %s\n", __LINE__, \
 				files[i].filename, errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
@@ -342,7 +342,7 @@ static int load_file_contents()
 		{
 			fprintf(stderr, "file: "__FILE__", line: %d, " \
 				"lseek file %s fail, " \
-				"errno: %d, error info: %s", __LINE__, \
+				"errno: %d, error info: %s\n", __LINE__, \
 				files[i].filename, errno, STRERROR(errno));
 			return errno != 0 ? errno : EIO;
 		}
@@ -368,26 +368,6 @@ static int load_file_contents()
 				errno, strerror(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
-
-		/*
-		if ((result=getFileContent(files[i].filename, &(files[i].file_buff), &file_size)) != 0)
-		{
-			printf("file: "__FILE__", line: %d, " 
-				"getFileContent %s fail, errno: %d, error info: %s\n", __LINE__, 
-				files[i].filename, errno, STRERROR(errno));
-
-			return result;
-		}
-
-		if (file_size != files[i].bytes)
-		{
-			printf("file: "__FILE__", line: %d, " 
-				"%s file size: %d != %d\n", __LINE__, 
-				files[i].filename, (int)file_size, files[i].bytes);
-
-			return EINVAL;
-		}
-		*/
 	}
 
 	return 0;
