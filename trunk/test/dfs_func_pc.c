@@ -48,11 +48,7 @@ int dfs_init(const int proccess_index)
 	int result;
 	char *conf_filename;
 
-#ifdef DEBUG  //for debug
-	conf_filename = "/home/yuqing/fastdfs/conf/client.conf";
-#else
-	conf_filename = "/home/yuqing/fastdfs/conf/client.conf";
-#endif
+	conf_filename = "/etc/fdfs/client.conf";
 
 	if ((result=fdfs_client_init(conf_filename)) != 0)
 	{
