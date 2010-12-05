@@ -4,6 +4,8 @@ Version 2.05  2010-12-05
    change to: pTask->data = (char *)pTask->arg + arg_size;
  * buf fixed: storage_sync.c line 237 cause core dump in Ubuntu 10.04
  * upload file test use mmap
+ * client add three tools: fdfs_upload_file, fdfs_download_file and 
+   fdfs_delete_file
 
 Version 2.04  2010-11-19
  * storage.conf: tracker server ip can NOT be 127.0.0.1

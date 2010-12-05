@@ -382,7 +382,8 @@ static int load_file_ids()
 	if (file_entries == NULL)
 	{
 		printf("file: "__FILE__", line: %d, " 
-			"malloc %d bytes fail\n", __LINE__, sizeof(FileEntry) * file_count);
+			"malloc %d bytes fail\n", __LINE__, \
+			(int)sizeof(FileEntry) * file_count);
 		free(file_buff);
 		return ENOMEM;
 	}
@@ -453,7 +454,8 @@ static int load_file_ids()
 			if (file_entries[i].file_id == NULL)
 			{
 				printf("file: "__FILE__", line: %d, " 
-					"malloc %d bytes fail\n", __LINE__, strlen(pFind)+1);
+					"malloc %d bytes fail\n", __LINE__, \
+					(int)strlen(pFind) + 1);
 				result = ENOMEM;
 				break;
 			}
