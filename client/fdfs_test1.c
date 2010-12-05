@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 	TrackerServerInfo *pTrackerServer;
 	int result;
 	TrackerServerInfo storageServer;
-	char group_name[FDFS_GROUP_NAME_MAX_LEN];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	FDFSMetaData meta_list[32];
 	int meta_count;
 	int i;

@@ -297,7 +297,7 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 		}
 
 #ifdef DEBUG_FLAG
-		fprintf(stderr, "base_path=%s, " \
+		logInfo("base_path=%s, " \
 			"connect_timeout=%d, "\
 			"network_timeout=%d, "\
 			"tracker_server_count=%d, " \
