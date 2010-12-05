@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include "common_define.h"
 #include "test_types.h"
 
 typedef struct {

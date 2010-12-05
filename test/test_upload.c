@@ -5,8 +5,10 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include "common_define.h"
 #include "logger.h"
 #include "test_types.h"
 #include "common_func.h"
@@ -20,6 +22,7 @@ typedef struct {
 	int count;   //total file count
 	int upload_count;
 	int success_count;  //success upload count
+	int fd;   //file description
 	int64_t time_used;  //unit: ms
 	char *file_buff; //file content
 } TestFileInfo;
@@ -27,23 +30,23 @@ typedef struct {
 #ifdef DEBUG  //for debug
 
 static TestFileInfo files[FILE_TYPE_COUNT] = {
-	{5 * 1024, "5K",        30000 / PROCESS_COUNT, 0, 0, 0, NULL},
-	{50 * 1024, "50K",      60000 / PROCESS_COUNT, 0, 0, 0, NULL}, 
-	{200 * 1024, "200K",     30000 / PROCESS_COUNT, 0, 0, 0, NULL},
-	{1 * 1024 * 1024, "1M",   3000 / PROCESS_COUNT, 0, 0, 0, NULL},
-	{10 * 1024 * 1024, "10M",  300 / PROCESS_COUNT, 0, 0, 0, NULL},
-	{100 * 1024 * 1024, "100M", 30 / PROCESS_COUNT, 0, 0, 0, NULL}
+	{5 * 1024, "5K",        30000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
+	{50 * 1024, "50K",      60000 / PROCESS_COUNT, 0, 0, -1, 0, NULL}, 
+	{200 * 1024, "200K",     30000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
+	{1 * 1024 * 1024, "1M",   3000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
+	{10 * 1024 * 1024, "10M",  300 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
+	{100 * 1024 * 1024, "100M", 30 / PROCESS_COUNT, 0, 0, -1, 0, NULL}
 };
 
 #else
 
 static TestFileInfo files[FILE_TYPE_COUNT] = {
-	{5 * 1024, "5K",         1000000 / PROCESS_COUNT, 0, 0, 0, NULL},
-	{50 * 1024, "50K",       2000000 / PROCESS_COUNT, 0, 0, 0, NULL}, 
-	{200 * 1024, "200K",     1000000 / PROCESS_COUNT, 0, 0, 0, NULL},
-	{1 * 1024 * 1024, "1M",   200000 / PROCESS_COUNT, 0, 0, 0, NULL},
-	{10 * 1024 * 1024, "10M",  20000 / PROCESS_COUNT, 0, 0, 0, NULL},
-	{100 * 1024 * 1024, "100M", 1000 / PROCESS_COUNT, 0, 0, 0, NULL}
+	{5 * 1024, "5K",         1000000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
+	{50 * 1024, "50K",       2000000 / PROCESS_COUNT, 0, 0, -1, 0, NULL}, 
+	{200 * 1024, "200K",     1000000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
+	{1 * 1024 * 1024, "1M",   200000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
+	{10 * 1024 * 1024, "10M",  20000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
+	{100 * 1024 * 1024, "100M", 1000 / PROCESS_COUNT, 0, 0, -1, 0, NULL}
 };
 
 #endif
@@ -319,11 +322,53 @@ static int add_to_storage_stat(const char *storage_ip, const int result, const i
 static int load_file_contents()
 {
 	int i;
-	int result;
+	//int result;
 	int64_t file_size;
 
 	for (i=0; i<FILE_TYPE_COUNT; i++)
 	{
+		files[i].fd = open(files[i].filename, O_RDONLY);
+		if (files[i].fd < 0)
+		{
+			fprintf(stderr, "file: "__FILE__", line: %d, " \
+				"open file %s fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				files[i].filename, errno, STRERROR(errno));
+			return errno != 0 ? errno : ENOENT;
+		}
+
+		if ((file_size=lseek(files[i].fd, 0, SEEK_END)) < 0)
+		{
+			fprintf(stderr, "file: "__FILE__", line: %d, " \
+				"lseek file %s fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				files[i].filename, errno, STRERROR(errno));
+			return errno != 0 ? errno : EIO;
+		}
+
+		if (file_size != files[i].bytes)
+		{
+			fprintf(stderr, "file: "__FILE__", line: %d, " 
+				"%s file size: %d != %d\n", __LINE__, 
+				files[i].filename, (int)file_size, \
+				files[i].bytes);
+
+			return EINVAL;
+		}
+
+		files[i].file_buff = mmap(NULL, file_size, PROT_READ, \
+					MAP_SHARED, files[i].fd, 0);
+		if (files[i].file_buff == NULL)
+		{
+			fprintf(stderr, "file: "__FILE__", line: %d, " \
+				"mmap file %s fail, " \
+				"errno: %d, error info: %s\n", \
+				__LINE__, files[i].filename, \
+				errno, strerror(errno));
+			return errno != 0 ? errno : ENOENT;
+		}
+
+		/*
 		if ((result=getFileContent(files[i].filename, &(files[i].file_buff), &file_size)) != 0)
 		{
 			printf("file: "__FILE__", line: %d, " 
@@ -341,6 +386,7 @@ static int load_file_contents()
 
 			return EINVAL;
 		}
+		*/
 	}
 
 	return 0;
