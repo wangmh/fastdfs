@@ -224,8 +224,9 @@ static int save_stats_by_file_type()
 	fprintf(fp, "#file_type total_count success_count time_used(ms)\n");
 	for (k=0; k<FILE_TYPE_COUNT; k++)
 	{
-		fprintf(fp, "%s %d %d %lld\n", files[k].filename, 
-			files[k].download_count, files[k].success_count, files[k].time_used);
+		fprintf(fp, "%s %d %d "INT64_PRINTF_FORMAT"\n", \
+			files[k].filename, files[k].download_count, \
+			files[k].success_count, files[k].time_used);
 	}
 
 	fclose(fp);
@@ -249,9 +250,9 @@ static int save_stats_by_storage_ip()
 	fprintf(fp, "#ip_addr total_count success_count time_used(ms)\n");
 	for (k=0; k<storage_count; k++)
 	{
-		fprintf(fp, "%s %d %d %lld\n", storages[k].ip_addr, 
-			storages[k].total_count, storages[k].success_count, 
-			storages[k].time_used);
+		fprintf(fp, "%s %d %d "INT64_PRINTF_FORMAT"\n", \
+			storages[k].ip_addr, storages[k].total_count, \
+			storages[k].success_count, storages[k].time_used);
 	}
 
 	fclose(fp);
