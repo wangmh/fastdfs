@@ -38,6 +38,7 @@ typedef struct
 	char ip_addr[IP_ADDRESS_SIZE];
 	bool need_sync_old;
 	bool sync_old_done;
+	bool last_file_exist;   //if the last file exist on the dest server
 	BinLogBuffer binlog_buff;
 	time_t until_timestamp;
 	int mark_fd;
