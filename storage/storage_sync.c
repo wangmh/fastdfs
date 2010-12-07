@@ -32,9 +32,10 @@
 #include "tracker_proto.h"
 #include "storage_global.h"
 #include "storage_func.h"
-#include "storage_sync.h"
 #include "storage_ip_changed_dealer.h"
 #include "tracker_client_thread.h"
+#include "storage_client.h"
+#include "storage_sync.h"
 
 #define SYNC_BINLOG_FILE_MAX_SIZE	1024 * 1024 * 1024
 #define SYNC_BINLOG_FILE_PREFIX		"binlog"
@@ -79,7 +80,7 @@ filename bytes : filename
 file size bytes: file content
 **/
 static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
-			const BinLogRecord *pRecord, const char proto_cmd)
+	BinLogReader *pReader, const BinLogRecord *pRecord, char proto_cmd)
 {
 	TrackerHeader *pHeader;
 	char *p;
@@ -104,17 +105,60 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 					"maybe deleted later?", \
 					__LINE__, full_filename);
 			}
+
+			return 0;
 		}
 		else
 		{
+			result = errno != 0 ? errno : EPERM;
 			logError("file: "__FILE__", line: %d, " \
 				"call stat fail, file: %s, "\
 				"error no: %d, error info: %s", \
 				__LINE__, full_filename, \
-				errno, STRERROR(errno));
+				result, STRERROR(result));
+			return result;
 		}
+	}
 
-		return 0;
+	if (pReader->last_file_exist && proto_cmd == \
+			STORAGE_PROTO_CMD_SYNC_CREATE_FILE)
+	{
+		FDFSFileInfo file_info;
+		result = storage_query_file_info(NULL, \
+				pStorageServer,  g_group_name, \
+				pRecord->filename, &file_info);
+		if (result == 0)
+		{
+			if (file_info.file_size == stat_buf.st_size)
+			{
+				logDebug("file: "__FILE__", line: %d, " \
+					"sync data file, file: %s on dest " \
+					"server %s:%d already exists, "\
+					"and same as mine, ignore it", \
+					__LINE__, full_filename, \
+					pStorageServer->ip_addr, \
+					pStorageServer->port);
+				return 0;
+			}
+			else
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"sync data file, file: %s on dest " \
+					"server %s:%d already exists, "\
+					"but file size: "INT64_PRINTF_FORMAT \
+					" not same as mine: "OFF_PRINTF_FORMAT\
+					", need re-sync it", __LINE__, \
+					full_filename, pStorageServer->ip_addr,\
+					pStorageServer->port, \
+					file_info.file_size, stat_buf.st_size);
+
+				proto_cmd = STORAGE_PROTO_CMD_SYNC_UPDATE_FILE;
+			}
+		}
+		else if (result != ENOENT)
+		{
+			return result;
+		}
 	}
 
 	//printf("sync create file: %s\n", pRecord->filename);
@@ -180,7 +224,6 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 
 	} while (0);
 
-	//printf("sync create file end!\n");
 	if (result == EEXIST)
 	{
 		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE)
@@ -192,10 +235,12 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 				pStorageServer->port, pRecord->filename);
 		}
 
+		pReader->last_file_exist = true;
 		return 0;
 	}
 	else
 	{
+		pReader->last_file_exist = false;
 		return result;
 	}
 }
@@ -499,39 +544,43 @@ static int storage_sync_data(BinLogReader *pReader, \
 	{
 		case STORAGE_OP_TYPE_SOURCE_CREATE_FILE:
 			result = storage_sync_copy_file(pStorageServer, \
-				pRecord, STORAGE_PROTO_CMD_SYNC_CREATE_FILE);
+					pReader, pRecord, \
+					STORAGE_PROTO_CMD_SYNC_CREATE_FILE);
 			break;
 		case STORAGE_OP_TYPE_SOURCE_DELETE_FILE:
 			result = storage_sync_delete_file( \
-				pStorageServer, pRecord);
+					pStorageServer, pRecord);
 			break;
 		case STORAGE_OP_TYPE_SOURCE_UPDATE_FILE:
 			result = storage_sync_copy_file(pStorageServer, \
-				pRecord, STORAGE_PROTO_CMD_SYNC_UPDATE_FILE);
+					pReader, pRecord, \
+					STORAGE_PROTO_CMD_SYNC_UPDATE_FILE);
 			break;
 		case STORAGE_OP_TYPE_SOURCE_CREATE_LINK:
 			result = storage_sync_link_file(pStorageServer, \
-				pRecord);
+					pRecord);
 			break;
 		case STORAGE_OP_TYPE_REPLICA_CREATE_FILE:
 			STARAGE_CHECK_IF_NEED_SYNC_OLD(pReader, pRecord)
 			result = storage_sync_copy_file(pStorageServer, \
-				pRecord, STORAGE_PROTO_CMD_SYNC_CREATE_FILE);
+					pReader, pRecord, \
+					STORAGE_PROTO_CMD_SYNC_CREATE_FILE);
 			break;
 		case STORAGE_OP_TYPE_REPLICA_DELETE_FILE:
 			STARAGE_CHECK_IF_NEED_SYNC_OLD(pReader, pRecord)
 			result = storage_sync_delete_file( \
-				pStorageServer, pRecord);
+					pStorageServer, pRecord);
 			break;
 		case STORAGE_OP_TYPE_REPLICA_UPDATE_FILE:
 			STARAGE_CHECK_IF_NEED_SYNC_OLD(pReader, pRecord)
 			result = storage_sync_copy_file(pStorageServer, \
-				pRecord, STORAGE_PROTO_CMD_SYNC_UPDATE_FILE);
+					pReader, pRecord, \
+					STORAGE_PROTO_CMD_SYNC_UPDATE_FILE);
 			break;
 		case STORAGE_OP_TYPE_REPLICA_CREATE_LINK:
 			STARAGE_CHECK_IF_NEED_SYNC_OLD(pReader, pRecord)
 			result = storage_sync_link_file(pStorageServer, \
-				pRecord);
+					pRecord);
 			break;
 		default:
 			return EINVAL;

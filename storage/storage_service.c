@@ -210,6 +210,7 @@ static void storage_sync_delete_file_done_callback(struct fast_task_info *pTask,
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
+
 	if (err_no == 0 && pFileContext->sync_flag != '\0')
 	{
 		result = storage_binlog_write(pFileContext->timestamp2log, \
@@ -283,8 +284,17 @@ static void storage_sync_copy_file_done_callback(struct fast_task_info *pTask, \
 	pFileContext =  &(pClientInfo->file_context);
 	if (err_no == 0)
 	{
-		result = storage_sync_copy_file_rename_filename(pFileContext);
-		if (result == 0 && pFileContext->sync_flag != '\0')
+		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
+		{
+			result = storage_sync_copy_file_rename_filename( \
+					pFileContext);
+		}
+		else
+		{
+			result = 0;
+		}
+
+		if (result == 0) 
 		{
 			storage_binlog_write(pFileContext->timestamp2log, \
 			pFileContext->sync_flag, pFileContext->fname2log);
@@ -292,7 +302,8 @@ static void storage_sync_copy_file_done_callback(struct fast_task_info *pTask, \
 	}
 	else
 	{
-		if (fileExists(pFileContext->filename))
+		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE && \
+			fileExists(pFileContext->filename))
 		{
 			unlink(pFileContext->filename);  //delete the temp file
 		}
@@ -303,6 +314,11 @@ static void storage_sync_copy_file_done_callback(struct fast_task_info *pTask, \
 	if (result == 0)
 	{
 		CHECK_AND_WRITE_TO_STAT_FILE1
+
+	}
+	if (pFileContext->op == FDFS_STORAGE_FILE_OP_DISCARD)
+	{
+		result = EEXIST;
 	}
 
 	pClientInfo->total_length = sizeof(TrackerHeader);
@@ -2385,7 +2401,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 			"client ip:%s, length of filename: %s " \
 			"is too small, should >= %d", \
 			__LINE__, pTask->client_ip, \
-			full_filename, base_path_len + sizeof("/data/") + \
+			full_filename, base_path_len + (int)sizeof("/data/") + \
 			FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH);
 		return EINVAL;
 	}
@@ -2853,38 +2869,71 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 		pFileContext->sync_flag = STORAGE_OP_TYPE_REPLICA_UPDATE_FILE;
 	}
 
-	if ((proto_cmd == STORAGE_PROTO_CMD_SYNC_CREATE_FILE) && \
-			fileExists(full_filename))
+	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
+	if (proto_cmd == STORAGE_PROTO_CMD_SYNC_CREATE_FILE)
 	{
-		logWarning("file: "__FILE__", line: %d, " \
-			"cmd=%d, client ip: %s, data file: %s " \
-			"already exists, ignore it", \
-			__LINE__, proto_cmd, \
-			pTask->client_ip, full_filename);
+		struct stat stat_buf;
+		if (lstat(full_filename, &stat_buf) != 0)
+		{
+			result = errno != 0 ? errno : ENOENT;
+			if (result != ENOENT)  //accept no exist
+			{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, stat file %s fail, " \
+				"errno: %d, error info: %s.", \
+				__LINE__, pTask->client_ip, \
+				full_filename, result, STRERROR(result));
+			return result;
+			}
+		}
+		else if (!S_ISREG(stat_buf.st_mode))
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip: %s, file %s is not a regular " \
+				"file, will be overwrited",  __LINE__, \
+				pTask->client_ip, full_filename);
+		}
+		else if (stat_buf.st_size != file_bytes)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip: %s, file %s,  my file size: " \
+				OFF_PRINTF_FORMAT" != src file size: " \
+				INT64_PRINTF_FORMAT", will be overwrited", \
+				__LINE__, pTask->client_ip, full_filename, \
+				stat_buf.st_size, file_bytes);
+		}
+		else
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip: %s, data file: %s " \
+				"already exists, ignore it", \
+				__LINE__, proto_cmd, \
+				pTask->client_ip, full_filename);
 
-		pFileContext->op = FDFS_STORAGE_FILE_OP_DISCARD;
+			pFileContext->op = FDFS_STORAGE_FILE_OP_DISCARD;
+			*(pFileContext->filename) = '\0';
+		}
 	}
-	else
+
+	if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
 	{
-		pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
-	}
-
-	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
+		snprintf(pFileContext->filename, sizeof(pFileContext->filename),\
 			"%s/data/cp%08X.XXXXXX", \
 			g_store_paths[store_path_index], (int)time(NULL));
-	if ((fd=mkstemp(pFileContext->filename)) < 0)
-	{
-		result = errno != 0 ? errno : EEXIST;
-		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, call mkstemp with %s, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, \
-			pFileContext->filename, \
-			result, STRERROR(result));
-		pClientInfo->total_length = sizeof(TrackerHeader);
-		return result;
+		if ((fd=mkstemp(pFileContext->filename)) < 0)
+		{
+			result = errno != 0 ? errno : EEXIST;
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, call mkstemp with %s, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pTask->client_ip, \
+				pFileContext->filename, \
+				result, STRERROR(result));
+			pClientInfo->total_length = sizeof(TrackerHeader);
+			return result;
+		}
+		close(fd);
 	}
-	close(fd);
 	
 	pFileContext->calc_crc32 = false;
 	pFileContext->calc_file_hash = false;
