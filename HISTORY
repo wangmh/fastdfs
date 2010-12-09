@@ -1,5 +1,5 @@
 
-Version 2.06  2010-12-07
+Version 2.06  2010-12-09
  * sync file op: do not sync the file which exists on dest storage server
    and the file size are same 
  * bug fixed: sync copy file will clear the existed file on dest storage

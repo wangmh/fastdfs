@@ -91,6 +91,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	struct stat stat_buf;
 	int64_t in_bytes;
 	int result;
+	bool need_sync_file;
 
 	snprintf(full_filename, sizeof(full_filename), \
 		"%s/data/%s", pRecord->pBasePath, pRecord->true_filename);
@@ -120,13 +121,14 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		}
 	}
 
+	need_sync_file = true;
 	if (pReader->last_file_exist && proto_cmd == \
 			STORAGE_PROTO_CMD_SYNC_CREATE_FILE)
 	{
 		FDFSFileInfo file_info;
-		result = storage_query_file_info(NULL, \
+		result = storage_query_file_info_ex(NULL, \
 				pStorageServer,  g_group_name, \
-				pRecord->filename, &file_info);
+				pRecord->filename, &file_info, true);
 		if (result == 0)
 		{
 			if (file_info.file_size == stat_buf.st_size)
@@ -138,7 +140,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 					__LINE__, full_filename, \
 					pStorageServer->ip_addr, \
 					pStorageServer->port);
-				return 0;
+				need_sync_file = false;
 			}
 			else
 			{
@@ -164,13 +166,22 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	//printf("sync create file: %s\n", pRecord->filename);
 	do
 	{
+		int64_t body_len;
+
 		pHeader = (TrackerHeader *)out_buff;
 		memset(pHeader, 0, sizeof(TrackerHeader));
-		long2buff(2 * FDFS_PROTO_PKG_LEN_SIZE + \
+
+		body_len = 2 * FDFS_PROTO_PKG_LEN_SIZE + \
 				4 + FDFS_GROUP_NAME_MAX_LEN + \
-				pRecord->filename_len + stat_buf.st_size,\
-				pHeader->pkg_len);
+				pRecord->filename_len;
+		if (need_sync_file)
+		{
+			body_len += stat_buf.st_size;
+		}
+
+		long2buff(body_len, pHeader->pkg_len);
 		pHeader->cmd = proto_cmd;
+		pHeader->status = need_sync_file ? 0 : EEXIST;
 
 		p = out_buff + sizeof(TrackerHeader);
 
@@ -201,9 +212,10 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 			break;
 		}
 
-		if((stat_buf.st_size > 0) && ((result=tcpsendfile( \
-			pStorageServer->sock, full_filename, \
-			stat_buf.st_size, g_fdfs_network_timeout)) != 0))
+		if (need_sync_file && (stat_buf.st_size > 0) && \
+			((result=tcpsendfile(pStorageServer->sock, \
+			full_filename, stat_buf.st_size, \
+			g_fdfs_network_timeout)) != 0))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"sync data to storage server %s:%d fail, " \
@@ -224,9 +236,11 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 
 	} while (0);
 
+
 	if (result == EEXIST)
 	{
-		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE)
+		if (need_sync_file && pRecord->op_type == \
+			STORAGE_OP_TYPE_SOURCE_CREATE_FILE)
 		{
 			logWarning("file: "__FILE__", line: %d, " \
 				"storage server ip: %s:%d, data file: %s " \
@@ -238,9 +252,13 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		pReader->last_file_exist = true;
 		return 0;
 	}
-	else
+	else if (result == 0)
 	{
 		pReader->last_file_exist = false;
+		return 0;
+	}
+	else
+	{
 		return result;
 	}
 }
