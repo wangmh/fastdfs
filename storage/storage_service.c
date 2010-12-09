@@ -44,6 +44,7 @@
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
 static int last_stat_change_count = 1;  //for sync to stat file
+static int64_t temp_file_sequence = 0;
 
 static pthread_mutex_t path_index_thread_lock;
 static pthread_mutex_t stat_count_thread_lock;
@@ -2768,7 +2769,6 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	int filename_len;
 	int64_t nInPackLen;
 	int64_t file_bytes;
-	int fd;
 	int result;
 	int store_path_index;
 	bool have_file_content;
@@ -2955,22 +2955,21 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 
 	if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
 	{
-		snprintf(pFileContext->filename, sizeof(pFileContext->filename),\
-			"%s/data/cp%08X.XXXXXX", \
-			g_store_paths[store_path_index], (int)time(NULL));
-		if ((fd=mkstemp(pFileContext->filename)) < 0)
+		pthread_mutex_lock(&g_storage_thread_lock);
+
+		sprintf(pFileContext->filename, "%s/data/.cp" \
+			INT64_PRINTF_FORMAT".tmp", \
+			g_store_paths[store_path_index], temp_file_sequence++);
+
+		pthread_mutex_unlock(&g_storage_thread_lock);
+
+		if ((fileExists(pFileContext->filename)))
 		{
-			result = errno != 0 ? errno : EEXIST;
-			logError("file: "__FILE__", line: %d, " \
-				"client ip: %s, call mkstemp with %s, " \
-				"errno: %d, error info: %s", \
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip: %s, temp file %s already exists", \
 				__LINE__, pTask->client_ip, \
-				pFileContext->filename, \
-				result, STRERROR(result));
-			pClientInfo->total_length = sizeof(TrackerHeader);
-			return result;
+				pFileContext->filename);
 		}
-		close(fd);
 	}
 	
 	pFileContext->calc_crc32 = false;

@@ -4,6 +4,7 @@ Version 2.06  2010-12-09
    and the file size are same 
  * bug fixed: sync copy file will clear the existed file on dest storage
    server (truncate the file size to 0), this bug caused by V2.04
+ * make temp file discard system function mkstemp, use file sequence no
 
 Version 2.05  2010-12-05
  * client/fdfs_monitor.c: add sync delay time
