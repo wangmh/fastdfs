@@ -306,10 +306,10 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
+int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer,  \
 			const char *group_name, const char *filename, \
-			FDFSFileInfo *pFileInfo)
+			FDFSFileInfo *pFileInfo, const bool bSilence)
 {
 	TrackerHeader *pHeader;
 	int result;
@@ -347,6 +347,7 @@ int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
 
 	long2buff(FDFS_GROUP_NAME_MAX_LEN + filename_len, pHeader->pkg_len);
 	pHeader->cmd = STORAGE_PROTO_CMD_QUERY_FILE_INFO;
+	pHeader->status = bSilence ? ENOENT : 0;
 
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \

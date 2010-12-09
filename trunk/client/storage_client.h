@@ -343,6 +343,12 @@ int storage_upload_slave_by_callback(TrackerServerInfo *pTrackerServer, \
 		const FDFSMetaData *meta_list, const int meta_count, \
 		char *group_name, char *remote_filename);
 
+
+#define storage_query_file_info(pTrackerServer, pStorageServer, \
+		group_name, filename, pFileInfo) \
+	storage_query_file_info_ex(pTrackerServer, pStorageServer, \
+		group_name, filename, pFileInfo, false)
+
 /**
 * query file info
 * params:
@@ -353,10 +359,10 @@ int storage_upload_slave_by_callback(TrackerServerInfo *pTrackerServer, \
 *	pFileInfo: return the file info (file size and create timestamp)
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_query_file_info(TrackerServerInfo *pTrackerServer, \
+int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer,  \
 			const char *group_name, const char *filename, \
-			FDFSFileInfo *pFileInfo);
+			FDFSFileInfo *pFileInfo, const bool bSilence);
 
 
 #define fdfs_get_file_info(file_id, pFileInfo) \
