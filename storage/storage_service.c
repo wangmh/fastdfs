@@ -2871,8 +2871,6 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	*(filename + filename_len) = '\0';
 	p += filename_len;
 
-	logInfo("file %s, have_file_content=%d", filename, have_file_content);
-
 	if ((result=storage_split_filename_ex(filename, \
 		&filename_len, true_filename, &store_path_index)) != 0)
 	{
@@ -2987,8 +2985,6 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	}
 	else
 	{
-		logInfo("skip file: %s", filename);
-
 		storage_sync_copy_file_done_callback(pTask, 0);
 		return STORAGE_STATUE_DEAL_FILE;
 	}
