@@ -2949,20 +2949,36 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 
 	if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
 	{
-		pthread_mutex_lock(&g_storage_thread_lock);
+		#define MKTEMP_MAX_COUNT  10
+		int i;
+		for (i=0; i < MKTEMP_MAX_COUNT; i++)
+		{
+			pthread_mutex_lock(&g_storage_thread_lock);
 
-		sprintf(pFileContext->filename, "%s/data/.cp" \
-			INT64_PRINTF_FORMAT".tmp", \
-			g_store_paths[store_path_index], temp_file_sequence++);
+			sprintf(pFileContext->filename, "%s/data/.cp" \
+				INT64_PRINTF_FORMAT".tmp", \
+				g_store_paths[store_path_index], \
+				temp_file_sequence++);
 
-		pthread_mutex_unlock(&g_storage_thread_lock);
+			pthread_mutex_unlock(&g_storage_thread_lock);
 
-		if ((fileExists(pFileContext->filename)))
+			if (fileExists(pFileContext->filename))
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"client ip: %s, temp file %s already "\
+					"exists", __LINE__, pTask->client_ip, \
+					pFileContext->filename);
+				continue;
+			}
+
+			break;
+		}
+
+		if (i == MKTEMP_MAX_COUNT)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"client ip: %s, temp file %s already exists", \
-				__LINE__, pTask->client_ip, \
-				pFileContext->filename);
+				"client ip: %s, make temp file fail", \
+				__LINE__, pTask->client_ip);
 			pClientInfo->total_length = sizeof(TrackerHeader);
 			return EAGAIN;
 		}
