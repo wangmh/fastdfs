@@ -2990,7 +2990,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 		logInfo("skip file: %s", filename);
 
 		storage_sync_copy_file_done_callback(pTask, 0);
-		return 0;
+		return STORAGE_STATUE_DEAL_FILE;
 	}
 }
 
