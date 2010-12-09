@@ -303,12 +303,6 @@ static void storage_sync_copy_file_done_callback(struct fast_task_info *pTask, \
 	}
 	else
 	{
-		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE && \
-			fileExists(pFileContext->filename))
-		{
-			unlink(pFileContext->filename);  //delete the temp file
-		}
-
 		result = err_no;
 	}
 
