@@ -43,7 +43,7 @@ int fdfs_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes)
 
 	if (resp.status != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
+		logDebug("file: "__FILE__", line: %d, " \
 			"server: %s:%d, response status %d != 0", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, resp.status);
@@ -56,8 +56,8 @@ int fdfs_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes)
 	if (*in_bytes < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"server: %s:%d, recv package size "INT64_PRINTF_FORMAT" " \
-			"is not correct", \
+			"server: %s:%d, recv package size " \
+			INT64_PRINTF_FORMAT" is not correct", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, *in_bytes);
 		*in_bytes = 0;
