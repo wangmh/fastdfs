@@ -2959,10 +2959,12 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 
 		if ((fileExists(pFileContext->filename)))
 		{
-			logWarning("file: "__FILE__", line: %d, " \
+			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, temp file %s already exists", \
 				__LINE__, pTask->client_ip, \
 				pFileContext->filename);
+			pClientInfo->total_length = sizeof(TrackerHeader);
+			return EAGAIN;
 		}
 	}
 	
