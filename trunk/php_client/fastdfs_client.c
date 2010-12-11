@@ -633,8 +633,8 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	pGroupEnd = group_stats + group_count;
 	for (pGroupStat=group_stats; pGroupStat<pGroupEnd; pGroupStat++)
 	{
-		if (group_name != NULL && strcmp(pGroupStat->group_name, \
-			group_name) != 0)
+		if (group_name != NULL && group_nlen > 0 && \
+			strcmp(pGroupStat->group_name, group_name) != 0)
 		{
 			continue;
 		}
