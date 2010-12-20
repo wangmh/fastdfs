@@ -1,13 +1,14 @@
 
-Version 2.06  2010-12-11
+Version 2.06  2010-12-20
  * sync file op: do not sync the file which exists on dest storage server
    and the file size are same 
  * bug fixed: sync copy file will clear the existed file on dest storage
    server (truncate the file size to 0), this bug caused by V2.04
  * bug fixed: make temp file discard system function mkstemp, 
-   use file sequence no with pthread_mutex_lock
+   use file sequence No. with pthread_mutex_lock
  * bug fixed: function fastdfs_tracker_list_groups, when parameter group_name
    is null or empty string, return all groups info
+ * bug fixed: upload a file extends 2GB will fail
 
 Version 2.05  2010-12-05
  * client/fdfs_monitor.c: add sync delay time

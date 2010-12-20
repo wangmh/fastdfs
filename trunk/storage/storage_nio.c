@@ -77,6 +77,7 @@ void storage_recv_notify_read(int sock, short event, void *arg)
 	struct fast_task_info *pTask;
 	StorageClientInfo *pClientInfo;
 	long task_addr;
+	int64_t remain_bytes;
 	int bytes;
 	int result;
 
@@ -128,12 +129,17 @@ void storage_recv_notify_read(int sock, short event, void *arg)
 				break;
 			case FDFS_STORAGE_STAGE_NIO_RECV:
 				pTask->offset = 0;
-				pTask->length = pClientInfo->total_length - \
-						pClientInfo->total_offset;
-				if (pTask->length > pTask->size)
+				remain_bytes = pClientInfo->total_length - \
+					       pClientInfo->total_offset;
+				if (remain_bytes > pTask->size)
 				{
 					pTask->length = pTask->size;
 				}
+				else
+				{
+					pTask->length = remain_bytes;
+				}
+
 				client_sock_read(pClientInfo->sock, EV_READ, pTask);
 				result = 0;
 				/*
