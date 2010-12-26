@@ -1,5 +1,5 @@
 
-Version 2.06  2010-12-20
+Version 2.06  2010-12-26
  * sync file op: do not sync the file which exists on dest storage server
    and the file size are same 
  * bug fixed: sync copy file will clear the existed file on dest storage
@@ -9,6 +9,8 @@ Version 2.06  2010-12-20
  * bug fixed: function fastdfs_tracker_list_groups, when parameter group_name
    is null or empty string, return all groups info
  * bug fixed: upload a file extends 2GB will fail
+ * bug fixed: tracker to tracker sync system data files, in function: 
+   tracker_mem_get_tracker_server, pTrackerStatus not be set properly
 
 Version 2.05  2010-12-05
  * client/fdfs_monitor.c: add sync delay time
