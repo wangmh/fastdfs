@@ -1591,11 +1591,7 @@ static int tracker_mem_destroy_groups(FDFSGroups *pGroups, const bool saveFiles)
 	{
 		if (saveFiles)
 		{
-			result = tracker_save_storages();
-			if (result == 0)
-			{
-				result = tracker_save_sync_timestamps();
-			}
+			result = tracker_save_sys_files();
 		}
 		else
 		{
@@ -2388,16 +2384,7 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 
 	tracker_write_to_changelog(pGroup, pNewStorageServer, new_storage_ip);
 
-	if ((result=tracker_save_storages()) != 0)
-	{
-		return 0;
-	}
-	if ((result=tracker_save_sync_timestamps()) != 0)
-	{
-		return 0;
-	}
-
-	return 0;
+	return tracker_save_sys_files();
 }
 
 static int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
@@ -2783,7 +2770,7 @@ static int tracker_mem_get_tracker_server(FDFSStorageJoinBody *pJoinBody, \
 	count = pStatus - trackerStatus;
 	if (count == 0)
 	{
-		return result;
+		return result == 0 ? ENOENT : result;
 	}
 
 	if (count == 1)
@@ -2807,6 +2794,7 @@ static int tracker_mem_get_tracker_server(FDFSStorageJoinBody *pJoinBody, \
 			trackerStatus[i].restart_interval);
 	}
 
+	//copy the last
 	memcpy(pTrackerStatus, trackerStatus + (count - 1), \
 			sizeof(TrackerRunningStatus));
 	return 0;
@@ -2829,7 +2817,7 @@ static int tracker_mem_get_sys_files_from_others(FDFSStorageJoinBody *pJoinBody,
 	result = tracker_mem_get_tracker_server(pJoinBody, &trackerStatus);
 	if (result != 0)
 	{
-		return result;
+		return result == ENOENT ? 0 : result;
 	}
 
 	if (pRunningStatus != NULL)
@@ -3268,11 +3256,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 			}
 		}
 
-		if ((result=tracker_save_storages()) != 0)
-		{
-			return result;
-		}
-		if ((result=tracker_save_sync_timestamps()) != 0)
+		if ((result=tracker_save_sys_files()) != 0)
 		{
 			return result;
 		}
