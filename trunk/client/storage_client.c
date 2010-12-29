@@ -830,8 +830,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 		prefix_len = 0;
 	}
 
-	bUploadSlave = (strlen(group_name) > 0 && master_filename_len > 0 \
-			&& prefix_len > 0);
+	bUploadSlave = (strlen(group_name) > 0 && master_filename_len > 0);
 	if (bUploadSlave)
 	{
 		if ((result=storage_get_update_connection(pTrackerServer, \
@@ -1504,8 +1503,7 @@ int storage_upload_slave_by_filename(TrackerServerInfo *pTrackerServer, \
 	char *pDot;
 
 	if (master_filename == NULL || *master_filename == '\0' || \
-		prefix_name == NULL || *prefix_name == '\0' || \
-		group_name == NULL || *group_name == '\0')
+	prefix_name == NULL || group_name == NULL || *group_name == '\0')
 	{
 		return EINVAL;
 	}
@@ -1514,7 +1512,7 @@ int storage_upload_slave_by_filename(TrackerServerInfo *pTrackerServer, \
 	{
 		*group_name = '\0';
 		*remote_filename = '\0';
-		return errno;
+		return errno != 0 ? errno : EPERM;
 	}
 
 	if (!S_ISREG(stat_buf.st_mode))
