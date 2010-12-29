@@ -4211,7 +4211,7 @@ static int storage_do_create_link(struct fast_task_info *pTask)
 			pHeader->pkg_len);
 
 	storage_nio_notify(pTask);
-	return 0;
+	return result;
 }
 
 static int storage_create_link(struct fast_task_info *pTask)
