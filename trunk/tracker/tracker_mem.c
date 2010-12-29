@@ -51,6 +51,8 @@ static int tracker_mem_add_group_ex(FDFSGroups *pGroups, \
 	TrackerClientInfo *pClientInfo, const char *group_name, \
 	const bool bNeedSleep, bool *bInserted);
 
+static int tracker_mem_destroy_groups(FDFSGroups *pGroups, const bool saveFiles);
+
 char *g_tracker_sys_filenames[TRACKER_SYS_FILE_COUNT] = {
 	STORAGE_GROUPS_LIST_FILENAME,
 	STORAGE_SERVERS_LIST_FILENAME,
@@ -1366,6 +1368,7 @@ int tracker_mem_init()
 		return result;
 	}
 
+	memset(&g_groups, 0, sizeof(g_groups));
 	return tracker_mem_init_groups(&g_groups);
 }
 
