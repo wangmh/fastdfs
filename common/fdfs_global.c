@@ -23,7 +23,7 @@
 int g_fdfs_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
 int g_fdfs_network_timeout = DEFAULT_NETWORK_TIMEOUT;
 char g_fdfs_base_path[MAX_PATH_SIZE] = {'/', 't', 'm', 'p', '\0'};
-Version g_fdfs_version = {2, 6};
+Version g_fdfs_version = {2, 7};
 
 /*
 data filename format:
@@ -114,6 +114,17 @@ int fdfs_gen_slave_filename(const char *master_filename, \
 		logError("file: "__FILE__", line: %d, " \
 			"prefix_name \"%s\" is invalid", \
 			__LINE__, prefix_name);
+		return EINVAL;
+	}
+
+	/* when prefix_name is empty, the extension name of master file and 
+	   slave file can not be same
+	*/
+	if ((*prefix_name == '\0') && ((pDot == NULL && *true_ext_name == '\0')
+		 || (pDot != NULL && strcmp(pDot, true_ext_name) == 0)))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"empty prefix_name is not allowed", __LINE__);
 		return EINVAL;
 	}
 

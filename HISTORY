@@ -1,4 +1,7 @@
 
+Version 2.07  2010-12-29
+ * slave file's prefix name can be empty
+
 Version 2.06  2010-12-26
  * sync file op: do not sync the file which exists on dest storage server
    and the file size are same 

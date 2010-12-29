@@ -2633,14 +2633,6 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	memcpy(prefix_name, p, FDFS_FILE_PREFIX_MAX_LEN);
 	*(prefix_name + FDFS_FILE_PREFIX_MAX_LEN) = '\0';
 	p += FDFS_FILE_PREFIX_MAX_LEN;
-	if (*prefix_name == '\0')
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, empty prefix name", \
-			__LINE__, pTask->client_ip);
-		pClientInfo->total_length = sizeof(TrackerHeader);
-		return EINVAL;
-	}
 
 	memcpy(file_ext_name, p, FDFS_FILE_EXT_NAME_MAX_LEN);
 	*(file_ext_name + FDFS_FILE_EXT_NAME_MAX_LEN) = '\0';
@@ -3934,7 +3926,7 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 		break;
 	}
 
-	if (master_filename_len > 0 && *prefix_name != '\0')
+	if (master_filename_len > 0)
 	{
 		int master_store_path_index;
 
