@@ -1,6 +1,7 @@
 
-Version 2.07  2010-12-29
+Version 2.07  2010-12-31
  * slave file's prefix name can be empty
+ * FDFS_MAX_GROUPS change from 64 to 512
 
 Version 2.06  2010-12-26
  * sync file op: do not sync the file which exists on dest storage server
