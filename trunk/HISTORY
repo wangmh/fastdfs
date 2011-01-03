@@ -1,7 +1,9 @@
 
-Version 2.07  2010-12-31
+Version 2.07  2011-01-03
  * slave file's prefix name can be empty
  * FDFS_MAX_GROUPS change from 64 to 512
+ * file size field in the file id changed: high 32 bits is random integer 
+   when the file size < 2GB and the highest bit set to 1
 
 Version 2.06  2010-12-26
  * sync file op: do not sync the file which exists on dest storage server

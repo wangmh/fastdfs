@@ -1200,14 +1200,30 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 	char szStorageIp[IP_ADDRESS_SIZE];
 	int n;
 	int len;
+	int r;
 	in_addr_t server_ip;
+	int64_t masked_file_size;
 
 	server_ip = getSockIpaddr(pClientInfo->sock, \
 			szStorageIp, IP_ADDRESS_SIZE);
 
 	int2buff(htonl(server_ip), buff);
 	int2buff(timestamp, buff+sizeof(int));
-	long2buff(file_size, buff+sizeof(int)*2);
+	if ((file_size >> 32) != 0)
+	{
+		masked_file_size = file_size;
+	}
+	else
+	{
+		r = rand();
+		if ((r & 0x80000000) == 0)
+		{
+			r |= 0x80000000;
+		}
+
+		masked_file_size = (((int64_t)r) << 32 ) | file_size;
+	}
+	long2buff(masked_file_size, buff+sizeof(int)*2);
 	int2buff(crc32, buff+sizeof(int)*4);
 
 	base64_encode_ex(&g_base64_context, buff, sizeof(int) * 5, encoded, \
