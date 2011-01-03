@@ -1756,6 +1756,10 @@ int fdfs_get_file_info_ex(const char *file_id, const bool get_from_server, \
 	{
 		pFileInfo->create_timestamp = buff2int(buff+sizeof(int));
 		pFileInfo->file_size = buff2long(buff+sizeof(int)*2);
+		if ((pFileInfo->file_size >> 63) != 0)
+		{
+			pFileInfo->file_size &= 0xFFFFFFFF;  //low 32 bits is file size
+		}
 		pFileInfo->crc32 = buff2int(buff+sizeof(int)*4);
 	}
 
