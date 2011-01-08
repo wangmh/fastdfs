@@ -6,7 +6,7 @@ Version 2.07  2011-01-08
    when the file size < 2GB and the highest bit set to 1
  * tracker_service.c: in function list_group_storages, use strcpy 
    intead of memcpy
- * php extension add function fdfs_tracker_delete_storage
+ * php extension add function fastdfs_tracker_delete_storage
 
 Version 2.06  2010-12-26
  * sync file op: do not sync the file which exists on dest storage server
