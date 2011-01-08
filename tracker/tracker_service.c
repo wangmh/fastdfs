@@ -1321,13 +1321,11 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 		pStatBuff = &(pDest->stat_buff);
 		pStorageStat = &((*ppServer)->stat);
 		pDest->status = (*ppServer)->status;
-		memcpy(pDest->ip_addr, (*ppServer)->ip_addr, \
-				IP_ADDRESS_SIZE);
+		strcpy(pDest->ip_addr, (*ppServer)->ip_addr);
 		if ((*ppServer)->psync_src_server != NULL)
 		{
-			memcpy(pDest->src_ip_addr, \
-					(*ppServer)->psync_src_server->ip_addr,\
-					IP_ADDRESS_SIZE);
+			strcpy(pDest->src_ip_addr, \
+				(*ppServer)->psync_src_server->ip_addr);
 		}
 
 		strcpy(pDest->domain_name, (*ppServer)->domain_name);
