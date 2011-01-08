@@ -97,6 +97,7 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 		ZEND_FE(fastdfs_tracker_query_storage_update1, NULL)
 		ZEND_FE(fastdfs_tracker_query_storage_fetch1, NULL)
 		ZEND_FE(fastdfs_tracker_query_storage_list1, NULL)
+		ZEND_FE(fastdfs_tracker_delete_storage, NULL)
 		ZEND_FE(fastdfs_storage_upload_by_filename, NULL)
 		ZEND_FE(fastdfs_storage_upload_by_filename1, NULL)
 		ZEND_FE(fastdfs_storage_upload_by_filebuff, NULL)
@@ -1180,6 +1181,57 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 	add_assoc_long_ex(return_value, "port", sizeof("port"), \
 			storage_server.port);
 	add_assoc_long_ex(return_value, "sock", sizeof("sock"), -1);
+}
+
+static void php_fdfs_tracker_delete_storage_impl( \
+		INTERNAL_FUNCTION_PARAMETERS, 
+		FDFSPhpContext *pContext)
+{
+	int argc;
+	int group_name_len;
+	int storage_ip_len;
+	char *group_name;
+	char *storage_ip;
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc != 2)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker_delete_storage parameters " \
+			"count: %d != 2", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", \
+		&group_name, &group_name_len, &storage_ip, &storage_ip_len)
+		 == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (group_name_len == 0 || storage_ip_len == 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"group name length: %d or storage ip length: %d = 0!",\
+			__LINE__, group_name_len, storage_ip_len);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	pContext->err_no = tracker_delete_storage(pContext->pTrackerGroup, \
+                	group_name, storage_ip);
+	if (pContext->err_no == 0)
+	{
+		RETURN_BOOL(true);
+	}
+	else
+	{
+		RETURN_BOOL(false);
+	}
 }
 
 static void php_fdfs_storage_delete_file_impl( \
@@ -3104,6 +3156,17 @@ ZEND_FUNCTION(fastdfs_tracker_query_storage_list1)
 }
 
 /*
+boolean fastdfs_tracker_delete_storage(string group_name, string storage_ip)
+return true for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_tracker_delete_storage)
+{
+	php_fdfs_tracker_delete_storage_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&php_context);
+}
+
+/*
 array fastdfs_storage_upload_by_filename(string local_filename, 
 	[string file_ext_name, string meta_list, string group_name, 
 	array tracker_server, array storage_server])
@@ -3626,6 +3689,20 @@ PHP_METHOD(FastDFS, tracker_query_storage_list)
 }
 
 /*
+boolean FastDFS::tracker_delete_storage(string group_name, string storage_ip)
+return true for success, false for error
+*/
+PHP_METHOD(FastDFS, tracker_delete_storage)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_tracker_delete_storage_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &(i_obj->context));
+}
+
+/*
 array FastDFS::tracker_query_storage_update1(string file_id 
 		[, array tracker_server])
 return array for success, false for error
@@ -4120,6 +4197,11 @@ ZEND_ARG_INFO(0, file_id)
 ZEND_ARG_INFO(0, tracker_server)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_tracker_delete_storage, 0, 0, 2)
+ZEND_ARG_INFO(0, group_name)
+ZEND_ARG_INFO(0, storage_ip)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_upload_by_filename, 0, 0, 1)
 ZEND_ARG_INFO(0, local_filename)
 ZEND_ARG_INFO(0, file_ext_name)
@@ -4320,6 +4402,7 @@ static zend_function_entry fdfs_class_methods[] = {
     FDFS_ME(tracker_query_storage_update1,arginfo_tracker_query_storage_update1)
     FDFS_ME(tracker_query_storage_fetch1, arginfo_tracker_query_storage_fetch1)
     FDFS_ME(tracker_query_storage_list1,  arginfo_tracker_query_storage_list1)
+    FDFS_ME(tracker_delete_storage, arginfo_tracker_delete_storage)
     FDFS_ME(storage_upload_by_filename,  arginfo_storage_upload_by_filename)
     FDFS_ME(storage_upload_by_filename1, arginfo_storage_upload_by_filename1)
     FDFS_ME(storage_upload_by_filebuff,  arginfo_storage_upload_by_filebuff)
