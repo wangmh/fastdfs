@@ -524,6 +524,13 @@ return index array for success, false for error.
        each server as an array element
 
 
+boolean fastdfs_tracker_delete_storage(string group_name, string storage_ip)
+delete the storage server from the cluster
+parameters:
+	group_name: the group name of the storage server
+	storage_ip: the ip address of the storage server to be deleted
+return true for success, false for error
+
 
 FastDFS Class Info:
 
@@ -1019,4 +1026,12 @@ parameters:
                         ip_addr, port and sock
 return index array for success, false for error. 
        each server as an array element
+
+
+boolean  FastDFS::tracker_delete_storage(string group_name, string storage_ip)
+delete the storage server from the cluster
+parameters:
+	group_name: the group name of the storage server
+	storage_ip: the ip address of the storage server to be deleted
+return true for success, false for error
 
