@@ -236,10 +236,10 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 		"free space = "INT64_PRINTF_FORMAT" GB\n" \
 		"storage server count = %d\n" \
 		"active server count = %d\n" \
-		"storage_port = %d\n" \
-		"storage_http_port = %d\n" \
+		"storage server port = %d\n" \
+		"storage HTTP port = %d\n" \
 		"store path count = %d\n" \
-		"subdir count per path= %d\n" \
+		"subdir count per path = %d\n" \
 		"current write server index = %d\n\n", \
 		pGroupStat->group_name, \
 		pGroupStat->free_mb / 1024, \
@@ -352,7 +352,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			*szUpTime = '\0';
 		}
 
-		printf( "\tHost %d:\n" \
+		printf( "\tStorage %d:\n" \
 			"\t\tip_addr = %s%s  %s\n" \
 			"\t\thttp domain = %s\n" \
 			"\t\tversion = %s\n" \
@@ -384,7 +384,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tlast_heart_beat_time = %s\n" \
 			"\t\tlast_source_update = %s\n" \
 			"\t\tlast_sync_update = %s\n"   \
-			"\t\tlast_synced_timestamp= %s %s\n",  \
+			"\t\tlast_synced_timestamp = %s %s\n",  \
 			++k, pStorage->ip_addr, szHostnamePrompt, \
 			get_storage_status_caption(pStorage->status), \
 			pStorage->domain_name, \
