@@ -53,11 +53,13 @@ int main(int argc, char *argv[])
 		char szDatetime[32];
 
 		printf("source ip address: %s\n", file_info.source_ip_addr);
-		printf("file timestamp=%s\n", formatDatetime(
+		printf("file create timestamp: %s\n", formatDatetime(
 			file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \
 			szDatetime, sizeof(szDatetime)));
-		printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
-		printf("file crc32=%u\n", file_info.crc32);
+		printf("file size: "INT64_PRINTF_FORMAT"\n", \
+			file_info.file_size);
+		printf("file crc32: %u (0x%08X)\n", \
+			file_info.crc32, file_info.crc32);
 	}
 
 	fdfs_client_destroy();
