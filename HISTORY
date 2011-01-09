@@ -9,6 +9,7 @@ Version 2.07  2011-01-09
  * php extension add function fastdfs_tracker_delete_storage
  * client add tool: fdfs_file_info to get file info, including file size,
    create timestamp, source storage ip address and crc32 signature
+ * fdfs_upload_file.c: omit more error info when the local file not exist
 
 Version 2.06  2010-12-26
  * sync file op: do not sync the file which exists on dest storage server
