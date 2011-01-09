@@ -1002,9 +1002,13 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 		}
 
 		close(tracker_server.sock);
+		if (result != 0 && result != ENOENT && result != EALREADY)
+		{
+			return result;
+		}
 	}
 
-	return result;
+	return result == ENOENT ? 0 : result;
 }
 
 int tracker_get_storage_status(TrackerServerGroup *pTrackerGroup, \
