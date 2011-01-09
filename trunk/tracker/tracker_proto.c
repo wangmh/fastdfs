@@ -149,9 +149,10 @@ int fdfs_quit(TrackerServerInfo *pTrackerServer)
 	if(result != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"tracker server ip: %s, send data fail, " \
+			"tracker server: %s:%d, send data fail, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
 			result, STRERROR(result));
 		return result;
 	}

@@ -72,8 +72,15 @@ int main(int argc, char *argv[])
 		printf("upload file fail, " \
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
-		fdfs_quit(&storageServer);
+
+		if (storageServer.sock >= 0)
+		{
+			fdfs_quit(&storageServer);
+		}
 		tracker_disconnect_server(&storageServer);
+
+		fdfs_quit(pTrackerServer);
+		tracker_close_all_connections();
 		fdfs_client_destroy();
 		return result;
 	}
