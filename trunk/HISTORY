@@ -1,5 +1,5 @@
 
-Version 2.07  2011-01-08
+Version 2.07  2011-01-09
  * slave file's prefix name can be empty
  * FDFS_MAX_GROUPS change from 64 to 512
  * file size field in the file id changed: high 32 bits is random integer 
@@ -7,6 +7,8 @@ Version 2.07  2011-01-08
  * tracker_service.c: in function list_group_storages, use strcpy 
    intead of memcpy
  * php extension add function fastdfs_tracker_delete_storage
+ * client add tool: fdfs_file_info to get file info, including file size,
+   create timestamp, source storage ip address and crc32 signature
 
 Version 2.06  2010-12-26
  * sync file op: do not sync the file which exists on dest storage server

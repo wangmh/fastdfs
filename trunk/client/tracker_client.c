@@ -974,6 +974,7 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 	long2buff(FDFS_GROUP_NAME_MAX_LEN + ipaddr_len, pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE;
 
+	enoent_count = 0;
 	result = 0;
 	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
 	{
@@ -1002,10 +1003,25 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 		}
 
 		close(tracker_server.sock);
-		if (result != 0 && result != ENOENT && result != EALREADY)
+		if (result != 0)
 		{
-			return result;
+			if (result == ENOENT)
+			{
+				enoent_count++;
+			}
+			else if (result == EALREADY)
+			{
+			}
+			else
+			{
+				return result;
+			}
 		}
+	}
+
+	if (enoent_count == pTrackerGroup->server_count)
+	{
+		return ENOENT;
 	}
 
 	return result == ENOENT ? 0 : result;
