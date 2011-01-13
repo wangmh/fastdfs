@@ -1898,11 +1898,13 @@ static int tracker_deal_storage_sync_src_req(struct fast_task_info *pTask)
 	if (pDestStorage->psync_src_server != NULL)
 	{
 		if (pDestStorage->psync_src_server->status == \
-				FDFS_STORAGE_STATUS_OFFLINE
+				FDFS_STORAGE_STATUS_OFFLINE \
 			|| pDestStorage->psync_src_server->status == \
-				FDFS_STORAGE_STATUS_ONLINE
+				FDFS_STORAGE_STATUS_ONLINE \
 			|| pDestStorage->psync_src_server->status == \
-				FDFS_STORAGE_STATUS_ACTIVE)
+				FDFS_STORAGE_STATUS_ACTIVE \
+			|| pDestStorage->psync_src_server->status == \
+				FDFS_STORAGE_STATUS_RECOVERY)
 		{
 			TrackerStorageSyncReqBody *pBody;
 			pBody = (TrackerStorageSyncReqBody *)(pTask->data + \

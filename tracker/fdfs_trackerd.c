@@ -163,8 +163,6 @@ int main(int argc, char *argv[])
 		return result;
 	}
 	
-	g_tracker_thread_count = 0;
-
 	memset(&act, 0, sizeof(act));
 	sigemptyset(&act.sa_mask);
 

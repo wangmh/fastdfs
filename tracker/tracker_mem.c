@@ -2277,7 +2277,8 @@ int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
 	}
 
 	if (pStorageServer->status == FDFS_STORAGE_STATUS_ONLINE || \
-	    pStorageServer->status == FDFS_STORAGE_STATUS_ACTIVE)
+	    pStorageServer->status == FDFS_STORAGE_STATUS_ACTIVE || \
+	    pStorageServer->status == FDFS_STORAGE_STATUS_RECOVERY)
 	{
 		return EBUSY;
 	}
@@ -2325,7 +2326,8 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 	}
 
 	if (pOldStorageServer->status == FDFS_STORAGE_STATUS_ONLINE || \
-	    pOldStorageServer->status == FDFS_STORAGE_STATUS_ACTIVE)
+	    pOldStorageServer->status == FDFS_STORAGE_STATUS_ACTIVE || \
+	    pOldStorageServer->status == FDFS_STORAGE_STATUS_RECOVERY)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, old storage server: %s is online", \
@@ -3265,7 +3267,8 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		}
 	}
 
-	if (pStorageServer->status == FDFS_STORAGE_STATUS_OFFLINE)
+	if (pStorageServer->status == FDFS_STORAGE_STATUS_OFFLINE || \
+	    pStorageServer->status == FDFS_STORAGE_STATUS_RECOVERY)
 	{
 		pStorageServer->status = FDFS_STORAGE_STATUS_ONLINE;
 	}
@@ -3343,7 +3346,9 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 				 || (*ppFound)->status == \
 					FDFS_STORAGE_STATUS_ONLINE \
 				 || (*ppFound)->status == \
-					FDFS_STORAGE_STATUS_ACTIVE)
+					FDFS_STORAGE_STATUS_ACTIVE
+				 || (*ppFound)->status == \
+					FDFS_STORAGE_STATUS_RECOVERY)
 				{
 					continue;
 				}
@@ -3580,7 +3585,8 @@ int tracker_mem_offline_store_server(FDFSGroupInfo *pGroup, \
 		(pStorage->status == FDFS_STORAGE_STATUS_SYNCING) || \
 		(pStorage->status == FDFS_STORAGE_STATUS_INIT) || \
 		(pStorage->status == FDFS_STORAGE_STATUS_DELETED) || \
-		(pStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED))
+		(pStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED) || \
+		(pStorage->status == FDFS_STORAGE_STATUS_RECOVERY))
 	{
 		return 0;
 	}

@@ -86,7 +86,7 @@ static pthread_mutex_t sync_stat_file_lock;
 
 static int storage_open_stat_file();
 static int storage_close_stat_file();
-static int storage_make_data_dirs(const char *pBasePath);
+static int storage_make_data_dirs(const char *pBasePath, bool *pathCreated);
 static int storage_check_and_make_data_dirs();
 
 static char *get_storage_stat_filename(const void *pArg, char *full_filename)
@@ -407,6 +407,7 @@ static int storage_check_and_make_data_dirs()
 	int i;
 	char data_path[MAX_PATH_SIZE];
 	char full_filename[MAX_PATH_SIZE];
+	bool pathCreated;
 
 	snprintf(data_path, sizeof(data_path), "%s/data", \
 			g_fdfs_base_path);
@@ -548,16 +549,21 @@ static int storage_check_and_make_data_dirs()
 
 	for (i=0; i<g_path_count; i++)
 	{
-		if ((result=storage_make_data_dirs(g_store_paths[i])) != 0)
+		if ((result=storage_make_data_dirs(g_store_paths[i], \
+				&pathCreated)) != 0)
 		{
 			return result;
+		}
+
+		if (g_sync_old_done && pathCreated)  //repair damaged disk
+		{
 		}
 	}
 
 	return 0;
 }
 
-static int storage_make_data_dirs(const char *pBasePath)
+static int storage_make_data_dirs(const char *pBasePath, bool *pathCreated)
 {
 	char data_path[MAX_PATH_SIZE];
 	char dir_name[9];
@@ -566,6 +572,7 @@ static int storage_make_data_dirs(const char *pBasePath)
 	char max_sub_path[16];
 	int i, k;
 
+	*pathCreated = false;
 	snprintf(data_path, sizeof(data_path), "%s/data", pBasePath);
 	if (!fileExists(data_path))
 	{
@@ -657,6 +664,7 @@ static int storage_make_data_dirs(const char *pBasePath)
 
 	fprintf(stderr, "data path: %s, mkdir sub dir done.\n", data_path);
 
+	*pathCreated = true;
 	return 0;
 }
 

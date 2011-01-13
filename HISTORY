@@ -1,4 +1,7 @@
 
+Version 2.08  2011-01-13
+ * bug fixed: fdfs_trackerd.c set g_tracker_thread_count to 0
+
 Version 2.07  2011-01-09
  * slave file's prefix name can be empty
  * FDFS_MAX_GROUPS change from 64 to 512
