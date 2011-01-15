@@ -357,6 +357,77 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
+int tracker_list_one_group(TrackerServerInfo *pTrackerServer, \
+		const char *group_name, FDFSGroupStat *pDest)
+{
+	TrackerHeader *pHeader;
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN];
+	TrackerGroupStat src;
+	char *pInBuff;
+	int result;
+	int64_t in_bytes;
+
+	if (pTrackerServer->sock < 0)
+	{
+		if ((result=tracker_connect_server(pTrackerServer)) != 0)
+		{
+			return result;
+		}
+	}
+
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
+	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
+			sizeof(TrackerHeader),  "%s", group_name);
+	pHeader->cmd = TRACKER_PROTO_CMD_SERVER_LIST_ONE_GROUP;
+	long2buff(FDFS_GROUP_NAME_MAX_LEN, pHeader->pkg_len);
+	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
+	{
+		logError("send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, STRERROR(result));
+	}
+	else
+	{
+		pInBuff = (char *)&src;
+		result = fdfs_recv_response(pTrackerServer, \
+			&pInBuff, sizeof(TrackerGroupStat), &in_bytes);
+	}
+
+	if (result != 0)
+	{
+		close(pTrackerServer->sock);
+		pTrackerServer->sock = -1;
+
+		return result;
+	}
+
+	if (in_bytes != sizeof(TrackerGroupStat))
+	{
+		logError("tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid.", \
+			pTrackerServer->ip_addr, \
+			pTrackerServer->port, in_bytes);
+		return EINVAL;
+	}
+
+	memset(pDest, 0, sizeof(FDFSGroupStat));
+	memcpy(pDest->group_name, src.group_name, FDFS_GROUP_NAME_MAX_LEN);
+	pDest->free_mb = buff2long(src.sz_free_mb);
+	pDest->count= buff2long(src.sz_count);
+	pDest->storage_port= buff2long(src.sz_storage_port);
+	pDest->storage_http_port= buff2long(src.sz_storage_http_port);
+	pDest->active_count = buff2long(src.sz_active_count);
+	pDest->current_write_server = buff2long(src.sz_current_write_server);
+	pDest->store_path_count = buff2long(src.sz_store_path_count);
+	pDest->subdir_count_per_path = buff2long(src.sz_subdir_count_per_path);
+
+	return 0;
+}
+
 int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 		FDFSGroupStat *group_stats, const int max_groups, \
 		int *group_count)
@@ -379,7 +450,7 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	}
 
 	memset(&header, 0, sizeof(header));
-	header.cmd = TRACKER_PROTO_CMD_SERVER_LIST_GROUP;
+	header.cmd = TRACKER_PROTO_CMD_SERVER_LIST_ALL_GROUPS;
 	header.status = 0;
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, \
 			sizeof(header), g_fdfs_network_timeout)) != 0)
