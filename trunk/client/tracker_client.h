@@ -86,6 +86,18 @@ int tracker_get_all_connections_ex(TrackerServerGroup *pTrackerGroup);
 void tracker_close_all_connections_ex(TrackerServerGroup *pTrackerGroup);
 
 /**
+* list one group
+* params:
+*	pTrackerServer: tracker server
+*	group_name: the group name
+*	pDest: return the group info
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_list_one_group(TrackerServerInfo *pTrackerServer, \
+		const char *group_name, FDFSGroupStat *pDest);
+
+
+/**
 * list all groups
 * params:
 *	pTrackerServer: tracker server

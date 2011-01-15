@@ -1791,7 +1791,59 @@ static int tracker_deal_service_query_storage( \
 	return 0;
 }
 
-static int tracker_deal_server_list_groups(struct fast_task_info *pTask)
+static int tracker_deal_server_list_one_group(struct fast_task_info *pTask)
+{
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	FDFSGroupInfo *pGroup;
+	TrackerGroupStat *pDest;
+
+	if (pTask->length - sizeof(TrackerHeader) != FDFS_GROUP_NAME_MAX_LEN)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length: %d", __LINE__, \
+			TRACKER_PROTO_CMD_SERVER_LIST_ONE_GROUP, \
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader), FDFS_GROUP_NAME_MAX_LEN);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	memcpy(group_name, pTask->data + sizeof(TrackerHeader), \
+		FDFS_GROUP_NAME_MAX_LEN);
+	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
+
+	pGroup = tracker_mem_get_group(group_name);
+	if (pGroup == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, group name: %s not exist", \
+			__LINE__, pTask->client_ip, group_name);
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	pDest = (TrackerGroupStat *)(pTask->data + sizeof(TrackerHeader));
+	memcpy(pDest->group_name, pGroup->group_name, \
+			FDFS_GROUP_NAME_MAX_LEN + 1);
+	long2buff(pGroup->free_mb, pDest->sz_free_mb);
+	long2buff(pGroup->count, pDest->sz_count);
+	long2buff(pGroup->storage_port, pDest->sz_storage_port);
+	long2buff(pGroup->storage_http_port, pDest->sz_storage_http_port);
+	long2buff(pGroup->active_count, pDest->sz_active_count);
+	long2buff(pGroup->current_write_server, 
+			pDest->sz_current_write_server);
+	long2buff(pGroup->store_path_count, pDest->sz_store_path_count);
+	long2buff(pGroup->subdir_count_per_path, \
+				pDest->sz_subdir_count_per_path);
+
+	pTask->length = sizeof(TrackerHeader) + sizeof(TrackerGroupStat);
+
+	return 0;
+}
+
+static int tracker_deal_server_list_all_groups(struct fast_task_info *pTask)
 {
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppEnd;
@@ -1804,7 +1856,7 @@ static int tracker_deal_server_list_groups(struct fast_task_info *pTask)
 			"cmd=%d, client ip: %s, package size " \
 			PKG_LEN_PRINTF_FORMAT" is not correct, " \
 			"expect length: 0", __LINE__, \
-			TRACKER_PROTO_CMD_SERVER_LIST_GROUP, \
+			TRACKER_PROTO_CMD_SERVER_LIST_ALL_GROUPS, \
 			pTask->client_ip, pTask->length - \
 			(int)sizeof(TrackerHeader));
 		pTask->length = sizeof(TrackerHeader);
@@ -2530,8 +2582,11 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			result = tracker_deal_service_query_storage( \
 					pTask, pHeader->cmd);
 			break;
-		case TRACKER_PROTO_CMD_SERVER_LIST_GROUP:
-			result = tracker_deal_server_list_groups(pTask);
+		case TRACKER_PROTO_CMD_SERVER_LIST_ONE_GROUP:
+			result = tracker_deal_server_list_one_group(pTask);
+			break;
+		case TRACKER_PROTO_CMD_SERVER_LIST_ALL_GROUPS:
+			result = tracker_deal_server_list_all_groups(pTask);
 			break;
 		case TRACKER_PROTO_CMD_SERVER_LIST_STORAGE:
 			result = tracker_deal_server_list_group_storages(pTask);

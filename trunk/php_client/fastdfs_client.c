@@ -614,8 +614,18 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		saved_tracker_sock = pTrackerServer->sock;
 	}
 
-	result = tracker_list_groups(pTrackerServer, group_stats, \
-		FDFS_MAX_GROUPS, &group_count);
+	if (group_name != NULL && group_nlen > 0)
+	{
+		group_count = 1;
+		result = tracker_list_one_group(pTrackerServer, group_name, \
+				group_stats);
+	}
+	else
+	{
+		result = tracker_list_groups(pTrackerServer, group_stats, \
+				FDFS_MAX_GROUPS, &group_count);
+	}
+
 	if (tracker_hash != NULL && pTrackerServer->sock != \
 		saved_tracker_sock)
 	{
@@ -634,11 +644,6 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	pGroupEnd = group_stats + group_count;
 	for (pGroupStat=group_stats; pGroupStat<pGroupEnd; pGroupStat++)
 	{
-		if (group_name != NULL && group_nlen > 0 && \
-			strcmp(pGroupStat->group_name, group_name) != 0)
-		{
-			continue;
-		}
 
 		ALLOC_INIT_ZVAL(group_info_array);
 		array_init(group_info_array);
