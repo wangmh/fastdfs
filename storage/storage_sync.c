@@ -20,7 +20,6 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
-#include <unistd.h>
 #include "fdfs_define.h"
 #include "logger.h"
 #include "fdfs_global.h"
@@ -67,7 +66,6 @@ static pthread_t *sync_tids = NULL;
 
 static int storage_write_to_mark_file(BinLogReader *pReader);
 static int storage_binlog_reader_skip(BinLogReader *pReader);
-static void storage_reader_destroy(BinLogReader *pReader);
 static int storage_binlog_fsync(const bool bNeedLock);
 static int storage_binlog_preread(BinLogReader *pReader);
 
@@ -1031,11 +1029,13 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 	return write_ret;
 }
 
-static char *get_binlog_readable_filename(BinLogReader *pReader, \
+static char *get_binlog_readable_filename(const void *pArg, \
 		char *full_filename)
 {
+	const BinLogReader *pReader;
 	static char buff[MAX_PATH_SIZE];
 
+	pReader = (const BinLogReader *)pArg;
 	if (full_filename == NULL)
 	{
 		full_filename = buff;
@@ -1048,7 +1048,8 @@ static char *get_binlog_readable_filename(BinLogReader *pReader, \
 	return full_filename;
 }
 
-static int storage_open_readable_binlog(BinLogReader *pReader)
+int storage_open_readable_binlog(BinLogReader *pReader, \
+		get_filename_func filename_func, const void *pArg)
 {
 	char full_filename[MAX_PATH_SIZE];
 
@@ -1057,7 +1058,7 @@ static int storage_open_readable_binlog(BinLogReader *pReader)
 		close(pReader->binlog_fd);
 	}
 
-	get_binlog_readable_filename(pReader, full_filename);
+	filename_func(pArg, full_filename);
 	pReader->binlog_fd = open(full_filename, O_RDONLY);
 	if (pReader->binlog_fd < 0)
 	{
@@ -1344,8 +1345,7 @@ static int storage_reader_sync_init_req(BinLogReader *pReader)
 	return result;
 }
 
-static int storage_reader_init(FDFSStorageBrief *pStorage, \
-			BinLogReader *pReader)
+int storage_reader_init(FDFSStorageBrief *pStorage, BinLogReader *pReader)
 {
 	char full_filename[MAX_PATH_SIZE];
 	IniContext iniContext;
@@ -1370,10 +1370,21 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 	}
 	pReader->binlog_buff.current = pReader->binlog_buff.buffer;
 
-	strcpy(pReader->ip_addr, pStorage->ip_addr);
+	if (pStorage == NULL)
+	{
+		strcpy(pReader->ip_addr, "0.0.0.0");
+	}
+	else
+	{
+		strcpy(pReader->ip_addr, pStorage->ip_addr);
+	}
 	get_mark_filename_by_reader(pReader, full_filename);
 
-	if (pStorage->status <= FDFS_STORAGE_STATUS_WAIT_SYNC)
+	if (pStorage == NULL)
+	{
+		bFileExist = false;
+	}
+	else if (pStorage->status <= FDFS_STORAGE_STATUS_WAIT_SYNC)
 	{
 		bFileExist = false;
 	}
@@ -1382,7 +1393,7 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 		bFileExist = fileExists(full_filename);
 	}
 
-	if (!bFileExist)
+	if (pStorage != NULL && !bFileExist)
 	{
 		if ((result=storage_reader_sync_init_req(pReader)) != 0)
 		{
@@ -1415,7 +1426,8 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 		bNeedSyncOld = iniGetBoolValue(NULL,  \
 				MARK_ITEM_NEED_SYNC_OLD, \
 				&iniContext, false);
-		if (pStorage->status == FDFS_STORAGE_STATUS_SYNCING)
+		if (pStorage != NULL && pStorage->status == \
+			FDFS_STORAGE_STATUS_SYNCING)
 		{
 			if ((result=storage_reader_sync_init_req(pReader)) != 0)
 			{
@@ -1497,27 +1509,24 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 		return errno != 0 ? errno : ENOENT;
 	}
 
-	if ((result=storage_open_readable_binlog(pReader)) != 0)
+	if ((result=storage_open_readable_binlog(pReader, \
+			get_binlog_readable_filename, pReader)) != 0)
 	{
-		close(pReader->mark_fd);
-		pReader->mark_fd = -1;
 		return result;
 	}
 
-	if (!bFileExist)
+	if (pStorage != NULL && !bFileExist)
 	{
         	if (!pReader->need_sync_old && pReader->until_timestamp > 0)
 		{
 			if ((result=storage_binlog_reader_skip(pReader)) != 0)
 			{
-				storage_reader_destroy(pReader);
 				return result;
 			}
 		}
 
 		if ((result=storage_write_to_mark_file(pReader)) != 0)
 		{
-			storage_reader_destroy(pReader);
 			return result;
 		}
 	}
@@ -1525,14 +1534,13 @@ static int storage_reader_init(FDFSStorageBrief *pStorage, \
 	result = storage_binlog_preread(pReader);
 	if (result != 0 && result != ENOENT)
 	{
-		storage_reader_destroy(pReader);
 		return result;
 	}
 
 	return 0;
 }
 
-static void storage_reader_destroy(BinLogReader *pReader)
+void storage_reader_destroy(BinLogReader *pReader)
 {
 	if (pReader->mark_fd >= 0)
 	{
@@ -1716,7 +1724,7 @@ static int storage_binlog_read_line(BinLogReader *pReader, \
 			line_size, line_length);
 }
 
-static int storage_binlog_read(BinLogReader *pReader, \
+int storage_binlog_read(BinLogReader *pReader, \
 			BinLogRecord *pRecord, int *record_length)
 {
 	char line[256];
@@ -1754,7 +1762,8 @@ static int storage_binlog_read(BinLogReader *pReader, \
 
 		pReader->binlog_index++;
 		pReader->binlog_offset = 0;
-		if ((result=storage_open_readable_binlog(pReader)) != 0)
+		if ((result=storage_open_readable_binlog(pReader, \
+				get_binlog_readable_filename, pReader)) != 0)
 		{
 			return result;
 		}

@@ -40,6 +40,7 @@
 #include "storage_client.h"
 #include "storage_nio.h"
 #include "storage_dio.h"
+#include "storage_sync.h"
 
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
