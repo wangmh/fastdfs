@@ -788,7 +788,7 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 		const int fsync_after_written_bytes, const int timeout, \
 		int64_t *true_file_bytes)
 {
-	int fd;
+	int write_fd;
 	char buff[FDFS_WRITE_BUFF_SIZE];
 	int64_t remain_bytes;
 	int recv_bytes;
@@ -814,8 +814,8 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 		recv_func = tcprecvdata_ex;
 	}
 
-	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (fd < 0)
+	write_fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (write_fd < 0)
 	{
 		return errno != 0 ? errno : EACCES;
 	}
@@ -839,16 +839,16 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 		{
 			if (file_bytes != INFINITE_FILE_SIZE)
 			{
-				close(fd);
+				close(write_fd);
 				unlink(filename);
 				return result;
 			}
 		}
 
-		if (count > 0 && write(fd, buff, count) != count)
+		if (count > 0 && write(write_fd, buff, count) != count)
 		{
 			result = errno != 0 ? errno: EIO;
-			close(fd);
+			close(write_fd);
 			unlink(filename);
 			return result;
 		}
@@ -860,10 +860,10 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 			if (written_bytes >= fsync_after_written_bytes)
 			{
 				written_bytes = 0;
-				if (fsync(fd) != 0)
+				if (fsync(write_fd) != 0)
 				{
 					result = errno != 0 ? errno: EIO;
-					close(fd);
+					close(write_fd);
 					unlink(filename);
 					return result;
 				}
@@ -872,6 +872,9 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 
 		if (result != 0)  //recv infinite file, does not delete the file
 		{
+			int read_fd;
+			read_fd = -1;
+
 			do
 			{
 				if (*true_file_bytes < 8)
@@ -879,34 +882,32 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 					break;
 				}
 
-				close(fd);
-				fd = open(filename, O_RDONLY);
-				if (fd < 0)
+				read_fd = open(filename, O_RDONLY);
+				if (read_fd < 0)
 				{
 					return errno != 0 ? errno : EACCES;
 				}
 
-				if (lseek(fd, -8, SEEK_END) < 0)
+				if (lseek(read_fd, -8, SEEK_END) < 0)
 				{
 					result = errno != 0 ? errno : EIO;
 					break;
 				}
 
-				if (read(fd, buff, 8) != 8)
+				if (read(read_fd, buff, 8) != 8)
 				{
 					result = errno != 0 ? errno : EIO;
 					break;
 				}
 
 				*true_file_bytes -= 8;
-				printf("fd4=%d, file size: %ld :: %ld\n", fd, buff2long(buff), *true_file_bytes);
 				if (buff2long(buff) != *true_file_bytes)
 				{
 					result = EINVAL;
 					break;
 				}
 
-				if (ftruncate(fd, *true_file_bytes) != 0)
+				if (ftruncate(write_fd, *true_file_bytes) != 0)
 				{
 					result = errno != 0 ? errno : EIO;
 					break;
@@ -915,7 +916,12 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 				result = 0;
 			} while (0);
 		
-			close(fd);
+			close(write_fd);
+			if (read_fd >= 0)
+			{
+				close(read_fd);
+			}
+
 			if (result != 0)
 			{
 				unlink(filename);
@@ -927,7 +933,7 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 		remain_bytes -= count;
 	}
 
-	close(fd);
+	close(write_fd);
 	return 0;
 }
 

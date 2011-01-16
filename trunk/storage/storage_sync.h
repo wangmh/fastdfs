@@ -94,6 +94,8 @@ int storage_open_readable_binlog(BinLogReader *pReader, \
 int storage_reader_init(FDFSStorageBrief *pStorage, BinLogReader *pReader);
 void storage_reader_destroy(BinLogReader *pReader);
 
+int storage_report_storage_status(const char *ip_addr, const char status);
+
 #ifdef __cplusplus
 }
 #endif

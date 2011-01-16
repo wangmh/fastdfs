@@ -1118,8 +1118,7 @@ static char *get_mark_filename_by_ip(const char *ip_addr, char *full_filename, \
 				full_filename, filename_size);
 }
 
-static int storage_report_storage_status(const char *ip_addr, \
-			const char status)
+int storage_report_storage_status(const char *ip_addr, const char status)
 {
 	FDFSStorageBrief briefServer;
 	TrackerServerInfo trackerServer;
@@ -1127,13 +1126,24 @@ static int storage_report_storage_status(const char *ip_addr, \
 	TrackerServerInfo *pTServer;
 	TrackerServerInfo *pTServerEnd;
 	int result;
+	int report_count;
+	int success_count;
 	int i;
 
 	strcpy(briefServer.ip_addr, ip_addr);
 	briefServer.status = status;
 
+	logDebug("file: "__FILE__", line: %d, " \
+		"begin to report storage %s 's status as: %d", \
+		__LINE__, ip_addr, status);
+
 	if (!g_sync_old_done)
 	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"report storage %s 's status as: %d, " \
+			"waiting for g_sync_old_done turn to true...", \
+			__LINE__, ip_addr, status);
+
 		while (g_continue_flag && !g_sync_old_done)
 		{
 			sleep(1);
@@ -1143,7 +1153,15 @@ static int storage_report_storage_status(const char *ip_addr, \
 		{
 			return 0;
 		}
+
+		logDebug("file: "__FILE__", line: %d, " \
+			"report storage %s 's status as: %d, " \
+			"ok, g_sync_old_done turn to true", \
+			__LINE__, ip_addr, status);
 	}
+
+	report_count = 0;
+	success_count = 0;
 
 	result = 0;
 	pTServer = &trackerServer;
@@ -1204,16 +1222,23 @@ static int storage_report_storage_status(const char *ip_addr, \
 			continue;
 		}
 
+		report_count++;
 		if ((result=tracker_report_storage_status(pTServer, \
-			&briefServer)) != 0)
+			&briefServer)) == 0)
 		{
+			success_count++;
 		}
 
 		fdfs_quit(pTServer);
 		close(pTServer->sock);
 	}
 
-	return 0;
+	logDebug("file: "__FILE__", line: %d, " \
+		"report storage %s 's status as: %d done, " \
+		"report count: %d, success count: %d", \
+		__LINE__, ip_addr, status, report_count, success_count);
+
+	return success_count > 0 ? 0 : EAGAIN;
 }
 
 static int storage_reader_sync_init_req(BinLogReader *pReader)
