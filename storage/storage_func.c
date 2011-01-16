@@ -1433,6 +1433,11 @@ int storage_func_init(const char *filename, \
 		return result;
 	}
 
+	if ((result=storage_get_my_tracker_client_ip()) != 0)
+	{
+		return result;
+	}
+
 	if ((result=storage_check_and_make_data_dirs()) != 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \

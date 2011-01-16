@@ -109,7 +109,7 @@ static int storage_report_ip_changed(TrackerServerInfo *pTrackerServer)
 	}
 }
 
-static int storage_report_storage_ip_addr()
+int storage_get_my_tracker_client_ip()
 {
 	TrackerServerInfo *pGlobalServer;
 	TrackerServerInfo *pTServer;
@@ -204,6 +204,29 @@ static int storage_report_storage_ip_addr()
 		success_count++;
 	}
 	}
+
+	if (!g_continue_flag)
+	{
+		return EINTR;
+	}
+
+	return 0;
+}
+
+static int storage_report_storage_ip_addr()
+{
+	TrackerServerInfo *pGlobalServer;
+	TrackerServerInfo *pTServer;
+	TrackerServerInfo *pTServerEnd;
+	TrackerServerInfo trackerServer;
+	int success_count;
+	int result;
+	int i;
+
+	result = 0;
+	success_count = 0;
+	pTServer = &trackerServer;
+	pTServerEnd = g_tracker_group.servers + g_tracker_group.server_count;
 
 	logDebug("file: "__FILE__", line: %d, " \
 		"last my ip is %s, current my ip is %s", \

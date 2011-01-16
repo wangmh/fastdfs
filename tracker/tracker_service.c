@@ -1263,6 +1263,7 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 	TrackerStorageStat *pDest;
 	FDFSStorageStatBuff *pStatBuff;
 	int nPkgLen;
+	int ip_len;
 
 	nPkgLen = pTask->length - sizeof(TrackerHeader);
 	if (nPkgLen < FDFS_GROUP_NAME_MAX_LEN || \
@@ -1282,7 +1283,7 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 
 	memcpy(group_name, pTask->data + sizeof(TrackerHeader), \
 			FDFS_GROUP_NAME_MAX_LEN);
-	group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
+	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
 	pGroup = tracker_mem_get_group(group_name);
 	if (pGroup == NULL)
 	{
@@ -1295,10 +1296,11 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 
 	if (nPkgLen > FDFS_GROUP_NAME_MAX_LEN)
 	{
+		ip_len = nPkgLen - FDFS_GROUP_NAME_MAX_LEN;
 		pStorageIp = ip_addr;
 		memcpy(pStorageIp, pTask->data + sizeof(TrackerHeader) + \
-			FDFS_GROUP_NAME_MAX_LEN, IP_ADDRESS_SIZE);
-		*(pStorageIp + (IP_ADDRESS_SIZE - 1)) = '\0';
+			FDFS_GROUP_NAME_MAX_LEN, ip_len);
+		*(pStorageIp + ip_len) = '\0';
 	}
 	else
 	{

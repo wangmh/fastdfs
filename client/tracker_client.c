@@ -275,7 +275,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	*storage_count = in_bytes / sizeof(TrackerStorageStat);
 	if (*storage_count > max_storages)
 	{
-		logError("tracker server %s:%d insufficent space" \
+		logError("tracker server %s:%d insufficent space, " \
 			"max storage count: %d, expect count: %d", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, max_storages, *storage_count);
@@ -486,7 +486,7 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	*group_count = in_bytes / sizeof(TrackerGroupStat);
 	if (*group_count > max_groups)
 	{
-		logError("tracker server %s:%d insufficent space" \
+		logError("tracker server %s:%d insufficent space, " \
 			"max group count: %d, expect count: %d", \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, max_groups, *group_count);
