@@ -35,8 +35,12 @@
 
 #define RECOVERY_BINLOG_FILENAME	".binlog.recovery"
 #define RECOVERY_MARK_FILENAME		".recovery.mark"
+
 #define MARK_ITEM_BINLOG_OFFSET    	"binlog_offset"
 #define MARK_ITEM_FETCH_BINLOG_DONE    	"fetch_binlog_done"
+#define MARK_ITEM_SAVED_STORAGE_STATUS	"saved_storage_status"
+
+static int saved_storage_status = FDFS_STORAGE_STATUS_NONE;
 
 static char *recovery_get_binlog_filename(const void *pArg, \
                         char *full_filename);
@@ -98,7 +102,6 @@ static int storage_do_fetch_binlog(TrackerServerInfo *pSrcStorage, \
 static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
 {
 	int result;
-	int status;
 	int storage_count;
 	TrackerServerInfo trackerServer;
 	FDFSGroupStat groupStat;
@@ -115,7 +118,8 @@ static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
 	while (g_continue_flag)
 	{
 		result = tracker_get_storage_status(&g_tracker_group, \
-                	g_group_name, g_tracker_client_ip, &status);
+                		g_group_name, g_tracker_client_ip, \
+				&saved_storage_status);
 		if (result == ENOENT)
 		{
 			logWarning("file: "__FILE__", line: %d, " \
@@ -127,22 +131,23 @@ static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
 
 		if (result == 0)
 		{
-			if (status == FDFS_STORAGE_STATUS_INIT)
+			if (saved_storage_status == FDFS_STORAGE_STATUS_INIT)
 			{
 				logInfo("file: "__FILE__", line: %d, " \
 					"current storage: %s 's status is %d" \
 					", does not need recovery", __LINE__, \
-					g_tracker_client_ip);
+					g_tracker_client_ip, \
+					saved_storage_status);
 				return ENOENT;
 			}
 
-			if (status == FDFS_STORAGE_STATUS_IP_CHANGED || \
-			    status == FDFS_STORAGE_STATUS_DELETED)
+			if (saved_storage_status == FDFS_STORAGE_STATUS_IP_CHANGED || \
+			    saved_storage_status == FDFS_STORAGE_STATUS_DELETED)
 			{
 				logWarning("file: "__FILE__", line: %d, " \
 					"current storage: %s 's status is %d" \
 					", does not need recovery", __LINE__, \
-					g_tracker_client_ip, status);
+					g_tracker_client_ip, saved_storage_status);
 				return ENOENT;
 			}
 
@@ -326,13 +331,25 @@ static int recovery_write_to_mark_file(const char *pBasePath, \
 	int len;
 
 	len = sprintf(buff, \
+		"%s=%d\n" \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s=1\n",  \
+		MARK_ITEM_SAVED_STORAGE_STATUS, saved_storage_status, \
 		MARK_ITEM_BINLOG_OFFSET, pReader->binlog_offset, \
 		MARK_ITEM_FETCH_BINLOG_DONE);
 
 	return storage_write_to_fd(pReader->mark_fd, \
 		recovery_get_mark_filename, pBasePath, buff, len);
+}
+
+static int recovery_init_binlog_file(const char *pBasePath)
+{
+	char full_binlog_filename[MAX_PATH_SIZE];
+	char buff[1];
+
+	*buff = '\0';
+	recovery_get_binlog_filename(pBasePath, full_binlog_filename);
+	return writeToFile(full_binlog_filename, buff, 0);
 }
 
 static int recovery_init_mark_file(const char *pBasePath, \
@@ -345,8 +362,10 @@ static int recovery_init_mark_file(const char *pBasePath, \
 	recovery_get_mark_filename(pBasePath, full_filename);
 
 	len = sprintf(buff, \
+		"%s=%d\n" \
 		"%s=0\n" \
 		"%s=%d\n", \
+		MARK_ITEM_SAVED_STORAGE_STATUS, saved_storage_status, \
 		MARK_ITEM_BINLOG_OFFSET, \
 		MARK_ITEM_FETCH_BINLOG_DONE, fetch_binlog_done);
 	return writeToFile(full_filename, buff, len);
@@ -400,6 +419,19 @@ static int recovery_reader_init(const char *pBasePath, \
 		return EAGAIN;
 	}
 
+	saved_storage_status = iniGetIntValue(NULL, \
+			MARK_ITEM_SAVED_STORAGE_STATUS, &iniContext, -1);
+	if (saved_storage_status < 0)
+	{
+		iniFreeContext(&iniContext);
+
+		logError("file: "__FILE__", line: %d, " \
+			"in mark file \"%s\", %s: %d < 0", __LINE__, \
+			full_mark_filename, MARK_ITEM_SAVED_STORAGE_STATUS, \
+			saved_storage_status);
+		return EINVAL;
+	}
+
 	pReader->binlog_offset = iniGetInt64Value(NULL, \
 			MARK_ITEM_BINLOG_OFFSET, &iniContext, -1);
 	if (pReader->binlog_offset < 0)
@@ -407,9 +439,10 @@ static int recovery_reader_init(const char *pBasePath, \
 		iniFreeContext(&iniContext);
 
 		logError("file: "__FILE__", line: %d, " \
-			"in mark file \"%s\", binlog_offset: "\
+			"in mark file \"%s\", %s: "\
 			INT64_PRINTF_FORMAT" < 0", __LINE__, \
-			full_mark_filename, pReader->binlog_offset);
+			full_mark_filename, MARK_ITEM_BINLOG_OFFSET, \
+			pReader->binlog_offset);
 		return EINVAL;
 	}
 
@@ -475,7 +508,22 @@ int storage_disk_recovery_restore(const char *pBasePath)
 
 	recovery_write_to_mark_file(pBasePath, &reader);
 	storage_reader_destroy(&reader);
-	return 0;
+
+	while (g_continue_flag)
+	{
+		if (storage_report_storage_status(g_tracker_client_ip, \
+				saved_storage_status) == 0)
+		{
+			break;
+		}
+	}
+
+	if (!g_continue_flag)
+	{
+		return EINTR;
+	}
+
+	return storage_disk_recovery_finish(pBasePath);
 }
 
 int storage_disk_recovery_start(const int store_path_index)
@@ -485,19 +533,41 @@ int storage_disk_recovery_start(const int store_path_index)
 	char *pBasePath;
 
 	pBasePath = g_store_paths[store_path_index];
-	if ((result=storage_disk_recovery_finish(pBasePath)) != 0)
+	if ((result=recovery_init_mark_file(pBasePath, false)) != 0)
+	{
+		return result;
+	}
+
+	if ((result=recovery_init_binlog_file(pBasePath)) != 0)
 	{
 		return result;
 	}
 
 	if ((result=recovery_get_src_storage_server(&srcStorage)) != 0)
 	{
-		return result == ENOENT ? 0 : result;
+		if (result == ENOENT)
+		{
+			return storage_disk_recovery_finish(pBasePath);
+		}
+		else
+		{
+			return result;
+		}
 	}
 
-	if ((result=recovery_init_mark_file(pBasePath, false)) != 0)
+
+	while (g_continue_flag)
 	{
-		return result;
+		if (storage_report_storage_status(g_tracker_client_ip, \
+				FDFS_STORAGE_STATUS_RECOVERY) == 0)
+		{
+			break;
+		}
+	}
+
+	if (!g_continue_flag)
+	{
+		return EINTR;
 	}
 
 	if ((result=tracker_connect_server(&srcStorage)) != 0)
