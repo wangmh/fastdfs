@@ -141,21 +141,18 @@ int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 	pCurrentServer = pTrackerGroup->servers + server_index;
 	memcpy(pTrackerServer, pCurrentServer, sizeof(TrackerServerInfo));
 	pTrackerServer->sock = -1;
-	if (tracker_connect_server(pTrackerServer) == 0)
+	if ((result=tracker_connect_server(pTrackerServer)) == 0)
 	{
-		result = 0;
 		break;
 	}
 
-	result = ENOENT;
 	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pCurrentServer+1; pServer<pEnd; pServer++)
 	{
 		memcpy(pTrackerServer, pServer, sizeof(TrackerServerInfo));
 		pTrackerServer->sock = -1;
-		if (tracker_connect_server(pTrackerServer) == 0)
+		if ((result=tracker_connect_server(pTrackerServer)) == 0)
 		{
-			result = 0;
 			pTrackerGroup->server_index = pServer - \
 							pTrackerGroup->servers;
 			break;
@@ -166,9 +163,8 @@ int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 	{
 		memcpy(pTrackerServer, pServer, sizeof(TrackerServerInfo));
 		pTrackerServer->sock = -1;
-		if (tracker_connect_server(pTrackerServer) == 0)
+		if ((result=tracker_connect_server(pTrackerServer)) == 0)
 		{
-			result = 0;
 			pTrackerGroup->server_index = pServer - \
 							pTrackerGroup->servers;
 			break;
@@ -1133,7 +1129,7 @@ int tracker_get_storage_status(TrackerServerGroup *pTrackerGroup, \
 			continue;
 		}
 
-		if (storage_infos[0].status > *status) 
+		if (storage_infos[0].status > *status)
 		{
 			*status = storage_infos[0].status;
 		}

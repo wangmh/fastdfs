@@ -37,6 +37,7 @@
 #include "fdht_func.h"
 #include "fdht_client.h"
 #include "client_func.h"
+#include "storage_disk_recovery.h"
 
 #ifdef WITH_HTTPD
 #include "fdfs_http_shared.h"
@@ -557,6 +558,28 @@ static int storage_check_and_make_data_dirs()
 
 		if (g_sync_old_done && pathCreated)  //repair damaged disk
 		{
+			if ((result=storage_disk_recovery_start( \
+				g_store_paths[i])) != 0)
+			{
+				return result;
+			}
+		}
+
+		result = storage_disk_recovery_restore(g_store_paths[i]);
+		if (result == EAGAIN) //need to re-fetch binlog
+		{
+			if ((result=storage_disk_recovery_start( \
+				g_store_paths[i])) != 0)
+			{
+				return result;
+			}
+
+			result=storage_disk_recovery_restore(g_store_paths[i]);
+		}
+
+		if (result != 0)
+		{
+			return result;
 		}
 	}
 
