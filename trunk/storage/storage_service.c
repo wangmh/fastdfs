@@ -2448,6 +2448,8 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 static int storage_server_fetch_one_path_binlog_dealer( \
 		struct fast_task_info *pTask)
 {
+#define STORAGE_LAST_AHEAD_BYTES   (2 * FDFS_PROTO_PKG_LEN_SIZE)
+
 	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
 	BinLogReader *pReader;
@@ -2455,24 +2457,191 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 	char *pBasePath;
 	int result;
 	int record_len;
+	int base_path_len;
+	int len;
+	int store_path_index;
+	struct stat stat_buf;
+	char diskLogicPath[16];
+	char full_filename[MAX_PATH_SIZE];
+	char src_filename[MAX_PATH_SIZE];
+	bool bLast;
 	BinLogRecord record;
+	int64_t pkg_len;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
+	if (pClientInfo->total_length - pClientInfo->total_offset <= \
+		STORAGE_LAST_AHEAD_BYTES)  //finished, close the connection
+	{
+		task_finish_clean_up(pTask);
+		return 0;
+	}
+
 	pFileContext =  &(pClientInfo->file_context);
 	pReader = (BinLogReader *)pClientInfo->extra_arg;
 
-	pBasePath = g_store_paths[pFileContext->extra_info.upload.store_path_index];
+	store_path_index = pFileContext->extra_info.upload.store_path_index;
+	pBasePath = g_store_paths[store_path_index];
+	base_path_len = strlen(pBasePath);
 	pOutBuff = pTask->data;
+
+	bLast = false;
+	sprintf(diskLogicPath, "%c"STORAGE_DATA_DIR_FORMAT, \
+		FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, store_path_index);
 
 	do
 	{
 		result = storage_binlog_read(pReader, &record, &record_len);
 		if (result == ENOENT)  //no binlog record
 		{
+			bLast = true;
+			result = 0;
+			break;
+		}
+		else if (result != 0)
+		{
+			break;
+		}
+
+		if (record.pBasePath != pBasePath)
+		{
+			continue;
+		}
+
+		if (!(record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE
+		   || record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_FILE
+		   || record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK
+		   || record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_LINK))
+		{
+			continue;
+		}
+
+		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
+			record.pBasePath, record.true_filename);
+		if (lstat(full_filename, &stat_buf) != 0)
+		{
+			if (errno == ENOENT)
+			{
+				continue;
+			}
+			else
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"call stat fail, file: %s, "\
+					"error no: %d, error info: %s", \
+					__LINE__, full_filename, \
+					errno, STRERROR(errno));
+				result = errno != 0 ? errno : EPERM;
+				break;
+			}
+		}
+
+		if (S_ISLNK(stat_buf.st_mode))
+		{
+			if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE
+		 	|| record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_FILE)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"regular file %s change to symbol " \
+					"link file, some mistake happen?", \
+					__LINE__, full_filename);
+			if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE)
+			{
+			record.op_type = STORAGE_OP_TYPE_SOURCE_CREATE_LINK;
+			}
+			else
+			{
+			record.op_type = STORAGE_OP_TYPE_REPLICA_CREATE_LINK;
+			}
+			}
+		}
+		else
+		{
+			if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK 
+		 	|| record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_LINK)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"symbol link file %s change to " \
+					"regular file, some mistake happen?", \
+					__LINE__, full_filename);
+			if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK)
+			{
+			record.op_type = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
+			}
+			else
+			{
+			record.op_type = STORAGE_OP_TYPE_REPLICA_CREATE_FILE;
+			}
+			}
+		}
+
+		if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE
+		 || record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_FILE)
+		{
+			pOutBuff += sprintf(pOutBuff, "%d %c %s\n", \
+					(int)record.timestamp, \
+					record.op_type, record.filename);
+		}
+		else
+		{
+			if ((len=readlink(full_filename, src_filename, \
+					sizeof(src_filename))) < 0)
+			{
+				result = errno != 0 ? errno : EPERM;
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s, call readlink file " \
+					"%s fail, errno: %d, error info: %s", \
+					__LINE__, pTask->client_ip, \
+					full_filename, result, STRERROR(result));
+
+				if (result == ENOENT)
+				{
+					continue;
+				}
+				break;
+			}
+
+			if (len <= base_path_len)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"invalid symbol link file: %s, " \
+					"maybe not create by FastDFS?", \
+					__LINE__, full_filename);
+				continue;
+			}
+			*(src_filename + len) = '\0';
+
+			pOutBuff += sprintf(pOutBuff, "%d %c %s %s/%s\n", \
+					(int)record.timestamp, \
+					record.op_type, record.filename, \
+					diskLogicPath, \
+					src_filename + base_path_len + 1);
+		}
+
+		if (pTask->size - (pOutBuff - pTask->data) < \
+			STORAGE_BINLOG_LINE_SIZE + FDFS_PROTO_PKG_LEN_SIZE)
+		{
 			break;
 		}
 	} while(1);
 
+	if (result != 0) //error occurs
+	{
+		task_finish_clean_up(pTask);
+		return result;
+	}
+
+	pTask->length = pOutBuff - pTask->data;
+	if (bLast)
+	{
+		pkg_len = pClientInfo->total_offset + pTask->length;
+		long2buff(pkg_len, pOutBuff);
+
+		pTask->length += FDFS_PROTO_PKG_LEN_SIZE;
+		pClientInfo->total_length = pkg_len + FDFS_PROTO_PKG_LEN_SIZE \
+						+ STORAGE_LAST_AHEAD_BYTES;
+	}
+
+	storage_nio_notify(pTask);
 	return 0;
 }
 

@@ -1727,7 +1727,7 @@ static int storage_binlog_read_line(BinLogReader *pReader, \
 int storage_binlog_read(BinLogReader *pReader, \
 			BinLogRecord *pRecord, int *record_length)
 {
-	char line[256];
+	char line[STORAGE_BINLOG_LINE_SIZE];
 	char *cols[3];
 	int result;
 
