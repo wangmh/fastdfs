@@ -33,6 +33,9 @@
 
 typedef int (*TaskDealFunc)(struct fast_task_info *pTask);
 
+/* this clean func will be called when connection disconnected */
+typedef void (*DisconnectCleanFunc)(struct fast_task_info *pTask);
+
 typedef void (*DeleteFileLogCallback)(struct fast_task_info *pTask, \
 		const int err_no);
 
@@ -100,6 +103,8 @@ typedef struct
 
 	FDFSStorageServer *pSrcStorage;
 	TaskDealFunc deal_func;
+	void *extra_arg;
+	DisconnectCleanFunc clean_func;
 } StorageClientInfo;
 
 struct storage_nio_thread_data
