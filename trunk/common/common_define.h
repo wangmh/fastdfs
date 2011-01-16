@@ -82,6 +82,7 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 #define TIME_NONE                               -1
 
 #define IP_ADDRESS_SIZE	16
+#define INFINITE_FILE_SIZE (256 * 1024LL * 1024 * 1024 * 1024 * 1024LL)
 
 #ifndef __cplusplus
 #ifndef true

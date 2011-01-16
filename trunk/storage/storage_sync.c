@@ -1096,8 +1096,7 @@ static char *get_mark_filename_by_ip_and_port(const char *ip_addr, \
 	return full_filename;
 }
 
-static char *get_mark_filename_by_reader(const void *pArg, \
-			char *full_filename)
+char *get_mark_filename_by_reader(const void *pArg, char *full_filename)
 {
 	const BinLogReader *pReader;
 	static char buff[MAX_PATH_SIZE];

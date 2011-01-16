@@ -83,6 +83,7 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage);
 int kill_storage_sync_threads();
 int fdfs_binlog_sync_func(void *args);
 
+char *get_mark_filename_by_reader(const void *pArg, char *full_filename);
 int storage_unlink_mark_file(const char *ip_addr);
 int storage_rename_mark_file(const char *old_ip_addr, const int old_port, \
 		const char *new_ip_addr, const int new_port);

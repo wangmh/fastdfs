@@ -38,35 +38,62 @@
 #define MARK_ITEM_BINLOG_OFFSET    	"binlog_offset"
 #define MARK_ITEM_FETCH_BINLOG_DONE    	"fetch_binlog_done"
 
-/*
-static int storage_do_changelog_req(TrackerServerInfo *pTrackerServer)
+static char *recovery_get_binlog_filename(const void *pArg, \
+                        char *full_filename);
+
+static int storage_do_fetch_binlog(TrackerServerInfo *pSrcStorage, \
+		const int store_path_index)
 {
-	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN];
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 1];
+	char full_binlog_filename[MAX_PATH_SIZE];
 	TrackerHeader *pHeader;
+	char *pBasePath;
 	int result;
+	int64_t in_bytes;
+	int64_t file_bytes;
+
+	pBasePath = g_store_paths[store_path_index];
+	recovery_get_binlog_filename(pBasePath, full_binlog_filename);
 
 	memset(out_buff, 0, sizeof(out_buff));
 	pHeader = (TrackerHeader *)out_buff;
 
-	long2buff(FDFS_GROUP_NAME_MAX_LEN, pHeader->pkg_len);
-	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ;
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + 1, pHeader->pkg_len);
+	pHeader->cmd = STORAGE_PROTO_CMD_FETCH_ONE_PATH_BINLOG;
 	strcpy(out_buff + sizeof(TrackerHeader), g_group_name);
-	if((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
-		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
-		g_fdfs_network_timeout)) != 0)
+	*(out_buff + sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN) = \
+			store_path_index;
+
+	if((result=tcpsenddata_nb(pSrcStorage->sock, out_buff, \
+		sizeof(out_buff), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
 			"errno: %d, error info: %s.", \
-			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, \
+			__LINE__, pSrcStorage->ip_addr, pSrcStorage->port, \
 			result, STRERROR(result));
 		return result;
 	}
 
-	return tracker_deal_changelog_response(pTrackerServer);
+	if ((result=fdfs_recv_header(pSrcStorage, &in_bytes)) != 0)
+	{
+		return result;
+	}
+
+	if ((result=tcprecvfile(pSrcStorage->sock, full_binlog_filename, \
+				in_bytes, 0, g_fdfs_network_timeout, \
+				&file_bytes)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, tcprecvfile fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pSrcStorage->ip_addr, pSrcStorage->port, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	return 0;
 }
-*/
 
 static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
 {
@@ -451,12 +478,13 @@ int storage_disk_recovery_restore(const char *pBasePath)
 	return 0;
 }
 
-int storage_disk_recovery_start(const char *pBasePath)
+int storage_disk_recovery_start(const int store_path_index)
 {
-	char full_binlog_filename[MAX_PATH_SIZE];
 	TrackerServerInfo srcStorage;
 	int result;
+	char *pBasePath;
 
+	pBasePath = g_store_paths[store_path_index];
 	if ((result=storage_disk_recovery_finish(pBasePath)) != 0)
 	{
 		return result;
@@ -472,7 +500,17 @@ int storage_disk_recovery_start(const char *pBasePath)
 		return result;
 	}
 
-	recovery_get_binlog_filename(pBasePath, full_binlog_filename);
+	if ((result=tracker_connect_server(&srcStorage)) != 0)
+	{
+		return result;
+	}
+
+	result = storage_do_fetch_binlog(&srcStorage, store_path_index);
+	tracker_disconnect_server(&srcStorage);
+	if (result != 0)
+	{
+		return result;
+	}
 
 	//set fetch binlog done
 	if ((result=recovery_init_mark_file(pBasePath, true)) != 0)

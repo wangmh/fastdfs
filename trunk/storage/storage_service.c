@@ -2609,6 +2609,15 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 				continue;
 			}
 			*(src_filename + len) = '\0';
+			if (!fileExists(src_filename))
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"client ip: %s, symbol link file: %s, "\
+					"it's source file: %s not exist", \
+					__LINE__, pTask->client_ip, \
+					full_filename, src_filename);
+				continue;
+			}
 
 			pOutBuff += sprintf(pOutBuff, "%d %c %s %s/%s\n", \
 					(int)record.timestamp, \
@@ -2645,6 +2654,33 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 	return 0;
 }
 
+static void fetch_one_path_binlog_finish_clean_up(struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	BinLogReader *pReader;
+	//char full_filename[MAX_PATH_SIZE];
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pReader = (BinLogReader *)pClientInfo->extra_arg;
+	if (pReader == NULL)
+	{
+		return;
+	}
+
+	pClientInfo->extra_arg = NULL;
+
+	/*
+	get_mark_filename_by_reader(pReader, full_filename);
+	if (fileExists(full_filename))
+	{
+		unlink(full_filename);
+	}
+	*/
+
+	storage_reader_destroy(pReader);
+	free(pReader);
+}
+
 static int storage_server_do_fetch_one_path_binlog( \
 		struct fast_task_info *pTask, const int store_path_index)
 {
@@ -2674,6 +2710,7 @@ static int storage_server_do_fetch_one_path_binlog( \
 	}
 
 	pClientInfo->deal_func = storage_server_fetch_one_path_binlog_dealer;
+	pClientInfo->clean_func = fetch_one_path_binlog_finish_clean_up;
 
 	pFileContext->fd = -1;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_READ;
@@ -2682,7 +2719,7 @@ static int storage_server_do_fetch_one_path_binlog( \
 	pFileContext->extra_info.upload.store_path_index = store_path_index;
 	pClientInfo->extra_arg = pReader;
 
-	pClientInfo->total_length = FDFS_INFINITE_FILE_SIZE + \
+	pClientInfo->total_length = INFINITE_FILE_SIZE + \
 					sizeof(TrackerHeader);
 	pClientInfo->total_offset = 0;
 	pTask->length = sizeof(TrackerHeader);
