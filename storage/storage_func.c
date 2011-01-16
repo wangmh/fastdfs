@@ -558,8 +558,7 @@ static int storage_check_and_make_data_dirs()
 
 		if (g_sync_old_done && pathCreated)  //repair damaged disk
 		{
-			if ((result=storage_disk_recovery_start( \
-				g_store_paths[i])) != 0)
+			if ((result=storage_disk_recovery_start(i)) != 0)
 			{
 				return result;
 			}
@@ -568,8 +567,7 @@ static int storage_check_and_make_data_dirs()
 		result = storage_disk_recovery_restore(g_store_paths[i]);
 		if (result == EAGAIN) //need to re-fetch binlog
 		{
-			if ((result=storage_disk_recovery_start( \
-				g_store_paths[i])) != 0)
+			if ((result=storage_disk_recovery_start(i)) != 0)
 			{
 				return result;
 			}

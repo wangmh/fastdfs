@@ -26,6 +26,7 @@
 #include <net/if.h>
 #include <sys/poll.h>
 #include <sys/select.h>
+#include "shared_func.h"
 
 #ifdef OS_SUNOS
 #include <sys/sockio.h>
@@ -785,7 +786,7 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no)
 
 int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 		const int fsync_after_written_bytes, const int timeout, \
-		int64_t *total_recv_bytes)
+		int64_t *true_file_bytes)
 {
 	int fd;
 	char buff[FDFS_WRITE_BUFF_SIZE];
@@ -797,7 +798,7 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 	int count;
 	tcprecvdata_exfunc recv_func;
 
-	*total_recv_bytes = 0;
+	*true_file_bytes = 0;
 	flags = fcntl(sock, F_GETFL, 0);
 	if (flags < 0)
 	{
@@ -834,15 +835,17 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 
 		result = recv_func(sock, buff, recv_bytes, \
 				timeout, &count);
-		*total_recv_bytes += count;
 		if (result != 0)
 		{
-			close(fd);
-			unlink(filename);
-			return result;
+			if (file_bytes != INFINITE_FILE_SIZE)
+			{
+				close(fd);
+				unlink(filename);
+				return result;
+			}
 		}
 
-		if (write(fd, buff, recv_bytes) != recv_bytes)
+		if (count > 0 && write(fd, buff, count) != count)
 		{
 			result = errno != 0 ? errno: EIO;
 			close(fd);
@@ -850,9 +853,10 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 			return result;
 		}
 
+		*true_file_bytes += count;
 		if (fsync_after_written_bytes > 0)
 		{
-			written_bytes += recv_bytes;
+			written_bytes += count;
 			if (written_bytes >= fsync_after_written_bytes)
 			{
 				written_bytes = 0;
@@ -866,7 +870,53 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 			}
 		}
 
-		remain_bytes -= recv_bytes;
+		if (result != 0)  //recv infinite file, does not delete the file
+		{
+			do
+			{
+				if (*true_file_bytes < 8)
+				{
+					break;
+				}
+
+				if (lseek(fd, -8, SEEK_CUR) < 0)
+				{
+					result = errno != 0 ? errno : EIO;
+					break;
+				}
+
+				if (read(fd, buff, 8) != 8)
+				{
+					result = errno != 0 ? errno : EIO;
+					break;
+				}
+
+				*true_file_bytes -= 8;
+				if (buff2long(buff) != *true_file_bytes)
+				{
+					result = EINVAL;
+					break;
+				}
+
+				if (ftruncate(fd, *true_file_bytes) != 0)
+				{
+					result = errno != 0 ? errno : EIO;
+					break;
+				}
+
+				result = 0;
+			} while (0);
+		
+			close(fd);
+			if (result != 0)
+			{
+				unlink(filename);
+			}
+
+			return result;
+		}
+
+		remain_bytes -= count;
 	}
 
 	close(fd);

@@ -255,12 +255,19 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
  *          file_bytes: file size (bytes) 
  *          fsync_after_written_bytes: call fsync every x bytes
  *          timeout: read/recv timeout
- *          total_recv_bytes: store the total recv bytes
+ *          true_file_bytes: store the true file bytes
  *  return: error no, 0 success, != 0 fail
 */
 int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 		const int fsync_after_written_bytes, const int timeout, \
-		int64_t *total_recv_bytes);
+		int64_t *true_file_bytes);
+
+
+#define tcprecvinfinitefile(sock, filename, fsync_after_written_bytes, \
+			timeout, file_bytes) \
+	tcprecvfile(sock, filename, INFINITE_FILE_SIZE, \
+		fsync_after_written_bytes, timeout, file_bytes)
+
 
 /** receive data to a file
  *  parameters:
