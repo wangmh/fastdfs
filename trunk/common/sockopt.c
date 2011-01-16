@@ -879,7 +879,14 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 					break;
 				}
 
-				if (lseek(fd, -8, SEEK_CUR) < 0)
+				close(fd);
+				fd = open(filename, O_RDONLY);
+				if (fd < 0)
+				{
+					return errno != 0 ? errno : EACCES;
+				}
+
+				if (lseek(fd, -8, SEEK_END) < 0)
 				{
 					result = errno != 0 ? errno : EIO;
 					break;
@@ -892,6 +899,7 @@ int tcprecvfile(int sock, const char *filename, const int64_t file_bytes, \
 				}
 
 				*true_file_bytes -= 8;
+				printf("fd4=%d, file size: %ld :: %ld\n", fd, buff2long(buff), *true_file_bytes);
 				if (buff2long(buff) != *true_file_bytes)
 				{
 					result = EINVAL;

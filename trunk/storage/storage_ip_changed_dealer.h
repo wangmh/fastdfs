@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+int storage_get_my_tracker_client_ip();
+
 int storage_changelog_req();
 int storage_check_ip_changed();
 

@@ -2642,7 +2642,8 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 	pTask->length = pOutBuff - pTask->data;
 	if (bLast)
 	{
-		pkg_len = pClientInfo->total_offset + pTask->length;
+		pkg_len = pClientInfo->total_offset + pTask->length - \
+				sizeof(TrackerHeader);
 		long2buff(pkg_len, pOutBuff);
 
 		pTask->length += FDFS_PROTO_PKG_LEN_SIZE;
