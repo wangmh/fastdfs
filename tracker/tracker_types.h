@@ -82,6 +82,8 @@
 
 #define FDFS_STORAGE_STORE_PATH_PREFIX_CHAR  'M'
 
+#define FDFS_INFINITE_FILE_SIZE (256 * 1024LL * 1024 * 1024 * 1024 * 1024LL)
+
 typedef struct
 {
 	char status;

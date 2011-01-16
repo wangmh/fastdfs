@@ -39,30 +39,12 @@ static int storage_nio_init(struct fast_task_info *pTask);
 void task_finish_clean_up(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
-        StorageFileContext *pFileContext;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
-	pFileContext = &(pClientInfo->file_context);
 
-	if (pFileContext->fd > 0)
+	if (pClientInfo->clean_func != NULL)
 	{
-		close(pFileContext->fd);
-
-		/* if file does not write to the end, delete it */
-		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE && \
-			pFileContext->offset < pFileContext->end)
-		{
-			if (unlink(pFileContext->filename) != 0)
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"client ip: %s, " \
-					"delete useless file %s fail," \
-					"errno: %d, error info: %s", \
-					__LINE__, pTask->client_ip, \
-					pFileContext->filename, \
-					errno, STRERROR(errno));
-			}
-		}
+		pClientInfo->clean_func(pTask);
 	}
 
 	close(pClientInfo->sock);
@@ -366,7 +348,7 @@ static void client_sock_read(int sock, short event, void *arg)
 			{
 				pClientInfo->total_offset += pTask->length;
 
-				/* continue to write to file */
+				/* continue write to file */
 				storage_dio_queue_push(pTask);
 			}
 
@@ -462,6 +444,8 @@ static void client_sock_write(int sock, short event, void *arg)
 			else  //continue to send file content
 			{
 				pTask->length = 0;
+
+				/* continue read from file */
 				storage_dio_queue_push(pTask);
 			}
 

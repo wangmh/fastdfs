@@ -2320,7 +2320,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 			"expect length > %d", __LINE__, \
 			STORAGE_PROTO_CMD_QUERY_FILE_INFO, \
 			pTask->client_ip,  \
-			nInPackLen, FDFS_PROTO_PKG_LEN_SIZE);
+			nInPackLen, FDFS_GROUP_NAME_MAX_LEN);
 		return EINVAL;
 	}
 
@@ -2443,6 +2443,143 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 
 	pClientInfo->total_length = p - pTask->data;
 	return 0;
+}
+
+static int storage_server_fetch_one_path_binlog_dealer( \
+		struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	BinLogReader *pReader;
+	char *pOutBuff;
+	char *pBasePath;
+	int result;
+	int record_len;
+	BinLogRecord record;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+	pReader = (BinLogReader *)pClientInfo->extra_arg;
+
+	pBasePath = g_store_paths[pFileContext->extra_info.upload.store_path_index];
+	pOutBuff = pTask->data;
+
+	do
+	{
+		result = storage_binlog_read(pReader, &record, &record_len);
+		if (result == ENOENT)  //no binlog record
+		{
+			break;
+		}
+	} while(1);
+
+	return 0;
+}
+
+static int storage_server_do_fetch_one_path_binlog( \
+		struct fast_task_info *pTask, const int store_path_index)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	BinLogReader *pReader;
+	TrackerHeader *pHeader;
+	int result;
+
+	pReader = (BinLogReader *)malloc(sizeof(BinLogReader));
+	if (pReader == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(BinLogReader),
+			errno, STRERROR(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+
+	if ((result=storage_reader_init(NULL, pReader)) != 0)
+	{
+		storage_reader_destroy(pReader);
+		return result;
+	}
+
+	pClientInfo->deal_func = storage_server_fetch_one_path_binlog_dealer;
+
+	pFileContext->fd = -1;
+	pFileContext->op = FDFS_STORAGE_FILE_OP_READ;
+	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
+		pTask, store_path_index, pFileContext->op);
+	pFileContext->extra_info.upload.store_path_index = store_path_index;
+	pClientInfo->extra_arg = pReader;
+
+	pClientInfo->total_length = FDFS_INFINITE_FILE_SIZE + \
+					sizeof(TrackerHeader);
+	pClientInfo->total_offset = 0;
+	pTask->length = sizeof(TrackerHeader);
+	pHeader = (TrackerHeader *)pTask->data;
+	pHeader->status = 0;
+	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
+	long2buff(pClientInfo->total_length - sizeof(TrackerHeader), \
+			pHeader->pkg_len);
+
+	storage_nio_notify(pTask);
+
+	return STORAGE_STATUE_DEAL_FILE;
+}
+
+/**
+FDFS_GROUP_NAME_MAX_LEN bytes: group_name
+1 byte: store path index
+**/
+static int storage_server_fetch_one_path_binlog(struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	char *in_buff;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	int store_path_index;
+	int64_t nInPackLen;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
+	if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN + 1)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT" is not correct, " \
+			"expect length = %d", __LINE__, \
+			STORAGE_PROTO_CMD_FETCH_ONE_PATH_BINLOG, \
+			pTask->client_ip,  \
+			nInPackLen, FDFS_GROUP_NAME_MAX_LEN + 1);
+		return EINVAL;
+	}
+
+	in_buff = pTask->data + sizeof(TrackerHeader);
+	memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
+	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
+	if (strcmp(group_name, g_group_name) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip:%s, group_name: %s " \
+			"not correct, should be: %s", \
+			__LINE__, pTask->client_ip, \
+			group_name, g_group_name);
+		return EINVAL;
+	}
+
+	store_path_index = *(in_buff + FDFS_GROUP_NAME_MAX_LEN);
+	if (store_path_index < 0 || store_path_index >= g_path_count)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, store_path_index: %d " \
+			"is invalid", __LINE__, \
+			pTask->client_ip, store_path_index);
+		return EINVAL;
+	}
+
+	return storage_server_do_fetch_one_path_binlog( \
+			pTask, store_path_index);
 }
 
 /**
@@ -3548,7 +3685,6 @@ static int storage_do_delete_file(struct fast_task_info *pTask, \
 	pFileContext =  &(pClientInfo->file_context);
 
 	pClientInfo->deal_func = dio_deal_task;
-
 	pFileContext->fd = -1;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_DELETE;
 	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
@@ -3578,6 +3714,7 @@ static int storage_read_from_file(struct fast_task_info *pTask, \
 	pFileContext =  &(pClientInfo->file_context);
 
 	pClientInfo->deal_func = dio_deal_task;
+	pClientInfo->clean_func = dio_finish_clean_up;
 	pClientInfo->total_length = sizeof(TrackerHeader) + download_bytes;
 	pClientInfo->total_offset = 0;
 
@@ -3619,6 +3756,7 @@ static int storage_write_to_file(struct fast_task_info *pTask, \
 	pFileContext =  &(pClientInfo->file_context);
 
 	pClientInfo->deal_func = dio_deal_task;
+	pClientInfo->clean_func = dio_finish_clean_up;
 
 	pFileContext->fd = -1;
 	pFileContext->buff_offset = buff_offset;
@@ -4369,6 +4507,9 @@ int storage_deal_task(struct fast_task_info *pTask)
 			break;
 		case STORAGE_PROTO_CMD_QUERY_FILE_INFO:
 			result = storage_server_query_file_info(pTask);
+			break;
+		case STORAGE_PROTO_CMD_FETCH_ONE_PATH_BINLOG:
+			result = storage_server_fetch_one_path_binlog(pTask);
 			break;
 		case FDFS_PROTO_CMD_QUIT:
 			task_finish_clean_up(pTask);

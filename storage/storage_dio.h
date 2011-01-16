@@ -51,6 +51,8 @@ int storage_dio_queue_push(struct fast_task_info *pTask);
 
 int dio_deal_task(struct fast_task_info *pTask);
 
+void dio_finish_clean_up(struct fast_task_info *pTask);
+
 #ifdef __cplusplus
 }
 #endif

@@ -476,6 +476,33 @@ int dio_deal_task(struct fast_task_info *pTask)
 	return result;
 }
 
+void dio_finish_clean_up(struct fast_task_info *pTask)
+{
+        StorageFileContext *pFileContext;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+	if (pFileContext->fd > 0)
+	{
+		close(pFileContext->fd);
+
+		/* if file does not write to the end, delete it */
+		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE && \
+			pFileContext->offset < pFileContext->end)
+		{
+			if (unlink(pFileContext->filename) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s, " \
+					"delete useless file %s fail," \
+					"errno: %d, error info: %s", \
+					__LINE__, pTask->client_ip, \
+					pFileContext->filename, \
+					errno, STRERROR(errno));
+			}
+		}
+	}
+}
+
 static void *dio_thread_entrance(void* arg) 
 {
 	int result;
