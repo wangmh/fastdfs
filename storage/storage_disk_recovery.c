@@ -32,6 +32,7 @@
 #include "storage_sync.h"
 #include "tracker_client.h"
 #include "storage_disk_recovery.h"
+#include "storage_client.h"
 
 #define RECOVERY_BINLOG_FILENAME	".binlog.recovery"
 #define RECOVERY_MARK_FILENAME		".recovery.mark"
@@ -468,6 +469,147 @@ static int recovery_reader_init(const char *pBasePath, \
 	return 0;
 }
 
+static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
+		TrackerServerInfo *pSrcStorage)
+{
+	TrackerServerInfo *pTrackerServer;
+	BinLogRecord record;
+	int record_length;
+	int result;
+	int count;
+	int64_t file_size;
+	char local_filename[MAX_PATH_SIZE];
+	char src_filename[MAX_PATH_SIZE];
+	char *pSrcFilename;
+
+	pTrackerServer = g_tracker_group.servers;
+	count = 0;
+	result = 0;
+
+	while (g_continue_flag)
+	{
+	if ((result=tracker_connect_server(pSrcStorage)) != 0)
+	{
+		sleep(5);
+		continue;
+	}
+
+	while (1)
+	{
+		result=storage_binlog_read(pReader, &record, &record_length);
+		if (result != 0)
+		{
+			if (result == ENOENT)
+			{
+				result = 0;
+			}
+
+			g_continue_flag = false;
+			break;
+		}
+
+		if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE
+		 || record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_FILE)
+		{
+			sprintf(local_filename, "%s/data/%s", \
+				record.pBasePath, record.true_filename);
+			result = storage_download_file_to_file(pTrackerServer, \
+					pSrcStorage, g_group_name, \
+					record.filename, local_filename, \
+					&file_size);
+			if (result != 0 && result != ENOENT)
+			{
+				break;
+			}
+		}
+		else if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK
+		      || record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_LINK)
+		{
+			pSrcFilename = strchr(record.filename, ' ');
+			if (pSrcFilename == NULL)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"invalid binlog file line: %s", \
+					__LINE__, record.filename);
+				result = EINVAL;
+				g_continue_flag = false;
+				break;
+			}
+
+			record.filename_len = pSrcFilename - record.filename;
+			*pSrcFilename = '\0';
+			pSrcFilename++;
+
+			if ((result=storage_split_filename(record.filename, \
+					&record.filename_len, \
+					record.true_filename, \
+					&record.pBasePath)) != 0)
+			{
+				g_continue_flag = false;
+				break;
+			}
+			sprintf(local_filename, "%s/data/%s", \
+				record.pBasePath, record.true_filename);
+
+			if ((result=storage_split_filename(pSrcFilename, \
+					&record.filename_len, \
+					record.true_filename, \
+					&record.pBasePath)) != 0)
+			{
+				g_continue_flag = false;
+				break;
+			}
+			sprintf(src_filename, "%s/data/%s", \
+				record.pBasePath, record.true_filename);
+			if (symlink(src_filename, local_filename) != 0)
+			{
+				result = errno != 0 ? errno : ENOENT;
+				logError("file: "__FILE__", line: %d, " \
+					"link file %s to %s fail, " \
+					"errno: %d, error info: %s", __LINE__,\
+					src_filename, local_filename, \
+					result, STRERROR(result));
+
+				if (result != ENOENT && result != EEXIST)
+				{
+					g_continue_flag = false;
+					break;
+				}
+			}
+		}
+		else
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"invalid file op type: %d", \
+				__LINE__, record.op_type);
+			result = EINVAL;
+			g_continue_flag = false;
+			break;
+		}
+
+		count++;
+		if (count == 1000)
+		{
+			recovery_write_to_mark_file(pBasePath, pReader);
+			count = 0;
+		}
+	}
+
+	tracker_disconnect_server(pSrcStorage);
+	if (count > 0)
+	{
+		recovery_write_to_mark_file(pBasePath, pReader);
+		count = 0;
+	}
+	else
+	{
+		sleep(5);
+	}
+	}
+
+	return result;
+}
+
 int storage_disk_recovery_restore(const char *pBasePath)
 {
 	char full_binlog_filename[MAX_PATH_SIZE];
@@ -506,8 +648,15 @@ int storage_disk_recovery_restore(const char *pBasePath)
 		return result;
 	}
 
+	result = storage_do_recovery(pBasePath, &reader, &srcStorage);
+
 	recovery_write_to_mark_file(pBasePath, &reader);
 	storage_reader_destroy(&reader);
+
+	if (result != 0)
+	{
+		return result;
+	}
 
 	while (g_continue_flag)
 	{
@@ -516,6 +665,8 @@ int storage_disk_recovery_restore(const char *pBasePath)
 		{
 			break;
 		}
+
+		sleep(5);
 	}
 
 	if (!g_continue_flag)
