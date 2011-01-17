@@ -2623,7 +2623,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 					(int)record.timestamp, \
 					record.op_type, record.filename, \
 					diskLogicPath, \
-					src_filename + base_path_len + 1);
+					src_filename + base_path_len + 6);
 		}
 
 		if (pTask->size - (pOutBuff - pTask->data) < \

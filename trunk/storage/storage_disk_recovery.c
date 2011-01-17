@@ -551,6 +551,7 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 			sprintf(local_filename, "%s/data/%s", \
 				record.pBasePath, record.true_filename);
 
+			record.filename_len = strlen(pSrcFilename);
 			if ((result=storage_split_filename(pSrcFilename, \
 					&record.filename_len, \
 					record.true_filename, \
