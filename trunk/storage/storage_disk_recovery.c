@@ -478,6 +478,7 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 	int result;
 	int count;
 	int64_t file_size;
+	bool bContinueFlag;
 	char local_filename[MAX_PATH_SIZE];
 	char src_filename[MAX_PATH_SIZE];
 	char *pSrcFilename;
@@ -486,7 +487,8 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 	count = 0;
 	result = 0;
 
-	while (g_continue_flag)
+	bContinueFlag = true;
+	while (bContinueFlag)
 	{
 	if ((result=tracker_connect_server(pSrcStorage)) != 0)
 	{
@@ -504,7 +506,9 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 				result = 0;
 			}
 
-			g_continue_flag = false;
+			logInfo("storage_binlog_read done");
+
+			bContinueFlag = false;
 			break;
 		}
 
@@ -532,7 +536,7 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 					"invalid binlog file line: %s", \
 					__LINE__, record.filename);
 				result = EINVAL;
-				g_continue_flag = false;
+				bContinueFlag = false;
 				break;
 			}
 
@@ -545,7 +549,7 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 					record.true_filename, \
 					&record.pBasePath)) != 0)
 			{
-				g_continue_flag = false;
+				bContinueFlag = false;
 				break;
 			}
 			sprintf(local_filename, "%s/data/%s", \
@@ -557,7 +561,7 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 					record.true_filename, \
 					&record.pBasePath)) != 0)
 			{
-				g_continue_flag = false;
+				bContinueFlag = false;
 				break;
 			}
 			sprintf(src_filename, "%s/data/%s", \
@@ -573,7 +577,7 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 
 				if (result != ENOENT && result != EEXIST)
 				{
-					g_continue_flag = false;
+					bContinueFlag = false;
 					break;
 				}
 			}
@@ -584,10 +588,11 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 				"invalid file op type: %d", \
 				__LINE__, record.op_type);
 			result = EINVAL;
-			g_continue_flag = false;
+			bContinueFlag = false;
 			break;
 		}
 
+		pReader->binlog_offset += record_length;
 		count++;
 		if (count == 1000)
 		{
