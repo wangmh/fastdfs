@@ -2659,7 +2659,7 @@ static void fetch_one_path_binlog_finish_clean_up(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
 	BinLogReader *pReader;
-	//char full_filename[MAX_PATH_SIZE];
+	char full_filename[MAX_PATH_SIZE];
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pReader = (BinLogReader *)pClientInfo->extra_arg;
@@ -2670,15 +2670,13 @@ static void fetch_one_path_binlog_finish_clean_up(struct fast_task_info *pTask)
 
 	pClientInfo->extra_arg = NULL;
 
-	/*
+	storage_reader_destroy(pReader);
 	get_mark_filename_by_reader(pReader, full_filename);
 	if (fileExists(full_filename))
 	{
 		unlink(full_filename);
 	}
-	*/
 
-	storage_reader_destroy(pReader);
 	free(pReader);
 }
 
