@@ -255,6 +255,9 @@ static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
 		return EINTR;
 	}
 
+	logDebug("file: "__FILE__", line: %d, " \
+		"disk recovery: get source storage server %s:%d", \
+		__LINE__, pSrcStorage->ip_addr, pSrcStorage->port);
 	return 0;
 }
 
@@ -506,8 +509,6 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 				result = 0;
 			}
 
-			logInfo("storage_binlog_read done");
-
 			bContinueFlag = false;
 			break;
 		}
@@ -633,6 +634,10 @@ int storage_disk_recovery_restore(const char *pBasePath)
 		return 0;
 	}
 
+	logDebug("file: "__FILE__", line: %d, " \
+		"disk recovery: begin recovery data path: %s ...", \
+		__LINE__, pBasePath);
+
 	if ((result=recovery_get_src_storage_server(&srcStorage)) != 0)
 	{
 		if (result == ENOENT)
@@ -680,6 +685,10 @@ int storage_disk_recovery_restore(const char *pBasePath)
 		return EINTR;
 	}
 
+	logDebug("file: "__FILE__", line: %d, " \
+		"disk recovery: end of recovery data path: %s", \
+		__LINE__, pBasePath);
+
 	return storage_disk_recovery_finish(pBasePath);
 }
 
@@ -711,7 +720,6 @@ int storage_disk_recovery_start(const int store_path_index)
 			return result;
 		}
 	}
-
 
 	while (g_continue_flag)
 	{

@@ -2619,6 +2619,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 				continue;
 			}
 
+			//full filename format: ${base_path}/data/filename
 			pOutBuff += sprintf(pOutBuff, "%d %c %s %s/%s\n", \
 					(int)record.timestamp, \
 					record.op_type, record.filename, \
