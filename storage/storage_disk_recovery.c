@@ -162,7 +162,7 @@ static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
 	{
 		if ((result=tracker_get_connection_r(&trackerServer)) != 0)
 		{
-			sleep(1);
+			sleep(5);
 			continue;
 		}
 
@@ -482,6 +482,8 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 	int log_level;
 	int count;
 	int64_t file_size;
+	int64_t total_count;
+	int64_t success_count;
 	bool bContinueFlag;
 	char local_filename[MAX_PATH_SIZE];
 	char src_filename[MAX_PATH_SIZE];
@@ -489,7 +491,13 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 
 	pTrackerServer = g_tracker_group.servers;
 	count = 0;
+	total_count = 0;
+	success_count = 0;
 	result = 0;
+
+	logDebug("file: "__FILE__", line: %d, " \
+		"disk recovery: recovering files of data path: %s ...", \
+		__LINE__, pBasePath);
 
 	bContinueFlag = true;
 	while (bContinueFlag)
@@ -514,6 +522,7 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 			break;
 		}
 
+		total_count++;
 		if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE
 		 || record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_FILE)
 		{
@@ -523,7 +532,11 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 					pSrcStorage, g_group_name, \
 					record.filename, local_filename, \
 					&file_size);
-			if (result != 0 && result != ENOENT)
+			if (result == 0)
+			{
+				success_count++;
+			}
+			else if (result != ENOENT)
 			{
 				break;
 			}
@@ -568,7 +581,11 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 			}
 			sprintf(src_filename, "%s/data/%s", \
 				record.pBasePath, record.true_filename);
-			if (symlink(src_filename, local_filename) != 0)
+			if (symlink(src_filename, local_filename) == 0)
+			{
+				success_count++;
+			}
+			else
 			{
 				result = errno != 0 ? errno : ENOENT;
 				if (result == ENOENT || result == EEXIST)
@@ -608,6 +625,12 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 		count++;
 		if (count == 1000)
 		{
+			logDebug("file: "__FILE__", line: %d, " \
+				"disk recovery: recover path: %s, " \
+				"file count: "INT64_PRINTF_FORMAT \
+				", success count: "INT64_PRINTF_FORMAT, \
+				__LINE__, pBasePath, total_count, \
+				success_count);
 			recovery_write_to_mark_file(pBasePath, pReader);
 			count = 0;
 		}
@@ -618,11 +641,24 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 	{
 		recovery_write_to_mark_file(pBasePath, pReader);
 		count = 0;
+
+		logDebug("file: "__FILE__", line: %d, " \
+			"disk recovery: recover path: %s, " \
+			"file count: "INT64_PRINTF_FORMAT \
+			", success count: "INT64_PRINTF_FORMAT, \
+			__LINE__, pBasePath, total_count, success_count);
 	}
 	else
 	{
 		sleep(5);
 	}
+	}
+
+	if (result == 0)
+	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"disk recovery: recover files of data path: %s done", \
+			__LINE__, pBasePath);
 	}
 
 	return result;
