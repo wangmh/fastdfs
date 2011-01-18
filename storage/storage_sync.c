@@ -2207,6 +2207,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			pStorage->status != FDFS_STORAGE_STATUS_SYNCING)
 		{
 			close(storage_server.sock);
+			sleep(5);
 			continue;
 		}
 
@@ -2268,6 +2269,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			{
 				close(storage_server.sock);
 				storage_reader_destroy(&reader);
+				sleep(1);
 				continue;
 			}
 		}
