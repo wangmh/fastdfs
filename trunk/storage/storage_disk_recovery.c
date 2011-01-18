@@ -479,6 +479,7 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 	BinLogRecord record;
 	int record_length;
 	int result;
+	int log_level;
 	int count;
 	int64_t file_size;
 	bool bContinueFlag;
@@ -570,7 +571,17 @@ static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
 			if (symlink(src_filename, local_filename) != 0)
 			{
 				result = errno != 0 ? errno : ENOENT;
-				logError("file: "__FILE__", line: %d, " \
+				if (result == ENOENT || result == EEXIST)
+				{
+					log_level = LOG_DEBUG;
+				}
+				else
+				{
+					log_level = LOG_ERR;
+				}
+
+				log_it_ex(&g_log_context, log_level, \
+					"file: "__FILE__", line: %d, " \
 					"link file %s to %s fail, " \
 					"errno: %d, error info: %s", __LINE__,\
 					src_filename, local_filename, \
