@@ -3179,6 +3179,11 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				{
 					return result;
 				}
+
+				logDebug("file: "__FILE__", line: %d, " \
+				"all storage server's store_path_count " \
+				"are same, adjust to %d", \
+				__LINE__, pJoinBody->store_path_count);
 			}
 			else
 			{
