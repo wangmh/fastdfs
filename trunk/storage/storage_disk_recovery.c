@@ -196,6 +196,18 @@ static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
 			return ENOENT;
 		}
 
+		if (g_path_count > groupStat.store_path_count)
+		{
+			logInfo("file: "__FILE__", line: %d, " \
+				"storage store path count: %d > " \
+				"which of the group: %d, " \
+				"does not need recovery", __LINE__, \
+				g_path_count, groupStat.store_path_count);
+
+			close(trackerServer.sock);
+			return ENOENT;
+		}
+
 		if (groupStat.active_count <= 0)
 		{
 			close(trackerServer.sock);
