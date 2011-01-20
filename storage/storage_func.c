@@ -70,6 +70,10 @@
 #define STAT_ITEM_SUCCESS_CREATE_LINK	"success_create_link_count"
 #define STAT_ITEM_TOTAL_DELETE_LINK	"total_delete_link_count"
 #define STAT_ITEM_SUCCESS_DELETE_LINK	"success_delete_link_count"
+#define STAT_ITEM_TOTAL_UPLOAD_BYTES	"total_upload_bytes"
+#define STAT_ITEM_SUCCESS_UPLOAD_BYTES	"success_upload_bytes"
+#define STAT_ITEM_TOTAL_DOWNLOAD_BYTES	"total_download_bytes"
+#define STAT_ITEM_SUCCESS_DOWNLOAD_BYTES "success_download_bytes"
 
 #define STAT_ITEM_DIST_PATH_INDEX_HIGH	"dist_path_index_high"
 #define STAT_ITEM_DIST_PATH_INDEX_LOW	"dist_path_index_low"
@@ -226,6 +230,18 @@ static int storage_open_stat_file()
 		g_storage_stat.success_delete_link_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_SUCCESS_DELETE_LINK, \
 				&iniContext, 0);
+		g_storage_stat.total_upload_bytes = iniGetInt64Value(NULL, \
+				STAT_ITEM_TOTAL_UPLOAD_BYTES, \
+				&iniContext, 0);
+		g_storage_stat.success_upload_bytes = iniGetInt64Value(NULL, \
+				STAT_ITEM_SUCCESS_UPLOAD_BYTES, \
+				&iniContext, 0);
+		g_storage_stat.total_download_bytes = iniGetInt64Value(NULL, \
+				STAT_ITEM_TOTAL_DOWNLOAD_BYTES, \
+				&iniContext, 0);
+		g_storage_stat.success_download_bytes = iniGetInt64Value(NULL, \
+				STAT_ITEM_SUCCESS_DOWNLOAD_BYTES, \
+				&iniContext, 0);
 
 		g_dist_path_index_high = iniGetIntValue(NULL, \
 				STAT_ITEM_DIST_PATH_INDEX_HIGH, \
@@ -299,6 +315,10 @@ int storage_write_to_stat_file()
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n", \
@@ -326,6 +346,14 @@ int storage_write_to_stat_file()
 		g_storage_stat.total_delete_link_count,  \
 		STAT_ITEM_SUCCESS_DELETE_LINK, \
 		g_storage_stat.success_delete_link_count,  \
+		STAT_ITEM_TOTAL_UPLOAD_BYTES, \
+		g_storage_stat.total_upload_bytes,
+		STAT_ITEM_SUCCESS_UPLOAD_BYTES, \
+		g_storage_stat.success_upload_bytes, \
+		STAT_ITEM_TOTAL_DOWNLOAD_BYTES, \
+		g_storage_stat.total_download_bytes, \
+		STAT_ITEM_SUCCESS_DOWNLOAD_BYTES, \
+		g_storage_stat.success_download_bytes, \
 		STAT_ITEM_DIST_PATH_INDEX_HIGH, g_dist_path_index_high, \
 		STAT_ITEM_DIST_PATH_INDEX_LOW, g_dist_path_index_low, \
 		STAT_ITEM_DIST_WRITE_FILE_COUNT, g_dist_write_file_count

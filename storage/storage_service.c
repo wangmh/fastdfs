@@ -156,11 +156,32 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 		++g_stat_change_count; \
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
+#define CHECK_AND_WRITE_TO_STAT_FILE2_WITH_BYTES(total_count, success_count, \
+		total_bytes, success_bytes, bytes)  \
+		pthread_mutex_lock(&stat_count_thread_lock); \
+		total_count++; \
+		success_count++; \
+		total_bytes += bytes; \
+		success_bytes += bytes; \
+		++g_stat_change_count; \
+		pthread_mutex_unlock(&stat_count_thread_lock);
+
 #define CHECK_AND_WRITE_TO_STAT_FILE3(total_count, success_count, timestamp)  \
 		pthread_mutex_lock(&stat_count_thread_lock); \
 		total_count++; \
 		success_count++; \
 		timestamp = time(NULL); \
+		++g_stat_change_count;  \
+		pthread_mutex_unlock(&stat_count_thread_lock);
+
+#define CHECK_AND_WRITE_TO_STAT_FILE3_WITH_BYTES(total_count, success_count, \
+		timestamp, total_bytes, success_bytes, bytes)  \
+		pthread_mutex_lock(&stat_count_thread_lock); \
+		total_count++; \
+		success_count++; \
+		timestamp = time(NULL); \
+		total_bytes += bytes; \
+		success_bytes += bytes; \
 		++g_stat_change_count;  \
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
@@ -364,12 +385,16 @@ static void storage_get_metadata_done_callback(struct fast_task_info *pTask, \
 static void storage_download_file_done_callback(struct fast_task_info *pTask, \
 			const int err_no)
 {
+	StorageFileContext *pFileContext;
 	TrackerHeader *pHeader;
 
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 	if (err_no != 0)
 	{
 		pthread_mutex_lock(&stat_count_thread_lock);
 		g_storage_stat.total_download_count++;
+		g_storage_stat.total_download_bytes += \
+				pFileContext->end - pFileContext->start;
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
 		if (pTask->length == sizeof(TrackerHeader)) //never response
@@ -385,9 +410,12 @@ static void storage_download_file_done_callback(struct fast_task_info *pTask, \
 	}
 	else
 	{
-		CHECK_AND_WRITE_TO_STAT_FILE2( \
+		CHECK_AND_WRITE_TO_STAT_FILE2_WITH_BYTES( \
 			g_storage_stat.total_download_count, \
-			g_storage_stat.success_download_count)
+			g_storage_stat.success_download_count, \
+			g_storage_stat.total_download_bytes, \
+			g_storage_stat.success_download_bytes, \
+			pFileContext->end - pFileContext->start)
 
 		storage_nio_notify(pTask);
 	}
@@ -749,10 +777,13 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 
 		if (pFileContext->create_flag & STORAGE_CREATE_FLAG_FILE)
 		{
-			CHECK_AND_WRITE_TO_STAT_FILE3( \
-					g_storage_stat.total_upload_count, \
-					g_storage_stat.success_upload_count, \
-					g_storage_stat.last_source_update)
+			CHECK_AND_WRITE_TO_STAT_FILE3_WITH_BYTES( \
+				g_storage_stat.total_upload_count, \
+				g_storage_stat.success_upload_count, \
+				g_storage_stat.last_source_update, \
+				g_storage_stat.total_upload_bytes, \
+				g_storage_stat.success_upload_bytes, \
+				pFileContext->end - pFileContext->start)
 		}
 
 		filename_len = strlen(pFileContext->fname2log);
@@ -769,6 +800,8 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 		if (pFileContext->create_flag & STORAGE_CREATE_FLAG_FILE)
 		{
 			g_storage_stat.total_upload_count++;
+ 			g_storage_stat.total_upload_bytes += \
+				pFileContext->end - pFileContext->start;
 		}
 		pthread_mutex_unlock(&stat_count_thread_lock);
 

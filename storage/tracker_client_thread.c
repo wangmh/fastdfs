@@ -1546,6 +1546,14 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_total_delete_link_count);
 		long2buff(g_storage_stat.success_delete_link_count, \
 			pStatBuff->sz_success_delete_link_count);
+		long2buff(g_storage_stat.total_upload_bytes, \
+			pStatBuff->sz_total_upload_bytes);
+		long2buff(g_storage_stat.success_upload_bytes, \
+			pStatBuff->sz_success_upload_bytes);
+		long2buff(g_storage_stat.total_download_bytes, \
+			pStatBuff->sz_total_download_bytes);
+		long2buff(g_storage_stat.success_download_bytes, \
+			pStatBuff->sz_success_download_bytes);
 		long2buff(g_storage_stat.last_source_update, \
 			pStatBuff->sz_last_source_update);
 		long2buff(g_storage_stat.last_sync_update, \
