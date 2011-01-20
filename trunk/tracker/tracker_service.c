@@ -1383,6 +1383,14 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 				pStatBuff->sz_total_delete_link_count);
 		long2buff(pStorageStat->success_delete_link_count, \
 				pStatBuff->sz_success_delete_link_count);
+		long2buff(pStorageStat->total_upload_bytes, \
+				pStatBuff->sz_total_upload_bytes);
+		long2buff(pStorageStat->success_upload_bytes, \
+				pStatBuff->sz_success_upload_bytes);
+		long2buff(pStorageStat->total_download_bytes, \
+				pStatBuff->sz_total_download_bytes);
+		long2buff(pStorageStat->success_download_bytes, \
+				pStatBuff->sz_success_download_bytes);
 		long2buff(pStorageStat->last_heart_beat_time, \
 				pStatBuff->sz_last_heart_beat_time);
 
@@ -2490,6 +2498,14 @@ static int tracker_deal_storage_beat(struct fast_task_info *pTask)
 			buff2long(pStatBuff->sz_total_delete_link_count);
 		pStat->success_delete_link_count = \
 			buff2long(pStatBuff->sz_success_delete_link_count);
+		pStat->total_upload_bytes = \
+			buff2long(pStatBuff->sz_total_upload_bytes);
+		pStat->success_upload_bytes = \
+			buff2long(pStatBuff->sz_success_upload_bytes);
+		pStat->total_download_bytes = \
+			buff2long(pStatBuff->sz_total_download_bytes);
+		pStat->success_download_bytes = \
+			buff2long(pStatBuff->sz_success_download_bytes);
 
 		if (++g_storage_stat_chg_count % TRACKER_SYNC_TO_FILE_FREQ == 0)
 		{

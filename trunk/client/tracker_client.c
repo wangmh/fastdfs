@@ -345,6 +345,14 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_total_delete_link_count);
 		pStorageStat->success_delete_link_count = buff2long( \
 			pStatBuff->sz_success_delete_link_count);
+		pStorageStat->total_upload_bytes = buff2long( \
+			pStatBuff->sz_total_upload_bytes);
+		pStorageStat->success_upload_bytes = buff2long( \
+			pStatBuff->sz_success_upload_bytes);
+		pStorageStat->total_download_bytes = buff2long( \
+			pStatBuff->sz_total_download_bytes);
+		pStorageStat->success_download_bytes = buff2long( \
+			pStatBuff->sz_success_download_bytes);
 		pStorageStat->last_heart_beat_time = buff2long( \
 			pStatBuff->sz_last_heart_beat_time);
 		pDest++;

@@ -120,6 +120,10 @@ typedef struct
 	int64_t success_create_link_count;
 	int64_t total_delete_link_count;
 	int64_t success_delete_link_count;
+	int64_t total_upload_bytes;
+	int64_t success_upload_bytes;
+	int64_t total_download_bytes;
+	int64_t success_download_bytes;
 
 	/* last update timestamp as source server, 
            current server' timestamp
@@ -156,6 +160,10 @@ typedef struct
 	char sz_success_create_link_count[8];
 	char sz_total_delete_link_count[8];
 	char sz_success_delete_link_count[8];
+	char sz_total_upload_bytes[8];
+	char sz_success_upload_bytes[8];
+	char sz_total_download_bytes[8];
+	char sz_success_download_bytes[8];
 	char sz_last_source_update[8];
 	char sz_last_sync_update[8];
 	char sz_last_synced_timestamp[8];
