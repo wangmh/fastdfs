@@ -30,6 +30,7 @@
 
 #define TRACKER_MEM_ALLOC_ONCE	2
 
+#define STORAGE_SECTION_NAME_GLOBAL            "Global"
 #define STORAGE_SECTION_NAME_PREFIX            "Storage"
 #define STORAGE_SECTION_NO_FORMAT              "%03d"
 #define STORAGE_ITEM_STORAGE_COUNT             "storage_count"
@@ -763,7 +764,8 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 		return result;
 	}
 
-	storage_count = iniGetIntValue(NULL, STORAGE_ITEM_STORAGE_COUNT, \
+	storage_count = iniGetIntValue(STORAGE_SECTION_NAME_GLOBAL, \
+				STORAGE_ITEM_STORAGE_COUNT, \
                 		&iniContext, -1);
 	if (storage_count < 0)
 	{
@@ -1381,45 +1383,47 @@ int tracker_save_storages()
 
 			count++;
 			len = sprintf(buff, \
+				"# storage %s:%d\n" \
 				"[%s"STORAGE_SECTION_NO_FORMAT"]\n" \
-				"%s=%s\n" \
-				"%s=%s\n" \
-				"%s=%d\n" \
-				"%s=%s\n" \
-				"%s=%d\n" \
-				"%s=%d\n" \
-				"%s=%d\n" \
-				"%s=%s\n" \
-				"%s=%s\n" \
-				"%s=%d\n" \
-				"%s=%d\n" \
-				"%s=%d\n" \
-				"%s=%d\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s="INT64_PRINTF_FORMAT"\n" \
-				"%s=%d\n" \
-				"%s=%d\n" \
-				"%s=%d\n" \
-				"%s=%d\n" \
-				"%s="INT64_PRINTF_FORMAT"\n\n", \
+				"\t%s=%s\n" \
+				"\t%s=%s\n" \
+				"\t%s=%d\n" \
+				"\t%s=%s\n" \
+				"\t%s=%d\n" \
+				"\t%s=%d\n" \
+				"\t%s=%d\n" \
+				"\t%s=%s\n" \
+				"\t%s=%s\n" \
+				"\t%s=%d\n" \
+				"\t%s=%d\n" \
+				"\t%s=%d\n" \
+				"\t%s=%d\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s=%d\n" \
+				"\t%s=%d\n" \
+				"\t%s=%d\n" \
+				"\t%s=%d\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n\n", \
+				pStorage->ip_addr, pStorage->storage_port, \
 				STORAGE_SECTION_NAME_PREFIX, count, \
 				STORAGE_ITEM_GROUP_NAME, \
 				(*ppGroup)->group_name, \
@@ -1511,8 +1515,10 @@ int tracker_save_storages()
 	if (result == 0)
 	{
 		len = sprintf(buff, \
-			"\n[]\n" \
-			"%s=%d\n", \
+			"\n# global section\n" \
+			"[%s]\n" \
+			"\t%s=%d\n", \
+			STORAGE_SECTION_NAME_GLOBAL, \
 			STORAGE_ITEM_STORAGE_COUNT, count);
 		if (write(fd, buff, len) != len)
 		{
