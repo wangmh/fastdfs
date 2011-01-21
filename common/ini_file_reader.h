@@ -35,7 +35,7 @@ typedef struct
 typedef struct
 {
 	IniSection global;
-	HashArray sections;
+	HashArray sections;  //key is session name, and value is IniSection
 	IniSection *current_section; //for load from ini file
 } IniContext;
 
