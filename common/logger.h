@@ -135,7 +135,7 @@ void logNoticeEx(LogContext *pContext, const char *format, ...);
 void logInfoEx(LogContext *pContext, const char *format, ...);
 void logDebugEx(LogContext *pContext, const char *format, ...);
 
-#define LOG_FORMAT_CHECK
+//#define LOG_FORMAT_CHECK
 
 #ifdef LOG_FORMAT_CHECK  /*only for format check*/
 
