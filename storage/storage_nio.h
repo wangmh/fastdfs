@@ -112,7 +112,6 @@ struct storage_nio_thread_data
 {
         struct event_base *ev_base;
         int pipe_fds[2];
-        int dealing_file_count;
 	GroupArray group_array;
 };
 

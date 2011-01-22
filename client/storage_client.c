@@ -1731,9 +1731,12 @@ int fdfs_get_file_info_ex(const char *file_id, const bool get_from_server, \
 	ip_addr.s_addr = ntohl(buff2int(buff));
 	inet_ntop(AF_INET,&ip_addr,pFileInfo->source_ip_addr,IP_ADDRESS_SIZE);
 
-	if (filename_len > FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH + \
-		FDFS_FILE_EXT_NAME_MAX_LEN + 1)  //slave file
-	{
+	pFileInfo->file_size = buff2long(buff + sizeof(int) * 2);
+
+	if ((filename_len > FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH + \
+		FDFS_FILE_EXT_NAME_MAX_LEN + 1) || \
+		(pFileInfo->file_size == INFINITE_FILE_SIZE))
+	{ //slave file or appender file
 		if (get_from_server)
 		{
 			TrackerServerInfo trackerServer;
@@ -1752,13 +1755,13 @@ int fdfs_get_file_info_ex(const char *file_id, const bool get_from_server, \
 		}
 		else
 		{
+			pFileInfo->file_size = -1;
 			return 0;
 		}
 	}
 	else  //master file (normal file)
 	{
 		pFileInfo->create_timestamp = buff2int(buff+sizeof(int));
-		pFileInfo->file_size = buff2long(buff+sizeof(int)*2);
 		if ((pFileInfo->file_size >> 63) != 0)
 		{
 			pFileInfo->file_size &= 0xFFFFFFFF;  //low 32 bits is file size
