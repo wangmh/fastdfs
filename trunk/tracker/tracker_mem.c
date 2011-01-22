@@ -30,6 +30,16 @@
 
 #define TRACKER_MEM_ALLOC_ONCE	2
 
+#define GROUP_SECTION_NAME_GLOBAL            "Global"
+#define GROUP_SECTION_NAME_PREFIX            "Group"
+#define GROUP_SECTION_NO_FORMAT              "%03d"
+#define GROUP_ITEM_GROUP_COUNT               "group_count"
+#define GROUP_ITEM_GROUP_NAME                "group_name"
+#define GROUP_ITEM_STORAGE_PORT              "storage_port"
+#define GROUP_ITEM_STORAGE_HTTP_PORT         "storage_http_port"
+#define GROUP_ITEM_STORE_PATH_COUNT          "store_path_count"
+#define GROUP_ITEM_SUBDIR_COUNT_PER_PATH     "subdir_count_per_path"
+
 #define STORAGE_SECTION_NAME_GLOBAL            "Global"
 #define STORAGE_SECTION_NAME_PREFIX            "Storage"
 #define STORAGE_SECTION_NO_FORMAT              "%03d"
@@ -95,10 +105,12 @@ static int tracker_mem_add_group_ex(FDFSGroups *pGroups, \
 	TrackerClientInfo *pClientInfo, const char *group_name, \
 	const bool bNeedSleep, bool *bInserted);
 
+static int tracker_save_groups();
+
 static int tracker_mem_destroy_groups(FDFSGroups *pGroups, const bool saveFiles);
 
 char *g_tracker_sys_filenames[TRACKER_SYS_FILE_COUNT] = {
-	STORAGE_GROUPS_LIST_FILENAME,
+	STORAGE_GROUPS_LIST_FILENAME_NEW,
 	STORAGE_SERVERS_LIST_FILENAME_NEW,
 	STORAGE_SYNC_TIMESTAMP_FILENAME,
 	STORAGE_SERVERS_CHANGELOG_FILENAME
@@ -375,7 +387,7 @@ static int tracker_malloc_all_group_path_mbs(FDFSGroups *pGroups)
 	return 0;
 }
 
-static int tracker_load_groups(FDFSGroups *pGroups, const char *data_path)
+static int tracker_load_groups_old(FDFSGroups *pGroups, const char *data_path)
 {
 #define STORAGE_DATA_GROUP_FIELDS	4
 
@@ -388,12 +400,12 @@ static int tracker_load_groups(FDFSGroups *pGroups, const char *data_path)
 	TrackerClientInfo clientInfo;
 	bool bInserted;
 
-	if ((fp=fopen(STORAGE_GROUPS_LIST_FILENAME, "r")) == NULL)
+	if ((fp=fopen(STORAGE_GROUPS_LIST_FILENAME_OLD, "r")) == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"open file \"%s/%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, data_path, STORAGE_GROUPS_LIST_FILENAME, \
+			__LINE__, data_path, STORAGE_GROUPS_LIST_FILENAME_OLD, \
 			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
@@ -414,7 +426,7 @@ static int tracker_load_groups(FDFSGroups *pGroups, const char *data_path)
 			logError("file: "__FILE__", line: %d, " \
 				"the format of the file \"%s/%s\" is invalid", \
 				__LINE__, data_path, \
-				STORAGE_GROUPS_LIST_FILENAME);
+				STORAGE_GROUPS_LIST_FILENAME_OLD);
 			result = errno != 0 ? errno : EINVAL;
 			break;
 		}
@@ -434,7 +446,7 @@ static int tracker_load_groups(FDFSGroups *pGroups, const char *data_path)
 				"in the file \"%s/%s\", " \
 				"group \"%s\" is duplicate", \
 				__LINE__, data_path, \
-				STORAGE_GROUPS_LIST_FILENAME, \
+				STORAGE_GROUPS_LIST_FILENAME_OLD, \
 				group_name);
 			result = errno != 0 ? errno : EEXIST;
 			break;
@@ -456,6 +468,111 @@ static int tracker_load_groups(FDFSGroups *pGroups, const char *data_path)
 	}
 
 	fclose(fp);
+	return result;
+}
+
+static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path)
+{
+	IniContext iniContext;
+	FDFSGroupInfo *pGroup;
+	char *group_name;
+	int group_count;
+	int result;
+	int i;
+	char section_name[64];
+	TrackerClientInfo clientInfo;
+	bool bInserted;
+
+	if (!fileExists(STORAGE_GROUPS_LIST_FILENAME_NEW) && \
+	     fileExists(STORAGE_GROUPS_LIST_FILENAME_OLD))
+	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"convert old data file %s to new data file %s", \
+			__LINE__, STORAGE_GROUPS_LIST_FILENAME_OLD, \
+			STORAGE_GROUPS_LIST_FILENAME_NEW);
+		if ((result=tracker_load_groups_old(pGroups, data_path)) == 0)
+		{
+			if ((result=tracker_save_groups()) == 0)
+			{
+				unlink(STORAGE_GROUPS_LIST_FILENAME_OLD);
+			}
+		}
+
+		return result;
+	}
+
+	if ((result=iniLoadFromFile(STORAGE_GROUPS_LIST_FILENAME_NEW, \
+			&iniContext)) != 0)
+	{
+		return result;
+	}
+
+	group_count = iniGetIntValue(GROUP_SECTION_NAME_GLOBAL, \
+				GROUP_ITEM_GROUP_COUNT, \
+                		&iniContext, -1);
+	if (group_count < 0)
+	{
+		iniFreeContext(&iniContext);
+		logError("file: "__FILE__", line: %d, " \
+			"in the file \"%s/%s\", " \
+			"item \"%s\" is not found", \
+			__LINE__, data_path, \
+			STORAGE_GROUPS_LIST_FILENAME_NEW, \
+			GROUP_ITEM_GROUP_COUNT);
+		return ENOENT;
+	}
+
+	for (i=1; i<=group_count; i++)
+	{
+		sprintf(section_name, "%s"GROUP_SECTION_NO_FORMAT, \
+			GROUP_SECTION_NAME_PREFIX, i);
+
+		group_name = iniGetStrValue(section_name, \
+				GROUP_ITEM_GROUP_NAME, &iniContext);
+		if (group_name == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"in the file \"%s/%s\", " \
+				"item \"%s\" is not found", \
+				__LINE__, data_path, \
+				STORAGE_GROUPS_LIST_FILENAME_NEW, \
+				GROUP_ITEM_GROUP_NAME);
+			result = ENOENT;
+			break;
+		}
+
+		memset(&clientInfo, 0, sizeof(TrackerClientInfo));
+		if ((result=tracker_mem_add_group_ex(pGroups, &clientInfo, \
+				group_name, false, &bInserted)) != 0)
+		{
+			break;
+		}
+
+		if (!bInserted)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"in the file \"%s/%s\", " \
+				"group \"%s\" is duplicate", \
+				__LINE__, data_path, \
+				STORAGE_GROUPS_LIST_FILENAME_NEW, \
+				group_name);
+			result = errno != 0 ? errno : EEXIST;
+			break;
+		}
+
+		pGroup = clientInfo.pGroup;
+		pGroup->storage_port = iniGetIntValue(section_name, \
+			GROUP_ITEM_STORAGE_PORT, &iniContext, 0);
+		pGroup->storage_http_port = iniGetIntValue(section_name, \
+			GROUP_ITEM_STORAGE_HTTP_PORT, &iniContext, 0);
+		pGroup->store_path_count = iniGetIntValue(section_name, \
+			GROUP_ITEM_STORE_PATH_COUNT, &iniContext, 0);
+		pGroup->subdir_count_per_path = iniGetIntValue(section_name, \
+			GROUP_ITEM_SUBDIR_COUNT_PER_PATH, &iniContext, 0);
+	}
+
+	iniFreeContext(&iniContext);
+
 	return result;
 }
 
@@ -753,9 +870,22 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 	TrackerClientInfo clientInfo;
 	bool bInserted;
 
-	if (!fileExists(STORAGE_SERVERS_LIST_FILENAME_NEW))
+	if (!fileExists(STORAGE_SERVERS_LIST_FILENAME_NEW) && \
+	     fileExists(STORAGE_SERVERS_LIST_FILENAME_OLD))
 	{
-		return tracker_load_storages_old(pGroups, data_path);
+		logDebug("file: "__FILE__", line: %d, " \
+			"convert old data file %s to new data file %s", \
+			__LINE__, STORAGE_SERVERS_LIST_FILENAME_OLD, \
+			STORAGE_SERVERS_LIST_FILENAME_NEW);
+		if ((result=tracker_load_storages_old(pGroups, data_path)) == 0)
+		{
+			if ((result=tracker_save_storages()) == 0)
+			{
+				unlink(STORAGE_SERVERS_LIST_FILENAME_OLD);
+			}
+		}
+
+		return result;
 	}
 
 	if ((result=iniLoadFromFile(STORAGE_SERVERS_LIST_FILENAME_NEW, \
@@ -1251,12 +1381,13 @@ static int tracker_load_data(FDFSGroups *pGroups)
 		return errno != 0 ? errno : ENOENT;
 	}
 
-	if (!fileExists(STORAGE_GROUPS_LIST_FILENAME))
+	if (!fileExists(STORAGE_GROUPS_LIST_FILENAME_OLD) && \
+	    !fileExists(STORAGE_GROUPS_LIST_FILENAME_NEW))
 	{
 		return 0;
 	}
 
-	if ((result=tracker_load_groups(pGroups, data_path)) != 0)
+	if ((result=tracker_load_groups_new(pGroups, data_path)) != 0)
 	{
 		return result;
 	}
@@ -1281,8 +1412,9 @@ static int tracker_load_data(FDFSGroups *pGroups)
 
 static int tracker_save_groups()
 {
-	char filename[MAX_PATH_SIZE];
-	char buff[FDFS_GROUP_NAME_MAX_LEN + 128];
+	char tmpFilename[MAX_PATH_SIZE];
+	char trueFilename[MAX_PATH_SIZE];
+	char buff[FDFS_GROUP_NAME_MAX_LEN + 256];
 	int fd;
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppEnd;
@@ -1291,43 +1423,108 @@ static int tracker_save_groups()
 
 	tracker_mem_file_lock();
 
-	snprintf(filename, sizeof(filename), "%s/data/%s", \
-		g_fdfs_base_path, STORAGE_GROUPS_LIST_FILENAME);
-	if ((fd=open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
+	snprintf(trueFilename, sizeof(trueFilename), "%s/data/%s", \
+		g_fdfs_base_path, STORAGE_GROUPS_LIST_FILENAME_NEW);
+	snprintf(tmpFilename, sizeof(tmpFilename), "%s.tmp", trueFilename);
+	if ((fd=open(tmpFilename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		tracker_mem_file_unlock();
 
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, filename, errno, STRERROR(errno));
+			__LINE__, tmpFilename, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
+	len = sprintf(buff, \
+			"# global section\n" \
+			"[%s]\n" \
+			"\t%s=%d\n\n", \
+			GROUP_SECTION_NAME_GLOBAL, \
+			GROUP_ITEM_GROUP_COUNT, g_groups.count);
+	if (write(fd, buff, len) != len)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"write to file \"%s\" fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, tmpFilename, \
+			errno, STRERROR(errno));
+		result = errno != 0 ? errno : EIO;
+	}
+	else
+	{
 	result = 0;
+
 	ppEnd = g_groups.sorted_groups + g_groups.count;
 	for (ppGroup=g_groups.sorted_groups; ppGroup<ppEnd; ppGroup++)
 	{
-		len = sprintf(buff, "%s%c%d%c%d%c%d\n", \
+		len = sprintf(buff, \
+				"# group: %s\n" \
+				"[%s"GROUP_SECTION_NO_FORMAT"]\n" \
+				"\t%s=%s\n" \
+				"\t%s=%d\n" \
+				"\t%s=%d\n" \
+				"\t%s=%d\n" \
+				"\t%s=%d\n\n", \
 				(*ppGroup)->group_name, \
-				STORAGE_DATA_FIELD_SEPERATOR, \
+				GROUP_SECTION_NAME_PREFIX, \
+				(int)(ppGroup - g_groups.sorted_groups) + 1, \
+				GROUP_ITEM_GROUP_NAME, \
+				(*ppGroup)->group_name, \
+				GROUP_ITEM_STORAGE_PORT, \
 				(*ppGroup)->storage_port, \
-				STORAGE_DATA_FIELD_SEPERATOR, \
+				GROUP_ITEM_STORAGE_HTTP_PORT, \
+				(*ppGroup)->storage_http_port, \
+				GROUP_ITEM_STORE_PATH_COUNT, \
 				(*ppGroup)->store_path_count, \
-				STORAGE_DATA_FIELD_SEPERATOR, \
+				GROUP_ITEM_SUBDIR_COUNT_PER_PATH, \
 				(*ppGroup)->subdir_count_per_path);
 		if (write(fd, buff, len) != len)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"write to file \"%s\" fail, " \
 				"errno: %d, error info: %s", \
-				__LINE__, filename, errno, STRERROR(errno));
+				__LINE__, tmpFilename, errno, STRERROR(errno));
 			result = errno != 0 ? errno : EIO;
 			break;
 		}
 	}
+	}
+
+	if (result == 0)
+	{
+		if (fsync(fd) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"fsync file \"%s\" fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, tmpFilename, \
+				errno, STRERROR(errno));
+			result = errno != 0 ? errno : EIO;
+		}
+	}
 
 	close(fd);
+
+	if (result == 0)
+	{
+		if (rename(tmpFilename, trueFilename) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"rename file \"%s\" to \"%s\" fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, tmpFilename, trueFilename, \
+				errno, STRERROR(errno));
+			result = errno != 0 ? errno : EIO;
+		}
+	}
+
+	if (result != 0)
+	{
+		unlink(tmpFilename);
+	}
+
 	tracker_mem_file_unlock();
 
 	return result;
@@ -1571,7 +1768,8 @@ int tracker_save_storages()
 
 int tracker_save_sync_timestamps()
 {
-	char filename[MAX_PATH_SIZE];
+	char tmpFilename[MAX_PATH_SIZE];
+	char trueFilename[MAX_PATH_SIZE];
 	char buff[512];
 	int fd;
 	int len;
@@ -1584,16 +1782,17 @@ int tracker_save_sync_timestamps()
 
 	tracker_mem_file_lock();
 
-	snprintf(filename, sizeof(filename), "%s/data/%s", \
+	snprintf(trueFilename, sizeof(trueFilename), "%s/data/%s", \
 		g_fdfs_base_path, STORAGE_SYNC_TIMESTAMP_FILENAME);
-	if ((fd=open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
+	snprintf(tmpFilename, sizeof(tmpFilename), "%s.tmp", trueFilename);
+	if ((fd=open(tmpFilename, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 	{
 		tracker_mem_file_unlock();
 
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, filename, errno, STRERROR(errno));
+			__LINE__, tmpFilename, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
 
@@ -1638,7 +1837,7 @@ int tracker_save_sync_timestamps()
 				logError("file: "__FILE__", line: %d, " \
 					"write to file \"%s\" fail, " \
 					"errno: %d, error info: %s", \
-					__LINE__, filename, \
+					__LINE__, tmpFilename, \
 					errno, STRERROR(errno));
 				result = errno != 0 ? errno : EIO;
 				break;
@@ -1646,7 +1845,39 @@ int tracker_save_sync_timestamps()
 		}
 	}
 
+	if (result == 0)
+	{
+		if (fsync(fd) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"fsync file \"%s\" fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, tmpFilename, \
+				errno, STRERROR(errno));
+			result = errno != 0 ? errno : EIO;
+		}
+	}
+
 	close(fd);
+
+	if (result == 0)
+	{
+		if (rename(tmpFilename, trueFilename) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"rename file \"%s\" to \"%s\" fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, tmpFilename, trueFilename, \
+				errno, STRERROR(errno));
+			result = errno != 0 ? errno : EIO;
+		}
+	}
+
+	if (result != 0)
+	{
+		unlink(tmpFilename);
+	}
+
 	tracker_mem_file_unlock();
 
 	return result;
