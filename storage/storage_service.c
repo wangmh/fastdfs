@@ -1537,9 +1537,11 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	*new_full_filename = '\0';
 	*new_filename = '\0';
 	new_filename_len = 0;
+
 	if ((result=storage_get_filename(pClientInfo, end_time, \
 		pFileContext->extra_info.upload.store_path_index, \
-		file_size, pFileContext->crc32, \
+		pFileContext->extra_info.upload.if_appender_file ? \
+		INFINITE_FILE_SIZE : file_size, pFileContext->crc32, \
 		pFileContext->extra_info.upload.file_ext_name, new_filename,\
 		&new_filename_len, new_full_filename)) != 0)
 	{
@@ -1564,7 +1566,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
 		pFileContext->extra_info.upload.store_path_index, new_filename);
 
-	if ((!pFileContext->extra_info.upload.gen_filename) && \
+	if ((!pFileContext->extra_info.upload.if_gen_filename) && \
 		(!g_check_file_duplicate))
 	{   //upload slave file
 		if (symlink(new_full_filename, pFileContext->filename) != 0)
@@ -1748,7 +1750,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		}
 	}
 
-	if (!pFileContext->extra_info.upload.gen_filename) //upload slave file
+	if (!pFileContext->extra_info.upload.if_gen_filename) //upload slave file
 	{
 		result = storage_binlog_write( \
 				pFileContext->timestamp2log, \
@@ -2827,7 +2829,7 @@ static int storage_server_fetch_one_path_binlog(struct fast_task_info *pTask)
 FDFS_FILE_EXT_NAME_MAX_LEN bytes: file ext name, do not include dot (.)
 file size bytes: file content
 **/
-static int storage_upload_file(struct fast_task_info *pTask)
+static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 {
 	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
@@ -2894,7 +2896,7 @@ static int storage_upload_file(struct fast_task_info *pTask)
 
 	pFileContext->calc_crc32 = true;
 	pFileContext->calc_file_hash = g_check_file_duplicate;
-        pFileContext->extra_info.upload.gen_filename = true;
+        pFileContext->extra_info.upload.if_gen_filename = true;
 	pFileContext->extra_info.upload.start_time = time(NULL);
 
 	crc32 = rand();
@@ -2917,6 +2919,7 @@ static int storage_upload_file(struct fast_task_info *pTask)
 
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
+	pFileContext->extra_info.upload.if_appender_file = bAppenderFile;
 	pFileContext->extra_info.upload.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 
@@ -3061,8 +3064,8 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	}
 
 	pFileContext->extra_info.upload.start_time = time(NULL);
-	pFileContext->extra_info.upload.gen_filename = g_check_file_duplicate;
-	if (pFileContext->extra_info.upload.gen_filename)
+	pFileContext->extra_info.upload.if_gen_filename = g_check_file_duplicate;
+	if (pFileContext->extra_info.upload.if_gen_filename)
 	{
 	crc32 = rand();
 	*filename = '\0';
@@ -3120,6 +3123,7 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
+	pFileContext->extra_info.upload.if_appender_file = false;
 	pFileContext->extra_info.upload.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 
@@ -4718,7 +4722,10 @@ int storage_deal_task(struct fast_task_info *pTask)
 			result = storage_server_get_metadata(pTask);
 			break;
 		case STORAGE_PROTO_CMD_UPLOAD_FILE:
-			result = storage_upload_file(pTask);
+			result = storage_upload_file(pTask, false);
+			break;
+		case STORAGE_PROTO_CMD_UPLOAD_APPENDER_FILE:
+			result = storage_upload_file(pTask, true);
 			break;
 		case STORAGE_PROTO_CMD_UPLOAD_SLAVE_FILE:
 			result = storage_upload_slave_file(pTask);

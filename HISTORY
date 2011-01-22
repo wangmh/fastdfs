@@ -7,6 +7,7 @@ Version 2.08  2011-01-22
    success_download_bytes
  * tracker data file storage_groups.dat changes to storage_groups_new.dat, and 
    storage_servers.dat changes to storage_servers_new.dat
+ * support file append
 
 Version 2.07  2011-01-09
  * slave file's prefix name can be empty

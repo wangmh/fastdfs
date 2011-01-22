@@ -108,30 +108,6 @@ static char *get_storage_stat_filename(const void *pArg, char *full_filename)
 	return full_filename;
 }
 
-int storage_safe_write_to_file(int fd, get_filename_func filename_func, \
-		const void *pArg, const char *buff, const int len)
-{
-	char *filename;
-	char trueFilename[MAX_PATH_SIZE];
-	char bakFilename[MAX_PATH_SIZE];
-	int result;
-
-	filename = filename_func(pArg, trueFilename);
-	snprintf(bakFilename, MAX_PATH_SIZE, "%s.bak", filename);
-	if ((result=writeToFile(bakFilename, buff, len)) != 0)
-	{
-		return result;
-	}
-
-	result = storage_write_to_fd(fd, filename_func, pArg, buff, len);
-	if (result != 0)
-	{
-		return result;
-	}
-
-	return 0;
-}
-
 int storage_write_to_fd(int fd, get_filename_func filename_func, \
 		const void *pArg, const char *buff, const int len)
 {
