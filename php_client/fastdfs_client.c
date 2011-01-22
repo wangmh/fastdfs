@@ -3233,13 +3233,12 @@ ZEND_FUNCTION(fastdfs_storage_upload_by_filebuff1)
 }
 
 /*
-/*
 array fastdfs_storage_upload_appender_by_filename(string local_filename, 
 	[string file_ext_name, string meta_list, string group_name, 
 	array tracker_server, array storage_server])
 return array for success, false for error
 */
-ZEND_FUNCTION(fastdfs_storage_appender_upload_by_filename)
+ZEND_FUNCTION(fastdfs_storage_upload_appender_by_filename)
 {
 	php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
 		&php_context, STORAGE_PROTO_CMD_UPLOAD_APPENDER_FILE, \
@@ -3285,6 +3284,7 @@ ZEND_FUNCTION(fastdfs_storage_upload_appender_by_filebuff1)
 		FDFS_UPLOAD_BY_BUFF, true);
 }
 
+/*
 string/array fastdfs_storage_upload_slave_by_filename(string local_filename, 
 	string group_name, string master_filename, string prefix_name 
 	[, string file_ext_name, array meta_list, 
@@ -4418,7 +4418,6 @@ ZEND_ARG_INFO(0, storage_server)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_upload_slave_by_filename, 0, 0, 4)
-ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_upload_slave_by_filename, 0, 0, 4)
 ZEND_ARG_INFO(0, local_filename)
 ZEND_ARG_INFO(0, group_name)
 ZEND_ARG_INFO(0, master_filename)
@@ -4591,7 +4590,6 @@ static zend_function_entry fdfs_class_methods[] = {
     FDFS_ME(storage_upload_appender_by_filename1, arginfo_storage_upload_appender_by_filename1)
     FDFS_ME(storage_upload_appender_by_filebuff,  arginfo_storage_upload_appender_by_filebuff)
     FDFS_ME(storage_upload_appender_by_filebuff1, arginfo_storage_upload_appender_by_filebuff1)
-    FDFS_ME(storage_upload_slave_by_filename,  arginfo_storage_upload_slave_by_filename)
     FDFS_ME(storage_upload_slave_by_filename,  arginfo_storage_upload_slave_by_filename)
     FDFS_ME(storage_upload_slave_by_filename1, arginfo_storage_upload_slave_by_filename1)
     FDFS_ME(storage_upload_slave_by_filebuff,  arginfo_storage_upload_slave_by_filebuff)
