@@ -802,6 +802,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	char out_buff[512];
 	char *p;
 	int64_t in_bytes;
+	int64_t total_send_bytes;
 	char in_buff[128];
 	char *pInBuff;
 	TrackerServerInfo storageServer;
@@ -933,7 +934,8 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	if (upload_type == FDFS_UPLOAD_BY_FILE)
 	{
 		if ((result=tcpsendfile(pStorageServer->sock, file_buff, \
-			file_size, g_fdfs_network_timeout)) != 0)
+			file_size, g_fdfs_network_timeout, \
+			&total_send_bytes)) != 0)
 		{
 			break;
 		}

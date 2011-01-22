@@ -39,14 +39,17 @@ int writeToFileCallback(void *arg, const int64_t file_size, const char *data, \
 
 int uploadFileCallback(void *arg, const int64_t file_size, int sock)
 {
+	int64_t total_send_bytes;
 	char *filename;
+
 	if (arg == NULL)
 	{
 		return EINVAL;
 	}
 
 	filename = (char *)arg;
-	return tcpsendfile(sock, filename, file_size, g_fdfs_network_timeout);
+	return tcpsendfile(sock, filename, file_size, \
+		g_fdfs_network_timeout, &total_send_bytes);
 }
 
 int main(int argc, char *argv[])

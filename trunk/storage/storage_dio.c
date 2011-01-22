@@ -221,95 +221,96 @@ int storage_dio_get_thread_index(struct fast_task_info *pTask, \
 	return pContext - g_dio_contexts;
 }
 
-int dio_deal_task(struct fast_task_info *pTask)
+int dio_delete_file(struct fast_task_info *pTask)
 {
 	StorageFileContext *pFileContext;
 	int result;
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
-
-	if (pFileContext->op == FDFS_STORAGE_FILE_OP_DELETE)
-	{
-
-		if ((pFileContext->delete_flag & STORAGE_DELETE_FLAG_LINK) && \
+	if ((pFileContext->delete_flag & STORAGE_DELETE_FLAG_LINK) && \
 			(!g_check_file_duplicate))
-		{
-			int len;
-			char full_filename[MAX_PATH_SIZE + 128];
+	{
+		int len;
+		char full_filename[MAX_PATH_SIZE + 128];
 
-			if ((len=readlink(pFileContext->filename, \
-				full_filename, sizeof(full_filename))) < 0)
-			{
-				result = errno != 0 ? errno : EACCES;
-				logError("file: "__FILE__", line: %d, " \
-					"readlink file: %s fail, " \
-					"errno: %d, error info: %s", \
-					__LINE__, pFileContext->filename, \
-					result, STRERROR(result));
-
-				pFileContext->done_callback(pTask, result);
-				return result;
-			}
-
-			*(full_filename + len) = '\0';
-			if (unlink(full_filename) != 0)
-			{
-				result = errno != 0 ? errno : EACCES;
-				logError("file: "__FILE__", line: %d, " \
-					"unlink file: %s fail, " \
-					"errno: %d, error info: %s", \
-					__LINE__, full_filename, \
-					result, STRERROR(result));
-
-				pFileContext->done_callback(pTask, result);
-				return result;
-			}
-		}
-
-		if (unlink(pFileContext->filename) != 0)
+		if ((len=readlink(pFileContext->filename, \
+			full_filename, sizeof(full_filename))) < 0)
 		{
 			result = errno != 0 ? errno : EACCES;
-			pFileContext->log_callback(pTask, result);
-		}
-		else
-		{
-			result = 0;
+			logError("file: "__FILE__", line: %d, " \
+				"readlink file: %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pFileContext->filename, \
+				result, STRERROR(result));
+
+			pFileContext->done_callback(pTask, result);
+			return result;
 		}
 
-		pFileContext->done_callback(pTask, result);
-		return result;
+		*(full_filename + len) = '\0';
+		if (unlink(full_filename) != 0)
+		{
+			result = errno != 0 ? errno : EACCES;
+			logError("file: "__FILE__", line: %d, " \
+				"unlink file: %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, full_filename, \
+				result, STRERROR(result));
+
+			pFileContext->done_callback(pTask, result);
+			return result;
+		}
 	}
 
-	if (pFileContext->op == FDFS_STORAGE_FILE_OP_DISCARD)
+	if (unlink(pFileContext->filename) != 0)
 	{
-		pFileContext->offset+=pTask->length - pFileContext->buff_offset;
-		if (pFileContext->offset >= pFileContext->end)
-		{
-			pFileContext->done_callback(pTask, 0);
-		}
-		else
-		{
-			pFileContext->buff_offset = 0;
-			storage_nio_notify(pTask);  //notify nio to deal
-		}
-
-		return 0;
+		result = errno != 0 ? errno : EACCES;
+		pFileContext->log_callback(pTask, result);
+	}
+	else
+	{
+		result = 0;
 	}
 
+	pFileContext->done_callback(pTask, result);
+	return result;
+}
+
+int dio_discard_file(struct fast_task_info *pTask)
+{
+	StorageFileContext *pFileContext;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+	pFileContext->offset+=pTask->length - pFileContext->buff_offset;
+	if (pFileContext->offset >= pFileContext->end)
+	{
+		pFileContext->done_callback(pTask, 0);
+	}
+	else
+	{
+		pFileContext->buff_offset = 0;
+		storage_nio_notify(pTask);  //notify nio to deal
+	}
+
+	return 0;
+}
+
+int dio_read_file(struct fast_task_info *pTask)
+{
+	StorageFileContext *pFileContext;
+	int result;
+	int64_t remain_bytes;
+	int capacity_bytes;
+	int read_bytes;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+
+	result = 0;
 	do
 	{
 	if (pFileContext->fd < 0)
 	{
-		if (pFileContext->op == FDFS_STORAGE_FILE_OP_READ)
-		{
-			pFileContext->fd=open(pFileContext->filename, O_RDONLY);
-		}
-		else  //write
-		{
-			pFileContext->fd = open(pFileContext->filename, \
-					O_WRONLY | O_CREAT | O_TRUNC, 0644);
-		}
-
+		pFileContext->fd = open(pFileContext->filename, O_RDONLY);
 		if (pFileContext->fd < 0)
 		{
 			result = errno != 0 ? errno : EACCES;
@@ -318,6 +319,18 @@ int dio_deal_task(struct fast_task_info *pTask)
 				"errno: %d, error info: %s", \
 				__LINE__, pFileContext->filename, \
 				result, STRERROR(result));
+		}
+
+		pthread_mutex_lock(&g_dio_thread_lock);
+		g_storage_stat.total_file_open_count++;
+		if (result == 0)
+		{
+			g_storage_stat.success_file_open_count++;
+		}
+		pthread_mutex_unlock(&g_dio_thread_lock);
+
+		if (result != 0)
+		{
 			break;
 		}
 
@@ -334,145 +347,219 @@ int dio_deal_task(struct fast_task_info *pTask)
 		}
 	}
 
-	if (pFileContext->op == FDFS_STORAGE_FILE_OP_READ)
-	{
-		int64_t remain_bytes;
-		int capacity_bytes;
-		int read_bytes;
-
-		remain_bytes = pFileContext->end - pFileContext->offset;
-		capacity_bytes = pTask->size - pTask->length;
-		read_bytes = (capacity_bytes < remain_bytes) ? \
+	remain_bytes = pFileContext->end - pFileContext->offset;
+	capacity_bytes = pTask->size - pTask->length;
+	read_bytes = (capacity_bytes < remain_bytes) ? \
 				capacity_bytes : remain_bytes;
 
-		/*
-		logInfo("###before dio read bytes: %d, pTask->length=%d, file offset=%ld", \
-			read_bytes, pTask->length, pFileContext->offset);
-		*/
+	/*
+	logInfo("###before dio read bytes: %d, pTask->length=%d, file offset=%ld", \
+		read_bytes, pTask->length, pFileContext->offset);
+	*/
 
-		if (read(pFileContext->fd, pTask->data + pTask->length, \
-			read_bytes) != read_bytes)
-		{
-			result = errno != 0 ? errno : EIO;
-			logError("file: "__FILE__", line: %d, " \
-				"read from file: %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, pFileContext->filename, \
-				result, STRERROR(result));
-			break;
-		}
+	if (read(pFileContext->fd, pTask->data + pTask->length, \
+		read_bytes) != read_bytes)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"read from file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pFileContext->filename, \
+			result, STRERROR(result));
+	}
 
-		pTask->length += read_bytes;
-		pFileContext->offset += read_bytes;
+	pthread_mutex_lock(&g_dio_thread_lock);
+	g_storage_stat.total_file_read_count++;
+	if (result == 0)
+	{
+		g_storage_stat.success_file_read_count++;
+	}
+	pthread_mutex_unlock(&g_dio_thread_lock);
 
-		/*
-		logInfo("###after dio read bytes: %d, pTask->length=%d, file offset=%ld", \
-			read_bytes, pTask->length, pFileContext->offset);
-		*/
+	if (result != 0)
+	{
+		break;
+	}
 
-		result = 0;
-		if (pFileContext->offset < pFileContext->end)
-		{
-			storage_nio_notify(pTask);  //notify nio to deal
-		}
-		else
-		{
-			/* file read done, close it */
-			close(pFileContext->fd);
-			pFileContext->fd = -1;
+	pTask->length += read_bytes;
+	pFileContext->offset += read_bytes;
 
-			pFileContext->done_callback(pTask, result);
-		}
+	/*
+	logInfo("###after dio read bytes: %d, pTask->length=%d, file offset=%ld", \
+		read_bytes, pTask->length, pFileContext->offset);
+	*/
+
+	if (pFileContext->offset < pFileContext->end)
+	{
+		storage_nio_notify(pTask);  //notify nio to deal
 	}
 	else
 	{
-		int write_bytes;
-		char *pDataBuff;
+		/* file read done, close it */
+		close(pFileContext->fd);
+		pFileContext->fd = -1;
 
-		pDataBuff = pTask->data + pFileContext->buff_offset;
-		write_bytes = pTask->length - pFileContext->buff_offset;
-		if (write(pFileContext->fd,pDataBuff,write_bytes)!=write_bytes)
+		pFileContext->done_callback(pTask, result);
+	}
+
+	return 0;
+
+	} while (0);
+
+	/* file read error, close it */
+	if (pFileContext->fd > 0)
+	{
+		close(pFileContext->fd);
+		pFileContext->fd = -1;
+	}
+
+	pFileContext->done_callback(pTask, result);
+	return result;
+}
+
+int dio_write_file(struct fast_task_info *pTask)
+{
+	StorageFileContext *pFileContext;
+	int result;
+	int write_bytes;
+	char *pDataBuff;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+
+	result = 0;
+	do
+	{
+	if (pFileContext->fd < 0)
+	{
+		pFileContext->fd = open(pFileContext->filename, \
+					O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		if (pFileContext->fd < 0)
+		{
+			result = errno != 0 ? errno : EACCES;
+			logError("file: "__FILE__", line: %d, " \
+				"open file: %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pFileContext->filename, \
+				result, STRERROR(result));
+		}
+
+		pthread_mutex_lock(&g_dio_thread_lock);
+		g_storage_stat.total_file_open_count++;
+		if (result == 0)
+		{
+			g_storage_stat.success_file_open_count++;
+		}
+		pthread_mutex_unlock(&g_dio_thread_lock);
+
+		if (result != 0)
+		{
+			break;
+		}
+
+		/*
+		if (pFileContext->offset > 0 && lseek(pFileContext->fd, \
+			pFileContext->offset, SEEK_SET) < 0)
 		{
 			result = errno != 0 ? errno : EIO;
 			logError("file: "__FILE__", line: %d, " \
-				"write to file: %s fail, " \
+				"lseek file: %s fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pFileContext->filename, \
 				result, STRERROR(result));
 			break;
 		}
+		*/
+	}
+
+
+	pDataBuff = pTask->data + pFileContext->buff_offset;
+	write_bytes = pTask->length - pFileContext->buff_offset;
+	if (write(pFileContext->fd, pDataBuff, write_bytes) != write_bytes)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"write to file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pFileContext->filename, \
+			result, STRERROR(result));
+	}
+
+	pthread_mutex_lock(&g_dio_thread_lock);
+	g_storage_stat.total_file_write_count++;
+	if (result == 0)
+	{
+		g_storage_stat.success_file_write_count++;
+	}
+	pthread_mutex_unlock(&g_dio_thread_lock);
+
+	if (result != 0)
+	{
+		break;
+	}
+
+	if (pFileContext->calc_crc32)
+	{
+		pFileContext->crc32 = CRC32_ex(pDataBuff, write_bytes, \
+					pFileContext->crc32);
+	}
+
+	if (pFileContext->calc_file_hash)
+	{
+		CALC_HASH_CODES4(pDataBuff, write_bytes, \
+				pFileContext->file_hash_codes)
+	}
+
+	/*
+	logInfo("###dio write bytes: %d, pTask->length=%d, buff_offset=%d", \
+		write_bytes, pTask->length, pFileContext->buff_offset);
+	*/
+
+	pFileContext->offset += write_bytes;
+	if (pFileContext->offset < pFileContext->end)
+	{
+		pFileContext->buff_offset = 0;
+		storage_nio_notify(pTask);  //notify nio to deal
+	}
+	else
+	{
+		/* file write done, close it */
+		close(pFileContext->fd);
+		pFileContext->fd = -1;
 
 		if (pFileContext->calc_crc32)
 		{
-			pFileContext->crc32 = CRC32_ex(pDataBuff, write_bytes, \
+			pFileContext->crc32 = CRC32_FINAL( \
 						pFileContext->crc32);
 		}
 
 		if (pFileContext->calc_file_hash)
 		{
-			CALC_HASH_CODES4(pDataBuff, write_bytes, \
-					pFileContext->file_hash_codes)
-		}
-
-		/*
-		logInfo("###dio write bytes: %d, pTask->length=%d, buff_offset=%d", \
-			write_bytes, pTask->length, pFileContext->buff_offset);
-		*/
-
-		pFileContext->offset += write_bytes;
-
-		result = 0;
-		if (pFileContext->offset < pFileContext->end)
-		{
-			pFileContext->buff_offset = 0;
-			storage_nio_notify(pTask);  //notify nio to deal
-		}
-		else
-		{
-			/* file write done, close it */
-			close(pFileContext->fd);
-			pFileContext->fd = -1;
-
-			if (pFileContext->calc_crc32)
-			{
-				pFileContext->crc32 = CRC32_FINAL( \
-							pFileContext->crc32);
-			}
-
-			if (pFileContext->calc_file_hash)
-			{
-				FINISH_HASH_CODES4(pFileContext->file_hash_codes)
-			}
-
-			pFileContext->done_callback(pTask, result);
-		}
-	}
-	} while (0);
-
-	if (result != 0) //error
-	{
-		/* file read/write done, close it */
-		if (pFileContext->fd > 0)
-		{
-		close(pFileContext->fd);
-		pFileContext->fd = -1;
-
-		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
-		{
-			if (unlink(pFileContext->filename) != 0)
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"delete file: %s fail, " \
-					"errno: %d, error info: %s", \
-					__LINE__, pFileContext->filename, \
-					errno, STRERROR(errno));
-			}
-		}
+			FINISH_HASH_CODES4(pFileContext->file_hash_codes)
 		}
 
 		pFileContext->done_callback(pTask, result);
 	}
 
+	return 0;
+	} while (0);
+
+	/* file write error, close it */
+	if (pFileContext->fd > 0)
+	{
+		close(pFileContext->fd);
+		pFileContext->fd = -1;
+
+		if (unlink(pFileContext->filename) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"delete file: %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pFileContext->filename, \
+				errno, STRERROR(errno));
+		}
+	}
+
+	pFileContext->done_callback(pTask, result);
 	return result;
 }
 

@@ -230,8 +230,8 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no);
 #define tcprecvdata(sock, data, size, timeout) \
 	tcprecvdata_ex(sock, data, size, timeout, NULL)
 
-#define tcpsendfile(sock, filename, file_bytes, timeout) \
-	tcpsendfile_ex(sock, filename, 0, file_bytes, timeout)
+#define tcpsendfile(sock, filename, file_bytes, timeout, total_send_bytes) \
+	tcpsendfile_ex(sock, filename, 0, file_bytes, timeout, total_send_bytes)
 
 #define tcprecvdata_nb(sock, data, size, timeout) \
 	tcprecvdata_nb_ex(sock, data, size, timeout, NULL)
@@ -243,10 +243,11 @@ int socketServer(const char *bind_ipaddr, const int port, int *err_no);
  *          file_offset: file offset, start position
  *          file_bytes: send file length
  *          timeout: write timeout
+ *          total_send_bytes: store the send bytes
  *  return: error no, 0 success, != 0 fail
 */
 int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
-		const int64_t file_bytes, const int timeout);
+	const int64_t file_bytes, const int timeout, int64_t *total_send_bytes);
 
 /** receive data to a file
  *  parameters:

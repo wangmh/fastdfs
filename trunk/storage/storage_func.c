@@ -75,6 +75,17 @@
 #define STAT_ITEM_TOTAL_DOWNLOAD_BYTES	"total_download_bytes"
 #define STAT_ITEM_SUCCESS_DOWNLOAD_BYTES "success_download_bytes"
 
+#define STAT_ITEM_TOTAL_SYNC_IN_BYTES      "total_sync_in_bytes"
+#define STAT_ITEM_SUCCESS_SYNC_IN_BYTES    "success_sync_in_bytes"
+#define STAT_ITEM_TOTAL_SYNC_OUT_BYTES     "total_sync_out_bytes"
+#define STAT_ITEM_SUCCESS_SYNC_OUT_BYTES   "success_sync_out_bytes"
+#define STAT_ITEM_TOTAL_FILE_OPEN_COUNT    "total_file_open_count"
+#define STAT_ITEM_SUCCESS_FILE_OPEN_COUNT  "success_file_open_count"
+#define STAT_ITEM_TOTAL_FILE_READ_COUNT    "total_file_read_count"
+#define STAT_ITEM_SUCCESS_FILE_READ_COUNT  "success_file_read_count"
+#define STAT_ITEM_TOTAL_FILE_WRITE_COUNT   "total_file_write_count"
+#define STAT_ITEM_SUCCESS_FILE_WRITE_COUNT "success_file_write_count"
+
 #define STAT_ITEM_DIST_PATH_INDEX_HIGH	"dist_path_index_high"
 #define STAT_ITEM_DIST_PATH_INDEX_LOW	"dist_path_index_low"
 #define STAT_ITEM_DIST_WRITE_FILE_COUNT	"dist_write_file_count"
@@ -242,7 +253,36 @@ static int storage_open_stat_file()
 		g_storage_stat.success_download_bytes = iniGetInt64Value(NULL, \
 				STAT_ITEM_SUCCESS_DOWNLOAD_BYTES, \
 				&iniContext, 0);
-
+		g_storage_stat.total_sync_in_bytes = iniGetInt64Value(NULL, \
+				STAT_ITEM_TOTAL_SYNC_IN_BYTES, \
+				&iniContext, 0);
+		g_storage_stat.success_sync_in_bytes = iniGetInt64Value(NULL, \
+				STAT_ITEM_SUCCESS_SYNC_IN_BYTES, \
+				&iniContext, 0);
+		g_storage_stat.total_sync_out_bytes = iniGetInt64Value(NULL, \
+				STAT_ITEM_TOTAL_SYNC_OUT_BYTES, \
+				&iniContext, 0);
+		g_storage_stat.success_sync_out_bytes = iniGetInt64Value(NULL, \
+				STAT_ITEM_SUCCESS_SYNC_OUT_BYTES, \
+				&iniContext, 0);
+		g_storage_stat.total_file_open_count = iniGetInt64Value(NULL, \
+				STAT_ITEM_TOTAL_FILE_OPEN_COUNT, \
+				&iniContext, 0);
+		g_storage_stat.success_file_open_count = iniGetInt64Value(NULL, \
+				STAT_ITEM_SUCCESS_FILE_OPEN_COUNT, \
+				&iniContext, 0);
+		g_storage_stat.total_file_read_count = iniGetInt64Value(NULL, \
+				STAT_ITEM_TOTAL_FILE_READ_COUNT, \
+				&iniContext, 0);
+		g_storage_stat.success_file_read_count = iniGetInt64Value(NULL, \
+				STAT_ITEM_SUCCESS_FILE_READ_COUNT, \
+				&iniContext, 0);
+		g_storage_stat.total_file_write_count = iniGetInt64Value(NULL, \
+				STAT_ITEM_TOTAL_FILE_WRITE_COUNT, \
+				&iniContext, 0);
+		g_storage_stat.success_file_write_count = iniGetInt64Value(NULL, \
+				STAT_ITEM_SUCCESS_FILE_WRITE_COUNT, \
+				&iniContext, 0);
 		g_dist_path_index_high = iniGetIntValue(NULL, \
 				STAT_ITEM_DIST_PATH_INDEX_HIGH, \
 				&iniContext, 0);
@@ -293,7 +333,7 @@ static int storage_close_stat_file()
 
 int storage_write_to_stat_file()
 {
-	char buff[1024];
+	char buff[2048];
 	int len;
 	int result;
 	int write_ret;
@@ -305,6 +345,16 @@ int storage_write_to_stat_file()
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
@@ -354,6 +404,26 @@ int storage_write_to_stat_file()
 		g_storage_stat.total_download_bytes, \
 		STAT_ITEM_SUCCESS_DOWNLOAD_BYTES, \
 		g_storage_stat.success_download_bytes, \
+		STAT_ITEM_TOTAL_SYNC_IN_BYTES, \
+		g_storage_stat.total_sync_in_bytes, \
+		STAT_ITEM_SUCCESS_SYNC_IN_BYTES, \
+		g_storage_stat.success_sync_in_bytes, \
+		STAT_ITEM_TOTAL_SYNC_OUT_BYTES, \
+		g_storage_stat.total_sync_out_bytes, \
+		STAT_ITEM_SUCCESS_SYNC_OUT_BYTES, \
+		g_storage_stat.success_sync_out_bytes, \
+		STAT_ITEM_TOTAL_FILE_OPEN_COUNT, \
+		g_storage_stat.total_file_open_count, \
+		STAT_ITEM_SUCCESS_FILE_OPEN_COUNT, \
+		g_storage_stat.success_file_open_count, \
+		STAT_ITEM_TOTAL_FILE_READ_COUNT, \
+		g_storage_stat.total_file_read_count, \
+		STAT_ITEM_SUCCESS_FILE_READ_COUNT, \
+		g_storage_stat.success_file_read_count, \
+		STAT_ITEM_TOTAL_FILE_WRITE_COUNT, \
+		g_storage_stat.total_file_write_count, \
+		STAT_ITEM_SUCCESS_FILE_WRITE_COUNT, \
+		g_storage_stat.success_file_write_count, \
 		STAT_ITEM_DIST_PATH_INDEX_HIGH, g_dist_path_index_high, \
 		STAT_ITEM_DIST_PATH_INDEX_LOW, g_dist_path_index_low, \
 		STAT_ITEM_DIST_WRITE_FILE_COUNT, g_dist_write_file_count

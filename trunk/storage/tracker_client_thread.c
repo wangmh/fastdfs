@@ -1554,6 +1554,26 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_total_download_bytes);
 		long2buff(g_storage_stat.success_download_bytes, \
 			pStatBuff->sz_success_download_bytes);
+		long2buff(g_storage_stat.total_sync_in_bytes, \
+			pStatBuff->sz_total_sync_in_bytes);
+		long2buff(g_storage_stat.success_sync_in_bytes, \
+			pStatBuff->sz_success_sync_in_bytes);
+		long2buff(g_storage_stat.total_sync_out_bytes, \
+			pStatBuff->sz_total_sync_out_bytes);
+		long2buff(g_storage_stat.success_sync_out_bytes, \
+			pStatBuff->sz_success_sync_out_bytes);
+		long2buff(g_storage_stat.total_file_open_count, \
+			pStatBuff->sz_total_file_open_count);
+		long2buff(g_storage_stat.success_file_open_count, \
+			pStatBuff->sz_success_file_open_count);
+		long2buff(g_storage_stat.total_file_read_count, \
+			pStatBuff->sz_total_file_read_count);
+		long2buff(g_storage_stat.success_file_read_count, \
+			pStatBuff->sz_success_file_read_count);
+		long2buff(g_storage_stat.total_file_write_count, \
+			pStatBuff->sz_total_file_write_count);
+		long2buff(g_storage_stat.success_file_write_count, \
+			pStatBuff->sz_success_file_write_count);
 		long2buff(g_storage_stat.last_source_update, \
 			pStatBuff->sz_last_source_update);
 		long2buff(g_storage_stat.last_sync_update, \

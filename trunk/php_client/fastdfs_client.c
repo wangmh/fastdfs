@@ -824,7 +824,62 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				"success_delete_link_count", \
 				sizeof("success_delete_link_count"), \
 				pStorageStat->success_delete_link_count);
-
+			add_assoc_long_ex(server_info_array, \
+				"total_upload_bytes", \
+				sizeof("total_upload_bytes"), \
+				pStorageStat->total_upload_bytes);
+			add_assoc_long_ex(server_info_array, \
+				"success_upload_bytes", \
+				sizeof("success_upload_bytes"), \
+				pStorageStat->success_upload_bytes);
+			add_assoc_long_ex(server_info_array, \
+				"total_download_bytes", \
+				sizeof("total_download_bytes"), \
+				pStorageStat->total_download_bytes);
+			add_assoc_long_ex(server_info_array, \
+				"success_download_bytes", \
+				sizeof("success_download_bytes"), \
+				pStorageStat->success_download_bytes);
+			add_assoc_long_ex(server_info_array, \
+				"total_sync_in_bytes", \
+				sizeof("total_sync_in_bytes"), \
+				pStorageStat->total_sync_in_bytes);
+			add_assoc_long_ex(server_info_array, \
+				"success_sync_in_bytes", \
+				sizeof("success_sync_in_bytes"), \
+				pStorageStat->success_sync_in_bytes);
+			add_assoc_long_ex(server_info_array, \
+				"total_sync_out_bytes", \
+				sizeof("total_sync_out_bytes"), \
+				pStorageStat->total_sync_out_bytes);
+			add_assoc_long_ex(server_info_array, \
+				"success_sync_out_bytes", \
+				sizeof("success_sync_out_bytes"), \
+				pStorageStat->success_sync_out_bytes);
+			add_assoc_long_ex(server_info_array, \
+				"total_file_open_count", \
+				sizeof("total_file_open_count"), \
+				pStorageStat->total_file_open_count);
+			add_assoc_long_ex(server_info_array, \
+				"success_file_open_count", \
+				sizeof("success_file_open_count"), \
+				pStorageStat->success_file_open_count);
+			add_assoc_long_ex(server_info_array, \
+				"total_file_read_count", \
+				sizeof("total_file_read_count"), \
+				pStorageStat->total_file_read_count);
+			add_assoc_long_ex(server_info_array, \
+				"success_file_read_count", \
+				sizeof("success_file_read_count"), \
+				pStorageStat->success_file_read_count);
+			add_assoc_long_ex(server_info_array, \
+				"total_file_write_count", \
+				sizeof("total_file_write_count"), \
+				pStorageStat->total_file_write_count);
+			add_assoc_long_ex(server_info_array, \
+				"success_file_write_count", \
+				sizeof("success_file_write_count"), \
+				pStorageStat->success_file_write_count);
 			add_assoc_long_ex(server_info_array, \
 				"last_heart_beat_time", \
 				sizeof("last_heart_beat_time"), \

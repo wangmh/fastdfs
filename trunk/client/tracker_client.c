@@ -353,6 +353,26 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_total_download_bytes);
 		pStorageStat->success_download_bytes = buff2long( \
 			pStatBuff->sz_success_download_bytes);
+		pStorageStat->total_sync_in_bytes = buff2long( \
+			pStatBuff->sz_total_sync_in_bytes);
+		pStorageStat->success_sync_in_bytes = buff2long( \
+			pStatBuff->sz_success_sync_in_bytes);
+		pStorageStat->total_sync_out_bytes = buff2long( \
+			pStatBuff->sz_total_sync_out_bytes);
+		pStorageStat->success_sync_out_bytes = buff2long( \
+			pStatBuff->sz_success_sync_out_bytes);
+		pStorageStat->total_file_open_count = buff2long( \
+			pStatBuff->sz_total_file_open_count);
+		pStorageStat->success_file_open_count = buff2long( \
+			pStatBuff->sz_success_file_open_count);
+		pStorageStat->total_file_read_count = buff2long( \
+			pStatBuff->sz_total_file_read_count);
+		pStorageStat->success_file_read_count = buff2long( \
+			pStatBuff->sz_success_file_read_count);
+		pStorageStat->total_file_write_count = buff2long( \
+			pStatBuff->sz_total_file_write_count);
+		pStorageStat->success_file_write_count = buff2long( \
+			pStatBuff->sz_success_file_write_count);
 		pStorageStat->last_heart_beat_time = buff2long( \
 			pStatBuff->sz_last_heart_beat_time);
 		pDest++;
