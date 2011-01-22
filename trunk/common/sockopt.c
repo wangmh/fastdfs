@@ -1251,9 +1251,10 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 
 		remain_bytes -= send_bytes;
 	}
-	}
 
 	*total_send_bytes = file_bytes - remain_bytes;
+	}
+
 	close(fd);
 	return result;
 }
