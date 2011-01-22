@@ -172,7 +172,7 @@ static int fastdfs_convert_metadata_to_array(zval *metadata_obj, \
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", __LINE__, \
-			sizeof(FDFSMetaData) * (*meta_count), \
+			(int)sizeof(FDFSMetaData) * (*meta_count), \
 			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -189,7 +189,7 @@ static int fastdfs_convert_metadata_to_array(zval *metadata_obj, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"invalid array element, " \
-				"index=%d!", __LINE__, index);
+				"index=%ld!", __LINE__, index);
 
 			free(*meta_list);
 			*meta_list = NULL;
@@ -1617,7 +1617,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"emalloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, file_size + 1, errno, STRERROR(errno));
+			__LINE__, (int)file_size + 1, errno, STRERROR(errno));
 		free(file_buff);
 		pContext->err_no = errno != 0 ? errno : ENOMEM;
 		RETURN_BOOL(false);
@@ -3601,7 +3601,7 @@ static PHP_METHOD(FastDFS, __construct)
 	if (config_index < 0 || config_index >= config_count)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"invalid config_index: %d < 0 || >= %d", \
+			"invalid config_index: %ld < 0 || >= %d", \
 			__LINE__, config_index, config_count);
 		ZVAL_NULL(object);
 		return;
@@ -3618,7 +3618,7 @@ static PHP_METHOD(FastDFS, __construct)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"malloc %d bytes fail!", __LINE__, \
-				sizeof(TrackerServerGroup));
+				(int)sizeof(TrackerServerGroup));
 			ZVAL_NULL(object);
 			return;
 		}
@@ -4933,7 +4933,7 @@ static int load_config_files()
 		"anti_steal_secret_key length=%d, " \
 		"tracker_group_count=%d, first tracker group server_count=%d", \
 		g_fdfs_base_path, g_fdfs_connect_timeout, \
-		g_fdfs_network_timeout, strlen(pAntiStealSecretKey), \
+		g_fdfs_network_timeout, (int)strlen(pAntiStealSecretKey), \
 		config_count, g_tracker_group.server_count);
 
 	return 0;
