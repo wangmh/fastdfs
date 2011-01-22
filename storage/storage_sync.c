@@ -88,6 +88,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	char in_buff[1];
 	struct stat stat_buf;
 	int64_t in_bytes;
+	int64_t total_send_bytes;
 	int result;
 	bool need_sync_file;
 
@@ -161,6 +162,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		}
 	}
 
+	total_send_bytes = 0;
 	//printf("sync create file: %s\n", pRecord->filename);
 	do
 	{
@@ -213,7 +215,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		if (need_sync_file && (stat_buf.st_size > 0) && \
 			((result=tcpsendfile(pStorageServer->sock, \
 			full_filename, stat_buf.st_size, \
-			g_fdfs_network_timeout)) != 0))
+			g_fdfs_network_timeout, &total_send_bytes)) != 0))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"sync data to storage server %s:%d fail, " \
@@ -231,9 +233,15 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		{
 			break;
 		}
-
 	} while (0);
 
+	pthread_mutex_lock(&sync_thread_lock);
+	g_storage_stat.total_sync_out_bytes += total_send_bytes;
+	if (result == 0)
+	{
+		g_storage_stat.success_sync_out_bytes += total_send_bytes;
+	}
+	pthread_mutex_unlock(&sync_thread_lock);
 
 	if (result == EEXIST)
 	{

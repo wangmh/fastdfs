@@ -4,10 +4,11 @@ Version 2.08  2011-01-22
  * add cmd TRACKER_PROTO_CMD_SERVER_LIST_ONE_GROUP to support list one group
  * support disk recovery automatically
  * support total_upload_bytes, success_upload_bytes, total_download_bytes and 
-   success_download_bytes
+   success_download_bytes etc. 14 fields
  * tracker data file storage_groups.dat changes to storage_groups_new.dat, and 
    storage_servers.dat changes to storage_servers_new.dat
  * support file append
+ * storage_dio.c: dio_deal_task split to several functions
 
 Version 2.07  2011-01-09
  * slave file's prefix name can be empty

@@ -67,8 +67,8 @@ static int storage_do_delete_file(struct fast_task_info *pTask, \
 
 static int storage_write_to_file(struct fast_task_info *pTask, \
 		const int64_t file_offset, const int64_t upload_bytes, \
-		const int buff_offset, FileDealDoneCallback done_callback, \
-		const int store_path_index);
+		const int buff_offset, TaskDealFunc deal_func, \
+		FileDealDoneCallback done_callback, const int store_path_index);
 
 static int storage_read_from_file(struct fast_task_info *pTask, \
 		const int64_t file_offset, const int64_t download_bytes, \
@@ -146,6 +146,28 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 		} \
 \
 		g_storage_stat.last_sync_update = time(NULL); \
+		++g_stat_change_count; \
+		pthread_mutex_unlock(&stat_count_thread_lock);
+
+#define CHECK_AND_WRITE_TO_STAT_FILE1_WITH_BYTES( \
+		total_bytes, success_bytes, bytes)  \
+		pthread_mutex_lock(&stat_count_thread_lock); \
+\
+		if (pClientInfo->pSrcStorage == NULL) \
+		{ \
+			pClientInfo->pSrcStorage = get_storage_server( \
+					pClientInfo->tracker_client_ip); \
+		} \
+		if (pClientInfo->pSrcStorage != NULL) \
+		{ \
+			pClientInfo->pSrcStorage->last_sync_src_timestamp = \
+					pFileContext->timestamp2log; \
+			g_sync_change_count++; \
+		} \
+\
+		g_storage_stat.last_sync_update = time(NULL); \
+		total_bytes += bytes; \
+		success_bytes += bytes; \
 		++g_stat_change_count; \
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
@@ -328,14 +350,31 @@ static void storage_sync_copy_file_done_callback(struct fast_task_info *pTask, \
 		result = err_no;
 	}
 
-	if (result == 0)
+	if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
 	{
-		CHECK_AND_WRITE_TO_STAT_FILE1
-
+		if (result == 0)
+		{
+			CHECK_AND_WRITE_TO_STAT_FILE1_WITH_BYTES( \
+				g_storage_stat.total_sync_in_bytes, \
+				g_storage_stat.success_sync_in_bytes, \
+				pFileContext->end - pFileContext->start)
+		}
 	}
-	if (pFileContext->op == FDFS_STORAGE_FILE_OP_DISCARD)
+	else  //FDFS_STORAGE_FILE_OP_DISCARD
 	{
+		if (result == 0)
+		{
+			CHECK_AND_WRITE_TO_STAT_FILE1
+		}
+
 		result = EEXIST;
+	}
+	if (result != 0)
+	{
+		pthread_mutex_lock(&stat_count_thread_lock);
+		g_storage_stat.total_sync_in_bytes += \
+				pClientInfo->total_offset;
+		pthread_mutex_unlock(&stat_count_thread_lock);
 	}
 
 	pClientInfo->total_length = sizeof(TrackerHeader);
@@ -394,7 +433,7 @@ static void storage_download_file_done_callback(struct fast_task_info *pTask, \
 		pthread_mutex_lock(&stat_count_thread_lock);
 		g_storage_stat.total_download_count++;
 		g_storage_stat.total_download_bytes += \
-				pFileContext->end - pFileContext->start;
+				pFileContext->offset - pFileContext->start;
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
 		if (pTask->length == sizeof(TrackerHeader)) //never response
@@ -801,7 +840,7 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 		{
 			g_storage_stat.total_upload_count++;
  			g_storage_stat.total_upload_bytes += \
-				pFileContext->end - pFileContext->start;
+				pClientInfo->total_offset;
 		}
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
@@ -2924,7 +2963,8 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 
  	return storage_write_to_file(pTask, 0, file_bytes, p - pTask->data, \
-			storage_upload_file_done_callback, store_path_index);
+			dio_write_file, storage_upload_file_done_callback, \
+			store_path_index);
 }
 
 static int storage_deal_active_test(struct fast_task_info *pTask)
@@ -3128,7 +3168,8 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 
  	return storage_write_to_file(pTask, 0, file_bytes, p - pTask->data, \
-			storage_upload_file_done_callback, store_path_index);
+			dio_write_file, storage_upload_file_done_callback, \
+			store_path_index);
 }
 
 /**
@@ -3144,6 +3185,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 {
 	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
+	TaskDealFunc deal_func;
 	char *p;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char full_filename[MAX_PATH_SIZE + 256];
@@ -3371,6 +3413,12 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 			pClientInfo->total_length = sizeof(TrackerHeader);
 			return EAGAIN;
 		}
+
+		deal_func = dio_write_file;
+	}
+	else
+	{
+		deal_func = dio_discard_file;
 	}
 	
 	pFileContext->calc_crc32 = false;
@@ -3380,7 +3428,8 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	if (have_file_content)
 	{
 		return storage_write_to_file(pTask, 0, file_bytes, \
-			p - pTask->data, storage_sync_copy_file_done_callback,\
+			p - pTask->data, deal_func, \
+			storage_sync_copy_file_done_callback,\
 			store_path_index);
 	}
 	else
@@ -3927,7 +3976,7 @@ static int storage_do_delete_file(struct fast_task_info *pTask, \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
-	pClientInfo->deal_func = dio_deal_task;
+	pClientInfo->deal_func = dio_delete_file;
 	pFileContext->fd = -1;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_DELETE;
 	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
@@ -3956,7 +4005,7 @@ static int storage_read_from_file(struct fast_task_info *pTask, \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
-	pClientInfo->deal_func = dio_deal_task;
+	pClientInfo->deal_func = dio_read_file;
 	pClientInfo->clean_func = dio_finish_clean_up;
 	pClientInfo->total_length = sizeof(TrackerHeader) + download_bytes;
 	pClientInfo->total_offset = 0;
@@ -3988,8 +4037,8 @@ static int storage_read_from_file(struct fast_task_info *pTask, \
 
 static int storage_write_to_file(struct fast_task_info *pTask, \
 		const int64_t file_offset, const int64_t upload_bytes, \
-		const int buff_offset, FileDealDoneCallback done_callback, \
-		const int store_path_index)
+		const int buff_offset, TaskDealFunc deal_func, \
+		FileDealDoneCallback done_callback, const int store_path_index)
 {
 	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
@@ -3998,7 +4047,7 @@ static int storage_write_to_file(struct fast_task_info *pTask, \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
-	pClientInfo->deal_func = dio_deal_task;
+	pClientInfo->deal_func = deal_func;
 	pClientInfo->clean_func = dio_finish_clean_up;
 
 	pFileContext->fd = -1;

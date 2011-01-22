@@ -79,6 +79,16 @@
 #define STORAGE_ITEM_SUCCESS_UPLOAD_BYTES      "success_upload_bytes"
 #define STORAGE_ITEM_TOTAL_DOWNLOAD_BYTES      "total_download_bytes"
 #define STORAGE_ITEM_SUCCESS_DOWNLOAD_BYTES    "success_download_bytes"
+#define STORAGE_ITEM_TOTAL_SYNC_IN_BYTES       "total_sync_in_bytes"
+#define STORAGE_ITEM_SUCCESS_SYNC_IN_BYTES     "success_sync_in_bytes"
+#define STORAGE_ITEM_TOTAL_SYNC_OUT_BYTES      "total_sync_out_bytes"
+#define STORAGE_ITEM_SUCCESS_SYNC_OUT_BYTES    "success_sync_out_bytes"
+#define STORAGE_ITEM_TOTAL_FILE_OPEN_COUNT     "total_file_open_count"
+#define STORAGE_ITEM_SUCCESS_FILE_OPEN_COUNT   "success_file_open_count"
+#define STORAGE_ITEM_TOTAL_FILE_READ_COUNT     "total_file_read_count"
+#define STORAGE_ITEM_SUCCESS_FILE_READ_COUNT   "success_file_read_count"
+#define STORAGE_ITEM_TOTAL_FILE_WRITE_COUNT    "total_file_write_count"
+#define STORAGE_ITEM_SUCCESS_FILE_WRITE_COUNT  "success_file_write_count"
 #define STORAGE_ITEM_LAST_SOURCE_UPDATE        "last_source_update"
 #define STORAGE_ITEM_LAST_SYNC_UPDATE          "last_sync_update"
 #define STORAGE_ITEM_LAST_SYNCED_TIMESTAMP     "last_synced_timestamp"
@@ -1069,6 +1079,26 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 			STORAGE_ITEM_TOTAL_DOWNLOAD_BYTES, &iniContext, 0);
 		pStat->success_download_bytes = iniGetInt64Value(section_name, \
 			STORAGE_ITEM_SUCCESS_DOWNLOAD_BYTES, &iniContext, 0);
+		pStat->total_sync_in_bytes = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_TOTAL_SYNC_IN_BYTES, &iniContext, 0);
+		pStat->success_sync_in_bytes = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_SUCCESS_SYNC_IN_BYTES, &iniContext, 0);
+		pStat->total_sync_out_bytes = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_TOTAL_SYNC_OUT_BYTES, &iniContext, 0);
+		pStat->success_sync_out_bytes = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_SUCCESS_SYNC_OUT_BYTES, &iniContext, 0);
+		pStat->total_file_open_count = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_TOTAL_FILE_OPEN_COUNT, &iniContext, 0);
+		pStat->success_file_open_count = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_SUCCESS_FILE_OPEN_COUNT, &iniContext, 0);
+		pStat->total_file_read_count = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_TOTAL_FILE_READ_COUNT, &iniContext, 0);
+		pStat->success_file_read_count = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_SUCCESS_FILE_READ_COUNT, &iniContext, 0);
+		pStat->total_file_write_count = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_TOTAL_FILE_WRITE_COUNT, &iniContext, 0);
+		pStat->success_file_write_count = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_SUCCESS_FILE_WRITE_COUNT, &iniContext, 0);
 		pStat->last_source_update = iniGetIntValue(section_name, \
 			STORAGE_ITEM_LAST_SOURCE_UPDATE, &iniContext, 0);
 		pStat->last_sync_update = iniGetIntValue(section_name, \
@@ -1615,6 +1645,16 @@ int tracker_save_storages()
 				"\t%s="INT64_PRINTF_FORMAT"\n" \
 				"\t%s="INT64_PRINTF_FORMAT"\n" \
 				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
 				"\t%s=%d\n" \
 				"\t%s=%d\n" \
 				"\t%s=%d\n" \
@@ -1684,6 +1724,26 @@ int tracker_save_storages()
 				pStorage->stat.total_download_bytes, \
 				STORAGE_ITEM_SUCCESS_DOWNLOAD_BYTES, \
 				pStorage->stat.success_download_bytes, \
+				STORAGE_ITEM_TOTAL_SYNC_IN_BYTES, \
+				pStorage->stat.total_sync_in_bytes, \
+				STORAGE_ITEM_SUCCESS_SYNC_IN_BYTES, \
+				pStorage->stat.success_sync_in_bytes, \
+				STORAGE_ITEM_TOTAL_SYNC_OUT_BYTES, \
+				pStorage->stat.total_sync_out_bytes, \
+				STORAGE_ITEM_SUCCESS_SYNC_OUT_BYTES, \
+				pStorage->stat.success_sync_out_bytes, \
+				STORAGE_ITEM_TOTAL_FILE_OPEN_COUNT, \
+				pStorage->stat.total_file_open_count, \
+				STORAGE_ITEM_SUCCESS_FILE_OPEN_COUNT, \
+				pStorage->stat.success_file_open_count, \
+				STORAGE_ITEM_TOTAL_FILE_READ_COUNT, \
+				pStorage->stat.total_file_read_count, \
+				STORAGE_ITEM_SUCCESS_FILE_READ_COUNT, \
+				pStorage->stat.success_file_read_count, \
+				STORAGE_ITEM_TOTAL_FILE_WRITE_COUNT, \
+				pStorage->stat.total_file_write_count, \
+				STORAGE_ITEM_SUCCESS_FILE_WRITE_COUNT, \
+				pStorage->stat.success_file_write_count, \
 				STORAGE_ITEM_LAST_SOURCE_UPDATE, \
 				(int)(pStorage->stat.last_source_update), \
 				STORAGE_ITEM_LAST_SYNC_UPDATE, \

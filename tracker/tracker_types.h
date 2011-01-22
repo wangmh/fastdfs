@@ -124,6 +124,16 @@ typedef struct
 	int64_t success_upload_bytes;
 	int64_t total_download_bytes;
 	int64_t success_download_bytes;
+	int64_t total_sync_in_bytes;
+	int64_t success_sync_in_bytes;
+	int64_t total_sync_out_bytes;
+	int64_t success_sync_out_bytes;
+	int64_t total_file_open_count;
+	int64_t success_file_open_count;
+	int64_t total_file_read_count;
+	int64_t success_file_read_count;
+	int64_t total_file_write_count;
+	int64_t success_file_write_count;
 
 	/* last update timestamp as source server, 
            current server' timestamp
@@ -164,6 +174,16 @@ typedef struct
 	char sz_success_upload_bytes[8];
 	char sz_total_download_bytes[8];
 	char sz_success_download_bytes[8];
+	char sz_total_sync_in_bytes[8];
+	char sz_success_sync_in_bytes[8];
+	char sz_total_sync_out_bytes[8];
+	char sz_success_sync_out_bytes[8];
+	char sz_total_file_open_count[8];
+	char sz_success_file_open_count[8];
+	char sz_total_file_read_count[8];
+	char sz_success_file_read_count[8];
+	char sz_total_file_write_count[8];
+	char sz_success_file_write_count[8];
 	char sz_last_source_update[8];
 	char sz_last_sync_update[8];
 	char sz_last_synced_timestamp[8];

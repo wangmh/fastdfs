@@ -1084,7 +1084,7 @@ int tcpdiscard(int sock, const int bytes, const int timeout, \
 }
 
 int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
-		const int64_t file_bytes, const int timeout)
+	const int64_t file_bytes, const int timeout, int64_t *total_send_bytes)
 {
 	int fd;
 	int64_t send_bytes;
@@ -1104,12 +1104,14 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 	fd = open(filename, O_RDONLY);
 	if (fd < 0)
 	{
+		*total_send_bytes = 0;
 		return errno != 0 ? errno : EACCES;
 	}
 
 	flags = fcntl(sock, F_GETFL, 0);
 	if (flags < 0)
 	{
+		*total_send_bytes = 0;
 		return errno != 0 ? errno : EACCES;
 	}
 
@@ -1119,6 +1121,7 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 	{
 		if (fcntl(sock, F_SETFL, flags & ~O_NONBLOCK) == -1)
 		{
+			*total_send_bytes = 0;
 			return errno != 0 ? errno : EACCES;
 		}
 	}
@@ -1132,6 +1135,7 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 			"setsockopt failed, errno: %d, error info: %s.", \
 			__LINE__, errno, STRERROR(errno));
 		close(fd);
+		*total_send_bytes = 0;
 		return errno != 0 ? errno : EIO;
 	}
 	*/
@@ -1160,15 +1164,19 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 
 		remain_bytes -= send_bytes;
 	}
+
+	*total_send_bytes = file_bytes - remain_bytes;
 #else
 #ifdef OS_FREEBSD
 	offset = file_offset;
 	if (sendfile(fd, sock, offset, file_bytes, NULL, NULL, 0) != 0)
 	{
+		*total_send_bytes = 0;
 		result = errno != 0 ? errno : EIO;
 	}
 	else
 	{
+		*total_send_bytes = file_bytes;
 		result = 0;
 	}
 #endif
@@ -1203,6 +1211,7 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 	{
 		result = errno != 0 ? errno : EIO;
 		close(fd);
+		*total_send_bytes = 0;
 		return result;
 	}
 
@@ -1244,6 +1253,7 @@ int tcpsendfile_ex(int sock, const char *filename, const int64_t file_offset, \
 	}
 	}
 
+	*total_send_bytes = file_bytes - remain_bytes;
 	close(fd);
 	return result;
 }

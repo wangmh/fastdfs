@@ -1391,6 +1391,27 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 				pStatBuff->sz_total_download_bytes);
 		long2buff(pStorageStat->success_download_bytes, \
 				pStatBuff->sz_success_download_bytes);
+		long2buff(pStorageStat->total_sync_in_bytes, \
+				pStatBuff->sz_total_sync_in_bytes);
+		long2buff(pStorageStat->success_sync_in_bytes, \
+				pStatBuff->sz_success_sync_in_bytes);
+		long2buff(pStorageStat->total_sync_out_bytes, \
+				pStatBuff->sz_total_sync_out_bytes);
+		long2buff(pStorageStat->success_sync_out_bytes, \
+				pStatBuff->sz_success_sync_out_bytes);
+		long2buff(pStorageStat->total_file_open_count, \
+				pStatBuff->sz_total_file_open_count);
+		long2buff(pStorageStat->success_file_open_count, \
+				pStatBuff->sz_success_file_open_count);
+		long2buff(pStorageStat->total_file_read_count, \
+				pStatBuff->sz_total_file_read_count);
+		long2buff(pStorageStat->success_file_read_count, \
+				pStatBuff->sz_success_file_read_count);
+		long2buff(pStorageStat->total_file_write_count, \
+				pStatBuff->sz_total_file_write_count);
+		long2buff(pStorageStat->success_file_write_count, \
+				pStatBuff->sz_success_file_write_count);
+
 		long2buff(pStorageStat->last_heart_beat_time, \
 				pStatBuff->sz_last_heart_beat_time);
 
@@ -2506,6 +2527,26 @@ static int tracker_deal_storage_beat(struct fast_task_info *pTask)
 			buff2long(pStatBuff->sz_total_download_bytes);
 		pStat->success_download_bytes = \
 			buff2long(pStatBuff->sz_success_download_bytes);
+		pStat->total_sync_in_bytes = \
+			buff2long(pStatBuff->sz_total_sync_in_bytes);
+		pStat->success_sync_in_bytes = \
+			buff2long(pStatBuff->sz_success_sync_in_bytes);
+		pStat->total_sync_out_bytes = \
+			buff2long(pStatBuff->sz_total_sync_out_bytes);
+		pStat->success_sync_out_bytes = \
+			buff2long(pStatBuff->sz_success_sync_out_bytes);
+		pStat->total_file_open_count = \
+			buff2long(pStatBuff->sz_total_file_open_count);
+		pStat->success_file_open_count = \
+			buff2long(pStatBuff->sz_success_file_open_count);
+		pStat->total_file_read_count = \
+			buff2long(pStatBuff->sz_total_file_read_count);
+		pStat->success_file_read_count = \
+			buff2long(pStatBuff->sz_success_file_read_count);
+		pStat->total_file_write_count = \
+			buff2long(pStatBuff->sz_total_file_write_count);
+		pStat->success_file_write_count = \
+			buff2long(pStatBuff->sz_success_file_write_count);
 
 		if (++g_storage_stat_chg_count % TRACKER_SYNC_TO_FILE_FREQ == 0)
 		{

@@ -385,6 +385,16 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tsuccess_upload_bytes = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tstotal_download_bytes = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tsuccess_download_bytes = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_sync_in_bytes = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tsuccess_sync_in_bytes = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_sync_out_bytes = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tsuccess_sync_out_bytes = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_file_open_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tsuccess_file_open_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_file_read_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tsuccess_file_read_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_file_write_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tsuccess_file_write_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tlast_heart_beat_time = %s\n" \
 			"\t\tlast_source_update = %s\n" \
 			"\t\tlast_sync_update = %s\n"   \
@@ -423,6 +433,16 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			pStorageStat->success_upload_bytes, \
 			pStorageStat->total_download_bytes, \
 			pStorageStat->success_download_bytes, \
+			pStorageStat->total_sync_in_bytes, \
+			pStorageStat->success_sync_in_bytes, \
+			pStorageStat->total_sync_out_bytes, \
+			pStorageStat->success_sync_out_bytes, \
+			pStorageStat->total_file_open_count, \
+			pStorageStat->success_file_open_count, \
+			pStorageStat->total_file_read_count, \
+			pStorageStat->success_file_read_count, \
+			pStorageStat->total_file_write_count, \
+			pStorageStat->success_file_write_count, \
 			formatDatetime(pStorageStat->last_heart_beat_time, \
 				"%Y-%m-%d %H:%M:%S", \
 				szLastHeartBeatTime, sizeof(szLastHeartBeatTime)), \
