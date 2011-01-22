@@ -27,6 +27,26 @@
 extern "C" {
 #endif
 
+#define storage_upload_by_filename(pTrackerServer, \
+		pStorageServer, store_path_index, local_filename, \
+		file_ext_name, meta_list, meta_count, group_name, \
+		remote_filename) \
+	storage_upload_by_filename_ex(pTrackerServer, \
+		pStorageServer, store_path_index, \
+		STORAGE_PROTO_CMD_UPLOAD_FILE, local_filename, \
+		file_ext_name, meta_list, meta_count, group_name, \
+		remote_filename)
+
+#define storage_upload_appender_by_filename(pTrackerServer, \
+		pStorageServer, store_path_index, local_filename, \
+		file_ext_name, meta_list, meta_count, group_name, \
+		remote_filename) \
+	storage_upload_by_filename_ex(pTrackerServer, \
+		pStorageServer, store_path_index, \
+		STORAGE_PROTO_CMD_UPLOAD_APPENDER_FILE, local_filename, \
+		file_ext_name, meta_list, meta_count, group_name, \
+		remote_filename)
+
 /**
 * upload file to storage server (by file name)
 * params:
@@ -43,11 +63,11 @@ extern "C" {
 *	remote_filename: return the new created filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
+int storage_upload_by_filename_ex(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const int store_path_index, \
-		const char *local_filename, const char *file_ext_name, \
-		const FDFSMetaData *meta_list, const int meta_count, \
-		char *group_name, char *remote_filename);
+		const char cmd, const char *local_filename, \
+		const char *file_ext_name, const FDFSMetaData *meta_list, \
+		const int meta_count, char *group_name, char *remote_filename);
 
 /**
 * upload file to storage server (by file buff)
@@ -70,7 +90,18 @@ int storage_upload_by_filename(TrackerServerInfo *pTrackerServer, \
 		file_size, file_ext_name, meta_list, meta_count, \
 		group_name, remote_filename) \
 	storage_do_upload_file(pTrackerServer, pStorageServer, \
-		store_path_index, FDFS_UPLOAD_BY_BUFF, file_buff, NULL, \
+		store_path_index, STORAGE_PROTO_CMD_UPLOAD_FILE, \
+		FDFS_UPLOAD_BY_BUFF, file_buff, NULL, \
+		file_size, NULL, NULL, file_ext_name, meta_list, meta_count, \
+		group_name, remote_filename)
+
+#define storage_upload_appender_by_filebuff(pTrackerServer, pStorageServer, \
+		store_path_index, file_buff, \
+		file_size, file_ext_name, meta_list, meta_count, \
+		group_name, remote_filename) \
+	storage_do_upload_file(pTrackerServer, pStorageServer, \
+		store_path_index, STORAGE_PROTO_CMD_UPLOAD_APPENDER_FILE, \
+		FDFS_UPLOAD_BY_BUFF, file_buff, NULL, \
 		file_size, NULL, NULL, file_ext_name, meta_list, meta_count, \
 		group_name, remote_filename)
 
@@ -100,20 +131,36 @@ typedef int (*UploadCallback) (void *arg, const int64_t file_size, int sock);
 *	remote_filename: return the new created filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_upload_by_callback(TrackerServerInfo *pTrackerServer, \
+#define storage_upload_by_callback(pTrackerServer, pStorageServer, \
+		store_path_index, callback, arg, file_size, file_ext_name, \
+		meta_list, meta_count, group_name, remote_filename) \
+	storage_upload_by_callback_ex(pTrackerServer, pStorageServer, \
+		store_path_index, STORAGE_PROTO_CMD_UPLOAD_FILE, \
+		callback, arg, file_size, file_ext_name, meta_list, \
+		meta_count, group_name, remote_filename)
+
+#define storage_upload_appender_by_callback(pTrackerServer, pStorageServer, \
+		store_path_index, callback, arg, file_size, file_ext_name, \
+		meta_list, meta_count, group_name, remote_filename) \
+	storage_upload_by_callback_ex(pTrackerServer, pStorageServer, \
+		store_path_index, STORAGE_PROTO_CMD_UPLOAD_APPENDER_FILE, \
+		callback, arg, file_size, file_ext_name, meta_list, \
+		meta_count, group_name, remote_filename)
+
+int storage_upload_by_callback_ex(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const int store_path_index, \
-		UploadCallback callback, void *arg, \
+		const char cmd, UploadCallback callback, void *arg, \
 		const int64_t file_size, const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
 		char *group_name, char *remote_filename);
 
 int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const int store_path_index, \
-		const int upload_type, const char *file_buff, void *arg, \
-		const int64_t file_size, const char *master_filename, \
-		const char *prefix_name, const char *file_ext_name, \
-		const FDFSMetaData *meta_list, const int meta_count, \
-		char *group_name, char *remote_filename);
+	TrackerServerInfo *pStorageServer, const int store_path_index, \
+	const char cmd, const int upload_type, const char *file_buff, \
+	void *arg, const int64_t file_size, const char *master_filename, \
+	const char *prefix_name, const char *file_ext_name, \
+	const FDFSMetaData *meta_list, const int meta_count, \
+	char *group_name, char *remote_filename);
 
 /**
 * delete file from storage server

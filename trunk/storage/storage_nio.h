@@ -44,7 +44,8 @@ typedef void (*FileDealDoneCallback)(struct fast_task_info *pTask, \
 
 typedef struct
 {
-	bool gen_filename;	//if upload generate filename
+	bool if_gen_filename;	//if upload generate filename
+	bool if_appender_file;  //if upload appender file
 	char master_filename[128];
 	char file_ext_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
 	char prefix_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
