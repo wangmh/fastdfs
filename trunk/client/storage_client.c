@@ -1786,11 +1786,13 @@ int storage_do_append_file(TrackerServerInfo *pTrackerServer, \
 		}
 	}
 
+	printf("heihei1111, sock=%d\n", pStorageServer->sock);
 	if ((result=fdfs_recv_header(pStorageServer, &in_bytes)) != 0)
 	{
 		break;
 	}
 
+	printf("heihei4, sock=%d\n", pStorageServer->sock);
 	if (in_bytes != 0)
 	{
 		logError("storage server %s:%d response data " \
@@ -1841,7 +1843,6 @@ int storage_append_by_filename(TrackerServerInfo *pTrackerServer, \
 	{
 		return EINVAL;
 	}
-
 	return storage_do_append_file(pTrackerServer, pStorageServer, \
 		FDFS_UPLOAD_BY_FILE, local_filename, \
 		NULL, stat_buf.st_size, group_name, appender_filename);

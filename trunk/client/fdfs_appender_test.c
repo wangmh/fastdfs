@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 	}
 
 	log_init();
-	//log_set_cache(false);
+	g_log_context.log_level = LOG_DEBUG;
 
 	conf_filename = argv[1];
 	if ((result=fdfs_client_init(conf_filename)) != 0)
@@ -187,13 +187,13 @@ int main(int argc, char *argv[])
 
 	if (upload_type == FDFS_UPLOAD_BY_FILE)
 	{
-		result = storage_upload_by_filename(pTrackerServer, \
+		result = storage_upload_appender_by_filename(pTrackerServer, \
 				&storageServer, store_path_index, \
 				local_filename, file_ext_name, \
 				meta_list, meta_count, \
 				group_name, remote_filename);
 
-		printf("storage_upload_by_filename\n");
+		printf("storage_upload_appender_by_filename\n");
 	}
 	else if (upload_type == FDFS_UPLOAD_BY_BUFF)
 	{
@@ -201,15 +201,16 @@ int main(int argc, char *argv[])
 		if ((result=getFileContent(local_filename, \
 					&file_content, &file_size)) == 0)
 		{
-			result = storage_upload_by_filebuff(pTrackerServer, \
-					&storageServer, store_path_index, \
-					file_content, file_size, file_ext_name, \
+			result = storage_upload_appender_by_filebuff( \
+					pTrackerServer, &storageServer, \
+					store_path_index, file_content, \
+					file_size, file_ext_name, \
 					meta_list, meta_count, \
 					group_name, remote_filename);
 			free(file_content);
 		}
 
-		printf("storage_upload_by_filebuff\n");
+		printf("storage_upload_appender_by_filebuff\n");
 	}
 	else
 	{
@@ -219,15 +220,15 @@ int main(int argc, char *argv[])
 				S_ISREG(stat_buf.st_mode))
 		{
 			file_size = stat_buf.st_size;
-			result = storage_upload_by_callback(pTrackerServer, \
-					&storageServer, store_path_index, \
-					uploadFileCallback, local_filename, \
-					file_size, file_ext_name, \
-					meta_list, meta_count, \
+			result = storage_upload_appender_by_callback( \
+					pTrackerServer, &storageServer, \
+					store_path_index, uploadFileCallback, \
+					local_filename, file_size, \
+					file_ext_name, meta_list, meta_count, \
 					group_name, remote_filename);
 		}
 
-		printf("storage_upload_by_callback\n");
+		printf("storage_upload_appender_by_callback\n");
 	}
 
 	if (result != 0)
