@@ -998,8 +998,8 @@ static int storage_binlog_fsync(const bool bNeedLock)
 	return write_ret;
 }
 
-int storage_binlog_write(const int timestamp, const char op_type, \
-		const char *filename)
+int storage_binlog_write_ex(const int timestamp, const char op_type, \
+		const char *filename, const char *extra)
 {
 	int result;
 	int write_ret;
@@ -1012,9 +1012,18 @@ int storage_binlog_write(const int timestamp, const char op_type, \
 			__LINE__, result, STRERROR(result));
 	}
 
-	binlog_write_cache_len += sprintf(binlog_write_cache_buff + \
-				binlog_write_cache_len, "%d %c %s\n", \
-				timestamp, op_type, filename);
+	if (extra != NULL)
+	{
+		binlog_write_cache_len += sprintf(binlog_write_cache_buff + \
+					binlog_write_cache_len, "%d %c %s %s\n",\
+					timestamp, op_type, filename, extra);
+	}
+	else
+	{
+		binlog_write_cache_len += sprintf(binlog_write_cache_buff + \
+					binlog_write_cache_len, "%d %c %s\n", \
+					timestamp, op_type, filename);
+	}
 
 	//check if buff full
 	if (SYNC_BINLOG_WRITE_BUFF_SIZE - binlog_write_cache_len < 256)
