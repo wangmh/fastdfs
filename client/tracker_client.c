@@ -315,6 +315,10 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_total_upload_count);
 		pStorageStat->success_upload_count = buff2long( \
 			pStatBuff->sz_success_upload_count);
+		pStorageStat->total_append_count = buff2long( \
+			pStatBuff->sz_total_append_count);
+		pStorageStat->success_append_count = buff2long( \
+			pStatBuff->sz_success_append_count);
 		pStorageStat->total_set_meta_count = buff2long( \
 			pStatBuff->sz_total_set_meta_count);
 		pStorageStat->success_set_meta_count = buff2long( \
@@ -349,6 +353,10 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_total_upload_bytes);
 		pStorageStat->success_upload_bytes = buff2long( \
 			pStatBuff->sz_success_upload_bytes);
+		pStorageStat->total_append_bytes = buff2long( \
+			pStatBuff->sz_total_append_bytes);
+		pStorageStat->success_append_bytes = buff2long( \
+			pStatBuff->sz_success_append_bytes);
 		pStorageStat->total_download_bytes = buff2long( \
 			pStatBuff->sz_total_download_bytes);
 		pStorageStat->success_download_bytes = buff2long( \

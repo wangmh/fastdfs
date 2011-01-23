@@ -369,6 +369,8 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tsource ip_addr = %s\n" \
 			"\t\ttotal_upload_count = "INT64_PRINTF_FORMAT"\n"   \
 			"\t\tsuccess_upload_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_append_count = "INT64_PRINTF_FORMAT"\n"   \
+			"\t\tsuccess_append_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\ttotal_set_meta_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tsuccess_set_meta_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\ttotal_delete_count = "INT64_PRINTF_FORMAT"\n" \
@@ -383,6 +385,8 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tsuccess_delete_link_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\ttotal_upload_bytes = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tsuccess_upload_bytes = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_append_bytes = "INT64_PRINTF_FORMAT"\n" \
+			"\t\tsuccess_append_bytes = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tstotal_download_bytes = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tsuccess_download_bytes = "INT64_PRINTF_FORMAT"\n" \
 			"\t\ttotal_sync_in_bytes = "INT64_PRINTF_FORMAT"\n" \
@@ -417,6 +421,8 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			pStorage->src_ip_addr,  \
 			pStorageStat->total_upload_count, \
 			pStorageStat->success_upload_count, \
+			pStorageStat->total_append_count, \
+			pStorageStat->success_append_count, \
 			pStorageStat->total_set_meta_count, \
 			pStorageStat->success_set_meta_count, \
 			pStorageStat->total_delete_count, \
@@ -431,6 +437,8 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			pStorageStat->success_delete_link_count, \
 			pStorageStat->total_upload_bytes, \
 			pStorageStat->success_upload_bytes, \
+			pStorageStat->total_append_bytes, \
+			pStorageStat->success_append_bytes, \
 			pStorageStat->total_download_bytes, \
 			pStorageStat->success_download_bytes, \
 			pStorageStat->total_sync_in_bytes, \

@@ -63,6 +63,8 @@
 #define STORAGE_ITEM_STORAGE_HTTP_PORT         "storage_http_port"
 #define STORAGE_ITEM_TOTAL_UPLOAD_COUNT        "total_upload_count"
 #define STORAGE_ITEM_SUCCESS_UPLOAD_COUNT      "success_upload_count"
+#define STORAGE_ITEM_TOTAL_APPEND_COUNT        "total_append_count"
+#define STORAGE_ITEM_SUCCESS_APPEND_COUNT      "success_append_count"
 #define STORAGE_ITEM_TOTAL_SET_META_COUNT      "total_set_meta_count"
 #define STORAGE_ITEM_SUCCESS_SET_META_COUNT    "success_set_meta_count"
 #define STORAGE_ITEM_TOTAL_DELETE_COUNT        "total_delete_count"
@@ -77,6 +79,8 @@
 #define STORAGE_ITEM_SUCCESS_DELETE_LINK_COUNT "success_delete_link_count"
 #define STORAGE_ITEM_TOTAL_UPLOAD_BYTES        "total_upload_bytes"
 #define STORAGE_ITEM_SUCCESS_UPLOAD_BYTES      "success_upload_bytes"
+#define STORAGE_ITEM_TOTAL_APPEND_BYTES        "total_append_bytes"
+#define STORAGE_ITEM_SUCCESS_APPEND_BYTES      "success_append_bytes"
 #define STORAGE_ITEM_TOTAL_DOWNLOAD_BYTES      "total_download_bytes"
 #define STORAGE_ITEM_SUCCESS_DOWNLOAD_BYTES    "success_download_bytes"
 #define STORAGE_ITEM_TOTAL_SYNC_IN_BYTES       "total_sync_in_bytes"
@@ -1047,6 +1051,10 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 			STORAGE_ITEM_TOTAL_UPLOAD_COUNT, &iniContext, 0);
 		pStat->success_upload_count = iniGetInt64Value(section_name, \
 			STORAGE_ITEM_SUCCESS_UPLOAD_COUNT, &iniContext, 0);
+		pStat->total_append_count = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_TOTAL_APPEND_COUNT, &iniContext, 0);
+		pStat->success_append_count = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_SUCCESS_APPEND_COUNT, &iniContext, 0);
 		pStat->total_set_meta_count = iniGetInt64Value(section_name, \
 			STORAGE_ITEM_TOTAL_SET_META_COUNT, &iniContext, 0);
 		pStat->success_set_meta_count = iniGetInt64Value(section_name, \
@@ -1075,6 +1083,10 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 			STORAGE_ITEM_TOTAL_UPLOAD_BYTES, &iniContext, 0);
 		pStat->success_upload_bytes = iniGetInt64Value(section_name, \
 			STORAGE_ITEM_SUCCESS_UPLOAD_BYTES, &iniContext, 0);
+		pStat->total_append_bytes = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_TOTAL_APPEND_BYTES, &iniContext, 0);
+		pStat->success_append_bytes = iniGetInt64Value(section_name, \
+			STORAGE_ITEM_SUCCESS_APPEND_BYTES, &iniContext, 0);
 		pStat->total_download_bytes = iniGetInt64Value(section_name, \
 			STORAGE_ITEM_TOTAL_DOWNLOAD_BYTES, &iniContext, 0);
 		pStat->success_download_bytes = iniGetInt64Value(section_name, \
@@ -1655,6 +1667,10 @@ int tracker_save_storages()
 				"\t%s="INT64_PRINTF_FORMAT"\n" \
 				"\t%s="INT64_PRINTF_FORMAT"\n" \
 				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
+				"\t%s="INT64_PRINTF_FORMAT"\n" \
 				"\t%s=%d\n" \
 				"\t%s=%d\n" \
 				"\t%s=%d\n" \
@@ -1692,6 +1708,10 @@ int tracker_save_storages()
 				pStorage->stat.total_upload_count, \
 				STORAGE_ITEM_SUCCESS_UPLOAD_COUNT, \
 				pStorage->stat.success_upload_count, \
+				STORAGE_ITEM_TOTAL_APPEND_COUNT, \
+				pStorage->stat.total_append_count, \
+				STORAGE_ITEM_SUCCESS_APPEND_COUNT, \
+				pStorage->stat.success_append_count, \
 				STORAGE_ITEM_TOTAL_SET_META_COUNT, \
 				pStorage->stat.total_set_meta_count, \
 				STORAGE_ITEM_SUCCESS_SET_META_COUNT, \
@@ -1720,6 +1740,10 @@ int tracker_save_storages()
 				pStorage->stat.total_upload_bytes, \
 				STORAGE_ITEM_SUCCESS_UPLOAD_BYTES, \
 				pStorage->stat.success_upload_bytes, \
+				STORAGE_ITEM_TOTAL_APPEND_BYTES, \
+				pStorage->stat.total_append_bytes, \
+				STORAGE_ITEM_SUCCESS_APPEND_BYTES, \
+				pStorage->stat.success_append_bytes, \
 				STORAGE_ITEM_TOTAL_DOWNLOAD_BYTES, \
 				pStorage->stat.total_download_bytes, \
 				STORAGE_ITEM_SUCCESS_DOWNLOAD_BYTES, \
