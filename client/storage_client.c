@@ -1820,7 +1820,7 @@ int storage_do_append_file(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_append_file_by_filename(TrackerServerInfo *pTrackerServer, \
+int storage_append_by_filename(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const char *local_filename,\
 		const char *group_name, const char *appender_filename)
 {
@@ -1847,7 +1847,7 @@ int storage_append_file_by_filename(TrackerServerInfo *pTrackerServer, \
 		NULL, stat_buf.st_size, group_name, appender_filename);
 }
 
-int storage_append_file_by_callback(TrackerServerInfo *pTrackerServer, \
+int storage_append_by_callback(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		UploadCallback callback, void *arg, const int64_t file_size, \
 		const char *group_name, const char *appender_filename)
@@ -1863,7 +1863,7 @@ int storage_append_file_by_callback(TrackerServerInfo *pTrackerServer, \
 			file_size, group_name, appender_filename);
 }
 
-int storage_append_file_by_filebuff(TrackerServerInfo *pTrackerServer, \
+int storage_append_by_filebuff(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const char *file_buff, \
 		const int64_t file_size, const char *group_name, \
 		const char *appender_filename)
@@ -1879,35 +1879,35 @@ int storage_append_file_by_filebuff(TrackerServerInfo *pTrackerServer, \
 			file_size, group_name, appender_filename);
 }
 
-int storage_append_file_by_filename1(TrackerServerInfo *pTrackerServer, \
+int storage_append_by_filename1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const char *local_filename,\
 		const char *appender_file_id)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(appender_file_id)
 
-	return storage_append_file_by_filename(pTrackerServer, \
+	return storage_append_by_filename(pTrackerServer, \
 			pStorageServer, local_filename, group_name, filename);
 }
 
-int storage_append_file_by_filebuff1(TrackerServerInfo *pTrackerServer, \
+int storage_append_by_filebuff1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const char *file_buff, \
 		const int64_t file_size, const char *appender_file_id)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(appender_file_id)
 
-	return storage_append_file_by_filebuff(pTrackerServer, \
+	return storage_append_by_filebuff(pTrackerServer, \
 			pStorageServer, file_buff, file_size, \
 			group_name, filename);
 }
 
-int storage_append_file_by_callback1(TrackerServerInfo *pTrackerServer, \
+int storage_append_by_callback1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		UploadCallback callback, void *arg, \
 		const int64_t file_size, const char *appender_file_id)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(appender_file_id)
 
-	return storage_append_file_by_callback(pTrackerServer, \
+	return storage_append_by_callback(pTrackerServer, \
 			pStorageServer, callback, arg, file_size, \
 			group_name, filename);
 }
