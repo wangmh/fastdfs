@@ -7,7 +7,7 @@ Version 2.08  2011-01-23
    success_download_bytes etc. 18 stat fields
  * tracker data file storage_groups.dat changes to storage_groups_new.dat, and 
    storage_servers.dat changes to storage_servers_new.dat
- * support file append, add tool fdfs_appender_test
+ * support file append, add tests: fdfs_appender_test and fdfs_appender_test1
  * storage_dio.c: dio_deal_task split to several functions
 
 Version 2.07  2011-01-09
