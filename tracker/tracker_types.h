@@ -108,6 +108,8 @@ typedef struct
 	*/
 	int64_t total_upload_count;
 	int64_t success_upload_count;
+	int64_t total_append_count;
+	int64_t success_append_count;
 	int64_t total_set_meta_count;
 	int64_t success_set_meta_count;
 	int64_t total_delete_count;
@@ -122,6 +124,8 @@ typedef struct
 	int64_t success_delete_link_count;
 	int64_t total_upload_bytes;
 	int64_t success_upload_bytes;
+	int64_t total_append_bytes;
+	int64_t success_append_bytes;
 	int64_t total_download_bytes;
 	int64_t success_download_bytes;
 	int64_t total_sync_in_bytes;
@@ -158,6 +162,8 @@ typedef struct
 {
 	char sz_total_upload_count[8];
 	char sz_success_upload_count[8];
+	char sz_total_append_count[8];
+	char sz_success_append_count[8];
 	char sz_total_set_meta_count[8];
 	char sz_success_set_meta_count[8];
 	char sz_total_delete_count[8];
@@ -172,6 +178,8 @@ typedef struct
 	char sz_success_delete_link_count[8];
 	char sz_total_upload_bytes[8];
 	char sz_success_upload_bytes[8];
+	char sz_total_append_bytes[8];
+	char sz_success_append_bytes[8];
 	char sz_total_download_bytes[8];
 	char sz_success_download_bytes[8];
 	char sz_total_sync_in_bytes[8];

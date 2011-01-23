@@ -54,7 +54,9 @@ int dio_write_file(struct fast_task_info *pTask);
 int dio_delete_file(struct fast_task_info *pTask);
 int dio_discard_file(struct fast_task_info *pTask);
 
-void dio_finish_clean_up(struct fast_task_info *pTask);
+void dio_read_finish_clean_up(struct fast_task_info *pTask);
+void dio_write_finish_clean_up(struct fast_task_info *pTask);
+void dio_append_finish_clean_up(struct fast_task_info *pTask);
 
 #ifdef __cplusplus
 }
