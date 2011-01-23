@@ -274,6 +274,7 @@ int main(int argc, char *argv[])
 	printf("file crc32=%u\n", file_info.crc32);
 	printf("file url: %s\n", file_url);
 
+	//sleep(70);
 	strcpy(appender_filename, remote_filename);
 	if (upload_type == FDFS_UPLOAD_BY_FILE)
 	{
