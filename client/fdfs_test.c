@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 	}
 
 	log_init();
-	//log_set_cache(false);
+	g_log_context.log_level = LOG_DEBUG;
 
 	conf_filename = argv[1];
 	operation = argv[2];

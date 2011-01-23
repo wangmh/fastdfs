@@ -3107,12 +3107,6 @@ static int storage_append_file(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
-        if (filename_len < FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
-                         + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
-        {
-                return EINVAL;
-        }
-
 	if (file_bytes < 0 || file_bytes != nInPackLen - \
 		(2 * FDFS_PROTO_PKG_LEN_SIZE + appender_filename_len))
 	{
@@ -3179,9 +3173,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 		return result;
 	}
 
-	sprintf(pFileContext->fname2log, "%c"STORAGE_DATA_DIR_FORMAT"/%s", \
-			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
-			store_path_index, true_filename);
+	strcpy(pFileContext->fname2log, appender_filename);
 
 	memset(buff, 0, sizeof(buff));
 	base64_decode_auto(&g_base64_context, pFileContext->fname2log + \
@@ -3192,7 +3184,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, file: %s is not a valid " \
 			"appender file", __LINE__, \
-			pTask->client_ip, full_filename);
+			pTask->client_ip, appender_filename);
 
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
@@ -3210,7 +3202,8 @@ static int storage_append_file(struct fast_task_info *pTask)
 	pFileContext->calc_crc32 = false;
 	pFileContext->calc_file_hash = false;
 
-	strcpy(pFileContext->filename, appender_filename);
+	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
+		"%s/data/%s", g_store_paths[store_path_index], true_filename);
 
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_APPEND_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
