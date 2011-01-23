@@ -402,7 +402,7 @@ int storage_upload_slave_by_callback(TrackerServerInfo *pTrackerServer, \
 *	appender_filename: the appender filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_append_file_by_filename(TrackerServerInfo *pTrackerServer, \
+int storage_append_by_filename(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const char *local_filename,\
 		const char *group_name, const char *appender_filename);
 
@@ -419,7 +419,7 @@ int storage_append_file_by_filename(TrackerServerInfo *pTrackerServer, \
 *	appender_filename: the appender filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_append_file_by_callback(TrackerServerInfo *pTrackerServer, \
+int storage_append_by_callback(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, \
 		UploadCallback callback, void *arg, const int64_t file_size, \
 		const char *group_name, const char *appender_filename);
@@ -436,7 +436,7 @@ int storage_append_file_by_callback(TrackerServerInfo *pTrackerServer, \
 *	appender_filename: the appender filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_append_file_by_filebuff(TrackerServerInfo *pTrackerServer, \
+int storage_append_by_filebuff(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, const char *file_buff, \
 		const int64_t file_size, const char *group_name, \
 		const char *appender_filename);

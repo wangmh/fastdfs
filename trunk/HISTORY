@@ -1,5 +1,5 @@
 
-Version 2.08  2011-01-22
+Version 2.08  2011-01-23
  * bug fixed: fdfs_trackerd.c set g_tracker_thread_count to 0
  * add cmd TRACKER_PROTO_CMD_SERVER_LIST_ONE_GROUP to support list one group
  * support disk recovery automatically
@@ -7,7 +7,7 @@ Version 2.08  2011-01-22
    success_download_bytes etc. 14 fields
  * tracker data file storage_groups.dat changes to storage_groups_new.dat, and 
    storage_servers.dat changes to storage_servers_new.dat
- * support file append
+ * support file append, add tool fdfs_appender_test
  * storage_dio.c: dio_deal_task split to several functions
 
 Version 2.07  2011-01-09

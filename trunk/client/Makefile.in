@@ -47,7 +47,9 @@ FDFS_HEADER_FILES = ../common/fdfs_define.h ../common/fdfs_global.h \
 ALL_OBJS = $(STATIC_OBJS) $(FAST_SHARED_OBJS) $(FDFS_SHARED_OBJS)
 
 ALL_PRGS = fdfs_monitor fdfs_test fdfs_test1 fdfs_crc32 fdfs_upload_file \
-           fdfs_download_file fdfs_delete_file fdfs_file_info
+           fdfs_download_file fdfs_delete_file fdfs_file_info \
+           fdfs_appender_test
+
 ALL_LIBS = libfastcommon.so.1 libfdfsclient.so.1
 
 all: $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS)
