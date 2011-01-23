@@ -310,7 +310,8 @@ int dio_read_file(struct fast_task_info *pTask)
 	{
 	if (pFileContext->fd < 0)
 	{
-		pFileContext->fd = open(pFileContext->filename, O_RDONLY);
+		pFileContext->fd = open(pFileContext->filename, \
+					pFileContext->open_flags);
 		if (pFileContext->fd < 0)
 		{
 			result = errno != 0 ? errno : EACCES;
@@ -419,20 +420,21 @@ int dio_read_file(struct fast_task_info *pTask)
 
 int dio_write_file(struct fast_task_info *pTask)
 {
+	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
 	int result;
 	int write_bytes;
 	char *pDataBuff;
 
-	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
-
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext = &(pClientInfo->file_context);
 	result = 0;
 	do
 	{
 	if (pFileContext->fd < 0)
 	{
 		pFileContext->fd = open(pFileContext->filename, \
-					O_WRONLY | O_CREAT | O_TRUNC, 0644);
+					pFileContext->open_flags, 0644);
 		if (pFileContext->fd < 0)
 		{
 			result = errno != 0 ? errno : EACCES;
@@ -470,7 +472,6 @@ int dio_write_file(struct fast_task_info *pTask)
 		}
 		*/
 	}
-
 
 	pDataBuff = pTask->data + pFileContext->buff_offset;
 	write_bytes = pTask->length - pFileContext->buff_offset;
@@ -543,27 +544,13 @@ int dio_write_file(struct fast_task_info *pTask)
 	return 0;
 	} while (0);
 
-	/* file write error, close it */
-	if (pFileContext->fd > 0)
-	{
-		close(pFileContext->fd);
-		pFileContext->fd = -1;
-
-		if (unlink(pFileContext->filename) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"delete file: %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, pFileContext->filename, \
-				errno, STRERROR(errno));
-		}
-	}
+	pClientInfo->clean_func(pTask);
 
 	pFileContext->done_callback(pTask, result);
 	return result;
 }
 
-void dio_finish_clean_up(struct fast_task_info *pTask)
+void dio_read_finish_clean_up(struct fast_task_info *pTask)
 {
         StorageFileContext *pFileContext;
 
@@ -571,10 +558,22 @@ void dio_finish_clean_up(struct fast_task_info *pTask)
 	if (pFileContext->fd > 0)
 	{
 		close(pFileContext->fd);
+		pFileContext->fd = -1;
+	}
+}
+
+void dio_write_finish_clean_up(struct fast_task_info *pTask)
+{
+        StorageFileContext *pFileContext;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+	if (pFileContext->fd > 0)
+	{
+		close(pFileContext->fd);
+		pFileContext->fd = -1;
 
 		/* if file does not write to the end, delete it */
-		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE && \
-			pFileContext->offset < pFileContext->end)
+		if (pFileContext->offset < pFileContext->end)
 		{
 			if (unlink(pFileContext->filename) != 0)
 			{
@@ -587,6 +586,18 @@ void dio_finish_clean_up(struct fast_task_info *pTask)
 					errno, STRERROR(errno));
 			}
 		}
+	}
+}
+
+void dio_append_finish_clean_up(struct fast_task_info *pTask)
+{
+        StorageFileContext *pFileContext;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+	if (pFileContext->fd > 0)
+	{
+		close(pFileContext->fd);
+		pFileContext->fd = -1;
 	}
 }
 

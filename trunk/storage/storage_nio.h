@@ -28,6 +28,7 @@
 
 #define FDFS_STORAGE_FILE_OP_READ     'R'
 #define FDFS_STORAGE_FILE_OP_WRITE    'W'
+#define FDFS_STORAGE_FILE_OP_APPEND   'A'
 #define FDFS_STORAGE_FILE_OP_DELETE   'D'
 #define FDFS_STORAGE_FILE_OP_DISCARD  'd'
 
@@ -64,10 +65,11 @@ typedef struct
 {
 	char filename[MAX_PATH_SIZE + 128];  	//full filename
 	char fname2log[128+sizeof(STORAGE_META_FILE_EXT)];  //filename to log
-	char op;        //w for writing, r for reading, d for deleting etc.
-	char sync_flag;  //sync flag log to binlog
-	bool calc_crc32;   //if calculate file content hash code
-	bool calc_file_hash;   //if calculate file content hash code
+	char op;            //w for writing, r for reading, d for deleting etc.
+	char sync_flag;     //sync flag log to binlog
+	bool calc_crc32;    //if calculate file content hash code
+	bool calc_file_hash;      //if calculate file content hash code
+	int open_flags;           //open file flags
 	int file_hash_codes[4];  //file hash code
 	int crc32;   //file content crc32 signature
 
