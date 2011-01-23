@@ -270,6 +270,174 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 }
 
 /**
+8 bytes: filename bytes
+8 bytes: start offset
+8 bytes: append length
+4 bytes: source op timestamp
+FDFS_GROUP_NAME_MAX_LEN bytes: group_name
+filename bytes : filename
+file size bytes: file content
+**/
+static int storage_sync_append_file(TrackerServerInfo *pStorageServer, \
+	BinLogReader *pReader, BinLogRecord *pRecord)
+{
+#define FIELD_COUNT  3
+	TrackerHeader *pHeader;
+	char *p;
+	char *pBuff;
+	char *fields[FIELD_COUNT];
+	char full_filename[MAX_PATH_SIZE];
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+256];
+	char in_buff[1];
+	struct stat stat_buf;
+	int64_t in_bytes;
+	int64_t total_send_bytes;
+	int64_t start_offset;
+	int64_t append_length;
+	int result;
+	int count;
+
+	if ((count=splitEx(pRecord->filename, ' ', fields, FIELD_COUNT)) \
+			!= FIELD_COUNT)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"the format of binlog not correct, filename: %s", \
+			__LINE__, pRecord->filename);
+		return EINVAL;
+	}
+
+	start_offset = strtoll((fields[1]), NULL, 10);
+	append_length = strtoll((fields[2]), NULL, 10);
+	
+	pRecord->filename_len = strlen(pRecord->filename);
+	pRecord->true_filename_len = pRecord->filename_len;
+	if ((result=storage_split_filename(pRecord->filename, \
+			&pRecord->true_filename_len, pRecord->true_filename, \
+			&pRecord->pBasePath)) != 0)
+	{
+		return result;
+	}
+
+	snprintf(full_filename, sizeof(full_filename), \
+		"%s/data/%s", pRecord->pBasePath, pRecord->true_filename);
+	if (lstat(full_filename, &stat_buf) != 0)
+	{
+		if (errno == ENOENT)
+		{
+			logDebug("file: "__FILE__", line: %d, " \
+				"sync appender file, file: %s not exists, "\
+				"maybe deleted later?", \
+				__LINE__, full_filename);
+
+			return 0;
+		}
+		else
+		{
+			result = errno != 0 ? errno : EPERM;
+			logError("file: "__FILE__", line: %d, " \
+				"call stat fail, appender file: %s, "\
+				"error no: %d, error info: %s", \
+				__LINE__, full_filename, \
+				result, STRERROR(result));
+			return result;
+		}
+	}
+
+	if (stat_buf.st_size < start_offset + append_length)
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"appender file: %s 'size: "INT64_PRINTF_FORMAT \
+			" < "INT64_PRINTF_FORMAT", maybe some mistakes " \
+			"happened, skip sync this appender file", __LINE__, \
+			full_filename, stat_buf.st_size, \
+			start_offset + append_length);
+
+		return 0;
+	}
+
+	total_send_bytes = 0;
+	//printf("sync create file: %s\n", pRecord->filename);
+	do
+	{
+		int64_t body_len;
+
+		pHeader = (TrackerHeader *)out_buff;
+		memset(pHeader, 0, sizeof(TrackerHeader));
+
+		body_len = 3 * FDFS_PROTO_PKG_LEN_SIZE + \
+				4 + FDFS_GROUP_NAME_MAX_LEN + \
+				pRecord->filename_len + append_length;
+
+		long2buff(body_len, pHeader->pkg_len);
+		pHeader->cmd = STORAGE_PROTO_CMD_SYNC_APPEND_FILE;
+		pHeader->status = 0;
+
+		p = out_buff + sizeof(TrackerHeader);
+
+		long2buff(pRecord->filename_len, p);
+		p += FDFS_PROTO_PKG_LEN_SIZE;
+
+		long2buff(start_offset, p);
+		p += FDFS_PROTO_PKG_LEN_SIZE;
+
+		long2buff(append_length, p);
+		p += FDFS_PROTO_PKG_LEN_SIZE;
+
+		int2buff(pRecord->timestamp, p);
+		p += 4;
+
+		sprintf(p, "%s", pStorageServer->group_name);
+		p += FDFS_GROUP_NAME_MAX_LEN;
+		memcpy(p, pRecord->filename, pRecord->filename_len);
+		p += pRecord->filename_len;
+
+		if((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
+			p - out_buff, g_fdfs_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"sync data to storage server %s:%d fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pStorageServer->ip_addr, \
+				pStorageServer->port, \
+				result, STRERROR(result));
+
+			break;
+		}
+
+		if ((result=tcpsendfile_ex(pStorageServer->sock, \
+			full_filename, start_offset, append_length, \
+			g_fdfs_network_timeout, &total_send_bytes)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"sync data to storage server %s:%d fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pStorageServer->ip_addr, \
+				pStorageServer->port, \
+				result, STRERROR(result));
+
+			break;
+		}
+
+		pBuff = in_buff;
+		if ((result=fdfs_recv_response(pStorageServer, \
+			&pBuff, 0, &in_bytes)) != 0)
+		{
+			break;
+		}
+	} while (0);
+
+	pthread_mutex_lock(&sync_thread_lock);
+	g_storage_stat.total_sync_out_bytes += total_send_bytes;
+	if (result == 0)
+	{
+		g_storage_stat.success_sync_out_bytes += total_send_bytes;
+	}
+	pthread_mutex_unlock(&sync_thread_lock);
+
+	return result == EEXIST ? 0 : result;
+}
+
+/**
 send pkg format:
 4 bytes: source delete timestamp
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
@@ -561,7 +729,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 
 static int storage_sync_data(BinLogReader *pReader, \
 			TrackerServerInfo *pStorageServer, \
-			const BinLogRecord *pRecord)
+			BinLogRecord *pRecord)
 {
 	int result;
 	switch(pRecord->op_type)
@@ -579,6 +747,16 @@ static int storage_sync_data(BinLogReader *pReader, \
 			result = storage_sync_copy_file(pStorageServer, \
 					pReader, pRecord, \
 					STORAGE_PROTO_CMD_SYNC_UPDATE_FILE);
+			break;
+		case STORAGE_OP_TYPE_SOURCE_APPEND_FILE:
+			result = storage_sync_append_file(pStorageServer, \
+					pReader, pRecord);
+			if (result == ENOENT)  //resync appender file
+			{
+			result = storage_sync_copy_file(pStorageServer, \
+					pReader, pRecord, \
+					STORAGE_PROTO_CMD_SYNC_UPDATE_FILE);
+			}
 			break;
 		case STORAGE_OP_TYPE_SOURCE_CREATE_LINK:
 			result = storage_sync_link_file(pStorageServer, \

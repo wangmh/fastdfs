@@ -328,27 +328,20 @@ static void storage_sync_copy_file_done_callback(struct fast_task_info *pTask, \
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
-	if (err_no == 0)
+	result = err_no;
+	if (result == 0)
 	{
 		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
 		{
 			result = storage_sync_copy_file_rename_filename( \
 					pFileContext);
-		}
-		else
-		{
-			result = 0;
-		}
 
-		if (result == 0) 
-		{
+			if (result == 0)
+			{
 			storage_binlog_write(pFileContext->timestamp2log, \
 			pFileContext->sync_flag, pFileContext->fname2log);
+			}
 		}
-	}
-	else
-	{
-		result = err_no;
 	}
 
 	if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
@@ -370,6 +363,87 @@ static void storage_sync_copy_file_done_callback(struct fast_task_info *pTask, \
 
 		result = EEXIST;
 	}
+	if (result != 0)
+	{
+		pthread_mutex_lock(&stat_count_thread_lock);
+		g_storage_stat.total_sync_in_bytes += \
+				pClientInfo->total_offset;
+		pthread_mutex_unlock(&stat_count_thread_lock);
+	}
+
+	pClientInfo->total_length = sizeof(TrackerHeader);
+	pClientInfo->total_offset = 0;
+	pTask->length = pClientInfo->total_length;
+	pHeader = (TrackerHeader *)pTask->data;
+	pHeader->status = result;
+	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
+	long2buff(pClientInfo->total_length - sizeof(TrackerHeader), \
+			pHeader->pkg_len);
+
+	storage_nio_notify(pTask);
+}
+
+static void storage_sync_append_file_done_callback( \
+		struct fast_task_info *pTask, const int err_no)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	TrackerHeader *pHeader;
+	int result;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+	result = err_no;
+
+	if (pFileContext->op == FDFS_STORAGE_FILE_OP_APPEND)
+	{
+		if (result == 0)
+		{
+		storage_binlog_write(pFileContext->timestamp2log, \
+			pFileContext->sync_flag, pFileContext->fname2log);
+
+			CHECK_AND_WRITE_TO_STAT_FILE1_WITH_BYTES( \
+				g_storage_stat.total_sync_in_bytes, \
+				g_storage_stat.success_sync_in_bytes, \
+				pFileContext->end - pFileContext->start)
+		}
+	}
+	else  //FDFS_STORAGE_FILE_OP_DISCARD
+	{
+		if (result == 0)
+		{
+			struct stat file_stat;
+
+			if (lstat(pFileContext->filename, &file_stat) != 0)
+			{
+				result = errno != 0 ? errno : ENOENT;
+				if (result != ENOENT)
+				{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip:%s, call stat file %s fail"\
+					", errno: %d, error info: %s", \
+					__LINE__, pTask->client_ip, \
+					pFileContext->filename, 
+					result, STRERROR(result));
+				}
+			}
+			else if (!S_ISREG(file_stat.st_mode))
+			{
+				result = EEXIST;
+			}
+			else if (file_stat.st_size < pFileContext->end)
+			{
+				result = ENOENT;  //need to resync
+			}
+			else
+			{
+				result = EEXIST;
+			}
+
+			CHECK_AND_WRITE_TO_STAT_FILE1
+		}
+	}
+
 	if (result != 0)
 	{
 		pthread_mutex_lock(&stat_count_thread_lock);
@@ -3137,7 +3211,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 
 	snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
 			g_store_paths[store_path_index], true_filename);
-	if (stat(pFileContext->filename, &stat_buf) == 0)
+	if (lstat(pFileContext->filename, &stat_buf) == 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))
 		{
@@ -3671,6 +3745,239 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 }
 
 /**
+8 bytes: filename bytes
+8 bytes: start offset
+8 bytes: append bytes 
+4 bytes: source op timestamp
+FDFS_GROUP_NAME_MAX_LEN bytes: group_name
+filename bytes : filename
+file size bytes: file content
+**/
+static int storage_sync_append_file(struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	TaskDealFunc deal_func;
+	char *p;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char true_filename[128];
+	char filename[128];
+	bool need_write_file;
+	int filename_len;
+	int64_t nInPackLen;
+	int64_t start_offset;
+	int64_t append_bytes;
+	struct stat stat_buf;
+	int result;
+	int store_path_index;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+
+	if (nInPackLen <= 3 * FDFS_PROTO_PKG_LEN_SIZE + \
+		4 + FDFS_GROUP_NAME_MAX_LEN)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT"is not correct, " \
+			"expect length > %d", __LINE__, \
+			STORAGE_PROTO_CMD_SYNC_APPEND_FILE, \
+			pTask->client_ip, nInPackLen, \
+			3 * FDFS_PROTO_PKG_LEN_SIZE + 4+FDFS_GROUP_NAME_MAX_LEN);
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	p = pTask->data + sizeof(TrackerHeader);
+
+	filename_len = buff2long(p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+	start_offset = buff2long(p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+	append_bytes = buff2long(p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+	if (filename_len < 0 || filename_len >= sizeof(filename))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, in request pkg, " \
+			"filename length: %d is invalid, " \
+			"which < 0 or >= %d", __LINE__, pTask->client_ip, \
+			filename_len,  (int)sizeof(filename));
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	if (start_offset < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, in request pkg, " \
+			"start offset: "INT64_PRINTF_FORMAT" is invalid, "\
+			"which < 0", __LINE__, pTask->client_ip, start_offset);
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	if (append_bytes < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, in request pkg, " \
+			"append bytes: "INT64_PRINTF_FORMAT" is invalid, "\
+			"which < 0", __LINE__, pTask->client_ip, append_bytes);
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	pFileContext->timestamp2log = buff2int(p);
+	p += 4;
+
+	memcpy(group_name, p, FDFS_GROUP_NAME_MAX_LEN);
+	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
+	p += FDFS_GROUP_NAME_MAX_LEN;
+	if (strcmp(group_name, g_group_name) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip:%s, group_name: %s " \
+			"not correct, should be: %s", __LINE__, \
+			pTask->client_ip, group_name, g_group_name);
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	if (append_bytes != nInPackLen - (3 * FDFS_PROTO_PKG_LEN_SIZE + \
+			4 + FDFS_GROUP_NAME_MAX_LEN + filename_len))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, in request pkg, " \
+			"file size: "INT64_PRINTF_FORMAT \
+			" != remain bytes: "INT64_PRINTF_FORMAT"", \
+			__LINE__, pTask->client_ip, append_bytes, \
+			nInPackLen - (3 * FDFS_PROTO_PKG_LEN_SIZE + \
+			FDFS_GROUP_NAME_MAX_LEN + filename_len));
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	memcpy(filename, p, filename_len);
+	*(filename + filename_len) = '\0';
+	p += filename_len;
+
+	if ((result=storage_split_filename_ex(filename, \
+		&filename_len, true_filename, &store_path_index)) != 0)
+	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return result;
+	}
+	if ((result=fdfs_check_data_filename(true_filename, filename_len)) != 0)
+	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return result;
+	}
+
+	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
+			"%s/data/%s", g_store_paths[store_path_index], \
+			true_filename);
+
+	if (lstat(pFileContext->filename, &stat_buf) != 0)
+	{
+		result = errno != 0 ? errno : ENOENT;
+		if (result != ENOENT)
+		{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, stat file %s fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pTask->client_ip, \
+			pFileContext->filename, result, STRERROR(result));
+		return result;
+		}
+		else
+		{
+		logWarning("file: "__FILE__", line: %d, " \
+			"client ip: %s, appender file %s not exists, " \
+			"will be resynced", __LINE__, pTask->client_ip, \
+			pFileContext->filename);
+		need_write_file = false;
+		}
+	}
+	else if (!S_ISREG(stat_buf.st_mode))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, file %s is not a regular " \
+			"file, will be ignored",  __LINE__, \
+			pTask->client_ip, pFileContext->filename);
+		need_write_file = false;
+	}
+	else if (stat_buf.st_size == start_offset)
+	{
+		need_write_file = true;
+	}
+	else if (stat_buf.st_size > start_offset)
+	{
+		if (stat_buf.st_size >= start_offset + append_bytes)
+		{
+		logDebug("file: "__FILE__", line: %d, " \
+			"client ip: %s, file %s,  my file size: " \
+			OFF_PRINTF_FORMAT" >= src file size: " \
+			INT64_PRINTF_FORMAT", do not append", \
+			__LINE__, pTask->client_ip, pFileContext->filename, \
+			stat_buf.st_size, start_offset + append_bytes);
+		}
+		else
+		{
+		logWarning("file: "__FILE__", line: %d, " \
+			"client ip: %s, file %s,  my file size: " \
+			OFF_PRINTF_FORMAT" > "INT64_PRINTF_FORMAT \
+			", but < "INT64_PRINTF_FORMAT", need be resynced", \
+			__LINE__, pTask->client_ip, pFileContext->filename, \
+			stat_buf.st_size, start_offset, \
+			start_offset + append_bytes);
+
+		}
+
+		need_write_file = false;
+	}
+	else //stat_buf.st_size < start_offset
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"client ip: %s, file %s,  my file size: " \
+			OFF_PRINTF_FORMAT" < start offset " \
+			INT64_PRINTF_FORMAT", need to resync this file!", \
+			__LINE__, pTask->client_ip, pFileContext->filename, \
+			stat_buf.st_size, start_offset);
+		need_write_file = false;
+	}
+
+	pFileContext->sync_flag = STORAGE_OP_TYPE_REPLICA_APPEND_FILE;
+
+	if (need_write_file)
+	{
+		deal_func = dio_write_file;
+		pFileContext->op = FDFS_STORAGE_FILE_OP_APPEND;
+		pFileContext->open_flags = O_WRONLY | O_APPEND;
+
+		snprintf(pFileContext->fname2log, \
+			sizeof(pFileContext->fname2log), \
+			"%s "INT64_PRINTF_FORMAT" "INT64_PRINTF_FORMAT, \
+			filename, start_offset, append_bytes);
+	}
+	else
+	{
+		deal_func = dio_discard_file;
+		pFileContext->op = FDFS_STORAGE_FILE_OP_DISCARD;
+		pFileContext->open_flags = 0;
+	}
+
+	pFileContext->calc_crc32 = false;
+	pFileContext->calc_file_hash = false;
+
+	return storage_write_to_file(pTask, start_offset, append_bytes, \
+		p - pTask->data, deal_func, \
+		storage_sync_append_file_done_callback, \
+		dio_append_finish_clean_up, store_path_index);
+}
+
+/**
 8 bytes: dest(link) filename length
 8 bytes: source filename length
 4 bytes: source op timestamp
@@ -4013,7 +4320,7 @@ static int storage_server_get_metadata(struct fast_task_info *pTask)
 	}
 
 	strcat(pFileContext->filename, STORAGE_META_FILE_EXT);
-	if (stat(pFileContext->filename, &stat_buf) == 0)
+	if (lstat(pFileContext->filename, &stat_buf) == 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))
 		{
@@ -4151,7 +4458,7 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 
 	sprintf(pFileContext->filename, "%s/data/%s", \
 			g_store_paths[store_path_index], true_filename);
-	if (stat(pFileContext->filename, &stat_buf) == 0)
+	if (lstat(pFileContext->filename, &stat_buf) == 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))
 		{
@@ -5029,6 +5336,9 @@ int storage_deal_task(struct fast_task_info *pTask)
 			break;
 		case STORAGE_PROTO_CMD_SYNC_UPDATE_FILE:
 			result = storage_sync_copy_file(pTask, pHeader->cmd);
+			break;
+		case STORAGE_PROTO_CMD_SYNC_APPEND_FILE:
+			result = storage_sync_append_file(pTask);
 			break;
 		case STORAGE_PROTO_CMD_SYNC_CREATE_LINK:
 			result = storage_sync_link_file(pTask);
