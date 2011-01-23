@@ -766,6 +766,16 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				pStorageStat->success_upload_count);
 
 			add_assoc_long_ex(server_info_array, \
+				"total_append_count", \
+				sizeof("total_append_count"), \
+				pStorageStat->total_append_count);
+
+			add_assoc_long_ex(server_info_array, \
+				"success_append_count", \
+				sizeof("success_append_count"), \
+				pStorageStat->success_append_count);
+
+			add_assoc_long_ex(server_info_array, \
 				"total_set_meta_count", \
 				sizeof("total_set_meta_count"), \
 				pStorageStat->total_set_meta_count);
@@ -833,6 +843,14 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				sizeof("success_upload_bytes"), \
 				pStorageStat->success_upload_bytes);
 			add_assoc_long_ex(server_info_array, \
+				"total_append_bytes", \
+				sizeof("total_append_bytes"), \
+				pStorageStat->total_append_bytes);
+			add_assoc_long_ex(server_info_array, \
+				"success_append_bytes", \
+				sizeof("success_append_bytes"), \
+				pStorageStat->success_append_bytes);
+			add_assoc_long_ex(server_info_array, \
 				"total_download_bytes", \
 				sizeof("total_download_bytes"), \
 				pStorageStat->total_download_bytes);
@@ -889,12 +907,10 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				"last_source_update", \
 				sizeof("last_source_update"), \
 				pStorageStat->last_source_update);
-
 			add_assoc_long_ex(server_info_array, \
 				"last_sync_update", \
 				sizeof("last_sync_update"), \
 				pStorageStat->last_sync_update);
-
 			add_assoc_long_ex(server_info_array, \
 				"last_synced_timestamp", \
 				sizeof("last_synced_timestamp"), \
