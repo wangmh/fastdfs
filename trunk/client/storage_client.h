@@ -54,6 +54,7 @@ extern "C" {
 *       pStorageServer: storage server
 *       store_path_index: the index of path on the storage server
 *       local_filename: local filename to upload
+*       cmd: the protocol command
 *       file_ext_name: file ext name, not include dot(.), 
 *                      if be NULL will abstract ext name from the local filename
 *	meta_list: meta info array
@@ -389,6 +390,56 @@ int storage_upload_slave_by_callback(TrackerServerInfo *pTrackerServer, \
 		const char *prefix_name, const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
 		char *group_name, char *remote_filename);
+
+
+/**
+* append file to storage server (by local filename)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       local_filename: local filename to upload
+*	group_name: the group name 
+*	appender_filename: the appender filename
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_append_file_by_filename(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *local_filename,\
+		const char *group_name, const char *appender_filename);
+
+
+/**
+* append file to storage server (by callback)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       callback: callback function to send file content to storage server
+*       arg: callback extra arguement
+*       file_size: the file size
+*	group_name: the group name 
+*	appender_filename: the appender filename
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_append_file_by_callback(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		UploadCallback callback, void *arg, const int64_t file_size, \
+		const char *group_name, const char *appender_filename);
+
+
+/**
+* append file to storage server (by file buff)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       file_buff: file content/buff
+*       file_size: file size (bytes)
+*	group_name: the group name
+*	appender_filename: the appender filename
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_append_file_by_filebuff(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *file_buff, \
+		const int64_t file_size, const char *group_name, \
+		const char *appender_filename);
 
 
 #define storage_query_file_info(pTrackerServer, pStorageServer, \

@@ -866,6 +866,7 @@ static void storage_append_file_done_callback(struct fast_task_info *pTask, \
 	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
 	TrackerHeader *pHeader;
+	char extra[64];
 	int result;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
@@ -873,8 +874,12 @@ static void storage_append_file_done_callback(struct fast_task_info *pTask, \
 
 	if (err_no == 0)
 	{
-		result = storage_binlog_write(pFileContext->timestamp2log, \
-			pFileContext->sync_flag, pFileContext->fname2log);
+		sprintf(extra, INT64_PRINTF_FORMAT" "INT64_PRINTF_FORMAT, \
+				pFileContext->start, \
+				pFileContext->end - pFileContext->start);
+		result = storage_binlog_write_ex(pFileContext->timestamp2log, \
+				pFileContext->sync_flag, \
+				pFileContext->fname2log, extra);
 	}
 	else
 	{

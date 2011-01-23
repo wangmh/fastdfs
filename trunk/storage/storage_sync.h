@@ -75,8 +75,12 @@ extern int g_storage_sync_thread_count;
 
 int storage_sync_init();
 int storage_sync_destroy();
-int storage_binlog_write(const int timestamp, const char op_type, \
-		const char *filename);
+
+#define storage_binlog_write(timestamp, op_type, filename) \
+	storage_binlog_write_ex(timestamp, op_type, filename, NULL)
+
+int storage_binlog_write_ex(const int timestamp, const char op_type, \
+		const char *filename, const char *extra);
 
 int storage_binlog_read(BinLogReader *pReader, \
 			BinLogRecord *pRecord, int *record_length);

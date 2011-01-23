@@ -596,6 +596,33 @@ void dio_append_finish_clean_up(struct fast_task_info *pTask)
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 	if (pFileContext->fd > 0)
 	{
+		/* if file does not write to the end, 
+                   delete the appended contents 
+                */
+		if (pFileContext->offset < pFileContext->end)
+		{
+			if (ftruncate(pFileContext->fd,pFileContext->start)!=0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"client ip: %s, " \
+					"call ftruncate of file %s fail," \
+					"errno: %d, error info: %s", \
+					__LINE__, pTask->client_ip, \
+					pFileContext->filename, \
+					errno, STRERROR(errno));
+			}
+			else
+			{
+				logDebug("file: "__FILE__", line: %d, " \
+					"client ip: %s, " \
+					"call ftruncate of file %s to " \
+					INT64_PRINTF_FORMAT, \
+					__LINE__, pTask->client_ip, \
+					pFileContext->filename, \
+					pFileContext->start);
+			}
+		}
+
 		close(pFileContext->fd);
 		pFileContext->fd = -1;
 	}

@@ -28,6 +28,7 @@
 #include "client_func.h"
 #include "tracker_client.h"
 #include "storage_client.h"
+#include "storage_client1.h"
 #include "client_global.h"
 #include "base64.h"
 
@@ -1685,6 +1686,230 @@ int storage_upload_slave_by_callback1(TrackerServerInfo *pTrackerServer, \
 	}
 
 	return result;
+}
+
+/**
+STORAGE_PROTO_CMD_APPEND_FILE:
+8 bytes: appender filename length
+8 bytes: file size
+master filename bytes: appender filename
+file size bytes: file content
+**/
+int storage_do_append_file(TrackerServerInfo *pTrackerServer, \
+	TrackerServerInfo *pStorageServer, const int upload_type, \
+	const char *file_buff, void *arg, const int64_t file_size, \
+	const char *group_name, const char *appender_filename)
+{
+	TrackerHeader *pHeader;
+	int result;
+	char out_buff[512];
+	char *p;
+	int64_t in_bytes;
+	int64_t total_send_bytes;
+	TrackerServerInfo storageServer;
+	bool new_connection;
+	int appender_filename_len;
+
+	appender_filename_len = strlen(appender_filename);
+
+	if ((result=storage_get_update_connection(pTrackerServer, \
+			&pStorageServer, group_name, appender_filename, \
+			&storageServer, &new_connection)) != 0)
+	{
+		return result;
+	}
+
+	/*
+	//printf("upload to storage %s:%d\n", \
+		pStorageServer->ip_addr, pStorageServer->port);
+	*/
+
+	do
+	{
+	pHeader = (TrackerHeader *)out_buff;
+	p = out_buff + sizeof(TrackerHeader);
+	long2buff(appender_filename_len, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+
+	long2buff(file_size, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+
+	memcpy(p, appender_filename, appender_filename_len);
+	p += appender_filename_len;
+
+	long2buff((p - out_buff) + file_size - sizeof(TrackerHeader), \
+		pHeader->pkg_len);
+	pHeader->cmd = STORAGE_PROTO_CMD_APPEND_FILE;
+	pHeader->status = 0;
+
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
+		p - out_buff, g_fdfs_network_timeout)) != 0)
+	{
+		logError("send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			pStorageServer->ip_addr, \
+			pStorageServer->port, \
+			result, STRERROR(result));
+		break;
+	}
+
+	if (upload_type == FDFS_UPLOAD_BY_FILE)
+	{
+		if ((result=tcpsendfile(pStorageServer->sock, file_buff, \
+			file_size, g_fdfs_network_timeout, \
+			&total_send_bytes)) != 0)
+		{
+			break;
+		}
+	}
+	else if (upload_type == FDFS_UPLOAD_BY_BUFF)
+	{
+		if ((result=tcpsenddata_nb(pStorageServer->sock, \
+			(char *)file_buff, file_size, \
+			g_fdfs_network_timeout)) != 0)
+		{
+			logError("send data to storage server %s:%d fail, " \
+				"errno: %d, error info: %s", \
+				pStorageServer->ip_addr, \
+				pStorageServer->port, \
+				result, STRERROR(result));
+			break;
+		}
+	}
+	else //FDFS_UPLOAD_BY_CALLBACK
+	{
+		UploadCallback callback;
+		callback = (UploadCallback)file_buff;
+		if ((result=callback(arg, file_size, pStorageServer->sock))!=0)
+		{
+			break;
+		}
+	}
+
+	if ((result=fdfs_recv_header(pStorageServer, &in_bytes)) != 0)
+	{
+		break;
+	}
+
+	if (in_bytes != 0)
+	{
+		logError("storage server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid, " \
+			"should == 0", pStorageServer->ip_addr, \
+			pStorageServer->port, in_bytes);
+		result = EINVAL;
+		break;
+	}
+
+	} while (0);
+
+	if (new_connection)
+	{
+		fdfs_quit(pStorageServer);
+		tracker_disconnect_server(pStorageServer);
+	}
+	else
+	{
+		if (result >= ENETDOWN) //network error
+		{
+			close(pStorageServer->sock);
+			pStorageServer->sock = -1;
+		}
+	}
+
+	return result;
+}
+
+int storage_append_file_by_filename(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *local_filename,\
+		const char *group_name, const char *appender_filename)
+{
+	struct stat stat_buf;
+
+	if (appender_filename == NULL || *appender_filename == '\0' \
+	 || group_name == NULL || *group_name == '\0')
+	{
+		return EINVAL;
+	}
+
+	if (stat(local_filename, &stat_buf) != 0)
+	{
+		return errno != 0 ? errno : EPERM;
+	}
+
+	if (!S_ISREG(stat_buf.st_mode))
+	{
+		return EINVAL;
+	}
+
+	return storage_do_append_file(pTrackerServer, pStorageServer, \
+		FDFS_UPLOAD_BY_FILE, local_filename, \
+		NULL, stat_buf.st_size, group_name, appender_filename);
+}
+
+int storage_append_file_by_callback(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		UploadCallback callback, void *arg, const int64_t file_size, \
+		const char *group_name, const char *appender_filename)
+{
+	if (appender_filename == NULL || *appender_filename == '\0' \
+	 || group_name == NULL || *group_name == '\0')
+	{
+		return EINVAL;
+	}
+
+	return storage_do_append_file(pTrackerServer, pStorageServer, \
+			FDFS_UPLOAD_BY_CALLBACK, (char *)callback, arg, \
+			file_size, group_name, appender_filename);
+}
+
+int storage_append_file_by_filebuff(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *file_buff, \
+		const int64_t file_size, const char *group_name, \
+		const char *appender_filename)
+{
+	if (appender_filename == NULL || *appender_filename == '\0' \
+	 || group_name == NULL || *group_name == '\0')
+	{
+		return EINVAL;
+	}
+
+	return storage_do_append_file(pTrackerServer, pStorageServer, \
+			FDFS_UPLOAD_BY_BUFF, file_buff, NULL, \
+			file_size, group_name, appender_filename);
+}
+
+int storage_append_file_by_filename1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *local_filename,\
+		const char *appender_file_id)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(appender_file_id)
+
+	return storage_append_file_by_filename(pTrackerServer, \
+			pStorageServer, local_filename, group_name, filename);
+}
+
+int storage_append_file_by_filebuff1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *file_buff, \
+		const int64_t file_size, const char *appender_file_id)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(appender_file_id)
+
+	return storage_append_file_by_filebuff(pTrackerServer, \
+			pStorageServer, file_buff, file_size, \
+			group_name, filename);
+}
+
+int storage_append_file_by_callback1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		UploadCallback callback, void *arg, \
+		const int64_t file_size, const char *appender_file_id)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(appender_file_id)
+
+	return storage_append_file_by_callback(pTrackerServer, \
+			pStorageServer, callback, arg, file_size, \
+			group_name, filename);
 }
 
 int fdfs_get_file_info_ex(const char *file_id, const bool get_from_server, \

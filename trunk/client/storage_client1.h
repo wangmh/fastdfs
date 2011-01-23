@@ -369,6 +369,52 @@ int storage_upload_slave_by_callback1(TrackerServerInfo *pTrackerServer, \
 		const char *prefix_name, const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
 		char *file_id);
+
+/**
+* append file to storage server (by filename)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       local_filename: local filename to upload
+*       appender_file_id: the appender file id
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_append_file_by_filename1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *local_filename,\
+		const char *appender_file_id);
+
+
+/**
+* append file to storage server (by file buff)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       file_buff: file content/buff
+*       file_size: file size (bytes)
+*       appender_file_id: the appender file id
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_append_file_by_filebuff1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *file_buff, \
+		const int64_t file_size, const char *appender_file_id);
+
+
+/**
+* append file to storage server (by callback)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       callback: callback function to send file content to storage server
+*       arg: callback extra arguement
+*       file_size: the file size
+*       appender_file_id: the appender file id
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_append_file_by_callback1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		UploadCallback callback, void *arg, \
+		const int64_t file_size, const char *appender_file_id);
+
 #ifdef __cplusplus
 }
 #endif
