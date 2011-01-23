@@ -784,6 +784,8 @@ static int storage_sync_data(BinLogReader *pReader, \
 			result = storage_sync_link_file(pStorageServer, \
 					pRecord);
 			break;
+		case STORAGE_OP_TYPE_REPLICA_APPEND_FILE:
+			return 0;
 		default:
 			return EINVAL;
 	}
