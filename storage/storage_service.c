@@ -3134,7 +3134,6 @@ static int storage_append_file(struct fast_task_info *pTask)
 	char *p;
 	char appender_filename[128];
 	char true_filename[128];
-	char full_filename[MAX_PATH_SIZE];
 	char buff[64];
 	struct stat stat_buf;
 	int appender_filename_len;
@@ -3209,8 +3208,8 @@ static int storage_append_file(struct fast_task_info *pTask)
 		return result;
 	}
 
-	snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
-			g_store_paths[store_path_index], true_filename);
+	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
+		"%s/data/%s", g_store_paths[store_path_index], true_filename);
 	if (lstat(pFileContext->filename, &stat_buf) == 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))
@@ -3218,7 +3217,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, appender file: %s " \
 				"is not a regular file", __LINE__, \
-				pTask->client_ip, full_filename);
+				pTask->client_ip, pFileContext->filename);
 
 			pClientInfo->total_length = sizeof(TrackerHeader);
 			return EINVAL;
@@ -3233,7 +3232,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, appender file: %s " \
 				"not exist", __LINE__, \
-				pTask->client_ip, full_filename);
+				pTask->client_ip, pFileContext->filename);
 		}
 		else
 		{
@@ -3241,7 +3240,8 @@ static int storage_append_file(struct fast_task_info *pTask)
 				"client ip: %s, stat appednder file %s fail" \
 				", errno: %d, error info: %s.", \
 				__LINE__, pTask->client_ip, \
-				full_filename, result, STRERROR(result));
+				pFileContext->filename, \
+				result, STRERROR(result));
 		}
 
 		return result;

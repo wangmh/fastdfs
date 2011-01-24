@@ -365,7 +365,7 @@ static int load_file_contents()
 				"mmap file %s fail, " \
 				"errno: %d, error info: %s\n", \
 				__LINE__, files[i].filename, \
-				errno, strerror(errno));
+				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
 	}

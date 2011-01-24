@@ -102,6 +102,10 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 		ZEND_FE(fastdfs_storage_upload_by_filename1, NULL)
 		ZEND_FE(fastdfs_storage_upload_by_filebuff, NULL)
 		ZEND_FE(fastdfs_storage_upload_by_filebuff1, NULL)
+		ZEND_FE(fastdfs_storage_append_by_filename, NULL)
+		ZEND_FE(fastdfs_storage_append_by_filename1, NULL)
+		ZEND_FE(fastdfs_storage_append_by_filebuff, NULL)
+		ZEND_FE(fastdfs_storage_append_by_filebuff1, NULL)
 		ZEND_FE(fastdfs_storage_upload_appender_by_filename, NULL)
 		ZEND_FE(fastdfs_storage_upload_appender_by_filename1, NULL)
 		ZEND_FE(fastdfs_storage_upload_appender_by_filebuff, NULL)
@@ -2660,6 +2664,218 @@ static void php_fdfs_storage_upload_slave_file_impl( \
 	}
 }
 
+/*
+boolean fastdfs_storage_append_by_filename(string local_filename, 
+	string group_name, appender_filename, 
+	[array tracker_server, array storage_server])
+return string/array for success, false for error
+*/
+static void php_fdfs_storage_append_file_impl( \
+		INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext, \
+		const byte upload_type, const bool bFileId)
+{
+	int result;
+	int argc;
+	char *local_filename;
+	char *appender_filename;
+	zval *tracker_obj;
+	zval *storage_obj;
+	char *group_name;
+	HashTable *tracker_hash;
+	HashTable *storage_hash;
+	TrackerServerInfo tracker_server;
+	TrackerServerInfo storage_server;
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer;
+	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 128];
+	int filename_len;
+	int group_name_len;
+	int appender_filename_len;
+	int store_path_index;
+	int saved_tracker_sock;
+	int saved_storage_sock;
+	int min_param_count;
+	int max_param_count;
+
+	if (bFileId)
+	{
+		min_param_count = 2;
+		max_param_count = 4;
+	}
+	else
+	{
+		min_param_count = 3;
+		max_param_count = 5;
+	}
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc < min_param_count || argc > max_param_count)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"storage_append_file parameters " \
+			"count: %d < %d or > %d", __LINE__, argc, \
+			min_param_count, max_param_count);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	tracker_obj = NULL;
+	storage_obj = NULL;
+	if (bFileId)
+	{
+		char *pSeperator;
+		char *appender_file_id;
+		int appender_file_id_len;
+
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|aa", \
+			&local_filename, &filename_len, &appender_file_id, \
+			&appender_file_id_len, &tracker_obj, \
+			&storage_obj) == FAILURE)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"zend_parse_parameters fail!", __LINE__);
+			pContext->err_no = EINVAL;
+			RETURN_BOOL(false);
+		}
+
+		snprintf(new_file_id, sizeof(new_file_id), "%s", appender_file_id);
+		pSeperator = strchr(new_file_id, FDFS_FILE_ID_SEPERATOR);
+		if (pSeperator == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"appender_file_id is invalid, " \
+				"appender_file_id=%s", \
+				__LINE__, appender_file_id);
+			pContext->err_no = EINVAL;
+			RETURN_BOOL(false);
+		}
+
+		*pSeperator = '\0';
+		group_name = new_file_id;
+		appender_filename =  pSeperator + 1;
+	}
+	else if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sss|aa", \
+		&local_filename, &filename_len, &group_name, &group_name_len, \
+		&appender_filename, &appender_filename_len, &tracker_obj, \
+		&storage_obj) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (tracker_obj == NULL)
+	{
+		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		if (pTrackerServer == NULL)
+		{
+			pContext->err_no = ENOENT;
+			RETURN_BOOL(false);
+		}
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
+	}
+	else
+	{
+		pTrackerServer = &tracker_server;
+		tracker_hash = Z_ARRVAL_P(tracker_obj);
+		if ((result=php_fdfs_get_server_from_hash(tracker_hash, \
+				pTrackerServer)) != 0)
+		{
+			pContext->err_no = result;
+			RETURN_BOOL(false);
+		}
+		saved_tracker_sock = pTrackerServer->sock;
+	}
+
+	if (storage_obj == NULL)
+	{
+		pStorageServer = NULL;
+		store_path_index = 0;
+		storage_hash = NULL;
+		saved_storage_sock = -1;
+	}
+	else
+	{
+		zval **data;
+		zval ***ppp;
+
+		pStorageServer = &storage_server;
+		storage_hash = Z_ARRVAL_P(storage_obj);
+		if ((result=php_fdfs_get_server_from_hash(storage_hash, \
+				pStorageServer)) != 0)
+		{
+			pContext->err_no = result;
+			RETURN_BOOL(false);
+		}
+
+		data = NULL;
+		ppp = &data;
+		if (zend_hash_find(storage_hash, "store_path_index", \
+			sizeof("store_path_index"), (void **)ppp) == FAILURE)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"key \"store_path_index\" not exist!", \
+				__LINE__);
+			pContext->err_no = ENOENT;
+			RETURN_BOOL(false);
+		}
+
+		if ((*data)->type == IS_LONG)
+		{
+			store_path_index = (*data)->value.lval;
+		}
+		else if ((*data)->type == IS_STRING)
+		{
+			store_path_index = atoi(Z_STRVAL_PP(data));
+		}
+		else
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"key \"store_path_index\" is invalid, " \
+				"type=%d!", __LINE__, (*data)->type);
+			pContext->err_no = EINVAL;
+			RETURN_BOOL(false);
+		}
+		saved_storage_sock = pStorageServer->sock;
+	}
+
+	if (upload_type == FDFS_UPLOAD_BY_FILE)
+	{
+	result = storage_append_by_filename(pTrackerServer, \
+			pStorageServer, local_filename, group_name, \
+			appender_filename);
+	}
+	else
+	{
+	result = storage_append_by_filebuff(pTrackerServer, \
+			pStorageServer, local_filename, filename_len, \
+			group_name, appender_filename);
+	}
+
+	if (tracker_hash != NULL && pTrackerServer->sock != \
+		saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
+	}
+	if (pStorageServer != NULL && pStorageServer->sock != \
+		saved_storage_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(storage_hash)
+	}
+
+	pContext->err_no = result;
+	if (result == 0)
+	{
+		RETURN_BOOL(true);
+	}
+	else
+	{
+		RETURN_BOOL(false);
+	}
+}
+
 static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		FDFSPhpContext *pContext, const bool bFileId)
 {
@@ -3301,6 +3517,52 @@ ZEND_FUNCTION(fastdfs_storage_upload_by_filebuff1)
 	php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
 		&php_context, STORAGE_PROTO_CMD_UPLOAD_FILE, \
 		FDFS_UPLOAD_BY_BUFF, true);
+}
+
+/*
+boolean fastdfs_storage_append_by_filename(string local_filename, 
+	string group_name, appender_filename, 
+	[array tracker_server, array storage_server])
+return true for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_storage_append_by_filename)
+{
+	php_fdfs_storage_append_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&php_context, FDFS_UPLOAD_BY_FILE, false);
+}
+
+/*
+string fastdfs_storage_upload_by_filename1(string local_filename, 
+	[string appender_file_id, array tracker_server, array storage_server])
+return true for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_storage_append_by_filename1)
+{
+	php_fdfs_storage_append_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&php_context, FDFS_UPLOAD_BY_FILE, true);
+}
+
+/*
+array fastdfs_storage_append_by_filebuff(string file_buff, 
+	[string group_name, string appender_filename,
+	array tracker_server, array storage_server])
+return true for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_storage_append_by_filebuff)
+{
+	php_fdfs_storage_append_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&php_context, FDFS_UPLOAD_BY_BUFF, false);
+}
+
+/*
+string fastdfs_storage_append_by_filebuff1(string file_buff, 
+	[string appender_file_id, array tracker_server, array storage_server])
+return true for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_storage_append_by_filebuff1)
+{
+	php_fdfs_storage_append_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&php_context, FDFS_UPLOAD_BY_BUFF, true);
 }
 
 /*
@@ -3959,6 +4221,68 @@ PHP_METHOD(FastDFS, storage_upload_by_filebuff1)
 }
 
 /*
+boolean FastDFS::storage_append_by_filename(string local_filename, 
+	string group_name, appender_filename, 
+	[array tracker_server, array storage_server])
+return string/array for success, false for error
+*/
+PHP_METHOD(FastDFS, storage_append_by_filename)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_storage_append_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context), FDFS_UPLOAD_BY_FILE, false);
+}
+
+/*
+string FastDFS::storage_upload_by_filename1(string local_filename, 
+	[string appender_file_id, array tracker_server, array storage_server])
+return file_id for success, false for error
+*/
+PHP_METHOD(FastDFS, storage_append_by_filename1)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_storage_append_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context), FDFS_UPLOAD_BY_FILE, true);
+}
+
+/*
+array FastDFS::storage_append_by_filebuff(string file_buff, 
+	[string group_name, string appender_filename,
+	array tracker_server, array storage_server])
+return array for success, false for error
+*/
+PHP_METHOD(FastDFS, storage_append_by_filebuff)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_storage_append_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context), FDFS_UPLOAD_BY_BUFF, false);
+}
+
+/*
+string FastDFS::storage_append_by_filebuff1(string file_buff, 
+	[string appender_file_id, array tracker_server, array storage_server])
+return file_id  for success, false for error
+*/
+PHP_METHOD(FastDFS, storage_append_by_filebuff1)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_storage_append_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context), FDFS_UPLOAD_BY_BUFF, true);
+}
+
+/*
 array FastDFS::storage_upload_appender_by_filename(string local_filename, 
 	[string file_ext_name, string meta_list, string group_name, 
 	array tracker_server, array storage_server])
@@ -4452,6 +4776,36 @@ ZEND_ARG_INFO(0, tracker_server)
 ZEND_ARG_INFO(0, storage_server)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_append_by_filename, 0, 0, 3)
+ZEND_ARG_INFO(0, local_filename)
+ZEND_ARG_INFO(0, group_name)
+ZEND_ARG_INFO(0, appender_filename)
+ZEND_ARG_INFO(0, tracker_server)
+ZEND_ARG_INFO(0, storage_server)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_append_by_filename1, 0, 0, 2)
+ZEND_ARG_INFO(0, local_filename)
+ZEND_ARG_INFO(0, appender_file_id)
+ZEND_ARG_INFO(0, tracker_server)
+ZEND_ARG_INFO(0, storage_server)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_append_by_filebuff, 0, 0, 3)
+ZEND_ARG_INFO(0, file_buff)
+ZEND_ARG_INFO(0, group_name)
+ZEND_ARG_INFO(0, appender_filename)
+ZEND_ARG_INFO(0, tracker_server)
+ZEND_ARG_INFO(0, storage_server)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_append_by_filebuff1, 0, 0, 2)
+ZEND_ARG_INFO(0, file_buff)
+ZEND_ARG_INFO(0, appender_file_id)
+ZEND_ARG_INFO(0, tracker_server)
+ZEND_ARG_INFO(0, storage_server)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_upload_appender_by_filename, 0, 0, 1)
 ZEND_ARG_INFO(0, local_filename)
 ZEND_ARG_INFO(0, file_ext_name)
@@ -4657,6 +5011,10 @@ static zend_function_entry fdfs_class_methods[] = {
     FDFS_ME(storage_upload_by_filename1, arginfo_storage_upload_by_filename1)
     FDFS_ME(storage_upload_by_filebuff,  arginfo_storage_upload_by_filebuff)
     FDFS_ME(storage_upload_by_filebuff1, arginfo_storage_upload_by_filebuff1)
+    FDFS_ME(storage_append_by_filename,  arginfo_storage_append_by_filename)
+    FDFS_ME(storage_append_by_filename1, arginfo_storage_append_by_filename1)
+    FDFS_ME(storage_append_by_filebuff,  arginfo_storage_append_by_filebuff)
+    FDFS_ME(storage_append_by_filebuff1, arginfo_storage_append_by_filebuff1)
     FDFS_ME(storage_upload_appender_by_filename,  arginfo_storage_upload_appender_by_filename)
     FDFS_ME(storage_upload_appender_by_filename1, arginfo_storage_upload_appender_by_filename1)
     FDFS_ME(storage_upload_appender_by_filebuff,  arginfo_storage_upload_appender_by_filebuff)
