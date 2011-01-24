@@ -215,6 +215,67 @@ parameters:
                         ip_addr, port and sock
 return file_id for success, false for error
 
+
+boolean fastdfs_storage_append_by_filename(string local_filename, 
+	string group_name, appender_filename, 
+	[array tracker_server, array storage_server])
+append local file to the appender file of storage server
+parameters:
+	local_filename: the local filename
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+string fastdfs_storage_upload_by_filename1(string local_filename, 
+	[string appender_file_id, array tracker_server, array storage_server])
+append local file to the appender file of storage server
+parameters:
+	local_filename: the local filename
+	appender_file_id: the appender file id
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+array fastdfs_storage_append_by_filebuff(string file_buff, 
+	[string group_name, string appender_filename,
+	array tracker_server, array storage_server])
+append file buff to the appender file of storage server
+parameters:
+	file_buff: the file content
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+string fastdfs_storage_append_by_filebuff1(string file_buff, 
+	[string appender_file_id, array tracker_server, array storage_server])
+append file buff to the appender file of storage server
+parameters:
+	file_buff: the file content
+	appender_file_id: the appender file id
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
 string/array fastdfs_storage_upload_slave_by_filename(string local_filename, 
 	string group_name, string master_filename, string prefix_name 
 	[, string file_ext_name, array meta_list, 
@@ -787,6 +848,66 @@ parameters:
 	storage_server: the storage server assoc array including elements:
                         ip_addr, port and sock
 return file_id for success, false for error
+
+
+boolean FastDFS::storage_append_by_filename(string local_filename, 
+	string group_name, appender_filename, 
+	[array tracker_server, array storage_server])
+append local file to the appender file of storage server
+parameters:
+	local_filename: the local filename
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+string FastDFS::storage_upload_by_filename1(string local_filename, 
+	[string appender_file_id, array tracker_server, array storage_server])
+append local file to the appender file of storage server
+parameters:
+	local_filename: the local filename
+	appender_file_id: the appender file id
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+array FastDFS::storage_append_by_filebuff(string file_buff, 
+	[string group_name, string appender_filename,
+	array tracker_server, array storage_server])
+append file buff to the appender file of storage server
+parameters:
+	file_buff: the file content
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+string FastDFS::storage_append_by_filebuff1(string file_buff, 
+	[string appender_file_id, array tracker_server, array storage_server])
+append file buff to the appender file of storage server
+parameters:
+	file_buff: the file content
+	appender_file_id: the appender file id
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
 
 
 string/array FastDFS::storage_upload_slave_by_filename(string local_filename, 
