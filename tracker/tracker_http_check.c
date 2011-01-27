@@ -17,7 +17,7 @@
 #include "tracker_http_check.h"
 
 static pthread_t http_check_tid;
-bool g_http_check_flag = true;
+bool g_http_check_flag = false;
 
 static void *http_check_entrance(void *arg)
 {
