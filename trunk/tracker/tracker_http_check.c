@@ -17,6 +17,7 @@
 #include "tracker_http_check.h"
 
 static pthread_t http_check_tid;
+bool g_http_check_flag = true;
 
 static void *http_check_entrance(void *arg)
 {
@@ -33,6 +34,7 @@ static void *http_check_entrance(void *arg)
 	int server_count;
 	int result;
 
+	g_http_check_flag = true;
 	g_http_servers_dirty = false;
 	while (g_continue_flag)
 	{
@@ -282,6 +284,7 @@ static void *http_check_entrance(void *arg)
 	}
 	}
 
+	g_http_check_flag = false;
 	return NULL;
 }
 

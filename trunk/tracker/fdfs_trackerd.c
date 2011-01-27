@@ -309,7 +309,15 @@ int main(int argc, char *argv[])
 	tracker_terminate_threads();
 
 #ifdef WITH_HTTPD
-	tracker_http_check_stop();
+	if (g_http_check_flag)
+	{
+		tracker_http_check_stop();
+	}
+
+	while (g_http_check_flag)
+	{
+		usleep(50000);
+	}
 #endif
 
 	while ((g_tracker_thread_count != 0) || g_schedule_flag)
