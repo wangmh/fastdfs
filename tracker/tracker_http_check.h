@@ -15,6 +15,8 @@
 extern "C" {
 #endif
 
+extern bool g_http_check_flag;
+
 int tracker_http_check_start();
 int tracker_http_check_stop();
 
