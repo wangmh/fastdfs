@@ -455,6 +455,7 @@ int storage_append_by_filebuff(TrackerServerInfo *pTrackerServer, \
 *	group_name: the group name of storage server
 *	filename: filename on storage server
 *	pFileInfo: return the file info (file size and create timestamp)
+*	bSilence: when this file not exist, do not log error on storage server
 * return: 0 success, !=0 fail, return the error code
 **/
 int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \

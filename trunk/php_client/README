@@ -53,8 +53,20 @@ parameters:
 return token string for success, false for error
 
 
-array fastdfs_get_file_info(string file_id)
-get file info from the filename / file id
+array fastdfs_get_file_info(string group_name, string filename)
+get file info from the filename
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+return assoc array for success, false for error. 
+	the assoc array including following elements:
+		create_timestamp: the file create timestamp (unix timestamp)
+		file_size: the file size (bytes)
+		source_ip_addr: the source storage server ip address
+	
+
+array fastdfs_get_file_info1(string file_id)
+get file info from the file id
 parameters:
 	file_id: the file id (including group name and filename) or remote filename
 return assoc array for success, false for error. 
@@ -687,8 +699,20 @@ parameters:
 return token string for success, false for error
 
 
-array FastDFS::get_file_info(string file_id)
-get file info from the filename / file id
+array FastDFS::get_file_info(string group_name, string filename)
+get file info from the filename
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+return assoc array for success, false for error. 
+	the assoc array including following elements:
+		create_timestamp: the file create timestamp (unix timestamp)
+		file_size: the file size (bytes)
+		source_ip_addr: the source storage server ip address
+
+
+array FastDFS::get_file_info1(string file_id)
+get file info from the file id
 parameters:
 	file_id: the file id (including group name and filename) or remote filename
 return assoc array for success, false for error. 
