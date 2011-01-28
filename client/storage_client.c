@@ -307,6 +307,15 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
+int storage_query_file_info_ex1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer,  const char *file_id, \
+		FDFSFileInfo *pFileInfo, const bool bSilence)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
+	return storage_query_file_info_ex(pTrackerServer, pStorageServer,  \
+			group_name, filename, pFileInfo, bSilence);
+}
+
 int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer,  \
 			const char *group_name, const char *filename, \

@@ -416,6 +416,25 @@ int storage_append_by_callback1(TrackerServerInfo *pTrackerServer, \
 		const int64_t file_size, const char *appender_file_id);
 
 
+#define storage_query_file_info1(pTrackerServer, pStorageServer, file_id, \
+		pFileInfo) \
+	storage_query_file_info_ex1(pTrackerServer, pStorageServer, file_id, \
+		pFileInfo, false)
+
+/**
+* query file info
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       file_id: the file id
+*	pFileInfo: return the file info (file size and create timestamp)
+*	bSilence: when this file not exist, do not log error on storage server
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_query_file_info_ex1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer,  const char *file_id, \
+		FDFSFileInfo *pFileInfo, const bool bSilence);
+
 #define fdfs_get_file_info1(file_id, pFileInfo) \
 	fdfs_get_file_info_ex1(file_id, true, pFileInfo)
 
