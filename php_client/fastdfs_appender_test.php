@@ -13,7 +13,7 @@
 
  var_dump($file_info);
  $file_id = "$group_name/$remote_filename";
- var_dump(fastdfs_get_file_info($file_id));
+ var_dump(fastdfs_get_file_info($group_name, $remote_filename));
 
  $appender_filename = $remote_filename;
  echo "file id: $group_name/$appender_filename\n";
@@ -23,7 +23,7 @@
 	exit;
  }
 
- var_dump(fastdfs_get_file_info($file_id));
+ var_dump(fastdfs_get_file_info($group_name, $appender_filename));
 
 
  $fdfs = new FastDFS();
@@ -39,7 +39,7 @@
 
  var_dump($file_info);
  $file_id = "$group_name/$remote_filename";
- var_dump($fdfs->get_file_info($file_id));
+ var_dump($fdfs->get_file_info($group_name, $remote_filename));
 
  $appender_filename = $remote_filename;
  echo "file id: $group_name/$appender_filename\n";
@@ -49,7 +49,7 @@
 	exit;
  }
 
- var_dump($fdfs->get_file_info($file_id));
+ var_dump($fdfs->get_file_info($group_name, $appender_filename));
 
  echo 'tracker_close_all_connections result: ' . $fdfs->tracker_close_all_connections() . "\n";
 ?>

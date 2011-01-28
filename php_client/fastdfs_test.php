@@ -8,7 +8,7 @@
  /*
  $file_id = $group_name . FDFS_FILE_ID_SEPERATOR . 'M00/00/02/wKjRbExc_qIAAAAAAABtNw6hsnM56585.part2.c';
 
- var_dump(fastdfs_get_file_info($file_id));
+ var_dump(fastdfs_get_file_info1($file_id));
  exit(1);
  */
 
@@ -60,7 +60,7 @@
 	$remote_filename = $file_info['filename'];
 
 	var_dump($file_info);
-	var_dump(fastdfs_get_file_info($remote_filename));
+	var_dump(fastdfs_get_file_info($group_name, $remote_filename));
 
 	$master_filename = $remote_filename;
 	$prefix_name = '.part1';
@@ -120,7 +120,7 @@
 	$remote_filename = $file_info['filename'];
 
 	var_dump($file_info);
-	var_dump(fastdfs_get_file_info($remote_filename));
+	var_dump(fastdfs_get_file_info($group_name, $remote_filename));
 
 	$ts = time();
 	$token = fastdfs_http_gen_token($group_name . FDFS_FILE_ID_SEPERATOR . $remote_filename, $ts);
@@ -241,7 +241,7 @@
 	$remote_filename = $file_info['filename'];
 
 	var_dump($file_info);
-	var_dump($fdfs->get_file_info($remote_filename));
+	var_dump($fdfs->get_file_info($group_name, $remote_filename));
 
 	$master_filename = $remote_filename;
 	$prefix_name = '.part1';
@@ -341,7 +341,7 @@
 		array('color'=>'none', 'size'=>0, 'font'=>'Aris'));
  if ($file_id)
  {
-	var_dump($fdfs->get_file_info($file_id));
+	var_dump($fdfs->get_file_info1($file_id));
 
 	$ts = time();
 	$token = $fdfs->http_gen_token($file_id, $ts);
