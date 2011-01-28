@@ -4707,7 +4707,6 @@ PHP_METHOD(FastDFS, get_file_info1)
 }
 
 /*
-/*
 string FastDFS::gen_slave_filename(string master_filename, string prefix_name
 		[, string file_ext_name])
 return slave filename string for success, false for error
