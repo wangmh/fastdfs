@@ -415,6 +415,21 @@ int storage_append_by_callback1(TrackerServerInfo *pTrackerServer, \
 		UploadCallback callback, void *arg, \
 		const int64_t file_size, const char *appender_file_id);
 
+
+#define fdfs_get_file_info1(file_id, pFileInfo) \
+	fdfs_get_file_info_ex1(file_id, true, pFileInfo)
+
+/**
+* get file info from the filename return by storage server
+* params:
+*       file_id: the file id return by storage server
+*       get_from_server: if get slave file info from storage server
+*       pFileInfo: return the file info
+* return: 0 success, !=0 fail, return the error code
+**/
+int fdfs_get_file_info_ex1(const char *file_id, const bool get_from_server, \
+		FDFSFileInfo *pFileInfo);
+
 #ifdef __cplusplus
 }
 #endif

@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 
 	snprintf(file_id, sizeof(file_id), "%s", argv[2]);
 
-	result = fdfs_get_file_info(file_id, &file_info);
+	result = fdfs_get_file_info1(file_id, &file_info);
 	if (result != 0)
 	{
 		printf("get file info fail, " \

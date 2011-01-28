@@ -314,7 +314,7 @@ int main(int argc, char *argv[])
 		printf("group_name=%s, remote_filename=%s\n", \
 			group_name, remote_filename);
 
-		fdfs_get_file_info(file_id, &file_info);
+		fdfs_get_file_info(group_name, remote_filename, &file_info);
 		printf("source ip address: %s\n", file_info.source_ip_addr);
 		printf("file timestamp=%s\n", formatDatetime(
 			file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \
@@ -407,7 +407,7 @@ int main(int argc, char *argv[])
 		printf("group_name=%s, remote_filename=%s\n", \
 			group_name, remote_filename);
 
-		fdfs_get_file_info(file_id, &file_info);
+		fdfs_get_file_info(group_name, remote_filename, &file_info);
 		printf("source ip address: %s\n", file_info.source_ip_addr);
 		printf("file timestamp=%s\n", formatDatetime(
 			file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \

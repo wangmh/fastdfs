@@ -1911,8 +1911,17 @@ int storage_append_by_callback1(TrackerServerInfo *pTrackerServer, \
 			group_name, filename);
 }
 
-int fdfs_get_file_info_ex(const char *file_id, const bool get_from_server, \
+int fdfs_get_file_info_ex1(const char *file_id, const bool get_from_server, \
 			FDFSFileInfo *pFileInfo)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
+
+	return fdfs_get_file_info_ex(group_name, filename, get_from_server, \
+			pFileInfo);
+}
+
+int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
+	const bool get_from_server, FDFSFileInfo *pFileInfo)
 {
 	static struct base64_context context;
 	static int context_inited = 0;
@@ -1920,9 +1929,6 @@ int fdfs_get_file_info_ex(const char *file_id, const bool get_from_server, \
 	int filename_len;
 	int buff_len;
 	int result;
-	char *group_name;
-	char *remote_filename;
-	char new_file_id[128];
 	char buff[64];
 
 	memset(pFileInfo, 0, sizeof(FDFSFileInfo));
@@ -1932,16 +1938,6 @@ int fdfs_get_file_info_ex(const char *file_id, const bool get_from_server, \
 		base64_init_ex(&context, 0, '-', '_', '.');
 	}
 
-	snprintf(new_file_id, sizeof(new_file_id), "%s", file_id);
-	group_name = new_file_id;
-	remote_filename = strchr(new_file_id, '/');
-	if (remote_filename == NULL)
-	{
-		return EINVAL;
-	}
-
-	*remote_filename = '\0';
-	remote_filename++;  //skip /
 	filename_len = strlen(remote_filename);
 	if (filename_len < FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
 			 + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
@@ -1950,8 +1946,9 @@ int fdfs_get_file_info_ex(const char *file_id, const bool get_from_server, \
 	}
 
 	memset(buff, 0, sizeof(buff));
-	base64_decode_auto(&context, remote_filename + FDFS_FILE_PATH_LEN, \
-		FDFS_FILENAME_BASE64_LENGTH, buff, &buff_len);
+	base64_decode_auto(&context, (char *)remote_filename + \
+		FDFS_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
+		buff, &buff_len);
 
 	memset(&ip_addr, 0, sizeof(ip_addr));
 	ip_addr.s_addr = ntohl(buff2int(buff));
