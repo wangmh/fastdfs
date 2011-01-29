@@ -3139,6 +3139,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 	int appender_filename_len;
 	int64_t nInPackLen;
 	int64_t file_bytes;
+	int64_t appender_file_size;
 	int result;
 	int store_path_index;
 	int filename_len;
@@ -3253,12 +3254,15 @@ static int storage_append_file(struct fast_task_info *pTask)
 	base64_decode_auto(&g_base64_context, pFileContext->fname2log + \
 		FDFS_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
 		buff, &buff_len);
-	if (buff2long(buff + sizeof(int) * 2) != INFINITE_FILE_SIZE)
+
+	appender_file_size = buff2long(buff + sizeof(int) * 2);
+	if (appender_file_size != INFINITE_FILE_SIZE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, file: %s is not a valid " \
-			"appender file", __LINE__, \
-			pTask->client_ip, appender_filename);
+			"appender file, file size: "INT64_PRINTF_FORMAT, \
+			__LINE__, pTask->client_ip, appender_filename, \
+			appender_file_size);
 
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
