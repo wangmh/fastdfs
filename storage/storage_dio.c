@@ -614,8 +614,8 @@ void dio_append_finish_clean_up(struct fast_task_info *pTask)
 			else
 			{
 				logDebug("file: "__FILE__", line: %d, " \
-					"client ip: %s, " \
-					"call ftruncate of file %s to " \
+					"client ip: %s, append file fail, " \
+					"call ftruncate of file %s to size: "\
 					INT64_PRINTF_FORMAT, \
 					__LINE__, pTask->client_ip, \
 					pFileContext->filename, \
