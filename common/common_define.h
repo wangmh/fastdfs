@@ -42,7 +42,10 @@ typedef void * (*ThreadEntranceFunc)(LPVOID lpThreadParameter);
 
 #endif
 
+#ifndef WIN32
 extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
+#endif
+
 #ifdef OS_LINUX
 #define PTHREAD_MUTEX_ERRORCHECK PTHREAD_MUTEX_ERRORCHECK_NP
 #endif
@@ -100,8 +103,10 @@ typedef char  bool;
 #define ubyte unsigned char
 #endif
 
+#ifndef WIN32
 #ifndef INADDR_NONE
 #define  INADDR_NONE  ((in_addr_t) 0xffffffff)
+#endif
 #endif
 
 #ifndef ECANCELED

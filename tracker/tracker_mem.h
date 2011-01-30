@@ -81,8 +81,6 @@ int tracker_get_group_success_upload_count(FDFSGroupInfo *pGroup);
 FDFSStorageDetail *tracker_get_group_sync_src_server(FDFSGroupInfo *pGroup, \
 			FDFSStorageDetail *pDestServer);
 
-extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
-
 FDFSStorageDetail *tracker_get_writable_storage(FDFSGroupInfo *pStoreGroup);
 
 #ifdef WITH_HTTPD
