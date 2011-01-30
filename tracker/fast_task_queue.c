@@ -120,7 +120,7 @@ int free_queue_init(const int max_connections, const int min_buff_size, \
 		}
 		else
 		{
-			pTask->data = malloc(pTask->size);
+			pTask->data = (char *)malloc(pTask->size);
 			if (pTask->data == NULL)
 			{
 				free_queue_destroy();

@@ -252,6 +252,7 @@ char *getExeAbsoluteFilename(const char *exeFilename, char *szAbsFilename, \
 	return szAbsFilename;
 }
 
+#ifndef WIN32
 int getProccessCount(const char *progName, const bool bAllOwners)
 {
 	int *pids = NULL;
@@ -365,6 +366,40 @@ int getUserProcIds(const char *progName, const bool bAllOwners, \
 	return cnt;
 }
 
+int getExecResult(const char *command, char *output, const int buff_size)
+{
+	FILE *fp;
+	char *pCurrent;
+	int bytes_read;
+	int remain_bytes;
+
+	if((fp=popen(command, "r")) == NULL)
+	{
+		return errno != 0 ? errno : EMFILE;
+	}
+
+	pCurrent = output;
+	remain_bytes = buff_size;
+	while (remain_bytes > 0 && \
+		(bytes_read=fread(pCurrent, 1, remain_bytes, fp)) > 0)
+	{
+		pCurrent += bytes_read;
+		remain_bytes -= bytes_read;
+	}
+
+	pclose(fp);
+
+	if (remain_bytes <= 0)
+	{
+		return ENOSPC;
+	}
+
+	*pCurrent = '\0';
+	return 0;
+}
+
+#endif
+
 char *toLowercase(char *src)
 {
 	char *p;
@@ -401,6 +436,7 @@ char *toUppercase(char *src)
 
 void daemon_init(bool bCloseFiles)
 {
+#ifndef WIN32
 	pid_t pid;
 	int i;
 	
@@ -437,6 +473,7 @@ void daemon_init(bool bCloseFiles)
 			close(i);
 		}
 	}
+#endif
 
 	return;
 }
@@ -1331,6 +1368,7 @@ int set_nonblock(int fd)
 
 int set_run_by(const char *group_name, const char *username)
 {
+#ifndef WIN32
 	struct group *pGroup;
 	struct passwd *pUser;
 	int nErrNo;
@@ -1377,6 +1415,7 @@ int set_run_by(const char *group_name, const char *username)
 			return nErrNo;
 		}
 	}
+#endif
 
 	return 0;
 }
@@ -1931,38 +1970,6 @@ int buffer_memcpy(BufferInfo *pBuff, const char *buff, const int len)
 	}
 
 	memcpy(pBuff->buff, buff, pBuff->length);
-	return 0;
-}
-
-int getExecResult(const char *command, char *output, const int buff_size)
-{
-	FILE *fp;
-	char *pCurrent;
-	int bytes_read;
-	int remain_bytes;
-
-	if((fp=popen(command, "r")) == NULL)
-	{
-		return errno != 0 ? errno : EMFILE;
-	}
-
-	pCurrent = output;
-	remain_bytes = buff_size;
-	while (remain_bytes > 0 && \
-		(bytes_read=fread(pCurrent, 1, remain_bytes, fp)) > 0)
-	{
-		pCurrent += bytes_read;
-		remain_bytes -= bytes_read;
-	}
-
-	pclose(fp);
-
-	if (remain_bytes <= 0)
-	{
-		return ENOSPC;
-	}
-
-	*pCurrent = '\0';
 	return 0;
 }
 

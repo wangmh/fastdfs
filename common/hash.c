@@ -548,7 +548,7 @@ int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
 		if (!pHash->is_malloc_value)
 		{
 			hash_data->value_len = value_len;
-			hash_data->value = value;
+			hash_data->value = (char *)value;
 			return 0;
 		}
 		else
@@ -600,7 +600,7 @@ int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
 
 	if (!pHash->is_malloc_value)
 	{
-		hash_data->value = value;
+		hash_data->value = (char *)value;
 	}
 	else
 	{

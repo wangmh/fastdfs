@@ -75,13 +75,14 @@ int main(int argc, char **argv)
 	int i;
 	int file_type;
 	char storage_ip[IP_ADDRESS_SIZE];
+	char *conf_filename;
 	struct timeval tv_start;
 	struct timeval tv_end;
 	int time_used;
 
 	if (argc < 2)
 	{
-		printf("Usage: %s <process_index>\n", argv[0]);
+		printf("Usage: %s <process_index> [config_filename]\n", argv[0]);
 		return EINVAL;
 	}
 
@@ -91,6 +92,15 @@ int main(int argc, char **argv)
 	{
 		printf("Invalid proccess index: %d\n", proccess_index);
 		return EINVAL;
+	}
+
+	if (argc >= 3)
+	{
+		conf_filename = argv[2];
+	}
+	else
+	{
+		conf_filename = "/etc/fdfs/client.conf";
 	}
 
 	if ((result = load_file_ids()) != 0)
@@ -103,15 +113,17 @@ int main(int argc, char **argv)
 		return result;
 	}
 
-	if ((result=dfs_init(proccess_index)) != 0)
+	if ((result=dfs_init(proccess_index, conf_filename)) != 0)
 	{
 		return result;
 	}
 
+#ifndef WIN32
 	if (daemon(1, 1) != 0)
 	{
 		return errno != 0 ? errno : EFAULT;
 	}
+#endif
 
 	/*
 	printf("file_count = %d\n", file_count);

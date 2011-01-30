@@ -10,19 +10,9 @@
 #include "dfs_func.h"
 #include "fdfs_client.h"
 
-int dfs_init(const int proccess_index)
+int dfs_init(const int proccess_index, const char *conf_filename)
 {
-	int result;
-	char *conf_filename;
-
-	conf_filename = "/etc/fdfs/client.conf";
-
-	if ((result=fdfs_client_init(conf_filename)) != 0)
-	{
-		return result;
-	}
-
-	return 0;
+	return fdfs_client_init(conf_filename);
 }
 
 void dfs_destroy()

@@ -10,9 +10,10 @@ extern "C" {
 /*
 *init function
 * param proccess_index the process index based 0
+* param conf_filename the config filename
 * return 0 if success, none zero for error
 */
-int dfs_init(const int proccess_index);
+int dfs_init(const int proccess_index, const char *conf_filename);
 
 /*
 *destroy function
