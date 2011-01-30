@@ -83,6 +83,8 @@ char *getAbsolutePath(const char *fileame, char *szAbsPath, \
 char *getExeAbsoluteFilename(const char *exeFilename, char *szAbsFilename, \
 		const int maxSize);
 
+#ifndef WIN32
+
 /** get running process count by program name such as fdfs_trackerd
  *  parameters:
  *  	progName: the program name
@@ -110,6 +112,8 @@ int getUserProcIds(const char *progName, const bool bAllOwners, \
  *  return: error no, 0 success, != 0 fail
 */
 int getExecResult(const char *command, char *output, const int buff_size);
+
+#endif
 
 /** daemon init
  *  parameters:

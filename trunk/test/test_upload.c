@@ -73,6 +73,7 @@ int main(int argc, char **argv)
 	int upload_count;
 	int rand_num;
 	int file_index;
+	char *conf_filename;
 	char file_id[64];
 	char storage_ip[IP_ADDRESS_SIZE];
 	int count_sums[FILE_TYPE_COUNT];
@@ -83,7 +84,7 @@ int main(int argc, char **argv)
 
 	if (argc < 2)
 	{
-		printf("Usage: %s <process_index>\n", argv[0]);
+		printf("Usage: %s <process_index> [config_filename]\n", argv[0]);
 		return EINVAL;
 	}
 
@@ -93,6 +94,15 @@ int main(int argc, char **argv)
 	{
 		printf("Invalid proccess index: %d\n", proccess_index);
 		return EINVAL;
+	}
+
+	if (argc >= 3)
+	{
+		conf_filename = argv[2];
+	}
+	else
+	{
+		conf_filename = "/etc/fdfs/client.conf";
 	}
 
 	if ((result = load_file_contents()) != 0)
@@ -105,15 +115,17 @@ int main(int argc, char **argv)
 		return result;
 	}
 
-	if ((result=dfs_init(proccess_index)) != 0)
+	if ((result=dfs_init(proccess_index, conf_filename)) != 0)
 	{
 		return result;
 	}
 
+#ifndef WIN32
 	if (daemon(1, 1) != 0)
 	{
 		return errno != 0 ? errno : EFAULT;
 	}
+#endif
 
 	memset(&storages, 0, sizeof(storages));
 	upload_count = 0;
