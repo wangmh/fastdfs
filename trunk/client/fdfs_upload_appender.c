@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 
 	strcpy(group_name, "");
 	local_filename = argv[2];
-	result = storage_upload_by_filename1(pTrackerServer, \
+	result = storage_upload_appender_by_filename1(pTrackerServer, \
 			&storageServer, store_path_index, \
 			local_filename, NULL, \
 			NULL, 0, group_name, file_id);

@@ -12,6 +12,7 @@ Version 2.08  2011-01-30
  * tracker http check thread exit normally
  * function fdfs_get_file_info_ex changed, add function fdfs_get_file_info_ex1
  * fix some type cast error when compile with c++
+ * client add tools: fdfs_upload_appender and fdfs_append_file
 
 Version 2.07  2011-01-09
  * slave file's prefix name can be empty

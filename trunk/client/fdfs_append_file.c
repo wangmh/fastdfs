@@ -21,16 +21,14 @@ int main(int argc, char *argv[])
 {
 	char *conf_filename;
 	char *local_filename;
-	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	TrackerServerInfo *pTrackerServer;
 	int result;
-	int store_path_index;
-	TrackerServerInfo storageServer;
-	char file_id[128];
+	char appender_file_id[128];
 	
-	if (argc < 3)
+	if (argc < 4)
 	{
-		printf("Usage: %s <config_filename> <local_filename>\n", argv[0]);
+		printf("Usage: %s <config_filename> <appender_file_id> " \
+			"<local_filename>\n", argv[0]);
 		return 1;
 	}
 
@@ -50,47 +48,21 @@ int main(int argc, char *argv[])
 		return errno != 0 ? errno : ECONNREFUSED;
 	}
 
-
-	if ((result=tracker_query_storage_store(pTrackerServer, \
-	                &storageServer, &store_path_index)) != 0)
+	snprintf(appender_file_id, sizeof(appender_file_id), "%s", argv[2]);
+	local_filename = argv[3];
+	if ((result=storage_append_by_filename1(pTrackerServer, \
+		NULL, local_filename, appender_file_id)) != 0)
 	{
-		fdfs_client_destroy();
-		fprintf(stderr, "tracker_query_storage fail, " \
+		printf("append file fail, " \
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
 		return result;
 	}
-
-	strcpy(group_name, "");
-	local_filename = argv[2];
-	result = storage_upload_by_filename1(pTrackerServer, \
-			&storageServer, store_path_index, \
-			local_filename, NULL, \
-			NULL, 0, group_name, file_id);
-	if (result != 0)
-	{
-		fprintf(stderr, "upload file fail, " \
-			"error no: %d, error info: %s\n", \
-			result, STRERROR(result));
-
-		if (storageServer.sock >= 0)
-		{
-			fdfs_quit(&storageServer);
-		}
-		tracker_disconnect_server(&storageServer);
-
-		fdfs_quit(pTrackerServer);
-		tracker_close_all_connections();
-		fdfs_client_destroy();
-		return result;
-	}
-
-	printf("%s\n", file_id);
 
 	fdfs_quit(pTrackerServer);
 	tracker_close_all_connections();
 	fdfs_client_destroy();
 
-	return 0;
+	return result;
 }
 
