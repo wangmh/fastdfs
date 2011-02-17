@@ -86,9 +86,9 @@
 
 typedef struct
 {
-	char pkg_len[FDFS_PROTO_PKG_LEN_SIZE];
-	char cmd;
-	char status;
+	char pkg_len[FDFS_PROTO_PKG_LEN_SIZE];  //body length, not including header
+	char cmd;    //command code
+	char status; //status code for response
 } TrackerHeader;
 
 typedef struct
