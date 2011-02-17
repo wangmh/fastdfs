@@ -845,7 +845,6 @@ static int write_to_binlog_index(const int binlog_index)
 
 	close(fd);
 
-	g_binlog_index = binlog_index;
 	return 0;
 }
 
@@ -865,6 +864,16 @@ static char *get_writable_binlog_filename(char *full_filename)
 	return full_filename;
 }
 
+static char *get_writable_binlog_filename1(char *full_filename, \
+		const int binlog_index)
+{
+	snprintf(full_filename, MAX_PATH_SIZE, \
+			"%s/data/"SYNC_DIR_NAME"/"SYNC_BINLOG_FILE_PREFIX"" \
+			SYNC_BINLOG_FILE_EXT_FMT, \
+			g_fdfs_base_path, binlog_index);
+	return full_filename;
+}
+
 static int open_next_writable_binlog()
 {
 	char full_filename[MAX_PATH_SIZE];
@@ -875,7 +884,7 @@ static int open_next_writable_binlog()
 		g_binlog_fd = -1;
 	}
 
-	get_writable_binlog_filename(full_filename);
+	get_writable_binlog_filename1(full_filename, g_binlog_index + 1);
 	if (fileExists(full_filename))
 	{
 		if (unlink(full_filename) != 0)
@@ -904,6 +913,7 @@ static int open_next_writable_binlog()
 		return errno != 0 ? errno : EACCES;
 	}
 
+	g_binlog_index++;
 	return 0;
 }
 
@@ -983,7 +993,8 @@ int storage_sync_init()
 	}
 	else
 	{
-		if ((result=write_to_binlog_index(0)) != 0)
+		g_binlog_index = 0;
+		if ((result=write_to_binlog_index(g_binlog_index)) != 0)
 		{
 			return result;
 		}
