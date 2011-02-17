@@ -99,9 +99,9 @@ extern FDFSStorageStat g_storage_stat;
 extern int g_stat_change_count;
 extern int g_sync_change_count; //sync src timestamp change counter
 
-extern int g_storage_join_time;
-extern bool g_sync_old_done;
-extern char g_sync_src_ip_addr[IP_ADDRESS_SIZE];
+extern int g_storage_join_time;  //my join timestamp
+extern bool g_sync_old_done;     //if old files synced to me done
+extern char g_sync_src_ip_addr[IP_ADDRESS_SIZE]; //the source storage server ip
 extern int g_sync_until_timestamp;
 
 extern char g_tracker_client_ip[IP_ADDRESS_SIZE]; //storage ip as tracker client
@@ -110,10 +110,10 @@ extern char g_last_storage_ip[IP_ADDRESS_SIZE];	//the last storage ip address
 extern int g_allow_ip_count;  /* -1 means match any ip address */
 extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
 
-extern bool g_check_file_duplicate;
+extern bool g_check_file_duplicate;  //if check file content duplicate
 extern char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1];
 extern int g_namespace_len;
-extern struct base64_context g_base64_context;
+extern struct base64_context g_base64_context;   //base64 context
 
 extern char g_run_by_group[32];
 extern char g_run_by_user[32];

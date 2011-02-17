@@ -158,6 +158,7 @@ typedef struct
 	time_t last_heart_beat_time;
 } FDFSStorageStat;
 
+/* struct for network transfering */
 typedef struct
 {
 	char sz_total_upload_count[8];
@@ -241,24 +242,24 @@ typedef struct
 {
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	int64_t free_mb;  //free disk storage in MB
-	int alloc_size;
+	int alloc_size;  //alloc storage count
 	int count;    //total server count
 	int active_count; //active server count
-	int storage_port;
+	int storage_port;  //storage server port
 	int storage_http_port; //storage http server port
-	FDFSStorageDetail **all_servers;
-	FDFSStorageDetail **sorted_servers;  //order by ip addr
-	FDFSStorageDetail **active_servers;  //order by ip addr
+	FDFSStorageDetail **all_servers;   //all storage servers
+	FDFSStorageDetail **sorted_servers;  //storages order by ip addr
+	FDFSStorageDetail **active_servers;  //storages order by ip addr
 	FDFSStorageDetail *pStoreServer;  //for upload priority mode
 
 #ifdef WITH_HTTPD
-	FDFSStorageDetail **http_servers;  //order by ip addr
+	FDFSStorageDetail **http_servers;  //storages order by ip addr
 	int http_server_count; //http server count
-	int current_http_server;
+	int current_http_server; //current http server index
 #endif
 
-	int current_read_server;
-	int current_write_server;
+	int current_read_server;   //current read storage server index
+	int current_write_server;  //current write storage server index
 
 	int store_path_count;  //store base path count of each storage server
 
@@ -270,22 +271,22 @@ typedef struct
 	int **last_sync_timestamps;//row for src storage, col for dest storage
 
 	int chg_count;   //current group changed count
-	time_t last_source_update;
-	time_t last_sync_update;
+	time_t last_source_update;  //last source update timestamp
+	time_t last_sync_update;    //last synced update timestamp
 } FDFSGroupInfo;
 
 typedef struct
 {
-	int alloc_size;
+	int alloc_size;   //alloc group count
 	int count;  //group count
 	FDFSGroupInfo **groups;
-	FDFSGroupInfo **sorted_groups; //order by group_name
+	FDFSGroupInfo **sorted_groups; //groups order by group_name
 	FDFSGroupInfo *pStoreGroup;  //the group to store uploaded files
 	int current_write_group;  //current group index to upload file
-	byte store_lookup;  //store to which group
-	byte store_server;  //store to which server
-	byte download_server; //download from which server
-	byte store_path;  //store to which path
+	byte store_lookup;  //store to which group, from conf file
+	byte store_server;  //store to which storage server, from conf file
+	byte download_server; //download from which storage server, from conf file
+	byte store_path;  //store to which path, from conf file
 	char store_group[FDFS_GROUP_NAME_MAX_LEN + 1];
 } FDFSGroups;
 

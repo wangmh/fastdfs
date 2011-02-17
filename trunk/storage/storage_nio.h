@@ -94,9 +94,9 @@ typedef struct
 
 typedef struct
 {
-	int nio_thread_index;
+	int nio_thread_index;  //nio thread index
 	int sock;
-	char stage;  //nio stage
+	char stage;  //nio stage, send or recv
 	char tracker_client_ip[IP_ADDRESS_SIZE];
 
 	StorageFileContext file_context;
@@ -105,16 +105,16 @@ typedef struct
 	int64_t total_offset;   //pkg current offset
 
 	FDFSStorageServer *pSrcStorage;
-	TaskDealFunc deal_func;
-	void *extra_arg;
-	DisconnectCleanFunc clean_func;
+	TaskDealFunc deal_func;  //function pointer to deal this task
+	void *extra_arg;   //store extra arg, such as (BinLogReader *)
+	DisconnectCleanFunc clean_func;  //clean function pointer when finished
 } StorageClientInfo;
 
 struct storage_nio_thread_data
 {
-        struct event_base *ev_base;
-        int pipe_fds[2];
-	GroupArray group_array;
+        struct event_base *ev_base;  //libevent base pointer
+        int pipe_fds[2];   //for notify nio thread to deal task
+	GroupArray group_array;  //FastDHT group array
 };
 
 #ifdef __cplusplus
