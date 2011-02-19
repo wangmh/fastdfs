@@ -1156,7 +1156,6 @@ int storage_service_init()
 	last_stat_change_count = g_stat_change_count;
 	extra_open_flags = g_disk_rw_direct ? O_DIRECT : 0;
 
-	logInfo("extra_open_flags=%d", extra_open_flags);
 	return result;
 }
 
