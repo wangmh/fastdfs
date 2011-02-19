@@ -1,7 +1,8 @@
 
-Version 2.09  2011-02-17
+Version 2.09  2011-02-19
  * bug fixed: write_to_binlog_index then increase g_binlog_index (feedback 
    by koolcoy)
+ * disk read / write supports direct mode (avoid caching by the file system)
 
 Version 2.08  2011-01-30
  * bug fixed: fdfs_trackerd.c set g_tracker_thread_count to 0
