@@ -9,10 +9,11 @@
 //storage_service.c
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/stat.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,6 +45,7 @@
 
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
+static int extra_open_flags = 0;
 static int last_stat_change_count = 1;  //for sync to stat file
 static int64_t temp_file_sequence = 0;
 
@@ -1152,7 +1154,9 @@ int storage_service_init()
 	pthread_attr_destroy(&thread_attr);
 
 	last_stat_change_count = g_stat_change_count;
+	extra_open_flags = g_disk_rw_direct ? O_DIRECT : 0;
 
+	logInfo("extra_open_flags=%d", extra_open_flags);
 	return result;
 }
 
@@ -3092,7 +3096,7 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 	pFileContext->extra_info.upload.if_appender_file = bAppenderFile;
 	pFileContext->extra_info.upload.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
-	pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC;
+	pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC | extra_open_flags;
 
  	return storage_write_to_file(pTask, 0, file_bytes, p - pTask->data, \
 			dio_write_file, storage_upload_file_done_callback, \
@@ -3288,7 +3292,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 	pFileContext->extra_info.upload.if_appender_file = true;
 	pFileContext->extra_info.upload.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_APPEND;
-	pFileContext->open_flags = O_WRONLY | O_APPEND;
+	pFileContext->open_flags = O_WRONLY | O_APPEND | extra_open_flags;
 
  	return storage_write_to_file(pTask, stat_buf.st_size, file_bytes, \
 			p - pTask->data, dio_write_file, \
@@ -3473,7 +3477,7 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	pFileContext->extra_info.upload.if_appender_file = false;
 	pFileContext->extra_info.upload.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
-	pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC;
+	pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC | extra_open_flags;
 
  	return storage_write_to_file(pTask, 0, file_bytes, p - pTask->data, \
 			dio_write_file, storage_upload_file_done_callback, \
@@ -3735,7 +3739,8 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 
 	if (have_file_content)
 	{
-		pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC;
+		pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC | \
+						extra_open_flags;
 		return storage_write_to_file(pTask, 0, file_bytes, \
 			p - pTask->data, deal_func, \
 			storage_sync_copy_file_done_callback, \
@@ -3958,7 +3963,7 @@ static int storage_sync_append_file(struct fast_task_info *pTask)
 	{
 		deal_func = dio_write_file;
 		pFileContext->op = FDFS_STORAGE_FILE_OP_APPEND;
-		pFileContext->open_flags = O_WRONLY | O_APPEND;
+		pFileContext->open_flags = O_WRONLY | O_APPEND | extra_open_flags;
 
 		snprintf(pFileContext->fname2log, \
 			sizeof(pFileContext->fname2log), \
@@ -4554,7 +4559,7 @@ static int storage_read_from_file(struct fast_task_info *pTask, \
 
 	pFileContext->fd = -1;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_READ;
-	pFileContext->open_flags = O_RDONLY;
+	pFileContext->open_flags = O_RDONLY | extra_open_flags;
 	pFileContext->offset = file_offset;
 	pFileContext->start = file_offset;
 	pFileContext->end = file_offset + download_bytes;

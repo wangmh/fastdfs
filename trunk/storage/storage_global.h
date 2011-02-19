@@ -62,7 +62,8 @@ extern char g_http_domain[FDFS_DOMAIN_NAME_MAX_SIZE];  //http server domain name
 extern int g_max_connections;
 extern int g_work_threads;
 extern int g_buff_size;
-
+ 
+extern bool g_disk_rw_direct;     //if file read / write directly
 extern bool g_disk_rw_separated;  //if disk read / write separated
 extern int g_disk_reader_threads; //disk reader thread count per store base path
 extern int g_disk_writer_threads; //disk writer thread count per store base path
