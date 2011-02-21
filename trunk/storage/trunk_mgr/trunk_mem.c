@@ -50,6 +50,7 @@ static pthread_mutex_t trunk_file_lock;
 
 static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 		int *sub_path_low, int *file_id);
+static int trunk_init_file(const char *filename, const int64_t file_size);
 
 static FDFSTrunkSlot *trunk_get_slot(const int size)
 {
@@ -71,6 +72,7 @@ int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult)
 	FDFSTrunkSlot *pSlot;
 	ChainNode *pNode;
 	FDFSTrunkInfo *pTrunk;
+	FDFSTrunkInfo *pNew;
 	bool found;
 	int result;
 	int store_path_index;
@@ -116,6 +118,26 @@ int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult)
 		return result;
 	}
 
+	pNew = (FDFSTrunkInfo *)malloc(sizeof(FDFSTrunkInfo));
+	if (pNew == NULL)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(FDFSTrunkInfo), \
+			result, STRERROR(result));
+		return result;
+	}
+
+	pNew->store_path_index = store_path_index;
+	pNew->sub_path_high = sub_path_high;
+	pNew->sub_path_low = sub_path_low;
+	pNew->id = file_id;
+	pNew->offset = 0;
+	pNew->size = g_trunk_file_size;
+	pNew->status = FDFS_TRUNK_STATUS_HOLD;
+
 	return 0;
 }
 
@@ -124,6 +146,7 @@ static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 {
 	char buff[16];
 	int i;
+	int result;
 	int filename_len;
 	char filename[64];
 	char full_filename[MAX_PATH_SIZE];
@@ -194,6 +217,68 @@ static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 		}
 	}
 
+	if ((result=trunk_init_file(full_filename, g_trunk_file_size)) != 0)
+	{
+		return result;
+	}
+
+	return 0;
+}
+
+static int trunk_init_file(const char *filename, const int64_t file_size)
+{
+	int fd;
+	int result;
+	int64_t remain_bytes;
+	int write_bytes;
+	char buff[256 * 1024];
+
+	fd = open(filename, O_WRONLY | O_CREAT, 0644);
+	if (fd < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"open file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	memset(buff, 0, sizeof(buff));
+	remain_bytes = file_size;
+	while (remain_bytes > 0)
+	{
+		write_bytes = remain_bytes > sizeof(buff) ? \
+				sizeof(buff) : remain_bytes;
+		if (write(fd, buff, write_bytes) != write_bytes)
+		{
+			result = errno != 0 ? errno : EIO;
+			logError("file: "__FILE__", line: %d, " \
+				"write file %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, filename, \
+				result, STRERROR(result));
+			close(fd);
+			return result;
+		}
+
+		remain_bytes -= write_bytes;
+	}
+
+	if (fsync(fd) != 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"fsync file \"%s\" fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, filename, \
+			result, STRERROR(result));
+		close(fd);
+		return result;
+	}
+
+	close(fd);
 	return 0;
 }
 
