@@ -29,13 +29,13 @@
 #include "pthread_func.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
-#include "storage_global.h"
 #include "trunk_mem.h"
+#include "storage_global.h"
 
 int g_slot_min_size;
 int g_trunk_file_size;
 
-static int slot_max_size = g_trunk_file_size / 2;
+static int slot_max_size;
 
 static int slot_count = 0;
 static FDFSTrunkSlot *slots = NULL;
@@ -66,10 +66,10 @@ int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult)
 	pSlot = trunk_get_slot(size);
 	if (pSlot == NULL)
 	{
-		return NULL;
+		return ENOENT;
 	}
 
-	pthread_mutext_lock(&pSlot->lock);
+	pthread_mutex_lock(&pSlot->lock);
 
 	pTrunk = NULL;
 	found = false;
@@ -92,9 +92,9 @@ int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult)
 		pTrunk->status = FDFS_TRUNK_STATUS_HOLD;
 	}
 
-	pthread_mutext_unlock(&pSlot->lock);
+	pthread_mutex_unlock(&pSlot->lock);
 
-	return NULL;
+	return 0;
 }
 
 static int *trunk_create_file()
