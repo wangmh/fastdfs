@@ -31,6 +31,7 @@
 #include "storage_sync.h"
 #include "storage_func.h"
 #include "tracker_client.h"
+#include "trunk_mem.h"
 
 static pthread_mutex_t reporter_thread_lock;
 
@@ -1475,12 +1476,32 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
 			return errno != 0 ? errno : EACCES;
 		}
 
+		g_path_free_mbs[i] = ((int64_t)(sbuf.f_bavail) * \
+					sbuf.f_frsize) / FDFS_ONE_MB;
+
 		long2buff((((int64_t)(sbuf.f_blocks) * sbuf.f_frsize) / FDFS_ONE_MB),\
 			pStatBuff->sz_total_mb);
-		long2buff((((int64_t)(sbuf.f_bavail) * sbuf.f_frsize) / FDFS_ONE_MB),\
-			pStatBuff->sz_free_mb);
+		long2buff(g_path_free_mbs[i], pStatBuff->sz_free_mb);
 
 		pStatBuff++;
+	}
+
+	if (g_store_path_mode == FDFS_STORE_PATH_LOAD_BALANCE)
+	{
+		int max_free_mb;
+
+		/* find the max free space path */
+		max_free_mb = 0;
+		g_store_path_index = -1;
+		for (i=0; i<g_path_count; i++)
+		{
+			if (g_path_free_mbs[i] > g_avg_storage_reserved_mb \
+			 && g_path_free_mbs[i] > max_free_mb)
+			{
+				g_store_path_index = i;
+				max_free_mb = g_path_free_mbs[i];
+			}
+		}
 	}
 
 	result = tcpsenddata_nb(pTrackerServer->sock, pBuff, \

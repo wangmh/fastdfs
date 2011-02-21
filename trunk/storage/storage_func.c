@@ -854,6 +854,17 @@ static int storage_load_paths(IniContext *pItemContext)
 	}
 	memset(g_store_paths, 0, sizeof(char *) * g_path_count);
 
+	g_path_free_mbs = (int *)malloc(sizeof(int) * g_path_count);
+	if (g_path_free_mbs == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(int) *g_path_count, \
+			errno, STRERROR(errno));
+		return errno != 0 ? errno : ENOMEM;
+	}
+	memset(g_path_free_mbs, 0, sizeof(int) * g_path_count);
+
 	pPath = iniGetStrValue(NULL, "store_path0", pItemContext);
 	if (pPath == NULL)
 	{
