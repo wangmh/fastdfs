@@ -20,16 +20,20 @@
 #include <sys/param.h>
 #include "fdfs_define.h"
 #include "logger.h"
+#include "shared_func.h"
 #include "fdfs_global.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
 #include "storage_global.h"
 #include "storage_param_getter.h"
+#include "trunk_mem.h"
 
 int storage_get_params_from_tracker()
 {
 	IniContext iniContext;
 	int result;
+	char *pSpaceSize;
+	int64_t reserved_storage_space;
 
 	if ((result=fdfs_get_ini_context_from_tracker(&g_tracker_group, \
 		&iniContext, &g_continue_flag, \
@@ -42,11 +46,35 @@ int storage_get_params_from_tracker()
 			"storage_ip_changed_auto_adjust", \
 			&iniContext, false);
 
+	g_store_path_mode = iniGetIntValue(NULL, "store_path", &iniContext, \
+				FDFS_STORE_PATH_ROUND_ROBIN);
+
+	pSpaceSize = iniGetStrValue(NULL, "reserved_storage_space", &iniContext);
+	if (pSpaceSize == NULL)
+	{
+		g_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
+	}
+	else if ((result=parse_bytes(pSpaceSize, 1, \
+			&reserved_storage_space)) != 0)
+	{
+		return result;
+	}
+	else
+	{
+		g_storage_reserved_mb = reserved_storage_space / FDFS_ONE_MB;
+	}
+
+	g_avg_storage_reserved_mb = g_storage_reserved_mb / g_path_count;
+
 	iniFreeContext(&iniContext);
 
 	logInfo("file: "__FILE__", line: %d, " \
-		"storage_ip_changed_auto_adjust=%d", __LINE__, \
-		g_storage_ip_changed_auto_adjust);
+		"storage_ip_changed_auto_adjust=%d, " \
+		"store_path=%d, " \
+		"reserved_storage_space=%dMB", __LINE__, \
+		g_storage_ip_changed_auto_adjust, \
+		g_store_path_mode, \
+		g_storage_reserved_mb);
 
 	return 0;
 }

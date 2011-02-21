@@ -36,6 +36,10 @@ int g_slot_min_size;
 int g_trunk_file_size;
 
 static int slot_max_size;
+int g_store_path_mode = FDFS_STORE_PATH_ROUND_ROBIN;
+int g_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
+int g_avg_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
+int g_store_path_index = 0;
 
 static int slot_count = 0;
 static FDFSTrunkSlot *slots = NULL;

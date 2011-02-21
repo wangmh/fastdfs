@@ -49,6 +49,7 @@ typedef struct
 
 extern bool g_continue_flag;
 extern char **g_store_paths; //file store paths
+extern int *g_path_free_mbs; //store path free spaces
 extern int g_path_count;   //store path count
 
 /* subdirs under store path, g_subdir_count * g_subdir_count 2 level subdirs */

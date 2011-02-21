@@ -507,9 +507,13 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 	pTask->length = sizeof(TrackerHeader) + \
 		sprintf(pTask->data + sizeof(TrackerHeader), \
 			"storage_ip_changed_auto_adjust=%d\n" \
-			"storage_sync_file_max_delay=%d\n", \
+			"storage_sync_file_max_delay=%d\n" \
+			"store_path=%d\n" \
+			"reserved_storage_space=%dMB\n", \
 			g_storage_ip_changed_auto_adjust, \
-			g_storage_sync_file_max_delay);
+			g_storage_sync_file_max_delay, \
+			g_groups.store_path, \
+			g_storage_reserved_mb);
 
 	return 0;
 }
