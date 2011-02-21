@@ -1396,52 +1396,16 @@ static void *work_thread_entrance(void* arg)
 	return NULL;
 }
 
-static int storage_gen_filename(StorageClientInfo *pClientInfo, \
-		const int64_t file_size, const int crc32, \
-		const char *szFormattedExt, const int ext_name_len, \
-		const time_t timestamp, char *filename, int *filename_len)
+void storage_get_store_path(const char *filename, const int filename_len, \
+		int *sub_path_high, int *sub_path_low)
 {
-	int result;
-	char buff[sizeof(int) * 5];
-	char encoded[sizeof(int) * 8 + 1];
-	char szStorageIp[IP_ADDRESS_SIZE];
 	int n;
-	int len;
-	int r;
-	in_addr_t server_ip;
-	int64_t masked_file_size;
-
-	server_ip = getSockIpaddr(pClientInfo->sock, \
-			szStorageIp, IP_ADDRESS_SIZE);
-
-	int2buff(htonl(server_ip), buff);
-	int2buff(timestamp, buff+sizeof(int));
-	if ((file_size >> 32) != 0)
-	{
-		masked_file_size = file_size;
-	}
-	else
-	{
-		r = rand();
-		if ((r & 0x80000000) == 0)
-		{
-			r |= 0x80000000;
-		}
-
-		masked_file_size = (((int64_t)r) << 32 ) | file_size;
-	}
-	long2buff(masked_file_size, buff+sizeof(int)*2);
-	int2buff(crc32, buff+sizeof(int)*4);
-
-	base64_encode_ex(&g_base64_context, buff, sizeof(int) * 5, encoded, \
-			filename_len, false);
+	int result;
 
 	if (g_file_distribute_path_mode == FDFS_FILE_DIST_PATH_ROUND_ROBIN)
 	{
-		len = sprintf(buff, STORAGE_DATA_DIR_FORMAT"/", \
-				g_dist_path_index_high);
-		len += sprintf(buff + len, STORAGE_DATA_DIR_FORMAT"/", \
-				g_dist_path_index_low);
+		*sub_path_high = g_dist_path_index_high;
+		*sub_path_low = g_dist_path_index_low;
 
 		if (++g_dist_write_file_count >= g_file_distribute_rotate_count)
 		{
@@ -1482,15 +1446,59 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 	}  //random
 	else
 	{
-		n = PJWHash(encoded, *filename_len) % (1 << 16);
+		n = PJWHash(filename, filename_len) % (1 << 16);
+		*sub_path_high = ((n >> 8) & 0xFF) % g_subdir_count_per_path;
+		*sub_path_low = (n & 0xFF) % g_subdir_count_per_path;
 
-		len = sprintf(buff,STORAGE_DATA_DIR_FORMAT"/",((n >> 8)&0xFF) \
-				% g_subdir_count_per_path);
-		len += sprintf(buff+len, STORAGE_DATA_DIR_FORMAT"/",(n & 0xFF)\
-				 % g_subdir_count_per_path);
 	}
+}
 
-	memcpy(filename, buff, len);
+static int storage_gen_filename(StorageClientInfo *pClientInfo, \
+		const int64_t file_size, const int crc32, \
+		const char *szFormattedExt, const int ext_name_len, \
+		const time_t timestamp, char *filename, int *filename_len)
+{
+	char buff[sizeof(int) * 5];
+	char encoded[sizeof(int) * 8 + 1];
+	char szStorageIp[IP_ADDRESS_SIZE];
+	int len;
+	int r;
+	int sub_path_high;
+	int sub_path_low;
+	in_addr_t server_ip;
+	int64_t masked_file_size;
+
+	server_ip = getSockIpaddr(pClientInfo->sock, \
+			szStorageIp, IP_ADDRESS_SIZE);
+
+	int2buff(htonl(server_ip), buff);
+	int2buff(timestamp, buff+sizeof(int));
+	if ((file_size >> 32) != 0)
+	{
+		masked_file_size = file_size;
+	}
+	else
+	{
+		r = rand();
+		if ((r & 0x80000000) == 0)
+		{
+			r |= 0x80000000;
+		}
+
+		masked_file_size = (((int64_t)r) << 32 ) | file_size;
+	}
+	long2buff(masked_file_size, buff+sizeof(int)*2);
+	int2buff(crc32, buff+sizeof(int)*4);
+
+	base64_encode_ex(&g_base64_context, buff, sizeof(int) * 5, encoded, \
+			filename_len, false);
+
+	storage_get_store_path(encoded, *filename_len, \
+				&sub_path_high, &sub_path_low);
+
+	len = sprintf(filename, STORAGE_DATA_DIR_FORMAT"/" \
+			STORAGE_DATA_DIR_FORMAT"/", \
+			sub_path_high, sub_path_low);
 	memcpy(filename+len, encoded, *filename_len);
 	memcpy(filename+len+(*filename_len), szFormattedExt, ext_name_len);
 	*filename_len += len + ext_name_len;
