@@ -29,7 +29,7 @@ extern int g_avg_storage_reserved_mb;  //calc by above var: g_storage_reserved_m
 extern int g_store_path_index;  //store to which path
 extern int g_current_trunk_file_id;  //current trunk file id
 
-typedef struct {
+typedef struct tagFDFSTrunkInfo {
 	unsigned char store_path_index;   //store which path as Mxx
 	unsigned char sub_path_high;      //high sub dir index, front part of HH/HH
 	unsigned char sub_path_low;       //low sub dir index, tail part of HH/HH
@@ -37,6 +37,7 @@ typedef struct {
 	int offset;  //file offset
 	int size;    //space size
 	int status;  //normal or hold
+	struct tagFDFSTrunkInfo *next;
 } FDFSTrunkInfo;
 
 typedef struct {
