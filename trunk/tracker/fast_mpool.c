@@ -103,6 +103,7 @@ void fast_mpool_destroy(struct fast_mpool_man *mpool)
 		pSrcNode = pSrcNode->next;
 
 		free(pSrcTmp->mpool);
+		free(pSrcTmp);
 	}
 
 	mpool->mpool_src_head = NULL;

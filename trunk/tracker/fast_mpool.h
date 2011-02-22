@@ -18,6 +18,12 @@
 #include "common_define.h"
 #include "chain.h"
  
+struct fast_mpool_node
+{
+	struct fast_mpool_node *next;
+	char data[0];
+}
+
 struct fast_mpool_src
 {
 	struct fast_mpool_node *mpool;
@@ -32,12 +38,6 @@ struct fast_mpool_man
 	int inc_elements_once;
 	pthread_mutex_t lock;
 };
-
-struct fast_mpool_node
-{
-	struct fast_mpool_node *next;
-	char data[0];
-}
 
 #ifdef __cplusplus
 extern "C" {
