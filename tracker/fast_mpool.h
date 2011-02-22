@@ -8,8 +8,8 @@
 
 //fast_mpool.h
 
-#ifndef _TRUNK_MPOOL_H
-#define _TRUNK_MPOOL_H
+#ifndef _FAST_MPOOL_H
+#define _FAST_MPOOL_H
 
 #include <stdio.h>
 #include <stdlib.h>

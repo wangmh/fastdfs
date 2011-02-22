@@ -51,105 +51,63 @@ int fast_mpool_init(struct fast_mpool_man *mpool, const int element_size, \
 static int fast_mpool_prealloc(struct fast_mpool_man *mpool)
 {
 	struct fast_mpool_node *pNode;
+	char *pNew;
 	char *p;
-	char *pCharEnd;
+	char *pLast;
 	int block_size;
 	int alloc_size;
-	int64_t total_size;
 	int result;
 
 	block_size = sizeof(struct fast_mpool_node) + mpool->element_size;
-	alloc_size = element_size * mpool->inc_elements_once;
+	alloc_size = mpool->element_size * mpool->inc_elements_once;
 
-	mpool_src_head = (struct fast_mpool_node *)malloc(total_size);
-	if (mpool_src_head == NULL)
+	pNew = (char *)malloc(alloc_size);
+	if (pNew == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"malloc "INT64_PRINTF_FORMAT" bytes fail, " \
+			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, total_size, errno, STRERROR(errno));
+			__LINE__, alloc_size, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
-	memset(mpool_src_head, 0, total_size);
+	memset(pNew, 0, alloc_size);
 
-	pCharEnd = ((char *)mpool_src_head) + total_size;
-	for (p=(char *)mpool_src_head; p<pCharEnd; p += element_size)
+	pLast = pNew + (alloc_size - block_size);
+	for (p=pNew; p<pLast; p += block_size)
 	{
 		pNode = (struct fast_mpool_node *)p;
-		pNode->size = min_buff_size;
-
-		pNode->arg = p + sizeof(void);
-		if (g_fast_1mpool.malloc_whole_block)
-		{
-			pNode->data = (char *)pNode->arg + arg_size;
-		}
-		else
-		{
-			pNode->data = (char *)malloc(pNode->size);
-			if (pNode->data == NULL)
-			{
-				fast_mpool_destroy();
-
-				logError("file: "__FILE__", line: %d, " \
-					"malloc %d bytes fail, " \
-					"errno: %d, error info: %s", \
-					__LINE__, pNode->size, \
-					errno, STRERROR(errno));
-				return errno != 0 ? errno : ENOMEM;
-			}
-		}
+		pNode->next = (struct fast_mpool_node *)(p + block_size);
 	}
 
-	g_fast_1mpool.tail = (struct fast_mpool_node *)(pCharEnd - element_size);
-	for (p=(char *)mpool_src_head; p<(char *)g_fast_1mpool.tail; p += element_size)
-	{
-		pNode = (struct fast_mpool_node *)p;
-		pNode->next = (struct fast_mpool_node *)(p + element_size);
-	}
-
-	g_fast_1mpool.max_connections = max_connections;
-	g_fast_1mpool.min_buff_size = min_buff_size;
-	g_fast_1mpool.max_buff_size = max_buff_size;
-	g_fast_1mpool.arg_size = arg_size;
-	g_fast_1mpool.head = mpool_src_head;
-	g_fast_1mpool.tail->next = NULL;
+	((struct fast_mpool_node *)pLast)->next = NULL;
+	mpool->head = (struct fast_mpool_node *)pNew;
+	mpool->mpool_src_head = (struct fast_mpool_node *)pNew;
 
 	return 0;
 }
 
-void fast_mpool_destroy()
+void fast_mpool_destroy(struct fast_mpool_man *mpool)
 {
-	if (mpool_src_head == NULL)
+	struct fast_mpool_src *pSrcNode;
+	struct fast_mpool_src *pSrcTmp;
+
+	if (mpool->mpool_src_head == NULL)
 	{
 		return;
 	}
 
-	if (!g_fast_1mpool.malloc_whole_block)
+	pSrcNode = mpool->mpool_src_head;
+	while (pSrcNode != NULL)
 	{
-		char *p;
-		char *pCharEnd;
-		int element_size;
-		struct fast_mpool_node *pNode;
+		pSrcTmp = pSrcNode;
+		pSrcNode = pSrcNode->next;
 
-		element_size = sizeof(void) + \
-					g_fast_1mpool.arg_size;
-		pCharEnd = ((char *)mpool_src_head) + element_size * \
-				g_fast_1mpool.max_connections;
-		for (p=(char *)mpool_src_head; p<pCharEnd; p += element_size)
-		{
-			pNode = (struct fast_mpool_node *)p;
-			if (pNode->data != NULL)
-			{
-				free(pNode->data);
-				pNode->data = NULL;
-			}
-		}
+		free(pSrcTmp->mpool);
 	}
 
-	free(mpool_src_head);
-	mpool_src_head = NULL;
+	mpool->mpool_src_head = NULL;
 
-	pthread_mutex_destroy(&(g_fast_1mpool.lock));
+	pthread_mutex_destroy(&(mpool->lock));
 }
 
 struct fast_mpool_node *fast_mpool_alloc()
