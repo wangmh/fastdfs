@@ -31,7 +31,6 @@ int fast_mpool_init(struct fast_mpool_man *mpool, const int element_size, \
 		int block_size;
 		block_size = sizeof(struct fast_mpool_node) + element_size;
 		mpool->inc_elements_once = (1024 * 1024) / block_size;
-		
 	}
 
 	if ((result=init_pthread_lock(&(mpool->lock))) != 0)
@@ -42,7 +41,7 @@ int fast_mpool_init(struct fast_mpool_man *mpool, const int element_size, \
 		return result;
 	}
 
-	mpool->mpool_src_head = NULL;
+	mpool->mpool_malloc_head = NULL;
 	mpool->head = NULL;
 
 	return 0;
@@ -51,7 +50,9 @@ int fast_mpool_init(struct fast_mpool_man *mpool, const int element_size, \
 static int fast_mpool_prealloc(struct fast_mpool_man *mpool)
 {
 	struct fast_mpool_node *pNode;
+	struct fast_mpool_malloc *pMallocNode;
 	char *pNew;
+	char *pTrunkStart;
 	char *p;
 	char *pLast;
 	int block_size;
@@ -59,7 +60,8 @@ static int fast_mpool_prealloc(struct fast_mpool_man *mpool)
 	int result;
 
 	block_size = sizeof(struct fast_mpool_node) + mpool->element_size;
-	alloc_size = mpool->element_size * mpool->inc_elements_once;
+	alloc_size = sizeof(struct fast_mpool_malloc) + mpool->element_size * \
+			mpool->inc_elements_once;
 
 	pNew = (char *)malloc(alloc_size);
 	if (pNew == NULL)
@@ -72,147 +74,50 @@ static int fast_mpool_prealloc(struct fast_mpool_man *mpool)
 	}
 	memset(pNew, 0, alloc_size);
 
+	pMallocNode = (struct fast_mpool_malloc *)pNew;
+
+	pTrunkStart = pNew + sizeof(struct fast_mpool_malloc);
 	pLast = pNew + (alloc_size - block_size);
-	for (p=pNew; p<pLast; p += block_size)
+	for (p=pTrunkStart; p<pLast; p += block_size)
 	{
 		pNode = (struct fast_mpool_node *)p;
 		pNode->next = (struct fast_mpool_node *)(p + block_size);
 	}
 
 	((struct fast_mpool_node *)pLast)->next = NULL;
-	mpool->head = (struct fast_mpool_node *)pNew;
-	mpool->mpool_src_head = (struct fast_mpool_node *)pNew;
+	mpool->head = (struct fast_mpool_node *)pTrunkStart;
+
+	pMallocNode->next = mpool->mpool_malloc_head;
+	mpool->mpool_malloc_head = pMallocNode;
 
 	return 0;
 }
 
 void fast_mpool_destroy(struct fast_mpool_man *mpool)
 {
-	struct fast_mpool_src *pSrcNode;
-	struct fast_mpool_src *pSrcTmp;
+	struct fast_mpool_malloc *pMallocNode;
+	struct fast_mpool_malloc *pMallocTmp;
 
-	if (mpool->mpool_src_head == NULL)
+	if (mpool->mpool_malloc_head == NULL)
 	{
 		return;
 	}
 
-	pSrcNode = mpool->mpool_src_head;
-	while (pSrcNode != NULL)
+	pMallocNode = mpool->mpool_malloc_head;
+	while (pMallocNode != NULL)
 	{
-		pSrcTmp = pSrcNode;
-		pSrcNode = pSrcNode->next;
+		pMallocTmp = pMallocNode;
+		pMallocNode = pMallocNode->next;
 
-		free(pSrcTmp->mpool);
-		free(pSrcTmp);
+		free(pMallocTmp);
 	}
-
-	mpool->mpool_src_head = NULL;
+	mpool->mpool_malloc_head = NULL;
+	mpool->head = NULL;
 
 	pthread_mutex_destroy(&(mpool->lock));
 }
 
-struct fast_mpool_node *fast_mpool_alloc()
-{
-	return fast_mpool_pop(&g_fast_1mpool);;
-}
-
-void fast_mpool_free(struct fast_mpool_man *mpool, struct fast_mpool_node *pNode)
-{
-	char *new_buff;
-	int result;
-
-	*(pNode->client_ip) = '\0';
-	pNode->length = 0;
-	pNode->offset = 0;
-	pNode->req_count = 0;
-
-	if (pNode->size > g_fast_1mpool.min_buff_size) //need thrink
-	{
-		new_buff = (char *)malloc(g_fast_1mpool.min_buff_size);
-		if (new_buff == NULL)
-		{
-			logWarning("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, g_fast_1mpool.min_buff_size, \
-				errno, STRERROR(errno));
-		}
-		else
-		{
-			free(pNode->data);
-			pNode->size = g_fast_1mpool.min_buff_size;
-			pNode->data = new_buff;
-		}
-	}
-
-	if ((result=pthread_mutex_lock(&g_fast_1mpool.lock)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_lock fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, STRERROR(result));
-	}
-
-	pNode->next = g_fast_1mpool.head;
-	g_fast_1mpool.head = pNode;
-	if (g_fast_1mpool.tail == NULL)
-	{
-		g_fast_1mpool.tail = pNode;
-	}
-
-	if ((result=pthread_mutex_unlock(&g_fast_1mpool.lock)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_unlock fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, STRERROR(result));
-	}
-
-	return result;
-}
-
-int fast_mpool_count()
-{
-	return fast_mpool_count(&g_fast_1mpool);
-}
-
-int fast_mpool_push(struct fast_mpool_man *mpool, \
-		struct fast_mpool_node *pNode)
-{
-	int result;
-
-	if ((result=pthread_mutex_lock(&(mpool->lock))) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_lock fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, STRERROR(result));
-		return result;
-	}
-
-	pNode->next = NULL;
-	if (mpool->tail == NULL)
-	{
-		mpool->head = pNode;
-	}
-	else
-	{
-		mpool->tail->next = pNode;
-	}
-	mpool->tail = pNode;
-
-	if ((result=pthread_mutex_unlock(&(mpool->lock))) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_unlock fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, STRERROR(result));
-	}
-
-	return 0;
-}
-
-struct fast_mpool_node *fast_mpool_pop(struct fast_mpool_man *mpool)
+struct fast_mpool_node *fast_mpool_alloc(struct fast_mpool_man *mpool)
 {
 	struct fast_mpool_node *pNode;
 	int result;
@@ -226,13 +131,21 @@ struct fast_mpool_node *fast_mpool_pop(struct fast_mpool_man *mpool)
 		return NULL;
 	}
 
-	pNode = mpool->head;
-	if (pNode != NULL)
+	if (mpool->head != NULL)
 	{
+		pNode = mpool->head;
 		mpool->head = pNode->next;
-		if (mpool->head == NULL)
+	}
+	else
+	{
+		if ((result=fast_mpool_prealloc(mpool)) == 0)
 		{
-			mpool->tail = NULL;
+			pNode = mpool->head;
+			mpool->head = pNode->next;
+		}
+		else
+		{
+			pNode = NULL;
 		}
 	}
 
@@ -245,6 +158,34 @@ struct fast_mpool_node *fast_mpool_pop(struct fast_mpool_man *mpool)
 	}
 
 	return pNode;
+}
+
+int fast_mpool_free(struct fast_mpool_man *mpool, \
+		struct fast_mpool_node *pNode)
+{
+	int result;
+
+	if ((result=pthread_mutex_lock(&(mpool->lock))) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, STRERROR(result));
+		return result;
+	}
+
+	pNode->next = mpool->head;
+	mpool->head = pNode;
+
+	if ((result=pthread_mutex_unlock(&(mpool->lock))) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, STRERROR(result));
+	}
+
+	return 0;
 }
 
 int fast_mpool_count(struct fast_mpool_man *mpool)
