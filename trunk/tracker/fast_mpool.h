@@ -24,16 +24,15 @@ struct fast_mpool_node
 	char data[0];
 }
 
-struct fast_mpool_src
+struct fast_mpool_malloc
 {
-	struct fast_mpool_node *mpool;
-	struct fast_mpool_src *next;
+	struct fast_mpool_malloc *next;
 };
 
 struct fast_mpool_man
 {
 	struct fast_mpool_node *head;
-	struct fast_mpool_src *mpool_src_head;
+	struct fast_mpool_malloc *mpool_malloc_head;
 	int element_size;
 	int inc_elements_once;
 	pthread_mutex_t lock;
