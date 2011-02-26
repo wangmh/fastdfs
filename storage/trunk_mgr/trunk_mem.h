@@ -47,6 +47,8 @@ typedef struct {
 	pthread_mutex_t lock;
 } FDFSTrunkSlot;
 
+int storage_trunk_init();
+
 #ifdef __cplusplus
 }
 #endif

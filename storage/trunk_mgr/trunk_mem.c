@@ -43,7 +43,6 @@ int g_avg_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
 int g_store_path_index = 0;
 int g_current_trunk_file_id = 0;
 
-static int slot_count = 0;
 static FDFSTrunkSlot *slots = NULL;
 static FDFSTrunkSlot *slot_end = NULL;
 static pthread_mutex_t trunk_file_lock;
@@ -52,6 +51,14 @@ static struct fast_mblock_man trunk_blocks_man;
 static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 		int *sub_path_low, int *file_id);
 static int trunk_init_file(const char *filename, const int64_t file_size);
+
+int storage_trunk_init()
+{
+	int slot_count;
+
+	slot_max_size = g_trunk_file_size / 2;
+	return 0;
+}
 
 static FDFSTrunkSlot *trunk_get_slot(const int size)
 {
