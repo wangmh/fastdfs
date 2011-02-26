@@ -54,9 +54,73 @@ static int trunk_init_file(const char *filename, const int64_t file_size);
 
 int storage_trunk_init()
 {
+	int result;
 	int slot_count;
+	int bytes;
+	FDFSTrunkSlot *pTrunk;
 
+	slot_count = 1;
 	slot_max_size = g_trunk_file_size / 2;
+	bytes = g_slot_min_size;
+	while (bytes < slot_max_size)
+	{
+		slot_count++;
+		bytes *= 2;
+	}
+
+	slots = (FDFSTrunkSlot *)malloc(sizeof(FDFSTrunkSlot) * slot_count);
+	if (slots == NULL)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(FDFSTrunkSlot) * slot_count, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	bytes = g_slot_min_size;
+	slot_end = slots + slot_count;
+	for (pTrunk=slots; pTrunk<slot_end; pTrunk++)
+	{
+		pTrunk->size = bytes;
+		pTrunk->free_trunk_head = NULL;
+		if ((result=init_pthread_lock(&(pTrunk->lock))) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"init_pthread_lock fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
+			return result;
+		}
+
+		bytes *= 2;
+	}
+
+	(slot_end - 1)->size = slot_max_size;
+
+	
+	if ((result=init_pthread_lock(&trunk_file_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"init_pthread_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, STRERROR(result));
+		return result;
+	}
+
+	if ((result=fast_mblock_init(&trunk_blocks_man, \
+			sizeof(FDFSTrunkInfo), 0)) != 0)
+	{
+		return result;
+	}
+
+	return 0;
+}
+
+int storage_trunk_destroy()
+{
 	return 0;
 }
 
