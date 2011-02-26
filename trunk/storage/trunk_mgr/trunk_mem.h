@@ -12,7 +12,7 @@
 #define _TRUNK_MEM_H_
 
 #include <pthread.h>
-#include "chain.h"
+#include "fast_mblock.h"
 
 #define FDFS_TRUNK_STATUS_FREE  0
 #define FDFS_TRUNK_STATUS_HOLD  1
@@ -37,12 +37,13 @@ typedef struct tagFDFSTrunkInfo {
 	int offset;  //file offset
 	int size;    //space size
 	int status;  //normal or hold
+	struct fast_mblock_node *pMblockNode;   //for free
 	struct tagFDFSTrunkInfo *next;
 } FDFSTrunkInfo;
 
 typedef struct {
 	int size;
-	ChainList free_trunk;
+	FDFSTrunkInfo *free_trunk_head;
 	pthread_mutex_t lock;
 } FDFSTrunkSlot;
 

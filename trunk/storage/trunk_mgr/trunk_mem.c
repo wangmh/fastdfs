@@ -29,9 +29,9 @@
 #include "pthread_func.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
-#include "trunk_mem.h"
 #include "storage_global.h"
 #include "storage_service.h"
+#include "trunk_mem.h"
 
 int g_slot_min_size;
 int g_trunk_file_size;
@@ -47,6 +47,7 @@ static int slot_count = 0;
 static FDFSTrunkSlot *slots = NULL;
 static FDFSTrunkSlot *slot_end = NULL;
 static pthread_mutex_t trunk_file_lock;
+static struct fast_mblock_man trunk_blocks_man;
 
 static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 		int *sub_path_low, int *file_id);
@@ -67,13 +68,81 @@ static FDFSTrunkSlot *trunk_get_slot(const int size)
 	return NULL;
 }
 
+static void trunk_add_node(FDFSTrunkInfo *pNode)
+{
+	FDFSTrunkSlot *pSlot;
+	FDFSTrunkInfo *pPrevious;
+	FDFSTrunkInfo *pCurrent;
+
+	for (pSlot=slot_end-1; pSlot>=slots; pSlot--)
+	{
+		if (pNode->size >= pSlot->size)
+		{
+			break;
+		}
+	}
+
+	pPrevious = NULL;
+	pCurrent = pSlot->free_trunk_head;
+	while (pCurrent != NULL && pNode->size > pCurrent->size)
+	{
+		pPrevious = pCurrent;
+		pCurrent = pCurrent->next;
+	}
+
+	pNode->next = pCurrent;
+	if (pPrevious == NULL)
+	{
+		pSlot->free_trunk_head = pNode;
+	}
+	else
+	{
+		pPrevious->next = pNode;
+	}
+}
+
+static int trunk_slit(FDFSTrunkInfo *pNode, const int size)
+{
+	int result;
+	struct fast_mblock_node *pMblockNode;
+	FDFSTrunkInfo *pTrunk;
+
+	if (pNode->size - size < g_slot_min_size)
+	{
+		return 0;
+	}
+
+	pMblockNode = fast_mblock_alloc(&trunk_blocks_man);
+	if (pMblockNode == NULL)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(FDFSTrunkInfo), \
+			result, STRERROR(result));
+		return result;
+	}
+
+	pTrunk = (FDFSTrunkInfo *)pMblockNode->data;
+	memcpy(pTrunk, pNode, sizeof(FDFSTrunkInfo));
+
+	pTrunk->pMblockNode = pMblockNode;
+	pTrunk->offset = pNode->offset + size;
+	pTrunk->size = pNode->size - size;
+	pTrunk->status = FDFS_TRUNK_STATUS_FREE;
+
+	trunk_add_node(pTrunk);
+
+	pNode->size = size;
+	return 0;
+}
+
 int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult)
 {
 	FDFSTrunkSlot *pSlot;
-	ChainNode *pNode;
 	FDFSTrunkInfo *pTrunk;
-	FDFSTrunkInfo *pNew;
-	bool found;
+	struct fast_mblock_node *pMblockNode;
 	int result;
 	int store_path_index;
 	int sub_path_high;
@@ -88,22 +157,55 @@ int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult)
 
 	pthread_mutex_lock(&pSlot->lock);
 
-	pTrunk = NULL;
-	found = false;
-	pNode = pSlot->free_trunk.head;
-	while (pNode != NULL)
+	pTrunk = pSlot->free_trunk_head;
+	while (pTrunk != NULL && pTrunk->status == FDFS_TRUNK_STATUS_HOLD)
 	{
-		pTrunk = (FDFSTrunkInfo *)pNode->data;
-		if (pTrunk->status == FDFS_TRUNK_STATUS_FREE)
+		pTrunk = pTrunk->next;
+	}
+
+	do
+	{
+	if (pTrunk != NULL)
+	{
+		result = trunk_slit(pTrunk, size);
+	}
+	else
+	{
+		result = trunk_create_file(&store_path_index, &sub_path_high, \
+					&sub_path_low, &file_id);
+		if (result != 0)
 		{
-			found = true;
 			break;
 		}
 
-		pNode = pNode->next;
-	}
+		pMblockNode = fast_mblock_alloc(&trunk_blocks_man);
+		if (pMblockNode == NULL)
+		{
+			result = errno != 0 ? errno : EIO;
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, (int)sizeof(FDFSTrunkInfo), \
+				result, STRERROR(result));
+			break;
+		}
+		pTrunk = (FDFSTrunkInfo *)pMblockNode->data;
 
-	if (found)
+		pTrunk->pMblockNode = pMblockNode;
+		pTrunk->store_path_index = store_path_index;
+		pTrunk->sub_path_high = sub_path_high;
+		pTrunk->sub_path_low = sub_path_low;
+		pTrunk->id = file_id;
+		pTrunk->offset = 0;
+		pTrunk->size = g_trunk_file_size;
+		pTrunk->status = FDFS_TRUNK_STATUS_FREE;
+
+		result = trunk_slit(pTrunk, size);
+		trunk_add_node(pTrunk);
+	}
+	} while (0);
+
+	if (result == 0)
 	{
 		memcpy(pResult, pTrunk, sizeof(FDFSTrunkInfo));
 		pTrunk->status = FDFS_TRUNK_STATUS_HOLD;
@@ -111,34 +213,7 @@ int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult)
 
 	pthread_mutex_unlock(&pSlot->lock);
 
-	result = trunk_create_file(&store_path_index, &sub_path_high, \
-				&sub_path_low, &file_id);
-	if (result != 0)
-	{
-		return result;
-	}
-
-	pNew = (FDFSTrunkInfo *)malloc(sizeof(FDFSTrunkInfo));
-	if (pNew == NULL)
-	{
-		result = errno != 0 ? errno : EIO;
-		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, (int)sizeof(FDFSTrunkInfo), \
-			result, STRERROR(result));
-		return result;
-	}
-
-	pNew->store_path_index = store_path_index;
-	pNew->sub_path_high = sub_path_high;
-	pNew->sub_path_low = sub_path_low;
-	pNew->id = file_id;
-	pNew->offset = 0;
-	pNew->size = g_trunk_file_size;
-	pNew->status = FDFS_TRUNK_STATUS_HOLD;
-
-	return 0;
+	return result;
 }
 
 static int trunk_create_file(int *store_path_index, int *sub_path_high, \
