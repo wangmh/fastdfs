@@ -37,17 +37,26 @@ typedef struct tagFDFSTrunkInfo {
 	int offset;  //file offset
 	int size;    //space size
 	int status;  //normal or hold
-	struct fast_mblock_node *pMblockNode;   //for free
-	struct tagFDFSTrunkInfo *next;
 } FDFSTrunkInfo;
+
+typedef struct tagFDFSTrunkNode {
+	FDFSTrunkInfo trunk;    //trunk info
+	struct fast_mblock_node *pMblockNode;   //for free
+	struct tagFDFSTrunkNode *next;
+} FDFSTrunkNode;
 
 typedef struct {
 	int size;
-	FDFSTrunkInfo *free_trunk_head;
+	FDFSTrunkNode *free_trunk_head;
 	pthread_mutex_t lock;
 } FDFSTrunkSlot;
 
 int storage_trunk_init();
+
+int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult);
+
+int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock);
+int trunk_delete_node(const FDFSTrunkInfo *pTrunkInfo, const bool bNeedLock);
 
 #ifdef __cplusplus
 }
