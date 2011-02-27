@@ -13,6 +13,7 @@
 
 #include "tracker_types.h"
 #include "storage_func.h"
+#include "trunk_mem.h"
 
 #define TRUNK_OP_TYPE_ADD_SPACE		'A'
 #define TRUNK_OP_TYPE_DEL_SPACE		'D'
@@ -27,7 +28,6 @@ extern "C" {
 typedef struct
 {
 	char ip_addr[IP_ADDRESS_SIZE];
-	bool sync_old_done;
 	BinLogBuffer binlog_buff;
 	int mark_fd;
 	int binlog_fd;
@@ -41,9 +41,6 @@ typedef struct
 	char op_type;
 	FDFSTrunkInfo trunk;
 } TrunkBinLogRecord;
-
-extern int g_binlog_fd;
-extern int g_binlog_index;
 
 extern int g_trunk_sync_thread_count;
 
@@ -60,12 +57,12 @@ int trunk_sync_thread_start(const FDFSStorageBrief *pStorage);
 int kill_trunk_sync_threads();
 int trunk_binlog_sync_func(void *args);
 
-char *get_mark_filename_by_reader(const void *pArg, char *full_filename);
+char *trunk_mark_filename_by_reader(const void *pArg, char *full_filename);
 int trunk_unlink_mark_file(const char *ip_addr);
 int trunk_rename_mark_file(const char *old_ip_addr, const int old_port, \
 		const char *new_ip_addr, const int new_port);
 
-int storage_open_readable_binlog(TrunkBinLogReader *pReader, \
+int trunk_open_readable_binlog(TrunkBinLogReader *pReader, \
 		get_filename_func filename_func, const void *pArg);
 
 int trunk_reader_init(FDFSStorageBrief *pStorage, TrunkBinLogReader *pReader);
