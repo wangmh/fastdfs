@@ -211,14 +211,17 @@ int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock)
 		pPrevious->next = pNode;
 	}
 
-	result = trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_ADD_SPACE, \
-					&(pNode->trunk));
 	if (bNeedLock)
 	{
+		result=trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_ADD_SPACE,\
+					&(pNode->trunk));
 		pthread_mutex_unlock(&pSlot->lock);
+		return result;
 	}
-
-	return result;
+	else
+	{
+		return 0;
+	}
 }
 
 int trunk_delete_node(const FDFSTrunkInfo *pTrunkInfo, const bool bNeedLock)
@@ -270,10 +273,14 @@ int trunk_delete_node(const FDFSTrunkInfo *pTrunkInfo, const bool bNeedLock)
 	if (bNeedLock)
 	{
 		pthread_mutex_unlock(&pSlot->lock);
+		result=trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_DEL_SPACE,\
+					&(pCurrent->trunk));
+	}
+	else
+	{
+		result = 0;
 	}
 
-	result = trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_DEL_SPACE, \
-					&(pCurrent->trunk));
 	fast_mblock_free(&trunk_blocks_man, pCurrent->pMblockNode);
 
 	return result;
@@ -416,6 +423,7 @@ int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult)
 	result = trunk_slit(pTrunkNode, size);
 	if (result == 0)
 	{
+		pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_HOLD;
 		result = trunk_add_node(pTrunkNode, true);
 	}
 	else
@@ -426,7 +434,6 @@ int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult)
 	if (result == 0)
 	{
 		memcpy(pResult, &(pTrunkNode->trunk), sizeof(FDFSTrunkInfo));
-		pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_HOLD;
 	}
 
 	return result;

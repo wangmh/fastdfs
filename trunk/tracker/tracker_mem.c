@@ -39,6 +39,7 @@
 #define GROUP_ITEM_STORAGE_HTTP_PORT         "storage_http_port"
 #define GROUP_ITEM_STORE_PATH_COUNT          "store_path_count"
 #define GROUP_ITEM_SUBDIR_COUNT_PER_PATH     "subdir_count_per_path"
+#define GROUP_ITEM_CURRENT_TRUNK_FILE_ID     "current_trunk_file_id"
 
 #define STORAGE_SECTION_NAME_GLOBAL            "Global"
 #define STORAGE_SECTION_NAME_PREFIX            "Storage"
@@ -583,6 +584,8 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path)
 			GROUP_ITEM_STORE_PATH_COUNT, &iniContext, 0);
 		pGroup->subdir_count_per_path = iniGetIntValue(section_name, \
 			GROUP_ITEM_SUBDIR_COUNT_PER_PATH, &iniContext, 0);
+		pGroup->current_trunk_file_id = iniGetIntValue(section_name, \
+			GROUP_ITEM_CURRENT_TRUNK_FILE_ID, &iniContext, 0);
 	}
 
 	iniFreeContext(&iniContext);
@@ -1508,6 +1511,7 @@ static int tracker_save_groups()
 				"\t%s=%d\n" \
 				"\t%s=%d\n" \
 				"\t%s=%d\n" \
+				"\t%s=%d\n" \
 				"\t%s=%d\n\n", \
 				(*ppGroup)->group_name, \
 				GROUP_SECTION_NAME_PREFIX, \
@@ -1521,7 +1525,10 @@ static int tracker_save_groups()
 				GROUP_ITEM_STORE_PATH_COUNT, \
 				(*ppGroup)->store_path_count, \
 				GROUP_ITEM_SUBDIR_COUNT_PER_PATH, \
-				(*ppGroup)->subdir_count_per_path);
+				(*ppGroup)->subdir_count_per_path, \
+				GROUP_ITEM_CURRENT_TRUNK_FILE_ID, \
+				(*ppGroup)->current_trunk_file_id);
+
 		if (write(fd, buff, len) != len)
 		{
 			logError("file: "__FILE__", line: %d, " \

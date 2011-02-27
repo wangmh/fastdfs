@@ -1,5 +1,5 @@
 
-Version 3.00  2011-02-27
+Version 3.00  2011-02-28
  * mass small files optimization
  * add fixed block memory pool: common/fast_mblock.c
 

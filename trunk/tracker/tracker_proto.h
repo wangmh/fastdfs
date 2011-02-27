@@ -28,6 +28,8 @@
 #define TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ     77  //storage server request storage server's changelog
 #define TRACKER_PROTO_CMD_STORAGE_REPORT_STATUS     76  //report specified storage server status
 #define TRACKER_PROTO_CMD_STORAGE_PARAMETER_REQ	    75  //storage server request parameters
+#define TRACKER_PROTO_CMD_STORAGE_REPORT_TRUNK_FID  74  //storage report current trunk file id
+#define TRACKER_PROTO_CMD_STORAGE_FETCH_TRUNK_FID   73  //storage get current trunk file id
 
 #define TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_START 61  //start of tracker get system data files
 #define TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_END   62  //end of tracker get system data files
@@ -124,6 +126,7 @@ typedef struct
 	char sz_current_write_server[FDFS_PROTO_PKG_LEN_SIZE];
 	char sz_store_path_count[FDFS_PROTO_PKG_LEN_SIZE];
 	char sz_subdir_count_per_path[FDFS_PROTO_PKG_LEN_SIZE];
+	char sz_current_trunk_file_id[FDFS_PROTO_PKG_LEN_SIZE];
 } TrackerGroupStat;
 
 typedef struct
