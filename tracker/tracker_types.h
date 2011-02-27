@@ -99,6 +99,7 @@ typedef struct
 	int current_write_server; //current server index to upload file
 	int store_path_count;  //store base path count of each storage server
 	int subdir_count_per_path;
+	int current_trunk_file_id;  //current trunk file id
 } FDFSGroupStat;
 
 typedef struct
@@ -247,6 +248,7 @@ typedef struct
 	int active_count; //active server count
 	int storage_port;  //storage server port
 	int storage_http_port; //storage http server port
+	int current_trunk_file_id;  //current trunk file id report by storage
 	FDFSStorageDetail **all_servers;   //all storage servers
 	FDFSStorageDetail **sorted_servers;  //storages order by ip addr
 	FDFSStorageDetail **active_servers;  //storages order by ip addr

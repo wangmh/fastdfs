@@ -456,6 +456,7 @@ int tracker_list_one_group(TrackerServerInfo *pTrackerServer, \
 	pDest->current_write_server = buff2long(src.sz_current_write_server);
 	pDest->store_path_count = buff2long(src.sz_store_path_count);
 	pDest->subdir_count_per_path = buff2long(src.sz_subdir_count_per_path);
+	pDest->current_trunk_file_id = buff2long(src.sz_current_trunk_file_id);
 
 	return 0;
 }
@@ -548,6 +549,8 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 				pSrc->sz_store_path_count);
 		pDest->subdir_count_per_path = buff2long( \
 				pSrc->sz_subdir_count_per_path);
+		pDest->current_trunk_file_id = buff2long( \
+				pSrc->sz_current_trunk_file_id);
 
 		pDest++;
 	}

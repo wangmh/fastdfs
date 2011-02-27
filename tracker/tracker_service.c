@@ -436,7 +436,8 @@ static int tracker_deal_changelog_req(struct fast_task_info *pTask)
 	}
 	else
 	{
-		if (pTask->length - sizeof(TrackerHeader) != FDFS_GROUP_NAME_MAX_LEN)
+		if (pTask->length - sizeof(TrackerHeader) != \
+			FDFS_GROUP_NAME_MAX_LEN)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, package size " \
@@ -486,6 +487,46 @@ static int tracker_deal_changelog_req(struct fast_task_info *pTask)
 	}
 
 	return tracker_changelog_response(pTask, pStorage);
+}
+
+static int tracker_deal_get_trunk_fid(struct fast_task_info *pTask)
+{
+	char *group_name;
+	FDFSGroupInfo *pGroup;
+	
+	if (pTask->length - sizeof(TrackerHeader) != FDFS_GROUP_NAME_MAX_LEN)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length = %d", __LINE__, \
+			TRACKER_PROTO_CMD_STORAGE_FETCH_TRUNK_FID, \
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader), \
+			FDFS_GROUP_NAME_MAX_LEN);
+
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	group_name = pTask->data + sizeof(TrackerHeader);
+	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
+	pGroup = tracker_mem_get_group(group_name);
+	if (pGroup == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid group_name: %s", \
+			__LINE__, pTask->client_ip, group_name);
+
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	pTask->length = sizeof(TrackerHeader) + sizeof(int);
+	int2buff(pGroup->current_trunk_file_id, \
+		pTask->data + sizeof(TrackerHeader));
+
+	return 0;
 }
 
 static int tracker_deal_parameter_req(struct fast_task_info *pTask)
@@ -553,6 +594,41 @@ static int tracker_deal_storage_replica_chg(struct fast_task_info *pTask)
 	briefServers = (FDFSStorageBrief *)(pTask->data + sizeof(TrackerHeader));
 	return tracker_mem_sync_storages(((TrackerClientInfo *)pTask->arg)->pGroup, \
 				briefServers, server_count);
+}
+
+static int tracker_deal_report_trunk_fid(struct fast_task_info *pTask)
+{
+	int current_trunk_fid;
+	TrackerClientInfo *pClientInfo;
+	
+	pClientInfo = (TrackerClientInfo *)pTask->arg;
+
+	if (pTask->length - sizeof(TrackerHeader) != sizeof(int))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip addr: %s, " \
+			"package size "PKG_LEN_PRINTF_FORMAT" " \
+			"is not correct", __LINE__, \
+			TRACKER_PROTO_CMD_STORAGE_REPORT_TRUNK_FID, \
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader));
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	current_trunk_fid = buff2int(pTask->data + sizeof(TrackerHeader));
+	if (current_trunk_fid < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid current trunk file id: %d", \
+			__LINE__, pTask->client_ip, current_trunk_fid);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	pClientInfo->pGroup->current_trunk_file_id = current_trunk_fid;
+	pTask->length = sizeof(TrackerHeader);
+	return 0;
 }
 
 static int tracker_deal_storage_report_status(struct fast_task_info *pTask)
@@ -1879,7 +1955,9 @@ static int tracker_deal_server_list_one_group(struct fast_task_info *pTask)
 			pDest->sz_current_write_server);
 	long2buff(pGroup->store_path_count, pDest->sz_store_path_count);
 	long2buff(pGroup->subdir_count_per_path, \
-				pDest->sz_subdir_count_per_path);
+			pDest->sz_subdir_count_per_path);
+	long2buff(pGroup->current_trunk_file_id, \
+			pDest->sz_current_trunk_file_id);
 
 	pTask->length = sizeof(TrackerHeader) + sizeof(TrackerGroupStat);
 
@@ -1927,6 +2005,8 @@ static int tracker_deal_server_list_all_groups(struct fast_task_info *pTask)
 				pDest->sz_store_path_count);
 		long2buff((*ppGroup)->subdir_count_per_path, \
 				pDest->sz_subdir_count_per_path);
+		long2buff((*ppGroup)->current_trunk_file_id, \
+				pDest->sz_current_trunk_file_id);
 		pDest++;
 	}
 
@@ -2377,6 +2457,15 @@ static int tracker_deal_storage_df_report(struct fast_task_info *pTask)
 	TrackerClientInfo *pClientInfo;
 	
 	pClientInfo = (TrackerClientInfo *)pTask->arg;
+	if (pClientInfo->pGroup == NULL || pClientInfo->pStorage == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, not join in!", \
+			__LINE__, TRACKER_PROTO_CMD_STORAGE_REPORT_DISK_USAGE, \
+			pTask->client_ip);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
 
 	nPkgLen = pTask->length - sizeof(TrackerHeader);
 	if (nPkgLen != sizeof(TrackerStatReportReqBody) * \
@@ -2674,6 +2763,7 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			result = tracker_deal_storage_sync_src_req(pTask);
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_SYNC_DEST_REQ:
+			TRACKER_CHECK_LOGINED(pTask)
 			result = tracker_deal_storage_sync_dest_req(pTask);
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY:
@@ -2712,6 +2802,13 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			break;
 		case TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_END:
 			result = tracker_deal_get_sys_files_end(pTask);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_REPORT_TRUNK_FID:
+			TRACKER_CHECK_LOGINED(pTask)
+			result = tracker_deal_report_trunk_fid(pTask);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_FETCH_TRUNK_FID:
+			result = tracker_deal_get_trunk_fid(pTask);
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "  \

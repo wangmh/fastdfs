@@ -37,6 +37,7 @@
 #include "fdht_func.h"
 #include "fdht_client.h"
 #include "client_func.h"
+#include "trunk_mem.h"
 #include "storage_disk_recovery.h"
 
 #ifdef WITH_HTTPD
@@ -53,6 +54,7 @@
 #define INIT_ITEM_LAST_IP_ADDRESS	"last_ip_addr"
 #define INIT_ITEM_LAST_SERVER_PORT	"last_server_port"
 #define INIT_ITEM_LAST_HTTP_PORT	"last_http_port"
+#define INIT_ITEM_CURRENT_TRUNK_FILE_ID "current_trunk_file_id"
 
 #define STAT_ITEM_TOTAL_UPLOAD		"total_upload_count"
 #define STAT_ITEM_SUCCESS_UPLOAD	"success_upload_count"
@@ -464,6 +466,7 @@ int storage_write_to_sync_ini_file()
 		"%s=%d\n"  \
 		"%s=%s\n"  \
 		"%s=%d\n"  \
+		"%s=%d\n"  \
 		"%s=%d\n", \
 		INIT_ITEM_STORAGE_JOIN_TIME, g_storage_join_time, \
 		INIT_ITEM_SYNC_OLD_DONE, g_sync_old_done, \
@@ -471,7 +474,8 @@ int storage_write_to_sync_ini_file()
 		INIT_ITEM_SYNC_UNTIL_TIMESTAMP, g_sync_until_timestamp, \
 		INIT_ITEM_LAST_IP_ADDRESS, g_tracker_client_ip, \
 		INIT_ITEM_LAST_SERVER_PORT, g_last_server_port, \
-		INIT_ITEM_LAST_HTTP_PORT, g_last_http_port
+		INIT_ITEM_LAST_HTTP_PORT, g_last_http_port,
+		INIT_ITEM_CURRENT_TRUNK_FILE_ID, g_current_trunk_file_id
 	    );
 	if (write(fd, buff, len) != len)
 	{
@@ -580,6 +584,9 @@ static int storage_check_and_make_data_dirs()
 		{
 			g_last_http_port = atoi(pValue);
 		}
+
+		g_current_trunk_file_id = iniGetIntValue(NULL, \
+			INIT_ITEM_CURRENT_TRUNK_FILE_ID, &iniContext, 0);
  
 		iniFreeContext(&iniContext);
 
@@ -605,9 +612,10 @@ static int storage_check_and_make_data_dirs()
 		printf("g_sync_old_done = %d\n", g_sync_old_done);
 		printf("g_sync_src_ip_addr = %s\n", g_sync_src_ip_addr);
 		printf("g_sync_until_timestamp = %d\n", g_sync_until_timestamp);
-		printf("g_last_storage_ip= %s\n", g_last_storage_ip);
-		printf("g_last_server_port= %d\n", g_last_server_port);
-		printf("g_last_http_port= %d\n", g_last_http_port);
+		printf("g_last_storage_ip = %s\n", g_last_storage_ip);
+		printf("g_last_server_port = %d\n", g_last_server_port);
+		printf("g_last_http_port = %d\n", g_last_http_port);
+		printf("g_current_trunk_file_id = %d\n", g_current_trunk_file_id);
 		*/
 	}
 	else
@@ -932,12 +940,16 @@ int storage_func_init(const char *filename, \
 	char *pThreadStackSize;
 	char *pBuffSize;
 	char *pIfAliasPrefix;
+	char *pSlotMinSize;
+	char *pTrunkFileSize;
 	char *pHttpDomain;
 	IniContext iniContext;
 	int result;
 	int64_t fsync_after_written_bytes;
 	int64_t thread_stack_size;
 	int64_t buff_size;
+	int64_t slot_min_size;
+	int64_t trunk_file_size;
 	TrackerServerInfo *pServer;
 	TrackerServerInfo *pEnd;
 
@@ -1364,6 +1376,54 @@ int storage_func_init(const char *filename, \
 				"%s", pIfAliasPrefix);
 		}
 
+		pSlotMinSize = iniGetStrValue(NULL, \
+			"slot_min_size", &iniContext);
+		if (pSlotMinSize == NULL)
+		{
+			slot_min_size = 256;
+		}
+		else if ((result=parse_bytes(pSlotMinSize, 1, \
+				&slot_min_size)) != 0)
+		{
+			return result;
+		}
+		g_slot_min_size = (int)slot_min_size;
+		if (g_slot_min_size <= 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"item \"slot_min_size\" %d is invalid, " \
+				"which <= 0", __LINE__, g_slot_min_size);
+			result = EINVAL;
+			break;
+		}
+		if (g_slot_min_size > 64 * 1024)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"item \"slot_min_size\" %d is too large, " \
+				"change to 64KB", __LINE__, g_slot_min_size);
+			g_slot_min_size = 64 * 1024;
+		}
+
+		pTrunkFileSize = iniGetStrValue(NULL, \
+			"trunk_file_size", &iniContext);
+		if (pTrunkFileSize == NULL)
+		{
+			trunk_file_size = 64 * 1024 * 1024;
+		}
+		else if ((result=parse_bytes(pTrunkFileSize, 1, \
+				&trunk_file_size)) != 0)
+		{
+			return result;
+		}
+		g_trunk_file_size = (int)trunk_file_size;
+		if (g_trunk_file_size < 4 * 1024 * 1024)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"item \"trunk_file_size\" %d is too small, " \
+				"change to 4MB", __LINE__, g_trunk_file_size);
+			g_trunk_file_size = 4 * 1024 * 1024;
+		}
+
 		g_check_file_duplicate = iniGetBoolValue(NULL, \
 				"check_file_duplicate", &iniContext, false);
 		if (g_check_file_duplicate)
@@ -1473,6 +1533,8 @@ int storage_func_init(const char *filename, \
 			"sync_stat_file_interval=%ds, " \
 			"thread_stack_size=%d KB, upload_priority=%d, " \
 			"if_alias_prefix=%s, " \
+			"slot_min_size=%d, " \
+			"trunk_file_size=%d MB, " \
 			"check_file_duplicate=%d, FDHT group count=%d, " \
 			"FDHT server count=%d, FDHT key_namespace=%s, " \
 			"FDHT keep_alive=%d, HTTP server port=%d, " \
@@ -1496,7 +1558,9 @@ int storage_func_init(const char *filename, \
 			g_fsync_after_written_bytes, g_sync_log_buff_interval, \
 			g_sync_binlog_buff_interval, g_sync_stat_file_interval, \
 			g_thread_stack_size/1024, g_upload_priority, \
-			g_if_alias_prefix, g_check_file_duplicate, \
+			g_if_alias_prefix, g_slot_min_size, \
+			g_trunk_file_size / (1024 * 1024), \
+			g_check_file_duplicate, \
 			g_group_array.group_count, g_group_array.server_count, \
 			g_key_namespace, g_keep_alive, \
 			g_http_port, g_http_domain);

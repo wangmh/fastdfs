@@ -211,7 +211,6 @@ int trunk_sync_destroy()
 		binlog_write_cache_buff = NULL;
 	}
 
-
 	return 0;
 }
 
@@ -485,10 +484,6 @@ int trunk_reader_init(FDFSStorageBrief *pStorage, TrunkBinLogReader *pReader)
 	{
 		bFileExist = false;
 	}
-	else if (pStorage->status <= FDFS_STORAGE_STATUS_WAIT_SYNC)
-	{
-		bFileExist = false;
-	}
 	else
 	{
 		bFileExist = fileExists(full_filename);
@@ -544,6 +539,14 @@ int trunk_reader_init(FDFSStorageBrief *pStorage, TrunkBinLogReader *pReader)
 			__LINE__, full_filename, \
 			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
+	}
+
+	if (!bFileExist && pStorage != NULL)
+	{
+		if ((result=trunk_write_to_mark_file(pReader)) != 0)
+		{
+			return result;
+		}
 	}
 
 	if ((result=trunk_open_readable_binlog(pReader, \
@@ -747,14 +750,6 @@ int trunk_binlog_read(TrunkBinLogReader *pReader, \
 	pRecord->trunk.offset = atoi(cols[6]);
 	pRecord->trunk.size = atoi(cols[7]);
 
-	/*
-	//printf("timestamp=%d, op_type=%c, filename=%s(%d), line length=%d, " \
-		"offset=%d\n", \
-		pRecord->timestamp, pRecord->op_type, \
-		pRecord->filename, strlen(pRecord->filename), \
-		*record_length, pReader->binlog_offset);
-	*/
-
 	return 0;
 }
 
@@ -909,7 +904,7 @@ static void* trunk_sync_thread_entrance(void* arg)
 	storage_server.sock = -1;
 
 	logDebug("file: "__FILE__", line: %d, " \
-		"sync thread to storage server %s:%d started", \
+		"trunk sync thread to storage server %s:%d started", \
 		__LINE__, storage_server.ip_addr, storage_server.port);
 
 	while (g_continue_flag && \
@@ -1042,7 +1037,7 @@ static void* trunk_sync_thread_entrance(void* arg)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"ip_addr %s belong to the local host," \
-				" sync thread exit.", \
+				" trunk sync thread exit.", \
 				__LINE__, storage_server.ip_addr);
 			fdfs_quit(&storage_server);
 			close(storage_server.sock);
@@ -1063,8 +1058,9 @@ static void* trunk_sync_thread_entrance(void* arg)
 
 		sync_result = 0;
 		while (g_continue_flag && \
-			(pStorage->status == FDFS_STORAGE_STATUS_ACTIVE || \
-			pStorage->status == FDFS_STORAGE_STATUS_SYNCING))
+			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
+			pStorage->status != FDFS_STORAGE_STATUS_IP_CHANGED && \
+			pStorage->status != FDFS_STORAGE_STATUS_NONE)
 		{
 			if (reader.binlog_buff.length == 0)
 			{
