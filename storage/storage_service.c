@@ -2668,7 +2668,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 
 	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
-	BinLogReader *pReader;
+	StorageBinLogReader *pReader;
 	char *pOutBuff;
 	char *pBasePath;
 	int result;
@@ -2681,7 +2681,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 	char full_filename[MAX_PATH_SIZE];
 	char src_filename[MAX_PATH_SIZE];
 	bool bLast;
-	BinLogRecord record;
+	StorageBinLogRecord record;
 	int64_t pkg_len;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
@@ -2693,7 +2693,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 	}
 
 	pFileContext =  &(pClientInfo->file_context);
-	pReader = (BinLogReader *)pClientInfo->extra_arg;
+	pReader = (StorageBinLogReader *)pClientInfo->extra_arg;
 
 	store_path_index = pFileContext->extra_info.upload.store_path_index;
 	pBasePath = g_store_paths[store_path_index];
@@ -2875,11 +2875,11 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 static void fetch_one_path_binlog_finish_clean_up(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
-	BinLogReader *pReader;
+	StorageBinLogReader *pReader;
 	char full_filename[MAX_PATH_SIZE];
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
-	pReader = (BinLogReader *)pClientInfo->extra_arg;
+	pReader = (StorageBinLogReader *)pClientInfo->extra_arg;
 	if (pReader == NULL)
 	{
 		return;
@@ -2902,16 +2902,16 @@ static int storage_server_do_fetch_one_path_binlog( \
 {
 	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
-	BinLogReader *pReader;
+	StorageBinLogReader *pReader;
 	TrackerHeader *pHeader;
 	int result;
 
-	pReader = (BinLogReader *)malloc(sizeof(BinLogReader));
+	pReader = (StorageBinLogReader *)malloc(sizeof(StorageBinLogReader));
 	if (pReader == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, (int)sizeof(BinLogReader),
+			__LINE__, (int)sizeof(StorageBinLogReader),
 			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}

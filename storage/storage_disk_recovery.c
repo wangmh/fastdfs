@@ -341,7 +341,7 @@ static int storage_disk_recovery_finish(const char *pBasePath)
 }
 
 static int recovery_write_to_mark_file(const char *pBasePath, \
-			BinLogReader *pReader)
+			StorageBinLogReader *pReader)
 {
 	char buff[128];
 	int len;
@@ -388,13 +388,13 @@ static int recovery_init_mark_file(const char *pBasePath, \
 }
 
 static int recovery_reader_init(const char *pBasePath, \
-                        BinLogReader *pReader)
+                        StorageBinLogReader *pReader)
 {
 	char full_mark_filename[MAX_PATH_SIZE];
 	IniContext iniContext;
 	int result;
 
-	memset(pReader, 0, sizeof(BinLogReader));
+	memset(pReader, 0, sizeof(StorageBinLogReader));
 	pReader->mark_fd = -1;
 	pReader->binlog_fd = -1;
 	pReader->binlog_index = g_binlog_index + 1;
@@ -484,11 +484,11 @@ static int recovery_reader_init(const char *pBasePath, \
 	return 0;
 }
 
-static int storage_do_recovery(const char *pBasePath, BinLogReader *pReader, \
+static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pReader, \
 		TrackerServerInfo *pSrcStorage)
 {
 	TrackerServerInfo *pTrackerServer;
-	BinLogRecord record;
+	StorageBinLogRecord record;
 	int record_length;
 	int result;
 	int log_level;
@@ -682,7 +682,7 @@ int storage_disk_recovery_restore(const char *pBasePath)
 	char full_mark_filename[MAX_PATH_SIZE];
 	TrackerServerInfo srcStorage;
 	int result;
-	BinLogReader reader;
+	StorageBinLogReader reader;
 
 	recovery_get_binlog_filename(pBasePath, full_binlog_filename);
 	recovery_get_mark_filename(pBasePath, full_mark_filename);

@@ -28,7 +28,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 int tracker_report_storage_status(TrackerServerInfo *pTrackerServer, \
 		FDFSStorageBrief *briefServer);
 int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
-		BinLogReader *pReader);
+		StorageBinLogReader *pReader);
 int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 		FDFSStorageBrief *briefServers, const int server_count);
 int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer);
