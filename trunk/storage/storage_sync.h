@@ -32,14 +32,6 @@ extern "C" {
 
 typedef struct
 {
-	char *buffer;  //the buffer pointer
-	char *current; //pointer to current position
-	int length;    //the content length
-	int version;   //for binlog pre-read, compare with binlog_write_version
-} BinLogBuffer;
-
-typedef struct
-{
 	char ip_addr[IP_ADDRESS_SIZE];
 	bool need_sync_old;
 	bool sync_old_done;
@@ -55,7 +47,7 @@ typedef struct
 
 	int64_t last_scan_rows;  //for write to mark file
 	int64_t last_sync_rows;  //for write to mark file
-} BinLogReader;
+} StorageBinLogReader;
 
 typedef struct
 {
@@ -66,7 +58,7 @@ typedef struct
 	int filename_len;
 	int true_filename_len;
 	char *pBasePath;
-} BinLogRecord;
+} StorageBinLogRecord;
 
 extern int g_binlog_fd;
 extern int g_binlog_index;
@@ -82,8 +74,8 @@ int storage_sync_destroy();
 int storage_binlog_write_ex(const int timestamp, const char op_type, \
 		const char *filename, const char *extra);
 
-int storage_binlog_read(BinLogReader *pReader, \
-			BinLogRecord *pRecord, int *record_length);
+int storage_binlog_read(StorageBinLogReader *pReader, \
+			StorageBinLogRecord *pRecord, int *record_length);
 
 int storage_sync_thread_start(const FDFSStorageBrief *pStorage);
 int kill_storage_sync_threads();
@@ -94,11 +86,11 @@ int storage_unlink_mark_file(const char *ip_addr);
 int storage_rename_mark_file(const char *old_ip_addr, const int old_port, \
 		const char *new_ip_addr, const int new_port);
 
-int storage_open_readable_binlog(BinLogReader *pReader, \
+int storage_open_readable_binlog(StorageBinLogReader *pReader, \
 		get_filename_func filename_func, const void *pArg);
 
-int storage_reader_init(FDFSStorageBrief *pStorage, BinLogReader *pReader);
-void storage_reader_destroy(BinLogReader *pReader);
+int storage_reader_init(FDFSStorageBrief *pStorage, StorageBinLogReader *pReader);
+void storage_reader_destroy(StorageBinLogReader *pReader);
 
 int storage_report_storage_status(const char *ip_addr, const char status);
 

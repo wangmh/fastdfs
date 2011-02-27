@@ -348,5 +348,13 @@ typedef struct
 	TrackerServerInfo *servers;
 } TrackerServerGroup;
 
+typedef struct
+{
+	char *buffer;  //the buffer pointer
+	char *current; //pointer to current position
+	int length;    //the content length
+	int version;   //for binlog pre-read, compare with binlog_write_version
+} BinLogBuffer;
+
 #endif
 

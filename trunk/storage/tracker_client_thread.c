@@ -1007,7 +1007,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 }
 
 int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
-			BinLogReader *pReader)
+			StorageBinLogReader *pReader)
 {
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
 			IP_ADDRESS_SIZE];
