@@ -2115,7 +2115,6 @@ int tracker_mem_init()
 		return result;
 	}
 
-	memset(&g_groups, 0, sizeof(g_groups));
 	return tracker_mem_init_groups(&g_groups);
 }
 

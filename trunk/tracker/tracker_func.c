@@ -109,6 +109,7 @@ int tracker_load_from_conf_file(const char *filename, \
 	int64_t storage_reserved;
 	int64_t thread_stack_size;
 
+	memset(&g_groups, 0, sizeof(FDFSGroups));
 	memset(&iniContext, 0, sizeof(IniContext));
 	if ((result=iniLoadFromFile(filename, &iniContext)) != 0)
 	{

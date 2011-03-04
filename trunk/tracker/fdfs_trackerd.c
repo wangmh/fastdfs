@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 		log_destroy();
 		return result;
 	}
-	
+
 	sock = socketServer(bind_addr, g_server_port, &result);
 	if (sock < 0)
 	{
