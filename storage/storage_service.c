@@ -4474,7 +4474,7 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 
 	sprintf(pFileContext->filename, "%s/data/%s", \
 			g_store_paths[store_path_index], true_filename);
-	if (lstat(pFileContext->filename, &stat_buf) == 0)
+	if (stat(pFileContext->filename, &stat_buf) == 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))
 		{

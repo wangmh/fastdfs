@@ -1965,9 +1965,8 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 
 	pFileInfo->file_size = buff2long(buff + sizeof(int) * 2);
 
-	if ((filename_len > FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH + \
-		FDFS_FILE_EXT_NAME_MAX_LEN + 1) || \
-		(pFileInfo->file_size == INFINITE_FILE_SIZE))
+	if (IS_SLAVE_FILE(filename_len) || \
+	    IS_APPENDER_FILE(pFileInfo->file_size))
 	{ //slave file or appender file
 		if (get_from_server)
 		{
