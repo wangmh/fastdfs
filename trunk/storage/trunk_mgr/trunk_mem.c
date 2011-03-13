@@ -506,9 +506,11 @@ static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 		storage_get_store_path(filename, filename_len, \
 					sub_path_high, sub_path_low);
 
+		TRUNK_GET_FILENAME(*file_id, filename);
 		snprintf(full_filename, sizeof(full_filename), \
-			"%s/data/%s%s", \
-			pStorePath, buff, filename);
+			"%s/data/"STORAGE_DATA_DIR_FORMAT"/" \
+			STORAGE_DATA_DIR_FORMAT"/%s", \
+			pStorePath, *sub_path_high, *sub_path_low, filename);
 		if (!fileExists(full_filename))
 		{
 			break;
@@ -579,9 +581,6 @@ static int trunk_init_file(const char *filename, const int64_t file_size)
 	close(fd);
 	return 0;
 }
-
-#define TRUNK_GET_FILENAME(file_id, filename) \
-	sprintf(filename, "%06d", file_id)
 
 void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str)
 {

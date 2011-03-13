@@ -68,10 +68,11 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult);
 int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock);
 int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo, const bool bNeedLock);
 
+#define TRUNK_GET_FILENAME(file_id, filename) \
+	sprintf(filename, "%06d", file_id)
+
 void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str);
 void trunk_file_info_decode(char *str, FDFSTrunkFileInfo *pTrunkFile);
-
-int trunk_get_filename(const FDFSTrunkFullInfo *pTrunk, char *filename);
 
 #ifdef __cplusplus
 }
