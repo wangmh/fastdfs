@@ -313,7 +313,7 @@ static int trunk_binlog_fsync(const bool bNeedLock)
 }
 
 int trunk_binlog_write(const int timestamp, const char op_type, \
-		const FDFSTrunkInfo *pTrunk)
+		const FDFSTrunkFullInfo *pTrunk)
 {
 	int result;
 	int write_ret;
@@ -330,12 +330,12 @@ int trunk_binlog_write(const int timestamp, const char op_type, \
 					binlog_write_cache_len, \
 					"%d %c %d %d %d %d %d %d\n", \
 					timestamp, op_type, \
-					pTrunk->store_path_index, \
-					pTrunk->sub_path_high, \
-					pTrunk->sub_path_low, \
-					pTrunk->id, \
-					pTrunk->offset, \
-					pTrunk->size);
+					pTrunk->path.store_path_index, \
+					pTrunk->path.sub_path_high, \
+					pTrunk->path.sub_path_low, \
+					pTrunk->file.id, \
+					pTrunk->file.offset, \
+					pTrunk->file.size);
 
 	//check if buff full
 	if (SYNC_BINLOG_WRITE_BUFF_SIZE - binlog_write_cache_len < 128)
@@ -743,12 +743,12 @@ int trunk_binlog_read(TrunkBinLogReader *pReader, \
 
 	pRecord->timestamp = atoi(cols[0]);
 	pRecord->op_type = *(cols[1]);
-	pRecord->trunk.store_path_index = atoi(cols[2]);
-	pRecord->trunk.sub_path_high = atoi(cols[3]);
-	pRecord->trunk.sub_path_low = atoi(cols[4]);
-	pRecord->trunk.id = atoi(cols[5]);
-	pRecord->trunk.offset = atoi(cols[6]);
-	pRecord->trunk.size = atoi(cols[7]);
+	pRecord->trunk.path.store_path_index = atoi(cols[2]);
+	pRecord->trunk.path.sub_path_high = atoi(cols[3]);
+	pRecord->trunk.path.sub_path_low = atoi(cols[4]);
+	pRecord->trunk.file.id = atoi(cols[5]);
+	pRecord->trunk.file.offset = atoi(cols[6]);
+	pRecord->trunk.file.size = atoi(cols[7]);
 
 	return 0;
 }
