@@ -39,7 +39,7 @@ typedef struct
 {
 	time_t timestamp;
 	char op_type;
-	FDFSTrunkInfo trunk;
+	FDFSTrunkFullInfo trunk;
 } TrunkBinLogRecord;
 
 extern int g_trunk_sync_thread_count;
@@ -48,7 +48,7 @@ int trunk_sync_init();
 int trunk_sync_destroy();
 
 int trunk_binlog_write(const int timestamp, const char op_type, \
-		const FDFSTrunkInfo *pTrunk);
+		const FDFSTrunkFullInfo *pTrunk);
 
 int trunk_binlog_read(TrunkBinLogReader *pReader, \
 		      TrunkBinLogRecord *pRecord, int *record_length);

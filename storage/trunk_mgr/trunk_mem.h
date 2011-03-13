@@ -17,6 +17,8 @@
 #define FDFS_TRUNK_STATUS_FREE  0
 #define FDFS_TRUNK_STATUS_HOLD  1
 
+#define FDFS_TRUNK_FILE_INFO_LEN  16
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,18 +31,26 @@ extern int g_avg_storage_reserved_mb;  //calc by above var: g_storage_reserved_m
 extern int g_store_path_index;  //store to which path
 extern int g_current_trunk_file_id;  //current trunk file id
 
-typedef struct tagFDFSTrunkInfo {
+typedef struct tagFDFSTrunkPathInfo {
 	unsigned char store_path_index;   //store which path as Mxx
 	unsigned char sub_path_high;      //high sub dir index, front part of HH/HH
 	unsigned char sub_path_low;       //low sub dir index, tail part of HH/HH
+} FDFSTrunkPathInfo;
+
+typedef struct tagFDFSTrunkFileInfo {
 	int id;      //trunk file id
 	int offset;  //file offset
 	int size;    //space size
+} FDFSTrunkFileInfo;
+
+typedef struct tagFDFSTrunkFullInfo {
+	FDFSTrunkPathInfo path;
+	FDFSTrunkFileInfo file;
 	int status;  //normal or hold
-} FDFSTrunkInfo;
+} FDFSTrunkFullInfo;
 
 typedef struct tagFDFSTrunkNode {
-	FDFSTrunkInfo trunk;    //trunk info
+	FDFSTrunkFullInfo trunk;    //trunk info
 	struct fast_mblock_node *pMblockNode;   //for free
 	struct tagFDFSTrunkNode *next;
 } FDFSTrunkNode;
@@ -53,10 +63,15 @@ typedef struct {
 
 int storage_trunk_init();
 
-int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult);
+int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult);
 
 int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock);
-int trunk_delete_node(const FDFSTrunkInfo *pTrunkInfo, const bool bNeedLock);
+int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo, const bool bNeedLock);
+
+void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str);
+void trunk_file_info_decode(char *str, FDFSTrunkFileInfo *pTrunkFile);
+
+int trunk_get_filename(const FDFSTrunkFullInfo *pTrunk, char *filename);
 
 #ifdef __cplusplus
 }

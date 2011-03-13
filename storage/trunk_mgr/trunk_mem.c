@@ -141,7 +141,7 @@ int storage_trunk_destroy()
 	return 0;
 }
 
-static char *trunk_info_dump(const FDFSTrunkInfo *pTrunkInfo, char *buff, \
+static char *trunk_info_dump(const FDFSTrunkFullInfo *pTrunkInfo, char *buff, \
 				const int buff_size)
 {
 	snprintf(buff, buff_size, \
@@ -149,10 +149,10 @@ static char *trunk_info_dump(const FDFSTrunkInfo *pTrunkInfo, char *buff, \
 		"sub_path_high=%d, " \
 		"sub_path_low=%d, " \
 		"id=%d, offset=%d, size=%d, status=%d", \
-		pTrunkInfo->store_path_index, \
-		pTrunkInfo->sub_path_high, \
-		pTrunkInfo->sub_path_low,  \
-		pTrunkInfo->id, pTrunkInfo->offset, pTrunkInfo->size, \
+		pTrunkInfo->path.store_path_index, \
+		pTrunkInfo->path.sub_path_high, \
+		pTrunkInfo->path.sub_path_low,  \
+		pTrunkInfo->file.id, pTrunkInfo->file.offset, pTrunkInfo->file.size, \
 		pTrunkInfo->status);
 
 	return buff;
@@ -182,7 +182,7 @@ int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock)
 
 	for (pSlot=slot_end-1; pSlot>=slots; pSlot--)
 	{
-		if (pNode->trunk.size >= pSlot->size)
+		if (pNode->trunk.file.size >= pSlot->size)
 		{
 			break;
 		}
@@ -195,7 +195,7 @@ int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock)
 
 	pPrevious = NULL;
 	pCurrent = pSlot->free_trunk_head;
-	while (pCurrent != NULL && pNode->trunk.size > pCurrent->trunk.size)
+	while (pCurrent != NULL && pNode->trunk.file.size > pCurrent->trunk.file.size)
 	{
 		pPrevious = pCurrent;
 		pCurrent = pCurrent->next;
@@ -224,7 +224,7 @@ int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock)
 	}
 }
 
-int trunk_delete_node(const FDFSTrunkInfo *pTrunkInfo, const bool bNeedLock)
+int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo, const bool bNeedLock)
 {
 	int result;
 	FDFSTrunkSlot *pSlot;
@@ -233,7 +233,7 @@ int trunk_delete_node(const FDFSTrunkInfo *pTrunkInfo, const bool bNeedLock)
 
 	for (pSlot=slot_end-1; pSlot>=slots; pSlot--)
 	{
-		if (pTrunkInfo->size >= pSlot->size)
+		if (pTrunkInfo->file.size >= pSlot->size)
 		{
 			break;
 		}
@@ -246,7 +246,7 @@ int trunk_delete_node(const FDFSTrunkInfo *pTrunkInfo, const bool bNeedLock)
 	pPrevious = NULL;
 	pCurrent = pSlot->free_trunk_head;
 	while (pCurrent != NULL && memcmp(&(pCurrent->trunk), pTrunkInfo, \
-		sizeof(FDFSTrunkInfo)) != 0)
+		sizeof(FDFSTrunkFullInfo)) != 0)
 	{
 		pPrevious = pCurrent;
 		pCurrent = pCurrent->next;
@@ -292,7 +292,7 @@ static int trunk_slit(FDFSTrunkNode *pNode, const int size)
 	struct fast_mblock_node *pMblockNode;
 	FDFSTrunkNode *pTrunkNode;
 
-	if (pNode->trunk.size - size < g_slot_min_size)
+	if (pNode->trunk.file.size - size < g_slot_min_size)
 	{
 		return 0;
 	}
@@ -313,8 +313,8 @@ static int trunk_slit(FDFSTrunkNode *pNode, const int size)
 	memcpy(pTrunkNode, pNode, sizeof(FDFSTrunkNode));
 
 	pTrunkNode->pMblockNode = pMblockNode;
-	pTrunkNode->trunk.offset = pNode->trunk.offset + size;
-	pTrunkNode->trunk.size = pNode->trunk.size - size;
+	pTrunkNode->trunk.file.offset = pNode->trunk.file.offset + size;
+	pTrunkNode->trunk.file.size = pNode->trunk.file.size - size;
 	pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
 
 	result = trunk_add_node(pTrunkNode, true);
@@ -323,11 +323,11 @@ static int trunk_slit(FDFSTrunkNode *pNode, const int size)
 		return result;
 	}
 
-	pNode->trunk.size = size;
+	pNode->trunk.file.size = size;
 	return 0;
 }
 
-int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult)
+int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 {
 	FDFSTrunkSlot *pSlot;
 	FDFSTrunkNode *pPreviousNode;
@@ -410,12 +410,12 @@ int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult)
 		pTrunkNode = (FDFSTrunkNode *)pMblockNode->data;
 
 		pTrunkNode->pMblockNode = pMblockNode;
-		pTrunkNode->trunk.store_path_index = store_path_index;
-		pTrunkNode->trunk.sub_path_high = sub_path_high;
-		pTrunkNode->trunk.sub_path_low = sub_path_low;
-		pTrunkNode->trunk.id = file_id;
-		pTrunkNode->trunk.offset = 0;
-		pTrunkNode->trunk.size = g_trunk_file_size;
+		pTrunkNode->trunk.path.store_path_index = store_path_index;
+		pTrunkNode->trunk.path.sub_path_high = sub_path_high;
+		pTrunkNode->trunk.path.sub_path_low = sub_path_low;
+		pTrunkNode->trunk.file.id = file_id;
+		pTrunkNode->trunk.file.offset = 0;
+		pTrunkNode->trunk.file.size = g_trunk_file_size;
 		pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
 	}
 	} while (0);
@@ -433,7 +433,7 @@ int trunk_alloc_space(const int size, FDFSTrunkInfo *pResult)
 
 	if (result == 0)
 	{
-		memcpy(pResult, &(pTrunkNode->trunk), sizeof(FDFSTrunkInfo));
+		memcpy(pResult, &(pTrunkNode->trunk), sizeof(FDFSTrunkFullInfo));
 	}
 
 	return result;
@@ -578,5 +578,33 @@ static int trunk_init_file(const char *filename, const int64_t file_size)
 
 	close(fd);
 	return 0;
+}
+
+#define TRUNK_GET_FILENAME(file_id, filename) \
+	sprintf(filename, "%06d", file_id)
+
+void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str)
+{
+	char buff[sizeof(int) * 3];
+	int len;
+
+	int2buff(pTrunkFile->id, buff);
+	int2buff(pTrunkFile->offset, buff + sizeof(int));
+	int2buff(pTrunkFile->size, buff + sizeof(int) * 2);
+	base64_encode_ex(&g_base64_context, buff, sizeof(buff), \
+			str, &len, false);
+}
+
+void trunk_file_info_decode(char *str, FDFSTrunkFileInfo *pTrunkFile)
+{
+	char buff[sizeof(int) * 3];
+	int len;
+
+	base64_decode_auto(&g_base64_context, str, FDFS_TRUNK_FILE_INFO_LEN, \
+		buff, &len);
+
+	pTrunkFile->id = buff2int(buff);
+	pTrunkFile->offset = buff2int(buff + sizeof(int));
+	pTrunkFile->size = buff2int(buff + sizeof(int) * 2);
 }
 
