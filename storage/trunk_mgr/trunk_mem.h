@@ -21,6 +21,14 @@
 
 #define FDFS_TRUNK_FILE_INFO_LEN  16
 
+#define FDFS_TRUNK_FILE_ALLOC_SIZE_OFFSET   0
+#define FDFS_TRUNK_FILE_FILE_SIZE_OFFSET    4
+#define FDFS_TRUNK_FILE_FILE_CRC32_OFFSET   8
+#define FDFS_TRUNK_FILE_FILE_MTIME_OFFSET  12
+#define FDFS_TRUNK_FILE_HEADER_SIZE	   16
+
+#define TRUNK_CALC_SIZE(file_size) (FDFS_TRUNK_FILE_HEADER_SIZE + file_size)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -33,6 +41,7 @@ extern int g_avg_storage_reserved_mb;  //calc by above var: g_storage_reserved_m
 extern int g_store_path_index;  //store to which path
 extern int g_current_trunk_file_id;  //current trunk file id
 extern TrackerServerInfo g_trunk_server;  //the trunk server
+extern bool g_if_use_trunk_file;   //if use trunk file
 extern bool g_if_trunker_self;   //if am i trunk server
 
 typedef struct tagFDFSTrunkPathInfo {
@@ -78,7 +87,12 @@ int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo);
 void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str);
 void trunk_file_info_decode(char *str, FDFSTrunkFileInfo *pTrunkFile);
 
-bool trunk_check_size(const int file_size);
+bool trunk_check_size(const int64_t file_size);
+
+#define trunk_init_file(filename) \
+	trunk_init_file_ex(filename, g_trunk_file_size)
+
+int trunk_init_file_ex(const char *filename, const int64_t file_size);
 
 #ifdef __cplusplus
 }
