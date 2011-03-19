@@ -2755,26 +2755,26 @@ request package format:
 static int storage_server_trunk_alloc_confirm(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
-	FDFSTrunkInfoBuff *pApplyBody;
+	FDFSTrunkInfoBuff *pTrunkBuff;
 	char *in_buff;
+	char status;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	FDFSTrunkFullInfo trunkInfo;
 	int64_t nInPackLen;
-	int file_size;
 	int result;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 	pClientInfo->total_length = sizeof(TrackerHeader);
-	if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN + 4)
+	if (nInPackLen != STORAGE_TRUNK_ALLOC_CONFIRM_REQ_BODY_LEN)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
 			INT64_PRINTF_FORMAT" is not correct, " \
 			"expect length: %d", __LINE__, \
-			STORAGE_PROTO_CMD_TRUNK_ALLOC_APPLY, \
+			STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM, \
 			pTask->client_ip,  nInPackLen, \
-			FDFS_GROUP_NAME_MAX_LEN + 4);
+			(int)STORAGE_TRUNK_ALLOC_CONFIRM_REQ_BODY_LEN);
 		return EINVAL;
 	}
 
@@ -2791,31 +2791,27 @@ static int storage_server_trunk_alloc_confirm(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
-	file_size = buff2int(in_buff + FDFS_GROUP_NAME_MAX_LEN);
-	if (file_size < 0 || !trunk_check_size(file_size))
+	pTrunkBuff = (FDFSTrunkInfoBuff *)(in_buff + FDFS_GROUP_NAME_MAX_LEN);
+	status = *(in_buff + FDFS_GROUP_NAME_MAX_LEN \
+			+ sizeof(FDFSTrunkInfoBuff));
+	trunkInfo.path.store_path_index = pTrunkBuff->store_path_index;
+	trunkInfo.path.sub_path_high = pTrunkBuff->sub_path_high;
+	trunkInfo.path.sub_path_low = pTrunkBuff->sub_path_low;
+	trunkInfo.file.id = buff2int(pTrunkBuff->id);
+	trunkInfo.file.offset = buff2int(pTrunkBuff->offset);
+	trunkInfo.file.size = buff2int(pTrunkBuff->size);
+	trunkInfo.status = FDFS_TRUNK_STATUS_HOLD;
+
+	if (status == 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip:%s, invalid file size: %d", \
-			__LINE__, pTask->client_ip, file_size);
-		return EINVAL;
+		result = trunk_delete_node(&trunkInfo);
+	}
+	else
+	{
+		result = trunk_restore_node(&trunkInfo);
 	}
 
-	if ((result=trunk_alloc_space(file_size, &trunkInfo)) != 0)
-	{
-		return result;
-	}
-
-	pApplyBody = (FDFSTrunkInfoBuff *)(pTask->data+sizeof(TrackerHeader));
-	pApplyBody->store_path_index = trunkInfo.path.store_path_index;
-	pApplyBody->sub_path_high = trunkInfo.path.sub_path_high;
-	pApplyBody->sub_path_low = trunkInfo.path.sub_path_low;
-	int2buff(trunkInfo.file.id, pApplyBody->id);
-	int2buff(trunkInfo.file.offset, pApplyBody->offset);
-	int2buff(trunkInfo.file.size, pApplyBody->size);
-
-	pClientInfo->total_length = sizeof(TrackerHeader) + \
-				sizeof(FDFSTrunkInfoBuff);
-	return 0;
+	return result;
 }
 
 static int storage_server_fetch_one_path_binlog_dealer( \

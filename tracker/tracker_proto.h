@@ -89,6 +89,9 @@
 #define TRACKER_QUERY_STORAGE_STORE_BODY_LEN	(FDFS_GROUP_NAME_MAX_LEN \
 			+ IP_ADDRESS_SIZE - 1 + FDFS_PROTO_PKG_LEN_SIZE + 1)
 
+#define STORAGE_TRUNK_ALLOC_CONFIRM_REQ_BODY_LEN  (FDFS_GROUP_NAME_MAX_LEN \
+			+ sizeof(FDFSTrunkInfoBuff) + 1)
+
 typedef struct
 {
 	char pkg_len[FDFS_PROTO_PKG_LEN_SIZE];  //body length, not including header
