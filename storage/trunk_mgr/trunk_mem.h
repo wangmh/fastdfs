@@ -13,6 +13,7 @@
 
 #include <pthread.h>
 #include "common_define.h"
+#include "tracker_types.h"
 #include "fast_mblock.h"
 
 #define FDFS_TRUNK_STATUS_FREE  0
@@ -31,6 +32,8 @@ extern int g_storage_reserved_mb;  //fetch from tracker
 extern int g_avg_storage_reserved_mb;  //calc by above var: g_storage_reserved_mb
 extern int g_store_path_index;  //store to which path
 extern int g_current_trunk_file_id;  //current trunk file id
+extern TrackerServerInfo g_trunk_server;  //the trunk server
+extern bool g_if_trunker_self;   //if am i trunk server
 
 typedef struct tagFDFSTrunkPathInfo {
 	unsigned char store_path_index;   //store which path as Mxx
@@ -65,9 +68,9 @@ typedef struct {
 int storage_trunk_init();
 
 int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult);
+int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status);
 
-int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo);
-int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo);
+int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo);
 
 #define TRUNK_GET_FILENAME(file_id, filename) \
 	sprintf(filename, "%06d", file_id)

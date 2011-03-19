@@ -43,6 +43,8 @@ int g_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
 int g_avg_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
 int g_store_path_index = 0;
 int g_current_trunk_file_id = 0;
+TrackerServerInfo g_trunk_server = {-1, 0};
+bool g_if_trunker_self = false;
 
 static FDFSTrunkSlot *slots = NULL;
 static FDFSTrunkSlot *slot_end = NULL;
@@ -52,7 +54,10 @@ static struct fast_mblock_man trunk_blocks_man;
 static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 		int *sub_path_low, int *file_id);
 static int trunk_init_file(const char *filename, const int64_t file_size);
-static int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock);
+static int trunk_add_node(FDFSTrunkNode *pNode);
+
+static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo);
+static int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo);
 
 static int trunk_init_slot(FDFSTrunkSlot *pTrunkSlot, const int bytes)
 {
@@ -78,6 +83,9 @@ int storage_trunk_init()
 	int slot_count;
 	int bytes;
 	FDFSTrunkSlot *pTrunkSlot;
+
+	memset(&g_trunk_server, 0, sizeof(g_trunk_server));
+	g_trunk_server.sock = -1;
 
 	slot_count = 1;
 	slot_max_size = g_trunk_file_size / 2;
@@ -174,7 +182,39 @@ static FDFSTrunkSlot *trunk_get_slot(const int size)
 	return NULL;
 }
 
-static int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock)
+int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo)
+{
+	int result;
+	struct fast_mblock_node *pMblockNode;
+	FDFSTrunkNode *pTrunkNode;
+
+	if (pTrunkInfo->file.size < g_slot_min_size)
+	{
+		return 0;
+	}
+
+	pMblockNode = fast_mblock_alloc(&trunk_blocks_man);
+	if (pMblockNode == NULL)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(FDFSTrunkNode), \
+			result, STRERROR(result));
+		return result;
+	}
+
+	pTrunkNode = (FDFSTrunkNode *)pMblockNode->data;
+	memcpy(&pTrunkNode->trunk, pTrunkInfo, sizeof(FDFSTrunkFullInfo));
+
+	pTrunkNode->pMblockNode = pMblockNode;
+	pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
+
+	return trunk_add_node(pTrunkNode);
+}
+
+static int trunk_add_node(FDFSTrunkNode *pNode)
 {
 	int result;
 	FDFSTrunkSlot *pSlot;
@@ -189,10 +229,7 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock)
 		}
 	}
 
-	if (bNeedLock)
-	{
-		pthread_mutex_lock(&pSlot->lock);
-	}
+	pthread_mutex_lock(&pSlot->lock);
 
 	pPrevious = NULL;
 	pCurrent = pSlot->free_trunk_head;
@@ -213,20 +250,13 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock)
 		pPrevious->next = pNode;
 	}
 
-	if (bNeedLock)
-	{
-		result=trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_ADD_SPACE,\
-					&(pNode->trunk));
-		pthread_mutex_unlock(&pSlot->lock);
-		return result;
-	}
-	else
-	{
-		return 0;
-	}
+	result = trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_ADD_SPACE, \
+				&(pNode->trunk));
+	pthread_mutex_unlock(&pSlot->lock);
+	return result;
 }
 
-int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo)
+static int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo)
 {
 	int result;
 	FDFSTrunkSlot *pSlot;
@@ -279,7 +309,7 @@ int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo)
 	return result;
 }
 
-int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
+static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
 {
 	int result;
 	FDFSTrunkSlot *pSlot;
@@ -353,7 +383,7 @@ static int trunk_slit(FDFSTrunkNode *pNode, const int size)
 	pTrunkNode->trunk.file.size = pNode->trunk.file.size - size;
 	pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
 
-	result = trunk_add_node(pTrunkNode, true);
+	result = trunk_add_node(pTrunkNode);
 	if (result != 0)
 	{
 		return result;
@@ -460,11 +490,11 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	if (result == 0)
 	{
 		pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_HOLD;
-		result = trunk_add_node(pTrunkNode, true);
+		result = trunk_add_node(pTrunkNode);
 	}
 	else
 	{
-		trunk_add_node(pTrunkNode, true);
+		trunk_add_node(pTrunkNode);
 	}
 
 	if (result == 0)
@@ -473,6 +503,18 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	}
 
 	return result;
+}
+
+int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status)
+{
+	if (status == 0)
+	{
+		return trunk_delete_node(pTrunkInfo);
+	}
+	else
+	{
+		return trunk_restore_node(pTrunkInfo);
+	}
 }
 
 static int trunk_create_file(int *store_path_index, int *sub_path_high, \

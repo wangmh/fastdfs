@@ -14,7 +14,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,7 +28,7 @@
 #include "storage_global.h"
 #include "trunk_client.h"
 
-int trunk_client_trunk_alloc_apply(TrackerServerInfo *pTrunkServer, \
+static int trunk_client_trunk_do_alloc_space(TrackerServerInfo *pTrunkServer, \
 		const int file_size, FDFSTrunkFullInfo *pTrunkInfo)
 {
 	TrackerHeader *pHeader;
@@ -46,7 +45,7 @@ int trunk_client_trunk_alloc_apply(TrackerServerInfo *pTrunkServer, \
 	int2buff(file_size, out_buff + sizeof(TrackerHeader) \
 		 + FDFS_GROUP_NAME_MAX_LEN);
 	long2buff(FDFS_GROUP_NAME_MAX_LEN + 4, pHeader->pkg_len);
-	pHeader->cmd = STORAGE_PROTO_CMD_TRUNK_ALLOC_APPLY;
+	pHeader->cmd = STORAGE_PROTO_CMD_TRUNK_ALLOC_SPACE;
 
 	if ((result=tcpsenddata_nb(pTrunkServer->sock, out_buff, \
 			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
@@ -88,8 +87,46 @@ int trunk_client_trunk_alloc_apply(TrackerServerInfo *pTrunkServer, \
 	return 0;
 }
 
-int trunk_client_trunk_alloc_confirm(TrackerServerInfo *pTrunkServer, \
-		const FDFSTrunkFullInfo *pTrunkInfo, const int status)
+int trunk_client_trunk_alloc_space(const int file_size, \
+		FDFSTrunkFullInfo *pTrunkInfo)
+{
+	int result;
+	TrackerServerInfo trunk_server;
+
+	if (g_if_trunker_self)
+	{
+		return trunk_alloc_space(file_size, pTrunkInfo);
+	}
+
+	if (g_trunk_server.port <= 0)
+	{
+		return EAGAIN;
+	}
+
+	memcpy(&trunk_server, &g_trunk_server, sizeof(TrackerServerInfo));
+	if ((result=tracker_connect_server(&trunk_server)) != 0)
+	{
+		return result;
+	}
+
+	result = trunk_client_trunk_do_alloc_space(&trunk_server, \
+			file_size, pTrunkInfo);
+
+	tracker_disconnect_server(&trunk_server);
+	return result;
+}
+
+#define trunk_client_trunk_do_alloc_confirm(pTrunkServer, pTrunkInfo, status) \
+	trunk_client_trunk_confirm_or_free(pTrunkServer, pTrunkInfo, \
+		STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM, status)
+
+#define trunk_client_trunk_do_free_space(pTrunkServer, pTrunkInfo) \
+	trunk_client_trunk_confirm_or_free(pTrunkServer, pTrunkInfo, \
+		STORAGE_PROTO_CMD_TRUNK_FREE_SPACE, 0)
+
+static int trunk_client_trunk_confirm_or_free(TrackerServerInfo *pTrunkServer,\
+		const FDFSTrunkFullInfo *pTrunkInfo, const int cmd, \
+		const int status)
 {
 	TrackerHeader *pHeader;
 	FDFSTrunkInfoBuff *pTrunkBuff;
@@ -105,7 +142,8 @@ int trunk_client_trunk_alloc_confirm(TrackerServerInfo *pTrunkServer, \
 	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
 		sizeof(TrackerHeader),  "%s", g_group_name);
 	long2buff(STORAGE_TRUNK_ALLOC_CONFIRM_REQ_BODY_LEN, pHeader->pkg_len);
-	pHeader->cmd = STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM;
+	pHeader->cmd = cmd;
+	pHeader->status = status;
 
 	pTrunkBuff->store_path_index = pTrunkInfo->path.store_path_index;
 	pTrunkBuff->sub_path_high = pTrunkInfo->path.sub_path_high;
@@ -113,8 +151,6 @@ int trunk_client_trunk_alloc_confirm(TrackerServerInfo *pTrunkServer, \
 	int2buff(pTrunkInfo->file.id, pTrunkBuff->id);
 	int2buff(pTrunkInfo->file.offset, pTrunkBuff->offset);
 	int2buff(pTrunkInfo->file.size, pTrunkBuff->size);
-	*(out_buff + FDFS_GROUP_NAME_MAX_LEN \
-		+ sizeof(FDFSTrunkInfoBuff)) = status;
 
 	if ((result=tcpsenddata_nb(pTrunkServer->sock, out_buff, \
 			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
@@ -144,5 +180,61 @@ int trunk_client_trunk_alloc_confirm(TrackerServerInfo *pTrunkServer, \
 	}
 
 	return 0;
+}
+
+int trunk_client_trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, \
+		const int status)
+{
+	int result;
+	TrackerServerInfo trunk_server;
+
+	if (g_if_trunker_self)
+	{
+		return trunk_alloc_confirm(pTrunkInfo, status);
+	}
+
+	if (g_trunk_server.port <= 0)
+	{
+		return EAGAIN;
+	}
+
+	memcpy(&trunk_server, &g_trunk_server, sizeof(TrackerServerInfo));
+	if ((result=tracker_connect_server(&trunk_server)) != 0)
+	{
+		return result;
+	}
+
+	result = trunk_client_trunk_do_alloc_confirm(&trunk_server, \
+			pTrunkInfo, status);
+
+	tracker_disconnect_server(&trunk_server);
+	return result;
+}
+
+int trunk_client_trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo)
+{
+	int result;
+	TrackerServerInfo trunk_server;
+
+	if (g_if_trunker_self)
+	{
+		return trunk_free_space(pTrunkInfo);
+	}
+
+	if (g_trunk_server.port <= 0)
+	{
+		return EAGAIN;
+	}
+
+	memcpy(&trunk_server, &g_trunk_server, sizeof(TrackerServerInfo));
+	if ((result=tracker_connect_server(&trunk_server)) != 0)
+	{
+		return result;
+	}
+
+	result = trunk_client_trunk_do_free_space(&trunk_server, pTrunkInfo);
+
+	tracker_disconnect_server(&trunk_server);
+	return result;
 }
 

@@ -2662,6 +2662,15 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	return 0;
 }
 
+#define CHECK_TRUNK_SERVER(pTask) \
+	if (!g_if_trunker_self) \
+	{ \
+		logError("file: "__FILE__", line: %d, " \
+			"client ip:%s, i am not trunk server!", \
+			__LINE__, pTask->client_ip); \
+		return EINVAL; \
+	}
+
 /**
 request package format:
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
@@ -2675,7 +2684,7 @@ response package format:
 4 bytes: trunk offset
 4 bytes: trunk size
 **/
-static int storage_server_trunk_alloc_apply(struct fast_task_info *pTask)
+static int storage_server_trunk_alloc_space(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
 	FDFSTrunkInfoBuff *pApplyBody;
@@ -2689,13 +2698,16 @@ static int storage_server_trunk_alloc_apply(struct fast_task_info *pTask)
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 	pClientInfo->total_length = sizeof(TrackerHeader);
+
+	CHECK_TRUNK_SERVER(pTask)
+
 	if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN + 4)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
 			INT64_PRINTF_FORMAT" is not correct, " \
 			"expect length: %d", __LINE__, \
-			STORAGE_PROTO_CMD_TRUNK_ALLOC_APPLY, \
+			STORAGE_PROTO_CMD_TRUNK_ALLOC_SPACE, \
 			pTask->client_ip,  nInPackLen, \
 			FDFS_GROUP_NAME_MAX_LEN + 4);
 		return EINVAL;
@@ -2741,6 +2753,12 @@ static int storage_server_trunk_alloc_apply(struct fast_task_info *pTask)
 	return 0;
 }
 
+#define storage_server_trunk_alloc_confirm(pTask) \
+	storage_server_trunk_confirm_or_free(pTask)
+
+#define storage_server_trunk_free_space(pTask) \
+	storage_server_trunk_confirm_or_free(pTask)
+
 /**
 request package format:
   FDFS_GROUP_NAME_MAX_LEN bytes: group_name
@@ -2750,30 +2768,31 @@ request package format:
   4 bytes: trunk file id
   4 bytes: trunk offset
   4 bytes: trunk size
-  1 byte: status, 0 for success(commit), != 0 for fail(rollback)
 **/
-static int storage_server_trunk_alloc_confirm(struct fast_task_info *pTask)
+static int storage_server_trunk_confirm_or_free(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
+	TrackerHeader *pHeader;
 	FDFSTrunkInfoBuff *pTrunkBuff;
 	char *in_buff;
-	char status;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	FDFSTrunkFullInfo trunkInfo;
 	int64_t nInPackLen;
-	int result;
 
+	pHeader = (TrackerHeader *)pTask->data;
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 	pClientInfo->total_length = sizeof(TrackerHeader);
+
+	CHECK_TRUNK_SERVER(pTask)
+
 	if (nInPackLen != STORAGE_TRUNK_ALLOC_CONFIRM_REQ_BODY_LEN)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
 			INT64_PRINTF_FORMAT" is not correct, " \
 			"expect length: %d", __LINE__, \
-			STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM, \
-			pTask->client_ip,  nInPackLen, \
+			pHeader->cmd, pTask->client_ip,  nInPackLen, \
 			(int)STORAGE_TRUNK_ALLOC_CONFIRM_REQ_BODY_LEN);
 		return EINVAL;
 	}
@@ -2792,26 +2811,23 @@ static int storage_server_trunk_alloc_confirm(struct fast_task_info *pTask)
 	}
 
 	pTrunkBuff = (FDFSTrunkInfoBuff *)(in_buff + FDFS_GROUP_NAME_MAX_LEN);
-	status = *(in_buff + FDFS_GROUP_NAME_MAX_LEN \
-			+ sizeof(FDFSTrunkInfoBuff));
 	trunkInfo.path.store_path_index = pTrunkBuff->store_path_index;
 	trunkInfo.path.sub_path_high = pTrunkBuff->sub_path_high;
 	trunkInfo.path.sub_path_low = pTrunkBuff->sub_path_low;
 	trunkInfo.file.id = buff2int(pTrunkBuff->id);
 	trunkInfo.file.offset = buff2int(pTrunkBuff->offset);
 	trunkInfo.file.size = buff2int(pTrunkBuff->size);
-	trunkInfo.status = FDFS_TRUNK_STATUS_HOLD;
 
-	if (status == 0)
+	if (pHeader->cmd == STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM)
 	{
-		result = trunk_delete_node(&trunkInfo);
+		trunkInfo.status = FDFS_TRUNK_STATUS_HOLD;
+		return trunk_alloc_confirm(&trunkInfo, pHeader->status);
 	}
 	else
 	{
-		result = trunk_restore_node(&trunkInfo);
+		trunkInfo.status = FDFS_TRUNK_STATUS_FREE;
+		return trunk_free_space(&trunkInfo);
 	}
-
-	return result;
 }
 
 static int storage_server_fetch_one_path_binlog_dealer( \
@@ -5530,11 +5546,14 @@ int storage_deal_task(struct fast_task_info *pTask)
 		case STORAGE_PROTO_CMD_REPORT_CLIENT_IP:
 			result = storage_server_report_client_ip(pTask);
 			break;
-		case STORAGE_PROTO_CMD_TRUNK_ALLOC_APPLY:
-			result = storage_server_trunk_alloc_apply(pTask);
+		case STORAGE_PROTO_CMD_TRUNK_ALLOC_SPACE:
+			result = storage_server_trunk_alloc_space(pTask);
 			break;
 		case STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM:
 			result = storage_server_trunk_alloc_confirm(pTask);
+			break;
+		case STORAGE_PROTO_CMD_TRUNK_FREE_SPACE:
+			result = storage_server_trunk_free_space(pTask);
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "  \
