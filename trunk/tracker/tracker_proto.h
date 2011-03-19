@@ -70,6 +70,9 @@
 #define STORAGE_PROTO_CMD_RESP			TRACKER_PROTO_CMD_RESP
 #define STORAGE_PROTO_CMD_UPLOAD_MASTER_FILE	STORAGE_PROTO_CMD_UPLOAD_FILE
 
+#define STORAGE_PROTO_CMD_TRUNK_ALLOC_APPLY	27  //since V3.00
+#define STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM	28  //since V3.00
+
 //for overwrite all old metadata
 #define STORAGE_SET_METADATA_FLAG_OVERWRITE	'O'
 #define STORAGE_SET_METADATA_FLAG_OVERWRITE_STR	"O"
@@ -160,6 +163,16 @@ typedef struct
 	char sz_total_mb[8];
 	char sz_free_mb[8];
 } TrackerStatReportReqBody;
+
+typedef struct
+{
+        unsigned char store_path_index;
+        unsigned char sub_path_high;
+        unsigned char sub_path_low;
+        char id[4];
+        char offset[4];
+	char size[4];
+} FDFSTrunkInfoBuff;
 
 #ifdef __cplusplus
 extern "C" {

@@ -607,3 +607,8 @@ void trunk_file_info_decode(char *str, FDFSTrunkFileInfo *pTrunkFile)
 	pTrunkFile->size = buff2int(buff + sizeof(int) * 2);
 }
 
+bool trunk_check_size(const int file_size)
+{
+	return file_size <= slot_max_size;
+}
+
