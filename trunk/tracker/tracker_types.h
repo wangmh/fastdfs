@@ -253,6 +253,7 @@ typedef struct
 	FDFSStorageDetail **sorted_servers;  //storages order by ip addr
 	FDFSStorageDetail **active_servers;  //storages order by ip addr
 	FDFSStorageDetail *pStoreServer;  //for upload priority mode
+	FDFSStorageDetail *pTrunkServer;  //point to the trunk server
 
 #ifdef WITH_HTTPD
 	FDFSStorageDetail **http_servers;  //storages order by ip addr

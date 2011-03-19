@@ -19,11 +19,13 @@
 extern "C" {
 #endif
 
-int trunk_client_trunk_alloc_apply(TrackerServerInfo *pTrunkServer, \
-		const int file_size, FDFSTrunkFullInfo *pTrunkInfo);
+int trunk_client_trunk_alloc_space(const int file_size, \
+		FDFSTrunkFullInfo *pTrunkInfo);
 
-int trunk_client_trunk_alloc_confirm(TrackerServerInfo *pTrunkServer, \
-		const FDFSTrunkFullInfo *pTrunkInfo, const int status);
+int trunk_client_trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, \
+		const int status);
+
+int trunk_client_trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo);
 
 #ifdef __cplusplus
 }
