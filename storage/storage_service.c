@@ -42,6 +42,7 @@
 #include "storage_nio.h"
 #include "storage_dio.h"
 #include "storage_sync.h"
+#include "trunk_mem.h"
 
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
@@ -2535,8 +2536,8 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 			INT64_PRINTF_FORMAT" is not correct, " \
 			"expect length > %d", __LINE__, \
 			STORAGE_PROTO_CMD_QUERY_FILE_INFO, \
-			pTask->client_ip,  \
-			nInPackLen, FDFS_GROUP_NAME_MAX_LEN);
+			pTask->client_ip,  nInPackLen, \
+			FDFS_GROUP_NAME_MAX_LEN);
 		return EINVAL;
 	}
 
@@ -2658,6 +2659,162 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 
 	pClientInfo->total_length = p - pTask->data;
+	return 0;
+}
+
+/**
+request package format:
+FDFS_GROUP_NAME_MAX_LEN bytes: group_name
+4 bytes: file size
+
+response package format:
+1 byte: store_path_index
+1 byte: sub_path_high
+1 byte: sub_path_low
+4 bytes: trunk file id
+4 bytes: trunk offset
+4 bytes: trunk size
+**/
+static int storage_server_trunk_alloc_apply(struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	FDFSTrunkInfoBuff *pApplyBody;
+	char *in_buff;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	FDFSTrunkFullInfo trunkInfo;
+	int64_t nInPackLen;
+	int file_size;
+	int result;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
+	if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN + 4)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT" is not correct, " \
+			"expect length: %d", __LINE__, \
+			STORAGE_PROTO_CMD_TRUNK_ALLOC_APPLY, \
+			pTask->client_ip,  nInPackLen, \
+			FDFS_GROUP_NAME_MAX_LEN + 4);
+		return EINVAL;
+	}
+
+	in_buff = pTask->data + sizeof(TrackerHeader);
+	memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
+	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
+	if (strcmp(group_name, g_group_name) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip:%s, group_name: %s " \
+			"not correct, should be: %s", \
+			__LINE__, pTask->client_ip, \
+			group_name, g_group_name);
+		return EINVAL;
+	}
+
+	file_size = buff2int(in_buff + FDFS_GROUP_NAME_MAX_LEN);
+	if (file_size < 0 || !trunk_check_size(file_size))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip:%s, invalid file size: %d", \
+			__LINE__, pTask->client_ip, file_size);
+		return EINVAL;
+	}
+
+	if ((result=trunk_alloc_space(file_size, &trunkInfo)) != 0)
+	{
+		return result;
+	}
+
+	pApplyBody = (FDFSTrunkInfoBuff *)(pTask->data+sizeof(TrackerHeader));
+	pApplyBody->store_path_index = trunkInfo.path.store_path_index;
+	pApplyBody->sub_path_high = trunkInfo.path.sub_path_high;
+	pApplyBody->sub_path_low = trunkInfo.path.sub_path_low;
+	int2buff(trunkInfo.file.id, pApplyBody->id);
+	int2buff(trunkInfo.file.offset, pApplyBody->offset);
+	int2buff(trunkInfo.file.size, pApplyBody->size);
+
+	pClientInfo->total_length = sizeof(TrackerHeader) + \
+				sizeof(FDFSTrunkInfoBuff);
+	return 0;
+}
+
+/**
+request package format:
+  FDFS_GROUP_NAME_MAX_LEN bytes: group_name
+  1 byte: store_path_index
+  1 byte: sub_path_high
+  1 byte: sub_path_low
+  4 bytes: trunk file id
+  4 bytes: trunk offset
+  4 bytes: trunk size
+  1 byte: status, 0 for success(commit), != 0 for fail(rollback)
+**/
+static int storage_server_trunk_alloc_confirm(struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	FDFSTrunkInfoBuff *pApplyBody;
+	char *in_buff;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	FDFSTrunkFullInfo trunkInfo;
+	int64_t nInPackLen;
+	int file_size;
+	int result;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
+	if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN + 4)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT" is not correct, " \
+			"expect length: %d", __LINE__, \
+			STORAGE_PROTO_CMD_TRUNK_ALLOC_APPLY, \
+			pTask->client_ip,  nInPackLen, \
+			FDFS_GROUP_NAME_MAX_LEN + 4);
+		return EINVAL;
+	}
+
+	in_buff = pTask->data + sizeof(TrackerHeader);
+	memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
+	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
+	if (strcmp(group_name, g_group_name) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip:%s, group_name: %s " \
+			"not correct, should be: %s", \
+			__LINE__, pTask->client_ip, \
+			group_name, g_group_name);
+		return EINVAL;
+	}
+
+	file_size = buff2int(in_buff + FDFS_GROUP_NAME_MAX_LEN);
+	if (file_size < 0 || !trunk_check_size(file_size))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip:%s, invalid file size: %d", \
+			__LINE__, pTask->client_ip, file_size);
+		return EINVAL;
+	}
+
+	if ((result=trunk_alloc_space(file_size, &trunkInfo)) != 0)
+	{
+		return result;
+	}
+
+	pApplyBody = (FDFSTrunkInfoBuff *)(pTask->data+sizeof(TrackerHeader));
+	pApplyBody->store_path_index = trunkInfo.path.store_path_index;
+	pApplyBody->sub_path_high = trunkInfo.path.sub_path_high;
+	pApplyBody->sub_path_low = trunkInfo.path.sub_path_low;
+	int2buff(trunkInfo.file.id, pApplyBody->id);
+	int2buff(trunkInfo.file.offset, pApplyBody->offset);
+	int2buff(trunkInfo.file.size, pApplyBody->size);
+
+	pClientInfo->total_length = sizeof(TrackerHeader) + \
+				sizeof(FDFSTrunkInfoBuff);
 	return 0;
 }
 
@@ -5376,6 +5533,12 @@ int storage_deal_task(struct fast_task_info *pTask)
 			break;
 		case STORAGE_PROTO_CMD_REPORT_CLIENT_IP:
 			result = storage_server_report_client_ip(pTask);
+			break;
+		case STORAGE_PROTO_CMD_TRUNK_ALLOC_APPLY:
+			result = storage_server_trunk_alloc_apply(pTask);
+			break;
+		case STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM:
+			result = storage_server_trunk_alloc_confirm(pTask);
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "  \

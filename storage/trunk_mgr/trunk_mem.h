@@ -12,6 +12,7 @@
 #define _TRUNK_MEM_H_
 
 #include <pthread.h>
+#include "common_define.h"
 #include "fast_mblock.h"
 
 #define FDFS_TRUNK_STATUS_FREE  0
@@ -73,6 +74,8 @@ int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo, const bool bNeedLock)
 
 void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str);
 void trunk_file_info_decode(char *str, FDFSTrunkFileInfo *pTrunkFile);
+
+bool trunk_check_size(const int file_size);
 
 #ifdef __cplusplus
 }
