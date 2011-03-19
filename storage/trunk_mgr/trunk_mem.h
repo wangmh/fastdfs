@@ -57,9 +57,9 @@ typedef struct tagFDFSTrunkFileInfo {
 } FDFSTrunkFileInfo;
 
 typedef struct tagFDFSTrunkFullInfo {
+	char status;  //normal or hold
 	FDFSTrunkPathInfo path;
 	FDFSTrunkFileInfo file;
-	int status;  //normal or hold
 } FDFSTrunkFullInfo;
 
 typedef struct tagFDFSTrunkNode {
@@ -88,6 +88,9 @@ void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str);
 void trunk_file_info_decode(char *str, FDFSTrunkFileInfo *pTrunkFile);
 
 bool trunk_check_size(const int64_t file_size);
+
+char *trunk_get_full_filename(const FDFSTrunkFullInfo *pTrunkInfo, \
+		char *full_filename, const int buff_size);
 
 #define trunk_init_file(filename) \
 	trunk_init_file_ex(filename, g_trunk_file_size)

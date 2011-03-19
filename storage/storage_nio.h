@@ -20,7 +20,7 @@
 #include "fast_task_queue.h"
 #include "storage_global.h"
 #include "fdht_types.h"
-
+#include "trunk_mem.h"
 
 #define FDFS_STORAGE_STAGE_NIO_INIT   '\0'
 #define FDFS_STORAGE_STAGE_NIO_RECV   'r'
@@ -53,6 +53,7 @@ typedef struct
 	char prefix_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
 	int store_path_index;
 	int start_time;		//upload start timestamp
+	FDFSTrunkFullInfo trunk_info;
 } StorageUploadInfo;
 
 typedef struct
