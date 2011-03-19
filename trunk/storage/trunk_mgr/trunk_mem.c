@@ -52,8 +52,7 @@ static FDFSTrunkSlot *slot_end = NULL;
 static pthread_mutex_t trunk_file_lock;
 static struct fast_mblock_man trunk_blocks_man;
 
-static int trunk_create_file(int *store_path_index, int *sub_path_high, \
-		int *sub_path_low, int *file_id);
+static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo);
 static int trunk_add_node(FDFSTrunkNode *pNode);
 
 static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo);
@@ -400,10 +399,6 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	FDFSTrunkNode *pTrunkNode;
 	struct fast_mblock_node *pMblockNode;
 	int result;
-	int store_path_index;
-	int sub_path_high;
-	int sub_path_low;
-	int file_id;
 
 	pSlot = trunk_get_slot(size);
 	if (pSlot == NULL)
@@ -438,8 +433,6 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 		}
 	}
 
-	do
-	{
 	if (pTrunkNode != NULL)
 	{
 		if (pPreviousNode == NULL)
@@ -455,13 +448,6 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	}
 	else
 	{
-		result = trunk_create_file(&store_path_index, &sub_path_high, \
-					&sub_path_low, &file_id);
-		if (result != 0)
-		{
-			break;
-		}
-
 		pMblockNode = fast_mblock_alloc(&trunk_blocks_man);
 		if (pMblockNode == NULL)
 		{
@@ -471,20 +457,22 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 				"errno: %d, error info: %s", \
 				__LINE__, (int)sizeof(FDFSTrunkNode), \
 				result, STRERROR(result));
-			break;
+			return result;
 		}
 		pTrunkNode = (FDFSTrunkNode *)pMblockNode->data;
-
 		pTrunkNode->pMblockNode = pMblockNode;
-		pTrunkNode->trunk.path.store_path_index = store_path_index;
-		pTrunkNode->trunk.path.sub_path_high = sub_path_high;
-		pTrunkNode->trunk.path.sub_path_low = sub_path_low;
-		pTrunkNode->trunk.file.id = file_id;
+
 		pTrunkNode->trunk.file.offset = 0;
 		pTrunkNode->trunk.file.size = g_trunk_file_size;
 		pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
+
+		result = trunk_create_next_file(&(pTrunkNode->trunk));
+		if (result != 0)
+		{
+			fast_mblock_free(&trunk_blocks_man, pMblockNode);
+			return result;
+		}
 	}
-	} while (0);
 
 	result = trunk_slit(pTrunkNode, size);
 	if (result == 0)
@@ -517,8 +505,7 @@ int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status)
 	}
 }
 
-static int trunk_create_file(int *store_path_index, int *sub_path_high, \
-		int *sub_path_low, int *file_id)
+static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo)
 {
 	char buff[16];
 	int i;
@@ -526,31 +513,33 @@ static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 	int filename_len;
 	char filename[64];
 	char full_filename[MAX_PATH_SIZE];
-	char *pStorePath;
+	int store_path_index;
+	int sub_path_high;
+	int sub_path_low;
 
-	*store_path_index = g_store_path_index;
+	store_path_index = g_store_path_index;
 	if (g_store_path_mode == FDFS_STORE_PATH_LOAD_BALANCE)
 	{
-		if (*store_path_index < 0)
+		if (store_path_index < 0)
 		{
 			return ENOSPC;
 		}
 	}
 	else
 	{
-		if (*store_path_index >= g_path_count)
+		if (store_path_index >= g_path_count)
 		{
-			*store_path_index = 0;
+			store_path_index = 0;
 		}
 
-		if (g_path_free_mbs[*store_path_index] <= \
+		if (g_path_free_mbs[store_path_index] <= \
 			g_avg_storage_reserved_mb)
 		{
 			for (i=0; i<g_path_count; i++)
 			{
 				if (g_path_free_mbs[i] > g_avg_storage_reserved_mb)
 				{
-					*store_path_index = i;
+					store_path_index = i;
 					g_store_path_index = i;
 					break;
 				}
@@ -569,26 +558,26 @@ static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 		}
 	}
 
-	pStorePath = g_store_paths[*store_path_index];
+	pTrunkInfo->path.store_path_index = store_path_index;
 
 	while (1)
 	{
 		pthread_mutex_lock(&trunk_file_lock);
-		*file_id = ++g_current_trunk_file_id;
+		pTrunkInfo->file.id = ++g_current_trunk_file_id;
 		pthread_mutex_unlock(&trunk_file_lock);
 
-		int2buff(*file_id, buff);
+		int2buff(pTrunkInfo->file.id, buff);
 		base64_encode_ex(&g_base64_context, buff, sizeof(int), \
 				filename, &filename_len, false);
 
 		storage_get_store_path(filename, filename_len, \
-					sub_path_high, sub_path_low);
+					&sub_path_high, &sub_path_low);
 
-		TRUNK_GET_FILENAME(*file_id, filename);
-		snprintf(full_filename, sizeof(full_filename), \
-			"%s/data/"STORAGE_DATA_DIR_FORMAT"/" \
-			STORAGE_DATA_DIR_FORMAT"/%s", \
-			pStorePath, *sub_path_high, *sub_path_low, filename);
+		pTrunkInfo->path.sub_path_high = sub_path_high;
+		pTrunkInfo->path.sub_path_low = sub_path_low;
+
+		trunk_get_full_filename(pTrunkInfo, full_filename, \
+			sizeof(full_filename));
 		if (!fileExists(full_filename))
 		{
 			break;
@@ -601,6 +590,24 @@ static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 	}
 
 	return 0;
+}
+
+char *trunk_get_full_filename(const FDFSTrunkFullInfo *pTrunkInfo, \
+		char *full_filename, const int buff_size)
+{
+	char filename[64];
+	char *pStorePath;
+
+	pStorePath = g_store_paths[pTrunkInfo->path.store_path_index];
+	TRUNK_GET_FILENAME(pTrunkInfo->file.id, filename);
+
+	snprintf(full_filename, buff_size, \
+			"%s/data/"STORAGE_DATA_DIR_FORMAT"/" \
+			STORAGE_DATA_DIR_FORMAT"/%s", \
+			pStorePath, pTrunkInfo->path.sub_path_high, \
+			pTrunkInfo->path.sub_path_low, filename);
+
+	return full_filename;
 }
 
 int trunk_init_file_ex(const char *filename, const int64_t file_size)

@@ -43,6 +43,7 @@
 #include "storage_dio.h"
 #include "storage_sync.h"
 #include "trunk_mem.h"
+#include "trunk_client.h"
 
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
@@ -3186,8 +3187,20 @@ static int storage_server_fetch_one_path_binlog(struct fast_task_info *pTask)
 			pTask, store_path_index);
 }
 
-int trunk_client_trunk_alloc_space(const int file_size, \
-		FDFSTrunkFullInfo *pTrunkInfo);
+static int storage_alloc_space(StorageFileContext *pFileContext, \
+		const int file_size)
+{
+	int result;
+	FDFSTrunkFullInfo *pTrunkInfo;
+
+	pTrunkInfo = &(pFileContext->extra_info.upload.trunk_info);
+	if ((result=trunk_client_trunk_alloc_space(file_size, pTrunkInfo)) != 0)
+	{
+		return result;
+	}
+
+	return 0;
+}
 
 /**
 1 byte: store path index
