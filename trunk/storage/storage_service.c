@@ -1705,6 +1705,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
 	int64_t file_size;
+	int64_t file_size_in_name;
 	time_t end_time;
 	char new_fname2log[128];
 	char new_full_filename[MAX_PATH_SIZE+64];
@@ -1720,11 +1721,23 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	*new_filename = '\0';
 	new_filename_len = 0;
 
+	if (pFileContext->extra_info.upload.if_appender_file)
+	{
+		file_size_in_name = FDFS_APPENDER_FILE_SIZE;
+	}
+	else if (pFileContext->extra_info.upload.if_trunk_file)
+	{
+		file_size_in_name = FDFS_TRUNK_FILE_SIZE | file_size;
+	}
+	else
+	{
+		file_size_in_name = file_size;
+	}
+
 	if ((result=storage_get_filename(pClientInfo, end_time, \
 		pFileContext->extra_info.upload.store_path_index, \
-		pFileContext->extra_info.upload.if_appender_file ? \
-		INFINITE_FILE_SIZE : file_size, pFileContext->crc32, \
-		pFileContext->extra_info.upload.file_ext_name, new_filename,\
+		file_size_in_name, pFileContext->crc32, \
+		pFileContext->extra_info.upload.file_ext_name, new_filename, \
 		&new_filename_len, new_full_filename)) != 0)
 	{
 		unlink(pFileContext->filename);
@@ -3173,6 +3186,9 @@ static int storage_server_fetch_one_path_binlog(struct fast_task_info *pTask)
 			pTask, store_path_index);
 }
 
+int trunk_client_trunk_alloc_space(const int file_size, \
+		FDFSTrunkFullInfo *pTrunkInfo);
+
 /**
 1 byte: store path index
 8 bytes: file size 
@@ -3270,9 +3286,28 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
 	pFileContext->extra_info.upload.if_appender_file = bAppenderFile;
+	if (bAppenderFile)
+	{
+		pFileContext->extra_info.upload.if_trunk_file = false;
+	}
+	else
+	{
+		pFileContext->extra_info.upload.if_trunk_file = \
+			g_if_use_trunk_file && trunk_check_size( \
+			TRUNK_CALC_SIZE(file_bytes));
+	}
+
 	pFileContext->extra_info.upload.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
-	pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC | extra_open_flags;
+	if (pFileContext->extra_info.upload.if_trunk_file)
+	{
+		pFileContext->open_flags = O_WRONLY | extra_open_flags;
+	}
+	else
+	{
+		pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC \
+						| extra_open_flags;
+	}
 
  	return storage_write_to_file(pTask, 0, file_bytes, p - pTask->data, \
 			dio_write_file, storage_upload_file_done_callback, \
@@ -3436,7 +3471,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 		buff, &buff_len);
 
 	appender_file_size = buff2long(buff + sizeof(int) * 2);
-	if (appender_file_size != INFINITE_FILE_SIZE)
+	if (appender_file_size != FDFS_APPENDER_FILE_SIZE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, file: %s is not a valid " \
@@ -3466,6 +3501,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_APPEND_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
 	pFileContext->extra_info.upload.if_appender_file = true;
+	pFileContext->extra_info.upload.if_trunk_file = false;
 	pFileContext->extra_info.upload.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_APPEND;
 	pFileContext->open_flags = O_WRONLY | O_APPEND | extra_open_flags;
@@ -3651,6 +3687,7 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
 	pFileContext->extra_info.upload.if_appender_file = false;
+	pFileContext->extra_info.upload.if_trunk_file = false;
 	pFileContext->extra_info.upload.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 	pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC | extra_open_flags;

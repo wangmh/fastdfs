@@ -44,6 +44,7 @@ int g_avg_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
 int g_store_path_index = 0;
 int g_current_trunk_file_id = 0;
 TrackerServerInfo g_trunk_server = {-1, 0};
+bool g_if_use_trunk_file = false;
 bool g_if_trunker_self = false;
 
 static FDFSTrunkSlot *slots = NULL;
@@ -53,7 +54,6 @@ static struct fast_mblock_man trunk_blocks_man;
 
 static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 		int *sub_path_low, int *file_id);
-static int trunk_init_file(const char *filename, const int64_t file_size);
 static int trunk_add_node(FDFSTrunkNode *pNode);
 
 static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo);
@@ -595,7 +595,7 @@ static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 		}
 	}
 
-	if ((result=trunk_init_file(full_filename, g_trunk_file_size)) != 0)
+	if ((result=trunk_init_file(full_filename)) != 0)
 	{
 		return result;
 	}
@@ -603,7 +603,7 @@ static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 	return 0;
 }
 
-static int trunk_init_file(const char *filename, const int64_t file_size)
+int trunk_init_file_ex(const char *filename, const int64_t file_size)
 {
 	int fd;
 	int result;
@@ -685,7 +685,7 @@ void trunk_file_info_decode(char *str, FDFSTrunkFileInfo *pTrunkFile)
 	pTrunkFile->size = buff2int(buff + sizeof(int) * 2);
 }
 
-bool trunk_check_size(const int file_size)
+bool trunk_check_size(const int64_t file_size)
 {
 	return file_size <= slot_max_size;
 }
