@@ -52,6 +52,7 @@ static struct fast_mblock_man trunk_blocks_man;
 static int trunk_create_file(int *store_path_index, int *sub_path_high, \
 		int *sub_path_low, int *file_id);
 static int trunk_init_file(const char *filename, const int64_t file_size);
+static int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock);
 
 static int trunk_init_slot(FDFSTrunkSlot *pTrunkSlot, const int bytes)
 {
@@ -173,7 +174,7 @@ static FDFSTrunkSlot *trunk_get_slot(const int size)
 	return NULL;
 }
 
-int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock)
+static int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock)
 {
 	int result;
 	FDFSTrunkSlot *pSlot;
@@ -195,7 +196,8 @@ int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock)
 
 	pPrevious = NULL;
 	pCurrent = pSlot->free_trunk_head;
-	while (pCurrent != NULL && pNode->trunk.file.size > pCurrent->trunk.file.size)
+	while (pCurrent != NULL && pNode->trunk.file.size > \
+		pCurrent->trunk.file.size)
 	{
 		pPrevious = pCurrent;
 		pCurrent = pCurrent->next;
@@ -224,7 +226,7 @@ int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock)
 	}
 }
 
-int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo, const bool bNeedLock)
+int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo)
 {
 	int result;
 	FDFSTrunkSlot *pSlot;
@@ -239,10 +241,7 @@ int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo, const bool bNeedLock)
 		}
 	}
 	
-	if (bNeedLock)
-	{
-		pthread_mutex_lock(&pSlot->lock);
-	}
+	pthread_mutex_lock(&pSlot->lock);
 	pPrevious = NULL;
 	pCurrent = pSlot->free_trunk_head;
 	while (pCurrent != NULL && memcmp(&(pCurrent->trunk), pTrunkInfo, \
@@ -255,6 +254,8 @@ int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo, const bool bNeedLock)
 	if (pCurrent == NULL)
 	{
 		char buff[256];
+
+		pthread_mutex_unlock(&pSlot->lock);
 		logError("file: "__FILE__", line: %d, " \
 			"can't find trunk entry: %s", \
 			trunk_info_dump(pTrunkInfo, buff, sizeof(buff)));
@@ -270,18 +271,53 @@ int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo, const bool bNeedLock)
 		pPrevious->next = pCurrent->next;
 	}
 
-	if (bNeedLock)
+	pthread_mutex_unlock(&pSlot->lock);
+	result = trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_DEL_SPACE, \
+				&(pCurrent->trunk));
+	fast_mblock_free(&trunk_blocks_man, pCurrent->pMblockNode);
+
+	return result;
+}
+
+int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
+{
+	int result;
+	FDFSTrunkSlot *pSlot;
+	FDFSTrunkNode *pCurrent;
+
+	for (pSlot=slot_end-1; pSlot>=slots; pSlot--)
 	{
-		pthread_mutex_unlock(&pSlot->lock);
-		result=trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_DEL_SPACE,\
-					&(pCurrent->trunk));
+		if (pTrunkInfo->file.size >= pSlot->size)
+		{
+			break;
+		}
 	}
-	else
+	
+	pthread_mutex_lock(&pSlot->lock);
+	pCurrent = pSlot->free_trunk_head;
+	while (pCurrent != NULL && memcmp(&(pCurrent->trunk), pTrunkInfo, \
+		sizeof(FDFSTrunkFullInfo)) != 0)
 	{
-		result = 0;
+		pCurrent = pCurrent->next;
 	}
 
-	fast_mblock_free(&trunk_blocks_man, pCurrent->pMblockNode);
+	if (pCurrent == NULL)
+	{
+		char buff[256];
+
+		pthread_mutex_unlock(&pSlot->lock);
+
+		logError("file: "__FILE__", line: %d, " \
+			"can't find trunk entry: %s", \
+			trunk_info_dump(pTrunkInfo, buff, sizeof(buff)));
+		return ENOENT;
+	}
+
+	pCurrent->trunk.status = FDFS_TRUNK_STATUS_FREE;
+	pthread_mutex_unlock(&pSlot->lock);
+
+	result = trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_SET_SPACE_FREE, \
+				pTrunkInfo);
 
 	return result;
 }

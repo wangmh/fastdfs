@@ -66,8 +66,8 @@ int storage_trunk_init();
 
 int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult);
 
-int trunk_add_node(FDFSTrunkNode *pNode, const bool bNeedLock);
-int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo, const bool bNeedLock);
+int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo);
+int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo);
 
 #define TRUNK_GET_FILENAME(file_id, filename) \
 	sprintf(filename, "%06d", file_id)
