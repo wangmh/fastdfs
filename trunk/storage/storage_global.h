@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "common_define.h"
 #include "fdfs_define.h"
 #include "tracker_types.h"
 #include "client_global.h"
@@ -116,6 +117,9 @@ extern bool g_check_file_duplicate;  //if check file content duplicate
 extern char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1];
 extern int g_namespace_len;
 extern struct base64_context g_base64_context;   //base64 context
+
+extern gid_t g_run_by_gid;
+extern uid_t g_run_by_uid;
 
 extern char g_run_by_group[32];
 extern char g_run_by_user[32];

@@ -614,11 +614,13 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size)
 {
 	int fd;
 	int result;
+	/*
 	int64_t remain_bytes;
 	int write_bytes;
 	char buff[256 * 1024];
+	*/
 
-	fd = open(filename, O_WRONLY | O_CREAT, 0644);
+	fd = open(filename, O_WRONLY | O_CREAT | O_EXCL, 0644);
 	if (fd < 0)
 	{
 		result = errno != 0 ? errno : EIO;
@@ -630,6 +632,21 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size)
 		return result;
 	}
 
+	if (ftruncate(fd, file_size) != 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"ftruncate file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, filename, \
+			result, STRERROR(result));
+	}
+	else
+	{
+		result = 0;
+	}
+
+/*
 	memset(buff, 0, sizeof(buff));
 	remain_bytes = file_size;
 	while (remain_bytes > 0)
@@ -650,18 +667,7 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size)
 
 		remain_bytes -= write_bytes;
 	}
-
-	if (fsync(fd) != 0)
-	{
-		result = errno != 0 ? errno : EIO;
-		logError("file: "__FILE__", line: %d, " \
-			"fsync file \"%s\" fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, filename, \
-			result, STRERROR(result));
-		close(fd);
-		return result;
-	}
+*/
 
 	close(fd);
 	return 0;
