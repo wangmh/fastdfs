@@ -83,6 +83,9 @@ int g_namespace_len = 0;
 
 struct base64_context g_base64_context;
 
+gid_t g_run_by_gid;
+uid_t g_run_by_uid;
+
 char g_run_by_group[32] = {0};
 char g_run_by_user[32] = {0};
 

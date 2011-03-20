@@ -8,6 +8,9 @@
 
 //storage_func.c
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -15,9 +18,8 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <grp.h>
+#include <pwd.h>
 #include <errno.h>
 #include <time.h>
 #include "fdfs_define.h"
@@ -109,6 +111,36 @@ static int storage_open_stat_file();
 static int storage_close_stat_file();
 static int storage_make_data_dirs(const char *pBasePath, bool *pathCreated);
 static int storage_check_and_make_data_dirs();
+
+#define STORAGE_CHOWN(path, current_uid, current_gid) \
+	if (!(g_run_by_gid == current_gid && g_run_by_uid == current_uid)) \
+	{ \
+		if (chown(path, g_run_by_uid, g_run_by_gid) != 0) \
+		{ \
+			logError("file: "__FILE__", line: %d, " \
+				"chown \"%s\" fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, path, \
+				errno, STRERROR(errno)); \
+			return errno != 0 ? errno : EPERM; \
+		} \
+	}
+
+
+#define STORAGE_FCHOWN(fd, path, current_uid, current_gid) \
+	if (!(g_run_by_gid == current_gid && g_run_by_uid == current_uid)) \
+	{ \
+		if (fchown(fd, g_run_by_uid, g_run_by_gid) != 0) \
+		{ \
+			logError("file: "__FILE__", line: %d, " \
+				"chown \"%s\" fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, path, \
+				errno, STRERROR(errno)); \
+			return errno != 0 ? errno : EPERM; \
+		} \
+	}
+
 
 static char *get_storage_stat_filename(const void *pArg, char *full_filename)
 {
@@ -290,7 +322,13 @@ static int storage_open_stat_file()
 		return errno != 0 ? errno : ENOENT;
 	}
 
-	return storage_write_to_stat_file();
+	if ((result=storage_write_to_stat_file()) != 0)
+	{
+		return result;
+	}
+
+	STORAGE_FCHOWN(storage_stat_fd, full_filename, geteuid(), getegid())
+	return 0;
 }
 
 static int storage_close_stat_file()
@@ -489,6 +527,9 @@ int storage_write_to_sync_ini_file()
 	}
 
 	close(fd);
+
+	STORAGE_CHOWN(full_filename, geteuid(), getegid())
+
 	return 0;
 }
 
@@ -631,6 +672,8 @@ static int storage_check_and_make_data_dirs()
 					errno, STRERROR(errno));
 				return errno != 0 ? errno : EPERM;
 			}
+
+			STORAGE_CHOWN(data_path, geteuid(), getegid())
 		}
 
 		g_last_server_port = g_server_port;
@@ -686,6 +729,11 @@ static int storage_make_data_dirs(const char *pBasePath, bool *pathCreated)
 	char min_sub_path[16];
 	char max_sub_path[16];
 	int i, k;
+	uid_t current_uid;
+	gid_t current_gid;
+
+	current_uid = geteuid();
+	current_gid = getegid();
 
 	*pathCreated = false;
 	snprintf(data_path, sizeof(data_path), "%s/data", pBasePath);
@@ -699,6 +747,8 @@ static int storage_make_data_dirs(const char *pBasePath, bool *pathCreated)
 				__LINE__, data_path, errno, STRERROR(errno));
 			return errno != 0 ? errno : EPERM;
 		}
+
+		STORAGE_CHOWN(data_path, current_uid, current_gid)
 	}
 
 	if (chdir(data_path) != 0)
@@ -738,6 +788,8 @@ static int storage_make_data_dirs(const char *pBasePath, bool *pathCreated)
 			}
 		}
 
+		STORAGE_CHOWN(dir_name, current_uid, current_gid)
+
 		if (chdir(dir_name) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -764,6 +816,8 @@ static int storage_make_data_dirs(const char *pBasePath, bool *pathCreated)
 					return errno != 0 ? errno : ENOENT;
 				}
 			}
+
+			STORAGE_CHOWN(sub_name, current_uid, current_gid)
 		}
 
 		if (chdir("..") != 0)
@@ -1262,6 +1316,27 @@ int storage_func_init(const char *filename, \
 			snprintf(g_run_by_group, sizeof(g_run_by_group), \
 				"%s", pRunByGroup);
 		}
+		if (*g_run_by_group == '\0')
+		{
+			g_run_by_gid = getegid();
+		}
+		else
+		{
+			struct group *pGroup;
+
+     			pGroup = getgrnam(g_run_by_group);
+			if (pGroup == NULL)
+			{
+				result = errno != 0 ? errno : ENOENT;
+				logError("file: "__FILE__", line: %d, " \
+					"getgrnam fail, errno: %d, " \
+					"error info: %s", __LINE__, \
+					result, STRERROR(result));
+				return result;
+			}
+
+			g_run_by_gid = pGroup->gr_gid;
+		}
 
 		if (pRunByUser == NULL)
 		{
@@ -1271,6 +1346,27 @@ int storage_func_init(const char *filename, \
 		{
 			snprintf(g_run_by_user, sizeof(g_run_by_user), \
 				"%s", pRunByUser);
+		}
+		if (*g_run_by_user == '\0')
+		{
+			g_run_by_uid = geteuid();
+		}
+		else
+		{
+			struct passwd *pUser;
+
+     			pUser = getpwnam(g_run_by_user);
+			if (pUser == NULL)
+			{
+				result = errno != 0 ? errno : ENOENT;
+				logError("file: "__FILE__", line: %d, " \
+					"getpwnam fail, errno: %d, " \
+					"error info: %s", __LINE__, \
+					result, STRERROR(result));
+				return result;
+			}
+
+			g_run_by_uid = pUser->pw_uid;
 		}
 
 		if ((result=load_allow_hosts(&iniContext, \
@@ -1514,6 +1610,7 @@ int storage_func_init(const char *filename, \
 
 		logInfo("FastDFS v%d.%02d, base_path=%s, store_path_count=%d, " \
 			"subdir_count_per_path=%d, group_name=%s, " \
+			"run_by_group=%s, run_by_user=%s, " \
 			"connect_timeout=%ds, network_timeout=%ds, "\
 			"port=%d, bind_addr=%s, client_bind=%d, " \
 			"max_connections=%d, work_threads=%d, "    \
@@ -1541,7 +1638,8 @@ int storage_func_init(const char *filename, \
 			"domain name=%s", \
 			g_fdfs_version.major, g_fdfs_version.minor, \
 			g_fdfs_base_path, g_path_count, g_subdir_count_per_path,\
-			g_group_name, g_fdfs_connect_timeout, \
+			g_group_name, g_run_by_group, g_run_by_user, \
+			g_fdfs_connect_timeout, \
 			g_fdfs_network_timeout, g_server_port, bind_addr, \
 			g_client_bind_addr, g_max_connections, \
 			g_work_threads, g_disk_rw_separated, \
