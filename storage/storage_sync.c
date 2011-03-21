@@ -845,6 +845,8 @@ static int write_to_binlog_index(const int binlog_index)
 
 	close(fd);
 
+	STORAGE_CHOWN(full_filename, geteuid(), getegid())
+
 	return 0;
 }
 
@@ -912,6 +914,7 @@ static int open_next_writable_binlog()
 			errno, STRERROR(errno));
 		return errno != 0 ? errno : EACCES;
 	}
+	STORAGE_FCHOWN(g_binlog_fd, full_filename, geteuid(), getegid())
 
 	g_binlog_index++;
 	return 0;
@@ -939,6 +942,8 @@ int storage_sync_init()
 				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
+
+		STORAGE_CHOWN(data_path, geteuid(), getegid())
 	}
 
 	snprintf(sync_path, sizeof(sync_path), \
@@ -954,6 +959,8 @@ int storage_sync_init()
 				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
+
+		STORAGE_CHOWN(sync_path, geteuid(), getegid())
 	}
 
 	binlog_write_cache_buff = (char *)malloc(SYNC_BINLOG_WRITE_BUFF_SIZE);
@@ -1023,6 +1030,8 @@ int storage_sync_init()
 		storage_sync_destroy();
 		return errno != 0 ? errno : EIO;
 	}
+
+	STORAGE_FCHOWN(g_binlog_fd, full_filename, geteuid(), getegid())
 
 	/*
 	//printf("full_filename=%s, binlog_file_size=%d\n", \
@@ -1741,6 +1750,7 @@ int storage_reader_init(FDFSStorageBrief *pStorage, StorageBinLogReader *pReader
 			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
 	}
+	STORAGE_FCHOWN(pReader->mark_fd, full_filename, geteuid(), getegid())
 
 	if ((result=storage_open_readable_binlog(pReader, \
 			get_binlog_readable_filename, pReader)) != 0)

@@ -131,6 +131,35 @@ char *g_tracker_sys_filenames[TRACKER_SYS_FILE_COUNT] = {
 	STORAGE_SERVERS_CHANGELOG_FILENAME
 };      
    
+#define TRACKER_CHOWN(path, current_uid, current_gid) \
+	if (!(g_run_by_gid == current_gid && g_run_by_uid == current_uid)) \
+	{ \
+		if (chown(path, g_run_by_uid, g_run_by_gid) != 0) \
+		{ \
+			logError("file: "__FILE__", line: %d, " \
+				"chown \"%s\" fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, path, \
+				errno, STRERROR(errno)); \
+			return errno != 0 ? errno : EPERM; \
+		} \
+	}
+
+#define TRACKER_FCHOWN(fd, path, current_uid, current_gid) \
+	if (!(g_run_by_gid == current_gid && g_run_by_uid == current_uid)) \
+	{ \
+		if (fchown(fd, g_run_by_uid, g_run_by_gid) != 0) \
+		{ \
+			logError("file: "__FILE__", line: %d, " \
+				"chown \"%s\" fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, path, \
+				errno, STRERROR(errno)); \
+			return errno != 0 ? errno : EPERM; \
+		} \
+	}
+
+
 int tracker_mem_pthread_lock()
 {
 	int result;
@@ -1415,6 +1444,7 @@ static int tracker_load_data(FDFSGroups *pGroups)
 				__LINE__, data_path, errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
+		TRACKER_CHOWN(data_path, geteuid(), getegid())
 	}
 
 	if (chdir(data_path) != 0)
@@ -1567,6 +1597,8 @@ static int tracker_save_groups()
 				errno, STRERROR(errno));
 			result = errno != 0 ? errno : EIO;
 		}
+
+		TRACKER_CHOWN(trueFilename, geteuid(), getegid())
 	}
 
 	if (result != 0)
@@ -1845,6 +1877,8 @@ int tracker_save_storages()
 				errno, STRERROR(errno));
 			result = errno != 0 ? errno : EIO;
 		}
+
+		TRACKER_CHOWN(trueFilename, geteuid(), getegid())
 	}
 
 	if (result != 0)
@@ -1962,6 +1996,8 @@ int tracker_save_sync_timestamps()
 				errno, STRERROR(errno));
 			result = errno != 0 ? errno : EIO;
 		}
+
+		TRACKER_CHOWN(trueFilename, geteuid(), getegid())
 	}
 
 	if (result != 0)
@@ -2007,6 +2043,7 @@ static int tracker_open_changlog_file()
 				__LINE__, data_path, errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
+		TRACKER_CHOWN(data_path, geteuid(), getegid())
 	}
 
 	snprintf(filename, sizeof(filename), "%s/data/%s", \
@@ -2030,6 +2067,8 @@ static int tracker_open_changlog_file()
 			__LINE__, filename, errno, STRERROR(errno));
 		return errno != 0 ? errno : EIO;
 	}
+
+	TRACKER_FCHOWN(changelog_fd, filename, geteuid(), getegid())
 
 	return 0;
 }
@@ -3414,6 +3453,8 @@ static int tracker_mem_get_one_sys_file(TrackerServerInfo *pTrackerServer, \
 			errno, STRERROR(errno));
 		return errno != 0 ? errno : EACCES;
 	}
+
+	TRACKER_FCHOWN(fd, full_filename, geteuid(), getegid())
 
 	offset = 0;
 	file_size = 0;

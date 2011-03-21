@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "common_define.h"
 #include "fdfs_define.h"
 #include "tracker_types.h"
 #include "tracker_status.h"
@@ -48,6 +49,9 @@ extern struct timeval g_network_tv;
 extern int g_allow_ip_count;  /* -1 means match any ip address */
 extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
 extern struct base64_context g_base64_context;
+
+gid_t g_run_by_gid;
+uid_t g_run_by_uid;
 
 extern char g_run_by_group[32];
 extern char g_run_by_user[32];
