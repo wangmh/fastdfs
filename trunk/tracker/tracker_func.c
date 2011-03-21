@@ -8,16 +8,18 @@
 
 //tracker_func.c
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <grp.h>
+#include <pwd.h>
 #include "fdfs_define.h"
 #include "logger.h"
 #include "fdfs_global.h"
@@ -303,6 +305,28 @@ int tracker_load_from_conf_file(const char *filename, \
 			snprintf(g_run_by_group, sizeof(g_run_by_group), \
 				"%s", pRunByGroup);
 		}
+		if (*g_run_by_group == '\0')
+		{
+			g_run_by_gid = getegid();
+		}
+		else
+		{
+			struct group *pGroup;
+
+     			pGroup = getgrnam(g_run_by_group);
+			if (pGroup == NULL)
+			{
+				result = errno != 0 ? errno : ENOENT;
+				logError("file: "__FILE__", line: %d, " \
+					"getgrnam fail, errno: %d, " \
+					"error info: %s", __LINE__, \
+					result, STRERROR(result));
+				return result;
+			}
+
+			g_run_by_gid = pGroup->gr_gid;
+		}
+
 
 		if (pRunByUser == NULL)
 		{
@@ -312,6 +336,27 @@ int tracker_load_from_conf_file(const char *filename, \
 		{
 			snprintf(g_run_by_user, sizeof(g_run_by_user), \
 				"%s", pRunByUser);
+		}
+		if (*g_run_by_user == '\0')
+		{
+			g_run_by_uid = geteuid();
+		}
+		else
+		{
+			struct passwd *pUser;
+
+     			pUser = getpwnam(g_run_by_user);
+			if (pUser == NULL)
+			{
+				result = errno != 0 ? errno : ENOENT;
+				logError("file: "__FILE__", line: %d, " \
+					"getpwnam fail, errno: %d, " \
+					"error info: %s", __LINE__, \
+					result, STRERROR(result));
+				return result;
+			}
+
+			g_run_by_uid = pUser->pw_uid;
 		}
 
 		if ((result=load_allow_hosts(&iniContext, \
@@ -415,6 +460,7 @@ int tracker_load_from_conf_file(const char *filename, \
 #endif
 
 		logInfo("FastDFS v%d.%02d, base_path=%s, " \
+			"run_by_group=%s, run_by_user=%s, " \
 			"connect_timeout=%ds, "    \
 			"network_timeout=%ds, "    \
 			"port=%d, bind_addr=%s, " \
@@ -431,7 +477,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			"storage_sync_file_max_delay=%ds, " \
 			"storage_sync_file_max_time=%ds",  \
 			g_fdfs_version.major, g_fdfs_version.minor,  \
-			g_fdfs_base_path, g_fdfs_connect_timeout, \
+			g_fdfs_base_path, g_run_by_group, g_run_by_user, \
+			g_fdfs_connect_timeout, \
 			g_fdfs_network_timeout, g_server_port, bind_addr, \
 			g_max_connections, g_work_threads, \
 			g_groups.store_lookup, g_groups.store_group, \
