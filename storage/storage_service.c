@@ -3275,30 +3275,14 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 
 	pFileContext->calc_crc32 = true;
 	pFileContext->calc_file_hash = g_check_file_duplicate;
-        pFileContext->extra_info.upload.if_gen_filename = true;
 	pFileContext->extra_info.upload.start_time = time(NULL);
-
-	crc32 = rand();
-	*filename = '\0';
-	filename_len = 0;
-	if ((result=storage_get_filename(pClientInfo, \
-			pFileContext->extra_info.upload.start_time, \
-			store_path_index, file_bytes, crc32, file_ext_name, \
-			filename, &filename_len, pFileContext->filename)) != 0)
-	{
-		pClientInfo->total_length = sizeof(TrackerHeader);
-		return result;
-	}
-
-	sprintf(pFileContext->fname2log, "%c"STORAGE_DATA_DIR_FORMAT"/%s", \
-			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
-			store_path_index, filename);
 
 	strcpy(pFileContext->extra_info.upload.file_ext_name, file_ext_name);
 
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
 	pFileContext->extra_info.upload.if_appender_file = bAppenderFile;
+	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 	if (bAppenderFile)
 	{
 		pFileContext->extra_info.upload.if_trunk_file = false;
@@ -3310,14 +3294,41 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 			TRUNK_CALC_SIZE(file_bytes));
 	}
 
-	pFileContext->extra_info.upload.store_path_index = store_path_index;
-	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 	if (pFileContext->extra_info.upload.if_trunk_file)
 	{
+		if ((result=trunk_client_trunk_alloc_space( \
+			TRUNK_CALC_SIZE(file_bytes), \
+                	&(pFileContext->extra_info.upload.trunk_info))) != 0)
+		{
+			pClientInfo->total_length = sizeof(TrackerHeader);
+			return result;
+		}
+
+        	pFileContext->extra_info.upload.if_gen_filename = false;
+		trunk_get_full_filename( \
+			&(pFileContext->extra_info.upload.trunk_info), \
+			pFileContext->filename, sizeof(pFileContext->filename));
+		pFileContext->extra_info.upload.store_path_index = \
+		pFileContext->extra_info.upload.trunk_info.path.store_path_index;
+
 		pFileContext->open_flags = O_WRONLY | extra_open_flags;
 	}
 	else
 	{
+		crc32 = rand();
+		*filename = '\0';
+		filename_len = 0;
+		if ((result=storage_get_filename(pClientInfo, \
+			pFileContext->extra_info.upload.start_time, \
+			store_path_index, file_bytes, crc32, file_ext_name, \
+			filename, &filename_len, pFileContext->filename)) != 0)
+		{
+			pClientInfo->total_length = sizeof(TrackerHeader);
+			return result;
+		}
+
+        	pFileContext->extra_info.upload.if_gen_filename = true;
+		pFileContext->extra_info.upload.store_path_index = store_path_index;
 		pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC \
 						| extra_open_flags;
 	}
