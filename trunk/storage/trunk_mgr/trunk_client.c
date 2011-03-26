@@ -100,6 +100,8 @@ int trunk_client_trunk_alloc_space(const int file_size, \
 
 	if (g_trunk_server.port <= 0)
 	{
+		logError("file: "__FILE__", line: %d, " \
+			"no trunk server", __LINE__);
 		return EAGAIN;
 	}
 
