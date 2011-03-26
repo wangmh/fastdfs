@@ -869,7 +869,21 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
-	if (err_no == 0)
+	if (pFileContext->extra_info.upload.if_trunk_file)
+	{
+		result = trunk_client_trunk_alloc_confirm( \
+			&(pFileContext->extra_info.upload.trunk_info), err_no);
+		if (err_no != 0)
+		{
+			result = err_no;
+		}
+	}
+	else
+	{
+		result = err_no;
+	}
+	
+	if (result == 0)
 	{
 		result = storage_service_upload_file_done(pTask);
 		if (result == 0)
@@ -882,10 +896,6 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 				pFileContext->fname2log);
 		}
 		}
-	}
-	else
-	{
-		result = err_no;
 	}
 
 	if (result == 0)
@@ -3187,21 +3197,6 @@ static int storage_server_fetch_one_path_binlog(struct fast_task_info *pTask)
 			pTask, store_path_index);
 }
 
-static int storage_alloc_space(StorageFileContext *pFileContext, \
-		const int file_size)
-{
-	int result;
-	FDFSTrunkFullInfo *pTrunkInfo;
-
-	pTrunkInfo = &(pFileContext->extra_info.upload.trunk_info);
-	if ((result=trunk_client_trunk_alloc_space(file_size, pTrunkInfo)) != 0)
-	{
-		return result;
-	}
-
-	return 0;
-}
-
 /**
 1 byte: store path index
 8 bytes: file size 
@@ -3212,10 +3207,12 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 {
 	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
+	DisconnectCleanFunc clean_func;
 	char *p;
 	char filename[128];
 	char file_ext_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
 	int64_t nInPackLen;
+	int64_t file_offset;
 	int64_t file_bytes;
 	int crc32;
 	int store_path_index;
@@ -3296,21 +3293,28 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 
 	if (pFileContext->extra_info.upload.if_trunk_file)
 	{
+		FDFSTrunkFullInfo *pTrunkInfo;
+
+		pTrunkInfo = &(pFileContext->extra_info.upload.trunk_info);
 		if ((result=trunk_client_trunk_alloc_space( \
-			TRUNK_CALC_SIZE(file_bytes), \
-                	&(pFileContext->extra_info.upload.trunk_info))) != 0)
+			TRUNK_CALC_SIZE(file_bytes), pTrunkInfo)) != 0)
 		{
 			pClientInfo->total_length = sizeof(TrackerHeader);
 			return result;
 		}
 
-        	pFileContext->extra_info.upload.if_gen_filename = false;
-		trunk_get_full_filename( \
-			&(pFileContext->extra_info.upload.trunk_info), \
-			pFileContext->filename, sizeof(pFileContext->filename));
+		clean_func = dio_trunk_write_finish_clean_up;
+		file_offset = pTrunkInfo->file.offset \
+				+ FDFS_TRUNK_FILE_HEADER_SIZE;
+        	pFileContext->extra_info.upload.if_gen_filename = true;
+		trunk_get_full_filename(pTrunkInfo, pFileContext->filename, \
+				sizeof(pFileContext->filename));
 		pFileContext->extra_info.upload.store_path_index = \
-		pFileContext->extra_info.upload.trunk_info.path.store_path_index;
-
+				pTrunkInfo->path.store_path_index;
+		pFileContext->extra_info.upload.before_open_callback = \
+					dio_check_trunk_file;
+		pFileContext->extra_info.upload.before_close_callback = \
+					dio_write_chunk_header;
 		pFileContext->open_flags = O_WRONLY | extra_open_flags;
 	}
 	else
@@ -3327,15 +3331,20 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 			return result;
 		}
 
+		clean_func = dio_write_finish_clean_up;
+		file_offset = 0;
         	pFileContext->extra_info.upload.if_gen_filename = true;
 		pFileContext->extra_info.upload.store_path_index = store_path_index;
+		pFileContext->extra_info.upload.before_open_callback = NULL;
+		pFileContext->extra_info.upload.before_close_callback = NULL;
 		pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC \
 						| extra_open_flags;
 	}
 
- 	return storage_write_to_file(pTask, 0, file_bytes, p - pTask->data, \
-			dio_write_file, storage_upload_file_done_callback, \
-			dio_write_finish_clean_up, store_path_index);
+ 	return storage_write_to_file(pTask, file_offset, file_bytes, \
+			p - pTask->data, dio_write_file, \
+			storage_upload_file_done_callback, \
+			clean_func, store_path_index);
 }
 
 static int storage_deal_active_test(struct fast_task_info *pTask)
@@ -3526,6 +3535,8 @@ static int storage_append_file(struct fast_task_info *pTask)
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
 	pFileContext->extra_info.upload.if_appender_file = true;
 	pFileContext->extra_info.upload.if_trunk_file = false;
+	pFileContext->extra_info.upload.before_open_callback = NULL;
+	pFileContext->extra_info.upload.before_close_callback = NULL;
 	pFileContext->extra_info.upload.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_APPEND;
 	pFileContext->open_flags = O_WRONLY | O_APPEND | extra_open_flags;
@@ -3712,6 +3723,8 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
 	pFileContext->extra_info.upload.if_appender_file = false;
 	pFileContext->extra_info.upload.if_trunk_file = false;
+	pFileContext->extra_info.upload.before_open_callback = NULL;
+	pFileContext->extra_info.upload.before_close_callback = NULL;
 	pFileContext->extra_info.upload.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 	pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC | extra_open_flags;
@@ -3974,6 +3987,9 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	pFileContext->calc_file_hash = false;
 	strcpy(pFileContext->fname2log, filename);
 
+	pFileContext->extra_info.upload.before_open_callback = NULL;
+	pFileContext->extra_info.upload.before_close_callback = NULL;
+
 	if (have_file_content)
 	{
 		pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC | \
@@ -4216,6 +4232,8 @@ static int storage_sync_append_file(struct fast_task_info *pTask)
 
 	pFileContext->calc_crc32 = false;
 	pFileContext->calc_file_hash = false;
+	pFileContext->extra_info.upload.before_open_callback = NULL;
+	pFileContext->extra_info.upload.before_close_callback = NULL;
 
 	return storage_write_to_file(pTask, start_offset, append_bytes, \
 		p - pTask->data, deal_func, \

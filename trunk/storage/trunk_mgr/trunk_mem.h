@@ -44,6 +44,13 @@ extern TrackerServerInfo g_trunk_server;  //the trunk server
 extern bool g_if_use_trunk_file;   //if use trunk file
 extern bool g_if_trunker_self;   //if am i trunk server
 
+typedef struct tagFDFSTrunkHeader {
+	int alloc_size;
+	int file_size;
+	int crc32;
+	int mtime;
+} FDFSTrunkHeader;
+
 typedef struct tagFDFSTrunkPathInfo {
 	unsigned char store_path_index;   //store which path as Mxx
 	unsigned char sub_path_high;      //high sub dir index, front part of HH/HH
@@ -92,10 +99,18 @@ bool trunk_check_size(const int64_t file_size);
 char *trunk_get_full_filename(const FDFSTrunkFullInfo *pTrunkInfo, \
 		char *full_filename, const int buff_size);
 
+void trunk_pack_header(const FDFSTrunkHeader *pTrunkHeader, char *buff);
+void trunk_unpack_header(const char *buff, FDFSTrunkHeader *pTrunkHeader);
+
 #define trunk_init_file(filename) \
 	trunk_init_file_ex(filename, g_trunk_file_size)
 
+#define trunk_check_and_init_file(filename) \
+	trunk_check_and_init_file_ex(filename, g_trunk_file_size)
+
 int trunk_init_file_ex(const char *filename, const int64_t file_size);
+
+int trunk_check_and_init_file_ex(const char *filename, const int64_t file_size);
 
 #ifdef __cplusplus
 }

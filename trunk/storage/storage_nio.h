@@ -43,6 +43,9 @@ typedef void (*DeleteFileLogCallback)(struct fast_task_info *pTask, \
 typedef void (*FileDealDoneCallback)(struct fast_task_info *pTask, \
 		const int err_no);
 
+typedef int (*FileBeforeOpenCallback)(struct fast_task_info *pTask);
+typedef int (*FileBeforeCloseCallback)(struct fast_task_info *pTask);
+
 typedef struct
 {
 	bool if_gen_filename;	//if upload generate filename
@@ -54,6 +57,8 @@ typedef struct
 	int store_path_index;
 	int start_time;		//upload start timestamp
 	FDFSTrunkFullInfo trunk_info;
+	FileBeforeOpenCallback before_open_callback;
+	FileBeforeCloseCallback before_close_callback;
 } StorageUploadInfo;
 
 typedef struct

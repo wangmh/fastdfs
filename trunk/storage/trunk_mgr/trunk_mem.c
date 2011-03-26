@@ -610,6 +610,30 @@ char *trunk_get_full_filename(const FDFSTrunkFullInfo *pTrunkInfo, \
 	return full_filename;
 }
 
+void trunk_pack_header(const FDFSTrunkHeader *pTrunkHeader, char *buff)
+{
+	int2buff(pTrunkHeader->alloc_size, \
+		buff + FDFS_TRUNK_FILE_ALLOC_SIZE_OFFSET);
+	int2buff(pTrunkHeader->file_size, \
+		buff + FDFS_TRUNK_FILE_FILE_SIZE_OFFSET);
+	int2buff(pTrunkHeader->crc32, \
+		buff + FDFS_TRUNK_FILE_FILE_CRC32_OFFSET);
+	int2buff(pTrunkHeader->mtime, \
+		buff + FDFS_TRUNK_FILE_FILE_MTIME_OFFSET);
+}
+
+void trunk_unpack_header(const char *buff, FDFSTrunkHeader *pTrunkHeader)
+{
+	pTrunkHeader->alloc_size = buff2int(
+			buff + FDFS_TRUNK_FILE_ALLOC_SIZE_OFFSET);
+	pTrunkHeader->file_size = buff2int(
+			buff + FDFS_TRUNK_FILE_FILE_SIZE_OFFSET);
+	pTrunkHeader->crc32 = buff2int(
+			buff + FDFS_TRUNK_FILE_FILE_CRC32_OFFSET);
+	pTrunkHeader->mtime = buff2int(
+			buff + FDFS_TRUNK_FILE_FILE_MTIME_OFFSET);
+}
+
 int trunk_init_file_ex(const char *filename, const int64_t file_size)
 {
 	int fd;
@@ -632,7 +656,11 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size)
 		return result;
 	}
 
-	if (ftruncate(fd, file_size) != 0)
+	if (ftruncate(fd, file_size) == 0)
+	{
+		result = 0;
+	}
+	else
 	{
 		result = errno != 0 ? errno : EIO;
 		logError("file: "__FILE__", line: %d, " \
@@ -640,10 +668,6 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size)
 			"errno: %d, error info: %s", \
 			__LINE__, filename, \
 			result, STRERROR(result));
-	}
-	else
-	{
-		result = 0;
 	}
 
 /*
@@ -670,7 +694,69 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size)
 */
 
 	close(fd);
-	return 0;
+	return result;
+}
+
+int trunk_check_and_init_file_ex(const char *filename, const int64_t file_size)
+{
+	struct stat file_stat;
+	int fd;
+	int result;
+
+	if (stat(filename, &file_stat) != 0)
+	{
+		result = errno != 0 ? errno : ENOENT;
+		if (result != ENOENT)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"stat file %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, filename, \
+				result, STRERROR(result));
+			return result;
+		}
+
+		return trunk_init_file_ex(filename, file_size);
+	}
+
+	if (file_stat.st_size >= file_size)
+	{
+		return 0;
+	}
+
+	logWarning("file: "__FILE__", line: %d, " \
+		"file: %s, file size: "INT64_PRINTF_FORMAT \
+		" < "INT64_PRINTF_FORMAT", should be resize", \
+		__LINE__, filename, (int64_t)file_stat.st_size, file_size);
+
+	fd = open(filename, O_WRONLY, 0644);
+	if (fd < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"open file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	if (ftruncate(fd, file_size) == 0)
+	{
+		result = 0;
+	}
+	else
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"ftruncate file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, filename, \
+			result, STRERROR(result));
+	}
+
+	close(fd);
+	return result;
 }
 
 void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str)
