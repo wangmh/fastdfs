@@ -28,6 +28,7 @@
 #include "storage_dio.h"
 #include "storage_nio.h"
 #include "storage_service.h"
+#include "trunk_mem.h"
 
 static pthread_mutex_t g_dio_thread_lock;
 static struct storage_dio_context *g_dio_contexts = NULL;
@@ -433,6 +434,17 @@ int dio_write_file(struct fast_task_info *pTask)
 	{
 	if (pFileContext->fd < 0)
 	{
+		if (pFileContext->extra_info.upload.before_open_callback != NULL)
+		{
+			result = pFileContext->extra_info.upload. \
+					before_open_callback(pTask);
+			if (result != 0)
+			{
+				break;
+			}
+		}
+		pFileContext->extra_info.upload.before_close_callback = NULL;
+
 		pFileContext->fd = open(pFileContext->filename, \
 					pFileContext->open_flags, 0644);
 		if (pFileContext->fd < 0)
@@ -523,10 +535,6 @@ int dio_write_file(struct fast_task_info *pTask)
 	}
 	else
 	{
-		/* file write done, close it */
-		close(pFileContext->fd);
-		pFileContext->fd = -1;
-
 		if (pFileContext->calc_crc32)
 		{
 			pFileContext->crc32 = CRC32_FINAL( \
@@ -537,6 +545,16 @@ int dio_write_file(struct fast_task_info *pTask)
 		{
 			FINISH_HASH_CODES4(pFileContext->file_hash_codes)
 		}
+
+		if (pFileContext->extra_info.upload.before_close_callback != NULL)
+		{
+			result = pFileContext->extra_info.upload. \
+					before_close_callback(pTask);
+		}
+
+		/* file write done, close it */
+		close(pFileContext->fd);
+		pFileContext->fd = -1;
 
 		pFileContext->done_callback(pTask, result);
 	}
@@ -552,7 +570,7 @@ int dio_write_file(struct fast_task_info *pTask)
 
 void dio_read_finish_clean_up(struct fast_task_info *pTask)
 {
-        StorageFileContext *pFileContext;
+	StorageFileContext *pFileContext;
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 	if (pFileContext->fd > 0)
@@ -564,7 +582,7 @@ void dio_read_finish_clean_up(struct fast_task_info *pTask)
 
 void dio_write_finish_clean_up(struct fast_task_info *pTask)
 {
-        StorageFileContext *pFileContext;
+	StorageFileContext *pFileContext;
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 	if (pFileContext->fd > 0)
@@ -591,7 +609,7 @@ void dio_write_finish_clean_up(struct fast_task_info *pTask)
 
 void dio_append_finish_clean_up(struct fast_task_info *pTask)
 {
-        StorageFileContext *pFileContext;
+	StorageFileContext *pFileContext;
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 	if (pFileContext->fd > 0)
@@ -623,6 +641,18 @@ void dio_append_finish_clean_up(struct fast_task_info *pTask)
 			}
 		}
 
+		close(pFileContext->fd);
+		pFileContext->fd = -1;
+	}
+}
+
+void dio_trunk_write_finish_clean_up(struct fast_task_info *pTask)
+{
+	StorageFileContext *pFileContext;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+	if (pFileContext->fd > 0)
+	{
 		close(pFileContext->fd);
 		pFileContext->fd = -1;
 	}
@@ -676,5 +706,56 @@ static void *dio_thread_entrance(void* arg)
 		__LINE__, g_dio_thread_count);
 
 	return NULL;
+}
+
+int dio_check_trunk_file(struct fast_task_info *pTask)
+{
+	StorageFileContext *pFileContext;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+	return trunk_check_and_init_file(pFileContext->filename);
+}
+
+int dio_write_chunk_header(struct fast_task_info *pTask)
+{
+	StorageFileContext *pFileContext;
+	char header[FDFS_TRUNK_FILE_HEADER_SIZE];
+	FDFSTrunkHeader trunkHeader;
+	int result;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+
+	trunkHeader.alloc_size = pFileContext->extra_info.upload.trunk_info.file.size;
+	trunkHeader.file_size = pFileContext->end - pFileContext->start;
+	trunkHeader.crc32 = pFileContext->crc32;
+	trunkHeader.mtime = pFileContext->extra_info.upload.start_time;
+
+	if (lseek(pFileContext->fd, pFileContext->start - \
+		FDFS_TRUNK_FILE_HEADER_SIZE, SEEK_SET) < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"lseek file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pFileContext->filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	trunk_pack_header(&trunkHeader, header);
+
+	if (write(pFileContext->fd, header, FDFS_TRUNK_FILE_HEADER_SIZE) != \
+		FDFS_TRUNK_FILE_HEADER_SIZE)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"write to file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pFileContext->filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	return 0;
 }
 
