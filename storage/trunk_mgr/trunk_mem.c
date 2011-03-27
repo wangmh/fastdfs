@@ -45,7 +45,8 @@ int g_store_path_index = 0;
 int g_current_trunk_file_id = 0;
 TrackerServerInfo g_trunk_server = {-1, 0};
 bool g_if_use_trunk_file = false;
-bool g_if_trunker_self = false;
+//bool g_if_trunker_self = false;
+bool g_if_trunker_self = true;
 
 static FDFSTrunkSlot *slots = NULL;
 static FDFSTrunkSlot *slot_end = NULL;

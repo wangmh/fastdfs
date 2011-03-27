@@ -1727,21 +1727,23 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	pFileContext =  &(pClientInfo->file_context);
 	file_size = pFileContext->end;
 
-	end_time = time(NULL);
 	*new_full_filename = '\0';
 	*new_filename = '\0';
 	new_filename_len = 0;
 
 	if (pFileContext->extra_info.upload.if_appender_file)
 	{
+		end_time = time(NULL);
 		file_size_in_name = FDFS_APPENDER_FILE_SIZE;
 	}
 	else if (pFileContext->extra_info.upload.if_trunk_file)
 	{
+		end_time = pFileContext->extra_info.upload.start_time;
 		file_size_in_name = FDFS_TRUNK_FILE_SIZE | file_size;
 	}
 	else
 	{
+		end_time = time(NULL);
 		file_size_in_name = file_size;
 	}
 
@@ -1755,7 +1757,22 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		return result;
 	}
 
-	if (rename(pFileContext->filename, new_full_filename) != 0)
+	sprintf(new_fname2log, "%c"STORAGE_DATA_DIR_FORMAT"/%s", \
+		FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
+		pFileContext->extra_info.upload.store_path_index, \
+		new_filename);
+
+	if (pFileContext->extra_info.upload.if_trunk_file)
+	{
+		char trunk_buff[FDFS_TRUNK_FILE_INFO_LEN + 1];
+		trunk_file_info_encode(&(pFileContext->extra_info.upload. \
+					trunk_info.file), trunk_buff);
+
+		sprintf(new_fname2log + FDFS_FILE_PATH_LEN \
+			+ FDFS_FILENAME_BASE64_LENGTH, "%s%s", trunk_buff, \
+			new_filename + FDFS_FILENAME_BASE64_LENGTH);
+	}
+	else if (rename(pFileContext->filename, new_full_filename) != 0)
 	{
 		result = errno != 0 ? errno : EPERM;
 		logError("file: "__FILE__", line: %d, " \
@@ -1767,10 +1784,6 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		unlink(pFileContext->filename);
 		return result;
 	}
-
-	sprintf(new_fname2log, "%c"STORAGE_DATA_DIR_FORMAT"/%s", \
-		FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
-		pFileContext->extra_info.upload.store_path_index, new_filename);
 
 	if ((!pFileContext->extra_info.upload.if_gen_filename) && \
 		(!g_check_file_duplicate))
@@ -5566,6 +5579,7 @@ int storage_deal_task(struct fast_task_info *pTask)
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pHeader = (TrackerHeader *)pTask->data;
+
 	switch(pHeader->cmd)
 	{
 		case STORAGE_PROTO_CMD_DOWNLOAD_FILE:

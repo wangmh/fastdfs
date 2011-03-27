@@ -1442,6 +1442,10 @@ int storage_func_init(const char *filename, \
 				"%s", pIfAliasPrefix);
 		}
 
+
+		g_if_use_trunk_file = iniGetBoolValue(NULL, \
+			"use_trunk_file", &iniContext, false);
+
 		pSlotMinSize = iniGetStrValue(NULL, \
 			"slot_min_size", &iniContext);
 		if (pSlotMinSize == NULL)
@@ -1488,6 +1492,14 @@ int storage_func_init(const char *filename, \
 				"item \"trunk_file_size\" %d is too small, " \
 				"change to 4MB", __LINE__, g_trunk_file_size);
 			g_trunk_file_size = 4 * 1024 * 1024;
+		}
+
+		if (g_if_use_trunk_file)
+		{
+			if ((result=storage_trunk_init()) != 0)
+			{
+				break;
+			}
 		}
 
 		g_check_file_duplicate = iniGetBoolValue(NULL, \
@@ -1600,6 +1612,7 @@ int storage_func_init(const char *filename, \
 			"sync_stat_file_interval=%ds, " \
 			"thread_stack_size=%d KB, upload_priority=%d, " \
 			"if_alias_prefix=%s, " \
+			"use_trunk_file=%d, " \
 			"slot_min_size=%d, " \
 			"trunk_file_size=%d MB, " \
 			"check_file_duplicate=%d, FDHT group count=%d, " \
@@ -1626,7 +1639,8 @@ int storage_func_init(const char *filename, \
 			g_fsync_after_written_bytes, g_sync_log_buff_interval, \
 			g_sync_binlog_buff_interval, g_sync_stat_file_interval, \
 			g_thread_stack_size/1024, g_upload_priority, \
-			g_if_alias_prefix, g_slot_min_size, \
+			g_if_alias_prefix, g_if_use_trunk_file, \
+			g_slot_min_size, \
 			g_trunk_file_size / (1024 * 1024), \
 			g_check_file_duplicate, \
 			g_group_array.group_count, g_group_array.server_count, \
