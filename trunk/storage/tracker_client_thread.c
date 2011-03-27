@@ -486,7 +486,8 @@ static void *tracker_report_thread_entrance(void *arg)
 				last_df_report_time = current_time;
 			}
 
-			if (last_trunk_file_id < g_current_trunk_file_id)
+			if (g_if_trunker_self && \
+				last_trunk_file_id < g_current_trunk_file_id)
 			{
 				if (tracker_report_trunk_fid(pTrackerServer)!=0)
 				{
