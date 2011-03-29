@@ -37,6 +37,8 @@
 #include "base64.h"
 #include "sched_thread.h"
 #include "storage_dio.h"
+#include "trunk_mem.h"
+#include "trunk_sync.h"
 
 #ifdef WITH_HTTPD
 #include "storage_httpd.h"
@@ -356,6 +358,11 @@ int main(int argc, char *argv[])
 	storage_service_destroy();
 	storage_sync_destroy();
 	storage_func_destroy();
+
+	if (g_if_use_trunk_file)
+	{
+		trunk_sync_destroy();
+	}
 
 	logInfo("exit nomally.\n");
 	log_destroy();

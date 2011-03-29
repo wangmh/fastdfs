@@ -40,6 +40,7 @@
 #include "fdht_client.h"
 #include "client_func.h"
 #include "trunk_mem.h"
+#include "trunk_sync.h"
 #include "storage_disk_recovery.h"
 
 #ifdef WITH_HTTPD
@@ -1497,6 +1498,11 @@ int storage_func_init(const char *filename, \
 		if (g_if_use_trunk_file)
 		{
 			if ((result=storage_trunk_init()) != 0)
+			{
+				break;
+			}
+
+			if ((result=trunk_sync_init()) != 0)
 			{
 				break;
 			}
