@@ -613,6 +613,7 @@ char *trunk_get_full_filename(const FDFSTrunkFullInfo *pTrunkInfo, \
 
 void trunk_pack_header(const FDFSTrunkHeader *pTrunkHeader, char *buff)
 {
+	*(buff + FDFS_TRUNK_FILE_FILE_TYPE_OFFSET) = pTrunkHeader->file_type;
 	int2buff(pTrunkHeader->alloc_size, \
 		buff + FDFS_TRUNK_FILE_ALLOC_SIZE_OFFSET);
 	int2buff(pTrunkHeader->file_size, \
@@ -621,10 +622,13 @@ void trunk_pack_header(const FDFSTrunkHeader *pTrunkHeader, char *buff)
 		buff + FDFS_TRUNK_FILE_FILE_CRC32_OFFSET);
 	int2buff(pTrunkHeader->mtime, \
 		buff + FDFS_TRUNK_FILE_FILE_MTIME_OFFSET);
+	memcpy(buff + FDFS_TRUNK_FILE_FILE_EXT_NAME_OFFSET, \
+		pTrunkHeader->ext_name, FDFS_FILE_EXT_NAME_MAX_LEN);
 }
 
 void trunk_unpack_header(const char *buff, FDFSTrunkHeader *pTrunkHeader)
 {
+	pTrunkHeader->file_type = *(buff + FDFS_TRUNK_FILE_FILE_TYPE_OFFSET);
 	pTrunkHeader->alloc_size = buff2int(
 			buff + FDFS_TRUNK_FILE_ALLOC_SIZE_OFFSET);
 	pTrunkHeader->file_size = buff2int(
@@ -633,6 +637,10 @@ void trunk_unpack_header(const char *buff, FDFSTrunkHeader *pTrunkHeader)
 			buff + FDFS_TRUNK_FILE_FILE_CRC32_OFFSET);
 	pTrunkHeader->mtime = buff2int(
 			buff + FDFS_TRUNK_FILE_FILE_MTIME_OFFSET);
+	memcpy(pTrunkHeader->ext_name, buff + \
+		FDFS_TRUNK_FILE_FILE_EXT_NAME_OFFSET, \
+		FDFS_FILE_EXT_NAME_MAX_LEN);
+	*(pTrunkHeader->ext_name + FDFS_FILE_EXT_NAME_MAX_LEN) = '\0';
 }
 
 int trunk_init_file_ex(const char *filename, const int64_t file_size)
@@ -772,7 +780,7 @@ void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str)
 			str, &len, false);
 }
 
-void trunk_file_info_decode(char *str, FDFSTrunkFileInfo *pTrunkFile)
+void trunk_file_info_decode(const char *str, FDFSTrunkFileInfo *pTrunkFile)
 {
 	char buff[sizeof(int) * 3];
 	int len;
@@ -788,5 +796,116 @@ void trunk_file_info_decode(char *str, FDFSTrunkFileInfo *pTrunkFile)
 bool trunk_check_size(const int64_t file_size)
 {
 	return file_size <= slot_max_size;
+}
+
+int trunk_file_stat_func(const char *pBasePath, const char *true_filename, \
+	const int filename_len, stat_func statfunc, struct stat *pStat)
+{
+	char full_filename[MAX_PATH_SIZE];
+	char filename[64];
+	char buff[128];
+	char pack_buff[FDFS_TRUNK_FILE_HEADER_SIZE];
+	int64_t file_size;
+	int buff_len;
+	int fd;
+	int read_bytes;
+	int result;
+	FDFSTrunkHeader trunkHeader;
+	FDFSTrunkFileInfo trunkFileInfo;
+
+	if (filename_len <= FDFS_TRUE_FILE_PATH_LEN + \
+		FDFS_FILENAME_BASE64_LENGTH + 1 + FDFS_FILE_EXT_NAME_MAX_LEN)
+	{
+		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
+			pBasePath, true_filename);
+
+		if (statfunc(full_filename, pStat) == 0)
+		{
+			return 0;
+		}
+		else
+		{
+			return errno != 0 ? errno : ENOENT;
+		}
+	}
+
+	memset(buff, 0, sizeof(buff));
+	base64_decode_auto(&g_base64_context, (char *)true_filename + \
+		FDFS_TRUE_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
+		buff, &buff_len);
+
+	file_size = buff2long(buff + sizeof(int) * 2);
+	if ((file_size & FDFS_TRUNK_FILE_SIZE) == 0)
+	{
+		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
+			pBasePath, true_filename);
+
+		if (statfunc(full_filename, pStat) == 0)
+		{
+			return 0;
+		}
+		else
+		{
+			return errno != 0 ? errno : ENOENT;
+		}
+	}
+
+	if (filename_len <= FDFS_TRUE_FILE_PATH_LEN + \
+		FDFS_FILENAME_BASE64_LENGTH + FDFS_TRUNK_FILE_INFO_LEN + \
+			 FDFS_FILE_EXT_NAME_MAX_LEN)
+	{
+		return EINVAL;
+	}
+
+	trunk_file_info_decode(true_filename + FDFS_TRUE_FILE_PATH_LEN + \
+		 FDFS_FILENAME_BASE64_LENGTH, &trunkFileInfo);
+
+	trunkHeader.file_size = file_size & (~(FDFS_TRUNK_FILE_SIZE));
+	trunkHeader.mtime = buff2int(buff + sizeof(int));
+	trunkHeader.crc32 = buff2int(buff + sizeof(int) * 4);
+	memcpy(trunkHeader.ext_name, true_filename + (filename_len - \
+		(FDFS_FILE_EXT_NAME_MAX_LEN + 1)), \
+		FDFS_FILE_EXT_NAME_MAX_LEN + 1); //include tailing '\0'
+	trunkHeader.alloc_size = trunkFileInfo.size;
+	trunkHeader.file_type = FDFS_TRUNK_FILE_TYPE_REGULAR;
+
+	TRUNK_GET_FILENAME(trunkFileInfo.id, filename);
+	snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
+		pBasePath, filename);
+
+	fd = open(full_filename, O_RDONLY);
+	if (fd < 0)
+	{
+		return errno != 0 ? errno : EIO;
+	}
+
+	if (lseek(fd, trunkFileInfo.offset, SEEK_SET) < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		close(fd);
+		return result;
+	}
+
+	read_bytes = read(fd, buff, FDFS_TRUNK_FILE_HEADER_SIZE);
+	result = errno;
+	close(fd);
+	if (read_bytes != FDFS_TRUNK_FILE_HEADER_SIZE)
+	{
+		return result != 0 ? result : EIO;
+	}
+
+	trunk_pack_header(&trunkHeader, pack_buff);
+
+	if (memcmp(pack_buff+1, buff+1, FDFS_TRUNK_FILE_HEADER_SIZE - 1) != 0)
+	{
+		return ENOENT;
+	}
+
+	memset(pStat, 0, sizeof(struct stat));
+	pStat->st_size = trunkHeader.file_size;
+	pStat->st_mtime = trunkHeader.mtime;
+	pStat->st_mode = S_IFREG;
+
+	return 0;
 }
 

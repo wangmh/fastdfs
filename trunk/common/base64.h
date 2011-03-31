@@ -82,7 +82,7 @@ int base64_get_encode_length(struct base64_context *context, const int nSrcLen);
  *           bPad:      if padding
  *  return: the encoded buffer
  */
-char *base64_encode_ex(struct base64_context *context, char *src, \
+char *base64_encode_ex(struct base64_context *context, const char *src, \
 		const int nSrcLen, char *dest, int *dest_len, const bool bPad);
 
 /** base64 decode buffer, work only with padding source string
@@ -94,7 +94,7 @@ char *base64_encode_ex(struct base64_context *context, char *src, \
  *           dest_len:  return dest buffer length
  *  return: the decoded buffer
  */
-char *base64_decode(struct base64_context *context, char *src, \
+char *base64_decode(struct base64_context *context, const char *src, \
 		const int nSrcLen, char *dest, int *dest_len);
 
 /** base64 decode buffer, can work with no padding source string
@@ -106,7 +106,7 @@ char *base64_decode(struct base64_context *context, char *src, \
  *           dest_len:  return dest buffer length
  *  return: the decoded buffer
  */
-char *base64_decode_auto(struct base64_context *context, char *src, \
+char *base64_decode_auto(struct base64_context *context, const char *src, \
 		const int nSrcLen, char *dest, int *dest_len);
 
 /** set line separator string, such as \n or \r\n

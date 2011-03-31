@@ -123,7 +123,7 @@ int base64_get_encode_length(struct base64_context *context, const int nSrcLen)
     * The output will always have an even multiple of data characters,
     * exclusive of \n.  It is padded out with =.
     */
-char *base64_encode_ex(struct base64_context *context, char *src, \
+char *base64_encode_ex(struct base64_context *context, const char *src, \
 		const int nSrcLen, char *dest, int *dest_len, const bool bPad)
 {
   int linePos;
@@ -133,7 +133,7 @@ char *base64_encode_ex(struct base64_context *context, char *src, \
   int c0, c1, c2, c3;
   unsigned char *pRaw;
   unsigned char *pEnd;
-  char *ppSrcs[2];
+  const char *ppSrcs[2];
   int lens[2];
   char szPad[3];
   int k;
@@ -254,7 +254,7 @@ char *base64_encode_ex(struct base64_context *context, char *src, \
   return dest;
 }
 
-char *base64_decode_auto(struct base64_context *context, char *src, \
+char *base64_decode_auto(struct base64_context *context, const char *src, \
 		const int nSrcLen, char *dest, int *dest_len)
 {
 	int nRemain;
@@ -306,7 +306,7 @@ char *base64_decode_auto(struct base64_context *context, char *src, \
 * It must have an even multiple of 4 data characters (not counting \n),
 * padded out with = as needed.
 */
-char *base64_decode(struct base64_context *context, char *src, \
+char *base64_decode(struct base64_context *context, const char *src, \
 		const int nSrcLen, char *dest, int *dest_len)
 {
       // tracks where we are in a cycle of 4 input chars.

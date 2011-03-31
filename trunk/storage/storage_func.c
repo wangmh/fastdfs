@@ -1765,11 +1765,11 @@ int storage_func_destroy()
  \
 	do \
 	{ \
-	if (*filename_len <= FDFS_FILE_PATH_LEN) \
+	if (*filename_len <= FDFS_LOGIC_FILE_PATH_LEN) \
 	{ \
 		logError("file: "__FILE__", line: %d, " \
 			"filename_len: %d is invalid, <= %d", \
-			__LINE__, *filename_len, FDFS_FILE_PATH_LEN); \
+			__LINE__, *filename_len, FDFS_LOGIC_FILE_PATH_LEN); \
 		return EINVAL; \
 	} \
  \

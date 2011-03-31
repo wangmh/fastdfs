@@ -4486,7 +4486,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 		int decoded_len;
 
 		base64_decode_auto(&g_base64_context, (char *)filename + \
-			FDFS_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
+			FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
 			name_buff, &decoded_len);
 		storage_ip = ntohl(buff2int(name_buff));
 		file_timestamp = buff2int(name_buff+sizeof(int));

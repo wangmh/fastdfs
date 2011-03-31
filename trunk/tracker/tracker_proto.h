@@ -234,7 +234,7 @@ int fdfs_get_ini_context_from_tracker(TrackerServerGroup *pTrackerGroup, \
                 const bool client_bind_addr, const char *bind_addr);
 
 #define IS_SLAVE_FILE(filename_len) \
-	(filename_len > FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH + \
+	(filename_len > FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH + \
 		FDFS_FILE_EXT_NAME_MAX_LEN + 1)
 
 #define IS_APPENDER_FILE(file_size)   (file_size == INFINITE_FILE_SIZE)

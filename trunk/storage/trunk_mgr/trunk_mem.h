@@ -11,6 +11,9 @@
 #ifndef _TRUNK_MEM_H_
 #define _TRUNK_MEM_H_
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <pthread.h>
 #include "common_define.h"
 #include "tracker_types.h"
@@ -19,19 +22,26 @@
 #define FDFS_TRUNK_STATUS_FREE  0
 #define FDFS_TRUNK_STATUS_HOLD  1
 
+#define FDFS_TRUNK_FILE_TYPE_REGULAR  'F'
+#define FDFS_TRUNK_FILE_TYPE_LINK     'L'
+
 #define FDFS_TRUNK_FILE_INFO_LEN  16
 
-#define FDFS_TRUNK_FILE_ALLOC_SIZE_OFFSET   0
-#define FDFS_TRUNK_FILE_FILE_SIZE_OFFSET    4
-#define FDFS_TRUNK_FILE_FILE_CRC32_OFFSET   8
-#define FDFS_TRUNK_FILE_FILE_MTIME_OFFSET  12
-#define FDFS_TRUNK_FILE_HEADER_SIZE	   16
+#define FDFS_TRUNK_FILE_FILE_TYPE_OFFSET	0
+#define FDFS_TRUNK_FILE_ALLOC_SIZE_OFFSET	1
+#define FDFS_TRUNK_FILE_FILE_SIZE_OFFSET	5
+#define FDFS_TRUNK_FILE_FILE_CRC32_OFFSET	9
+#define FDFS_TRUNK_FILE_FILE_MTIME_OFFSET  	13
+#define FDFS_TRUNK_FILE_FILE_EXT_NAME_OFFSET	17
+#define FDFS_TRUNK_FILE_HEADER_SIZE	(17 + FDFS_FILE_EXT_NAME_MAX_LEN)
 
 #define TRUNK_CALC_SIZE(file_size) (FDFS_TRUNK_FILE_HEADER_SIZE + file_size)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef int (*stat_func)(const char *filename, struct stat *buf);
 
 extern int g_slot_min_size;    //slot min size, such as 256 bytes
 extern int g_trunk_file_size;  //the trunk file size, such as 64MB
@@ -45,6 +55,8 @@ extern bool g_if_use_trunk_file;   //if use trunk file
 extern bool g_if_trunker_self;   //if am i trunk server
 
 typedef struct tagFDFSTrunkHeader {
+	char file_type;
+	char ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 1];
 	int alloc_size;
 	int file_size;
 	int crc32;
@@ -92,7 +104,7 @@ int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo);
 	sprintf(filename, "%06d", file_id)
 
 void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str);
-void trunk_file_info_decode(char *str, FDFSTrunkFileInfo *pTrunkFile);
+void trunk_file_info_decode(const char *str, FDFSTrunkFileInfo *pTrunkFile);
 
 bool trunk_check_size(const int64_t file_size);
 
@@ -112,6 +124,16 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size);
 
 int trunk_check_and_init_file_ex(const char *filename, const int64_t file_size);
 
+#define trunk_file_stat(pBasePath, true_filename, filename_len, pStat) \
+	trunk_file_stat_func(pBasePath, true_filename, filename_len, \
+				stat, pStat)
+
+#define trunk_file_lstat(pBasePath, true_filename, filename_len, pStat) \
+	trunk_file_stat_func(pBasePath, true_filename, filename_len, \
+				lstat, pStat)
+
+int trunk_file_stat_func(const char *pBasePath, const char *true_filename, \
+	const int filename_len, stat_func statfunc, struct stat *pStat);
 #ifdef __cplusplus
 }
 #endif
