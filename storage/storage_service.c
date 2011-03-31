@@ -1768,7 +1768,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		trunk_file_info_encode(&(pFileContext->extra_info.upload. \
 					trunk_info.file), trunk_buff);
 
-		sprintf(new_fname2log + FDFS_FILE_PATH_LEN \
+		sprintf(new_fname2log + FDFS_LOGIC_FILE_PATH_LEN \
 			+ FDFS_FILENAME_BASE64_LENGTH, "%s%s", trunk_buff, \
 			new_filename + FDFS_FILENAME_BASE64_LENGTH);
 	}
@@ -2667,14 +2667,14 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 
 	base_path_len = strlen(pBasePath);
 	if (strlen(full_filename) < base_path_len + sizeof("/data/") + \
-			FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH)
+			FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip:%s, length of filename: %s " \
 			"is too small, should >= %d", \
 			__LINE__, pTask->client_ip, \
 			full_filename, base_path_len + (int)sizeof("/data/") + \
-			FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH);
+			FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH);
 		return EINVAL;
 	}
 
@@ -2683,7 +2683,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 
 	memset(decode_buff, 0, sizeof(decode_buff));
 	base64_decode_auto(&g_base64_context, remote_filename + \
-		FDFS_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
+		FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
 		decode_buff, &buff_len);
 	crc32 = buff2int(decode_buff + sizeof(int)*4);
 
@@ -3430,7 +3430,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 	file_bytes = buff2long(p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
-	if (appender_filename_len < FDFS_FILE_PATH_LEN + \
+	if (appender_filename_len < FDFS_LOGIC_FILE_PATH_LEN + \
 		FDFS_FILENAME_BASE64_LENGTH + FDFS_FILE_EXT_NAME_MAX_LEN + 1 \
 		|| appender_filename_len >= sizeof(appender_filename))
 	{
@@ -3513,7 +3513,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 
 	memset(buff, 0, sizeof(buff));
 	base64_decode_auto(&g_base64_context, pFileContext->fname2log + \
-		FDFS_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
+		FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
 		buff, &buff_len);
 
 	appender_file_size = buff2long(buff + sizeof(int) * 2);
@@ -3614,7 +3614,7 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 	file_bytes = buff2long(p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
-	if (master_filename_len <= FDFS_FILE_PATH_LEN || \
+	if (master_filename_len <= FDFS_LOGIC_FILE_PATH_LEN || \
 		master_filename_len >= sizeof(master_filename))
 	{
 		logError("file: "__FILE__", line: %d, " \
