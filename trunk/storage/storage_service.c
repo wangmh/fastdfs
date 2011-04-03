@@ -4779,7 +4779,7 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 	{
 		trunk_get_full_filename((&trunkInfo), pFileContext->filename, \
 				sizeof(pFileContext->filename));
-		file_offset += trunkInfo.file.offset;
+		file_offset += TRUNK_FILE_START_OFFSET(trunkInfo);
 	}
 	else
 	{
