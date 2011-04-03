@@ -149,7 +149,7 @@ int storage_trunk_destroy()
 	return 0;
 }
 
-static char *trunk_info_dump(const FDFSTrunkFullInfo *pTrunkInfo, char *buff, \
+char *trunk_info_dump(const FDFSTrunkFullInfo *pTrunkInfo, char *buff, \
 				const int buff_size)
 {
 	snprintf(buff, buff_size, \
@@ -162,6 +162,23 @@ static char *trunk_info_dump(const FDFSTrunkFullInfo *pTrunkInfo, char *buff, \
 		pTrunkInfo->path.sub_path_low,  \
 		pTrunkInfo->file.id, pTrunkInfo->file.offset, pTrunkInfo->file.size, \
 		pTrunkInfo->status);
+
+	return buff;
+}
+
+char *trunk_header_dump(const FDFSTrunkHeader *pTrunkHeader, char *buff, \
+				const int buff_size)
+{
+	snprintf(buff, buff_size, \
+		"file_type=%d, " \
+		"alloc_size=%d, " \
+		"file_size=%d, " \
+		"crc32=%d, " \
+		"mtime=%d, " \
+		"ext_name=%s", \
+		pTrunkHeader->file_type, pTrunkHeader->alloc_size, \
+		pTrunkHeader->file_size, pTrunkHeader->crc32, \
+		pTrunkHeader->mtime, pTrunkHeader->formatted_ext_name);
 
 	return buff;
 }
@@ -622,7 +639,8 @@ void trunk_pack_header(const FDFSTrunkHeader *pTrunkHeader, char *buff)
 	int2buff(pTrunkHeader->mtime, \
 		buff + FDFS_TRUNK_FILE_FILE_MTIME_OFFSET);
 	memcpy(buff + FDFS_TRUNK_FILE_FILE_EXT_NAME_OFFSET, \
-		pTrunkHeader->ext_name, FDFS_FILE_EXT_NAME_MAX_LEN);
+		pTrunkHeader->formatted_ext_name, \
+		FDFS_FILE_EXT_NAME_MAX_LEN + 1);
 }
 
 void trunk_unpack_header(const char *buff, FDFSTrunkHeader *pTrunkHeader)
@@ -636,10 +654,11 @@ void trunk_unpack_header(const char *buff, FDFSTrunkHeader *pTrunkHeader)
 			buff + FDFS_TRUNK_FILE_FILE_CRC32_OFFSET);
 	pTrunkHeader->mtime = buff2int(
 			buff + FDFS_TRUNK_FILE_FILE_MTIME_OFFSET);
-	memcpy(pTrunkHeader->ext_name, buff + \
+	memcpy(pTrunkHeader->formatted_ext_name, buff + \
 		FDFS_TRUNK_FILE_FILE_EXT_NAME_OFFSET, \
-		FDFS_FILE_EXT_NAME_MAX_LEN);
-	*(pTrunkHeader->ext_name + FDFS_FILE_EXT_NAME_MAX_LEN) = '\0';
+		FDFS_FILE_EXT_NAME_MAX_LEN + 1);
+	*(pTrunkHeader->formatted_ext_name + FDFS_FILE_EXT_NAME_MAX_LEN \
+		 				+ 1) = '\0';
 }
 
 int trunk_init_file_ex(const char *filename, const int64_t file_size)
@@ -803,13 +822,16 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 {
 	char full_filename[MAX_PATH_SIZE];
 	char buff[128];
+	char temp[265];
 	char pack_buff[FDFS_TRUNK_FILE_HEADER_SIZE];
+	char szHexBuff[2 * FDFS_TRUNK_FILE_HEADER_SIZE + 1];
 	int64_t file_size;
 	int buff_len;
 	int fd;
 	int read_bytes;
 	int result;
 	FDFSTrunkHeader trunkHeader;
+	FDFSTrunkHeader trueTrunkHeader;
 
 	pTrunkInfo->file.id = 0;
 	if (filename_len <= FDFS_TRUE_FILE_PATH_LEN + \
@@ -862,9 +884,9 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	trunkHeader.file_size = file_size & (~(FDFS_TRUNK_FILE_SIZE));
 	trunkHeader.mtime = buff2int(buff + sizeof(int));
 	trunkHeader.crc32 = buff2int(buff + sizeof(int) * 4);
-	memcpy(trunkHeader.ext_name, true_filename + (filename_len - \
-		(FDFS_FILE_EXT_NAME_MAX_LEN + 1)), \
-		FDFS_FILE_EXT_NAME_MAX_LEN + 1); //include tailing '\0'
+	memcpy(trunkHeader.formatted_ext_name, true_filename + \
+		(filename_len - (FDFS_FILE_EXT_NAME_MAX_LEN + 1)), \
+		FDFS_FILE_EXT_NAME_MAX_LEN + 2); //include tailing '\0'
 	trunkHeader.alloc_size = pTrunkInfo->file.size;
 	trunkHeader.file_type = FDFS_TRUNK_FILE_TYPE_REGULAR;
 
@@ -892,10 +914,23 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	close(fd);
 	if (read_bytes != FDFS_TRUNK_FILE_HEADER_SIZE)
 	{
-		return result != 0 ? result : EIO;
+		return EINVAL;
 	}
 
 	trunk_pack_header(&trunkHeader, pack_buff);
+
+	logInfo("file: "__FILE__", line: %d, true buff=%s", __LINE__, \
+		bin2hex(buff+1, FDFS_TRUNK_FILE_HEADER_SIZE - 1, szHexBuff));
+	trunk_unpack_header(buff, &trueTrunkHeader);
+	logInfo("file: "__FILE__", line: %d, true fields=%s", __LINE__, \
+		trunk_header_dump(&trueTrunkHeader, full_filename, sizeof(full_filename)));
+
+	logInfo("file: "__FILE__", line: %d, my buff=%s", __LINE__, \
+		bin2hex(pack_buff+1, FDFS_TRUNK_FILE_HEADER_SIZE - 1, szHexBuff));
+	logInfo("file: "__FILE__", line: %d, my trunk=%s, my fields=%s", __LINE__, \
+		trunk_info_dump(pTrunkInfo, temp, sizeof(temp)), \
+		trunk_header_dump(&trunkHeader, full_filename, sizeof(full_filename)));
+
 	if (memcmp(pack_buff+1, buff+1, FDFS_TRUNK_FILE_HEADER_SIZE - 1) != 0)
 	{
 		return ENOENT;

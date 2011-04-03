@@ -443,7 +443,6 @@ int dio_write_file(struct fast_task_info *pTask)
 				break;
 			}
 		}
-		pFileContext->extra_info.upload.before_close_callback = NULL;
 
 		pFileContext->fd = open(pFileContext->filename, \
 					pFileContext->open_flags, 0644);
@@ -720,15 +719,21 @@ int dio_write_chunk_header(struct fast_task_info *pTask)
 {
 	StorageFileContext *pFileContext;
 	char header[FDFS_TRUNK_FILE_HEADER_SIZE];
+	char buff1[256];
+	char buff2[256];
 	FDFSTrunkHeader trunkHeader;
 	int result;
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 
+	trunkHeader.file_type = FDFS_TRUNK_FILE_TYPE_REGULAR;
 	trunkHeader.alloc_size = pFileContext->extra_info.upload.trunk_info.file.size;
 	trunkHeader.file_size = pFileContext->end - pFileContext->start;
 	trunkHeader.crc32 = pFileContext->crc32;
 	trunkHeader.mtime = pFileContext->extra_info.upload.start_time;
+	snprintf(trunkHeader.formatted_ext_name, \
+		sizeof(trunkHeader.formatted_ext_name), "%s", \
+		pFileContext->extra_info.upload.formatted_ext_name);
 
 	if (lseek(pFileContext->fd, pFileContext->start - \
 		FDFS_TRUNK_FILE_HEADER_SIZE, SEEK_SET) < 0)
@@ -743,6 +748,9 @@ int dio_write_chunk_header(struct fast_task_info *pTask)
 	}
 
 	trunk_pack_header(&trunkHeader, header);
+	logInfo("file: "__FILE__", line: %d, my trunk=%s, my fields=%s", __LINE__, \
+                trunk_info_dump(&pFileContext->extra_info.upload.trunk_info, buff1, sizeof(buff1)), \
+                trunk_header_dump(&trunkHeader, buff2, sizeof(buff2)));
 
 	if (write(pFileContext->fd, header, FDFS_TRUNK_FILE_HEADER_SIZE) != \
 		FDFS_TRUNK_FILE_HEADER_SIZE)
