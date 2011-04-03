@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "common_define.h"
+#include "fdfs_global.h"
 #include "tracker_types.h"
 #include "fast_mblock.h"
 
@@ -93,6 +94,8 @@ typedef struct {
 	pthread_mutex_t lock;
 } FDFSTrunkSlot;
 
+#define STORAGE_IS_TRUNK_FILE(trunkInfo) (trunkInfo.file.id > 0)
+
 int storage_trunk_init();
 
 int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult);
@@ -124,16 +127,20 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size);
 
 int trunk_check_and_init_file_ex(const char *filename, const int64_t file_size);
 
-#define trunk_file_stat(pBasePath, true_filename, filename_len, pStat) \
-	trunk_file_stat_func(pBasePath, true_filename, filename_len, \
-				stat, pStat)
+#define trunk_file_stat(store_path_index, true_filename, filename_len, \
+			pStat, pTrunkInfo) \
+	trunk_file_stat_func(store_path_index, true_filename, filename_len, \
+			stat, pStat, pTrunkInfo)
 
-#define trunk_file_lstat(pBasePath, true_filename, filename_len, pStat) \
-	trunk_file_stat_func(pBasePath, true_filename, filename_len, \
-				lstat, pStat)
+#define trunk_file_lstat(store_path_index, true_filename, filename_len, \
+			pStat, pTrunkInfo) \
+	trunk_file_stat_func(store_path_index, true_filename, filename_len, \
+			lstat, pStat, pTrunkInfo)
 
-int trunk_file_stat_func(const char *pBasePath, const char *true_filename, \
-	const int filename_len, stat_func statfunc, struct stat *pStat);
+int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
+	const int filename_len, stat_func statfunc, \
+	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo);
+
 #ifdef __cplusplus
 }
 #endif

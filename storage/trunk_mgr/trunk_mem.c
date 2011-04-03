@@ -23,7 +23,6 @@
 #include "fdfs_define.h"
 #include "chain.h"
 #include "logger.h"
-#include "fdfs_global.h"
 #include "sockopt.h"
 #include "shared_func.h"
 #include "pthread_func.h"
@@ -798,11 +797,11 @@ bool trunk_check_size(const int64_t file_size)
 	return file_size <= slot_max_size;
 }
 
-int trunk_file_stat_func(const char *pBasePath, const char *true_filename, \
-	const int filename_len, stat_func statfunc, struct stat *pStat)
+int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
+	const int filename_len, stat_func statfunc, \
+	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo)
 {
 	char full_filename[MAX_PATH_SIZE];
-	char filename[64];
 	char buff[128];
 	char pack_buff[FDFS_TRUNK_FILE_HEADER_SIZE];
 	int64_t file_size;
@@ -811,13 +810,13 @@ int trunk_file_stat_func(const char *pBasePath, const char *true_filename, \
 	int read_bytes;
 	int result;
 	FDFSTrunkHeader trunkHeader;
-	FDFSTrunkFileInfo trunkFileInfo;
 
+	pTrunkInfo->file.id = 0;
 	if (filename_len <= FDFS_TRUE_FILE_PATH_LEN + \
 		FDFS_FILENAME_BASE64_LENGTH + 1 + FDFS_FILE_EXT_NAME_MAX_LEN)
 	{
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
-			pBasePath, true_filename);
+			g_store_paths[store_path_index], true_filename);
 
 		if (statfunc(full_filename, pStat) == 0)
 		{
@@ -838,7 +837,7 @@ int trunk_file_stat_func(const char *pBasePath, const char *true_filename, \
 	if ((file_size & FDFS_TRUNK_FILE_SIZE) == 0)
 	{
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
-			pBasePath, true_filename);
+			g_store_paths[store_path_index], true_filename);
 
 		if (statfunc(full_filename, pStat) == 0)
 		{
@@ -858,7 +857,7 @@ int trunk_file_stat_func(const char *pBasePath, const char *true_filename, \
 	}
 
 	trunk_file_info_decode(true_filename + FDFS_TRUE_FILE_PATH_LEN + \
-		 FDFS_FILENAME_BASE64_LENGTH, &trunkFileInfo);
+		 FDFS_FILENAME_BASE64_LENGTH, &pTrunkInfo->file);
 
 	trunkHeader.file_size = file_size & (~(FDFS_TRUNK_FILE_SIZE));
 	trunkHeader.mtime = buff2int(buff + sizeof(int));
@@ -866,20 +865,22 @@ int trunk_file_stat_func(const char *pBasePath, const char *true_filename, \
 	memcpy(trunkHeader.ext_name, true_filename + (filename_len - \
 		(FDFS_FILE_EXT_NAME_MAX_LEN + 1)), \
 		FDFS_FILE_EXT_NAME_MAX_LEN + 1); //include tailing '\0'
-	trunkHeader.alloc_size = trunkFileInfo.size;
+	trunkHeader.alloc_size = pTrunkInfo->file.size;
 	trunkHeader.file_type = FDFS_TRUNK_FILE_TYPE_REGULAR;
 
-	TRUNK_GET_FILENAME(trunkFileInfo.id, filename);
-	snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
-		pBasePath, filename);
+	pTrunkInfo->path.store_path_index = store_path_index;
+	pTrunkInfo->path.sub_path_high = strtol(true_filename, NULL, 16);
+	pTrunkInfo->path.sub_path_low = strtol(true_filename + 3, NULL, 16);
 
+	trunk_get_full_filename(pTrunkInfo, full_filename, \
+				sizeof(full_filename));
 	fd = open(full_filename, O_RDONLY);
 	if (fd < 0)
 	{
 		return errno != 0 ? errno : EIO;
 	}
 
-	if (lseek(fd, trunkFileInfo.offset, SEEK_SET) < 0)
+	if (lseek(fd, pTrunkInfo->file.offset, SEEK_SET) < 0)
 	{
 		result = errno != 0 ? errno : EIO;
 		close(fd);
@@ -895,7 +896,6 @@ int trunk_file_stat_func(const char *pBasePath, const char *true_filename, \
 	}
 
 	trunk_pack_header(&trunkHeader, pack_buff);
-
 	if (memcmp(pack_buff+1, buff+1, FDFS_TRUNK_FILE_HEADER_SIZE - 1) != 0)
 	{
 		return ENOENT;

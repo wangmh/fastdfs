@@ -4652,6 +4652,7 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 	int64_t file_bytes;
 	struct stat stat_buf;
 	int64_t nInPackLen;
+	FDFSTrunkFullInfo trunkInfo;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
@@ -4733,9 +4734,8 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 		return result;
 	}
 
-	sprintf(pFileContext->filename, "%s/data/%s", \
-			g_store_paths[store_path_index], true_filename);
-	if (stat(pFileContext->filename, &stat_buf) == 0)
+	if ((result=trunk_file_stat(store_path_index, \
+		true_filename, filename_len, &stat_buf, &trunkInfo)) != 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))
 		{
@@ -4773,6 +4773,18 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 			pTask->client_ip, download_bytes, \
 			file_bytes - file_offset);
 		return EINVAL;
+	}
+
+	if (STORAGE_IS_TRUNK_FILE(trunkInfo))
+	{
+		trunk_get_full_filename((&trunkInfo), pFileContext->filename, \
+				sizeof(pFileContext->filename));
+		file_offset += trunkInfo.file.offset;
+	}
+	else
+	{
+		sprintf(pFileContext->filename, "%s/data/%s", \
+			g_store_paths[store_path_index], true_filename);
 	}
 
 	return storage_read_from_file(pTask, file_offset, download_bytes, \
