@@ -37,6 +37,10 @@
 #define FDFS_TRUNK_FILE_HEADER_SIZE	(17 + FDFS_FILE_EXT_NAME_MAX_LEN)
 
 #define TRUNK_CALC_SIZE(file_size) (FDFS_TRUNK_FILE_HEADER_SIZE + file_size)
+#define TRUNK_FILE_START_OFFSET(trunkInfo) \
+		(FDFS_TRUNK_FILE_HEADER_SIZE + trunkInfo.file.offset)
+
+#define STORAGE_IS_TRUNK_FILE(trunkInfo) (trunkInfo.file.id > 0)
 
 #ifdef __cplusplus
 extern "C" {
@@ -93,8 +97,6 @@ typedef struct {
 	FDFSTrunkNode *free_trunk_head;
 	pthread_mutex_t lock;
 } FDFSTrunkSlot;
-
-#define STORAGE_IS_TRUNK_FILE(trunkInfo) (trunkInfo.file.id > 0)
 
 int storage_trunk_init();
 
