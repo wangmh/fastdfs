@@ -34,7 +34,7 @@
 #define FDFS_TRUNK_FILE_FILE_CRC32_OFFSET	9
 #define FDFS_TRUNK_FILE_FILE_MTIME_OFFSET  	13
 #define FDFS_TRUNK_FILE_FILE_EXT_NAME_OFFSET	17
-#define FDFS_TRUNK_FILE_HEADER_SIZE	(17 + FDFS_FILE_EXT_NAME_MAX_LEN)
+#define FDFS_TRUNK_FILE_HEADER_SIZE	(17 + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
 
 #define TRUNK_CALC_SIZE(file_size) (FDFS_TRUNK_FILE_HEADER_SIZE + file_size)
 #define TRUNK_FILE_START_OFFSET(trunkInfo) \
@@ -61,7 +61,7 @@ extern bool g_if_trunker_self;   //if am i trunk server
 
 typedef struct tagFDFSTrunkHeader {
 	char file_type;
-	char ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 1];
+	char formatted_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 2];
 	int alloc_size;
 	int file_size;
 	int crc32;
@@ -110,6 +110,12 @@ int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo);
 
 void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str);
 void trunk_file_info_decode(const char *str, FDFSTrunkFileInfo *pTrunkFile);
+
+char *trunk_info_dump(const FDFSTrunkFullInfo *pTrunkInfo, char *buff, \
+				const int buff_size);
+
+char *trunk_header_dump(const FDFSTrunkHeader *pTrunkHeader, char *buff, \
+				const int buff_size);
 
 bool trunk_check_size(const int64_t file_size);
 
