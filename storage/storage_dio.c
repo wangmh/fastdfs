@@ -469,7 +469,6 @@ int dio_write_file(struct fast_task_info *pTask)
 			break;
 		}
 
-		/*
 		if (pFileContext->offset > 0 && lseek(pFileContext->fd, \
 			pFileContext->offset, SEEK_SET) < 0)
 		{
@@ -481,7 +480,6 @@ int dio_write_file(struct fast_task_info *pTask)
 				result, STRERROR(result));
 			break;
 		}
-		*/
 	}
 
 	pDataBuff = pTask->data + pFileContext->buff_offset;
