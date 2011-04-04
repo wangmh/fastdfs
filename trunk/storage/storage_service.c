@@ -4798,8 +4798,6 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 			g_store_paths[store_path_index], true_filename);
 	}
 
-	logInfo("download file, file_offset=%lld", file_offset);
-
 	return storage_read_from_file(pTask, file_offset, download_bytes, \
 			storage_download_file_done_callback, store_path_index);
 }
