@@ -914,7 +914,7 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	close(fd);
 	if (read_bytes != FDFS_TRUNK_FILE_HEADER_SIZE)
 	{
-		return EINVAL;
+		return result != 0 ? errno : EINVAL;
 	}
 
 	trunk_pack_header(&trunkHeader, pack_buff);
@@ -940,6 +940,44 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	pStat->st_size = trunkHeader.file_size;
 	pStat->st_mtime = trunkHeader.mtime;
 	pStat->st_mode = S_IFREG;
+
+	return 0;
+}
+
+int trunk_file_delete(const char *trunk_filename, \
+			FDFSTrunkFullInfo *pTrunkInfo)
+{
+	char pack_buff[FDFS_TRUNK_FILE_HEADER_SIZE];
+	FDFSTrunkHeader trunkHeader;
+	int fd;
+	int write_bytes;
+	int result;
+
+	fd = open(trunk_filename, O_WRONLY);
+	if (fd < 0)
+	{
+		return errno != 0 ? errno : EIO;
+	}
+
+	if (lseek(fd, pTrunkInfo->file.offset, SEEK_SET) < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		close(fd);
+		return result;
+	}
+
+	memset(&trunkHeader, 0, sizeof(trunkHeader));
+	trunkHeader.alloc_size = pTrunkInfo->file.size;
+	trunkHeader.file_type = FDFS_TRUNK_FILE_TYPE_NONE;
+	trunk_pack_header(&trunkHeader, pack_buff);
+
+	write_bytes = write(fd, pack_buff, FDFS_TRUNK_FILE_HEADER_SIZE);
+	result = errno;
+	close(fd);
+	if (write_bytes != FDFS_TRUNK_FILE_HEADER_SIZE)
+	{
+		return result != 0 ? errno : EINVAL;
+	}
 
 	return 0;
 }

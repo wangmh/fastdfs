@@ -51,7 +51,8 @@ int storage_dio_queue_push(struct fast_task_info *pTask);
 
 int dio_read_file(struct fast_task_info *pTask);
 int dio_write_file(struct fast_task_info *pTask);
-int dio_delete_file(struct fast_task_info *pTask);
+int dio_delete_normal_file(struct fast_task_info *pTask);
+int dio_delete_trunk_file(struct fast_task_info *pTask);
 int dio_discard_file(struct fast_task_info *pTask);
 
 void dio_read_finish_clean_up(struct fast_task_info *pTask);

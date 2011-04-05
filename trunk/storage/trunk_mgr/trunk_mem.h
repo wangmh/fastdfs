@@ -23,6 +23,7 @@
 #define FDFS_TRUNK_STATUS_FREE  0
 #define FDFS_TRUNK_STATUS_HOLD  1
 
+#define FDFS_TRUNK_FILE_TYPE_NONE     '\0'
 #define FDFS_TRUNK_FILE_TYPE_REGULAR  'F'
 #define FDFS_TRUNK_FILE_TYPE_LINK     'L'
 
@@ -148,6 +149,9 @@ int trunk_check_and_init_file_ex(const char *filename, const int64_t file_size);
 int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	const int filename_len, stat_func statfunc, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo);
+
+int trunk_file_delete(const char *trunk_filename, \
+			FDFSTrunkFullInfo *pTrunkInfo);
 
 #ifdef __cplusplus
 }
