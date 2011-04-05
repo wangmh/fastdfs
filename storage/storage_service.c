@@ -2362,6 +2362,7 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 	int true_filename_len;
 	int result;
 	int store_path_index;
+	struct stat stat_buf;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
@@ -2476,21 +2477,26 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 	meta_buff = p;
 	*(meta_buff + meta_bytes) = '\0';
 
-	sprintf(pFileContext->filename, "%s/data/%s", \
-		g_store_paths[store_path_index], true_filename);
-	if (!fileExists(pFileContext->filename))
+	if ((result=trunk_file_lstat(store_path_index, true_filename, \
+			true_filename_len, &stat_buf, \
+			&(pFileContext->extra_info.upload.trunk_info))) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"client ip:%s, filename: %s not exist", \
-			__LINE__, pTask->client_ip, pFileContext->filename);
+			"client ip:%s, call lstat logic file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pTask->client_ip, filename, \
+			result, STRERROR(result));
 
 		pClientInfo->total_length = sizeof(TrackerHeader);
-		return ENOENT;
+		return result;
 	}
 
 	pFileContext->timestamp2log = time(NULL);
-	sprintf(pFileContext->fname2log,"%s"STORAGE_META_FILE_EXT, filename);
-	strcat(pFileContext->filename, STORAGE_META_FILE_EXT);
+	sprintf(pFileContext->filename, "%s/data/%s%s", \
+		g_store_paths[store_path_index], true_filename, \
+		STORAGE_META_FILE_EXT);
+	sprintf(pFileContext->fname2log,"%s%s", \
+		filename, STORAGE_META_FILE_EXT);
 
 	pClientInfo->deal_func = storage_do_set_metadata;
 	pFileContext->extra_info.setmeta.meta_buff = meta_buff;
@@ -2552,24 +2558,21 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	StorageClientInfo *pClientInfo;
 	char *in_buff;
 	char *filename;
-	char *pBasePath;
 	char *p;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char true_filename[128];
-	char full_filename[MAX_PATH_SIZE + 128];
 	char src_filename[MAX_PATH_SIZE + 128];
-	char remote_filename[128];
 	char decode_buff[64];
 	struct stat file_stat;
+	FDFSTrunkFullInfo trunkInfo;
 	int64_t nInPackLen;
+	int store_path_index;
 	int filename_len;
 	int true_filename_len;
-	int base_path_len;
 	int crc32;
 	int result;
 	int len;
 	int buff_len;
-	time_t file_mtime;
 	bool bSilence;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
@@ -2618,8 +2621,8 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	*(filename + filename_len) = '\0';
 
 	true_filename_len = filename_len;
-	if ((result=storage_split_filename(filename, &true_filename_len, \
-			true_filename, &pBasePath)) != 0)
+	if ((result=storage_split_filename_ex(filename, &true_filename_len, \
+			true_filename, &store_path_index)) != 0)
 	{
 		return result;
 	}
@@ -2629,25 +2632,28 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 		return result;
 	}
 
-	sprintf(full_filename, "%s/data/%s", pBasePath, true_filename);
-	if (lstat(full_filename, &file_stat) != 0)
+	if ((result=trunk_file_lstat(store_path_index, true_filename, \
+			true_filename_len, &file_stat, \
+			&trunkInfo)) != 0)
 	{
-		result = errno != 0 ? errno : ENOENT;
 		if ((!bSilence) || (result != ENOENT))
 		{
-			logError("file: "__FILE__", line: %d, " \
-				"client ip:%s, call lstat file %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, pTask->client_ip, true_filename, 
-				result, STRERROR(result));
+		logError("file: "__FILE__", line: %d, " \
+			"client ip:%s, call lstat logic file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pTask->client_ip, filename, \
+			result, STRERROR(result));
 		}
 
 		return result;
 	}
 
-	file_mtime = file_stat.st_mtime;
 	if (S_ISLNK(file_stat.st_mode))
 	{
+		char full_filename[MAX_PATH_SIZE + 128];
+
+		sprintf(full_filename, "%s/data/%s", \
+			g_store_paths[store_path_index], true_filename);
 		if ((len=readlink(full_filename, src_filename, \
 			sizeof(src_filename))) < 0)
 		{
@@ -2674,32 +2680,27 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 		}
 	}
 
-	base_path_len = strlen(pBasePath);
-	if (strlen(full_filename) < base_path_len + sizeof("/data/") + \
-			FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH)
+	if (filename_len < FDFS_LOGIC_FILE_PATH_LEN + \
+				FDFS_FILENAME_BASE64_LENGTH)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip:%s, length of filename: %s " \
 			"is too small, should >= %d", \
-			__LINE__, pTask->client_ip, \
-			full_filename, base_path_len + (int)sizeof("/data/") + \
+			__LINE__, pTask->client_ip, filename, \
 			FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH);
 		return EINVAL;
 	}
 
-	p = full_filename + strlen(pBasePath) + sizeof("/data/") - 1;
-	snprintf(remote_filename, sizeof(remote_filename), "M00/%s", p);
-
 	memset(decode_buff, 0, sizeof(decode_buff));
-	base64_decode_auto(&g_base64_context, remote_filename + \
+	base64_decode_auto(&g_base64_context, filename + \
 		FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
 		decode_buff, &buff_len);
-	crc32 = buff2int(decode_buff + sizeof(int)*4);
+	crc32 = buff2int(decode_buff + sizeof(int) * 4);
 
 	p = pTask->data + sizeof(TrackerHeader);
 	long2buff(file_stat.st_size, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
-	long2buff(file_mtime, p);
+	long2buff(file_stat.st_mtime, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 	long2buff(crc32, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
@@ -3589,7 +3590,6 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	char true_filename[128];
 	char prefix_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
 	char file_ext_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
-	char full_filename[MAX_PATH_SIZE];
 	int master_filename_len;
 	int64_t nInPackLen;
 	int64_t file_bytes;
@@ -3597,6 +3597,7 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	int result;
 	int store_path_index;
 	int filename_len;
+	struct stat stat_buf;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
@@ -3673,16 +3674,17 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 		return result;
 	}
 
-	snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
-			g_store_paths[store_path_index], true_filename);
-	if (!fileExists(full_filename))
+	if ((result=trunk_file_lstat(store_path_index, true_filename, \
+			filename_len, &stat_buf, \
+			&(pFileContext->extra_info.upload.trunk_info))) != 0)
 	{
+		result = errno != 0 ? errno : ENOENT;
 		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, master file: %s " \
-			"not exist", __LINE__, \
-			pTask->client_ip, full_filename);
-		pClientInfo->total_length = sizeof(TrackerHeader);
-		return ENOENT;
+			"client ip: %s, stat logic file %s fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pTask->client_ip, \
+			master_filename, result, STRERROR(result));
+		return result;
 	}
 
 	strcpy(pFileContext->extra_info.upload.file_ext_name, file_ext_name);
@@ -4814,7 +4816,6 @@ static int storage_do_delete_file(struct fast_task_info *pTask, \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
-	pClientInfo->deal_func = dio_delete_file;
 	pFileContext->fd = -1;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_DELETE;
 	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
@@ -5026,6 +5027,7 @@ static int storage_sync_delete_file(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
+	pClientInfo->deal_func = dio_delete_normal_file;
 	strcpy(pFileContext->fname2log, filename);
 	pFileContext->sync_flag = STORAGE_OP_TYPE_REPLICA_DELETE_FILE;
 	return storage_do_delete_file(pTask, storage_sync_delete_file_log_error, \
@@ -5110,16 +5112,16 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 		return result;
 	}
 
-	sprintf(pFileContext->filename, "%s/data/%s", \
-			g_store_paths[store_path_index], true_filename);
-	if (lstat(pFileContext->filename, &stat_buf) != 0)
+	if ((result=trunk_file_lstat(store_path_index, true_filename, \
+			filename_len, &stat_buf, \
+			&(pFileContext->extra_info.upload.trunk_info))) != 0)
 	{
 		result = errno != 0 ? errno : ENOENT;
 		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, stat file %s fail, " \
-			"errno: %d, error info: %s.", \
+			"client ip: %s, stat logic file %s fail, " \
+			"errno: %d, error info: %s", \
 			__LINE__, pTask->client_ip, \
-			pFileContext->filename, result, STRERROR(result));
+			filename, result, STRERROR(result));
 		return result;
 	}
 	if (S_ISREG(stat_buf.st_mode))
@@ -5139,9 +5141,22 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
+	if (STORAGE_IS_TRUNK_FILE(pFileContext->extra_info.upload.trunk_info))
+	{
+		pClientInfo->deal_func = dio_delete_trunk_file;
+		trunk_get_full_filename((&pFileContext->extra_info.upload.\
+				trunk_info), pFileContext->filename, \
+				sizeof(pFileContext->filename));
+	}
+	else
+	{
+		pClientInfo->deal_func = dio_delete_normal_file;
+		sprintf(pFileContext->filename, "%s/data/%s", \
+			g_store_paths[store_path_index], true_filename);
+	}
+
 	strcpy(pFileContext->fname2log, filename);
-	return storage_do_delete_file(pTask, \
-			storage_delete_file_log_error, \
+	return storage_do_delete_file(pTask, storage_delete_file_log_error, \
 			storage_delete_fdfs_file_done_callback, \
 			store_path_index);
 }

@@ -222,7 +222,7 @@ int storage_dio_get_thread_index(struct fast_task_info *pTask, \
 	return pContext - g_dio_contexts;
 }
 
-int dio_delete_file(struct fast_task_info *pTask)
+int dio_delete_normal_file(struct fast_task_info *pTask)
 {
 	StorageFileContext *pFileContext;
 	int result;
@@ -271,6 +271,23 @@ int dio_delete_file(struct fast_task_info *pTask)
 	else
 	{
 		result = 0;
+	}
+
+	pFileContext->done_callback(pTask, result);
+	return result;
+}
+
+int dio_delete_trunk_file(struct fast_task_info *pTask)
+{
+	StorageFileContext *pFileContext;
+	int result;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+
+	if ((result=trunk_file_delete(pFileContext->filename, \
+		&(pFileContext->extra_info.upload.trunk_info))) != 0)
+	{
+		pFileContext->log_callback(pTask, result);
 	}
 
 	pFileContext->done_callback(pTask, result);
