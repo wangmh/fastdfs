@@ -3940,7 +3940,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 			if (result != ENOENT)  //accept no exist
 			{
 			logError("file: "__FILE__", line: %d, " \
-				"client ip: %s, stat logigc file %s fail, " \
+				"client ip: %s, stat logic file %s fail, " \
 				"errno: %d, error info: %s.", \
 				__LINE__, pTask->client_ip, \
 				filename, result, STRERROR(result));
