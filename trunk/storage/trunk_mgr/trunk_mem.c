@@ -856,8 +856,11 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 		buff, &buff_len);
 
 	file_size = buff2long(buff + sizeof(int) * 2);
-	if ((file_size & FDFS_TRUNK_FILE_SIZE) == 0)
-	{
+	if ((file_size & FDFS_TRUNK_FILE_SIZE) == 0 || \
+		filename_len > FDFS_TRUE_FILE_PATH_LEN + \
+		FDFS_FILENAME_BASE64_LENGTH + FDFS_TRUNK_FILE_INFO_LEN + \
+			 1 + FDFS_FILE_EXT_NAME_MAX_LEN)
+	{  //normal file or slave file or meta data file
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
 			g_store_paths[store_path_index], true_filename);
 
@@ -871,9 +874,9 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 		}
 	}
 
-	if (filename_len <= FDFS_TRUE_FILE_PATH_LEN + \
+	if (filename_len != FDFS_TRUE_FILE_PATH_LEN + \
 		FDFS_FILENAME_BASE64_LENGTH + FDFS_TRUNK_FILE_INFO_LEN + \
-			 FDFS_FILE_EXT_NAME_MAX_LEN)
+			 1 + FDFS_FILE_EXT_NAME_MAX_LEN)
 	{
 		return EINVAL;
 	}
