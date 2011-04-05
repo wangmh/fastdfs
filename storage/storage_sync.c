@@ -98,7 +98,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 
 	if ((result=trunk_file_stat(pRecord->store_path_index, \
 		pRecord->true_filename, pRecord->true_filename_len, \
-		&stat_buf, &trunkInfo)) == 0)
+		&stat_buf, &trunkInfo)) != 0)
 	{
 		if (result == ENOENT)
 		{
