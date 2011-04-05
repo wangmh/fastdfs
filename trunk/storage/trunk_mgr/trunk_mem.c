@@ -835,7 +835,7 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 
 	pTrunkInfo->file.id = 0;
 	if (filename_len <= FDFS_TRUE_FILE_PATH_LEN + \
-		FDFS_FILENAME_BASE64_LENGTH + 1 + FDFS_FILE_EXT_NAME_MAX_LEN)
+		FDFS_FILENAME_BASE64_LENGTH + 3 + FDFS_FILE_EXT_NAME_MAX_LEN)
 	{
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
 			g_store_paths[store_path_index], true_filename);
