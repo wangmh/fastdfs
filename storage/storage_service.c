@@ -2938,7 +2938,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 			break;
 		}
 
-		if (record.pBasePath != pBasePath)
+		if (g_store_paths[record.store_path_index] != pBasePath)
 		{
 			continue;
 		}
@@ -2952,7 +2952,8 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 		}
 
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
-			record.pBasePath, record.true_filename);
+			g_store_paths[record.store_path_index], \
+			record.true_filename);
 		if (lstat(full_filename, &stat_buf) != 0)
 		{
 			if (errno == ENOENT)
@@ -3783,7 +3784,6 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	FDFSTrunkFullInfo trunkInfo;
 	char *p;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char full_filename[MAX_PATH_SIZE + 256];
 	char true_filename[128];
 	char filename[128];
 	int filename_len;
@@ -3904,10 +3904,6 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 		return result;
 	}
 
-	snprintf(full_filename, sizeof(full_filename), \
-			"%s/data/%s", g_store_paths[store_path_index], \
-			true_filename);
-
 	if (proto_cmd == STORAGE_PROTO_CMD_SYNC_CREATE_FILE)
 	{
 		pFileContext->sync_flag = STORAGE_OP_TYPE_REPLICA_CREATE_FILE;
@@ -3950,17 +3946,18 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 		else if (!S_ISREG(stat_buf.st_mode))
 		{
 			logWarning("file: "__FILE__", line: %d, " \
-				"client ip: %s, file %s is not a regular " \
-				"file, will be overwrited",  __LINE__, \
-				pTask->client_ip, full_filename);
+				"client ip: %s, logic file %s is not " \
+				"a regular file, will be overwrited", \
+				__LINE__, pTask->client_ip, filename);
 		}
 		else if (stat_buf.st_size != file_bytes)
 		{
 			logWarning("file: "__FILE__", line: %d, " \
-				"client ip: %s, file %s,  my file size: " \
-				OFF_PRINTF_FORMAT" != src file size: " \
-				INT64_PRINTF_FORMAT", will be overwrited", \
-				__LINE__, pTask->client_ip, full_filename, \
+				"client ip: %s, logic file %s, " \
+				"my file size: "OFF_PRINTF_FORMAT \
+				" != src file size: "INT64_PRINTF_FORMAT \
+				", will be overwrited", __LINE__, \
+				pTask->client_ip, filename, \
 				stat_buf.st_size, file_bytes);
 		}
 		else
@@ -3969,7 +3966,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 				"cmd=%d, client ip: %s, data file: %s " \
 				"already exists, ignore it", \
 				__LINE__, proto_cmd, \
-				pTask->client_ip, full_filename);
+				pTask->client_ip, filename);
 
 			pFileContext->op = FDFS_STORAGE_FILE_OP_DISCARD;
 			*(pFileContext->filename) = '\0';
@@ -4579,6 +4576,7 @@ static int storage_server_get_metadata(struct fast_task_info *pTask)
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char true_filename[128];
 	struct stat stat_buf;
+	FDFSTrunkFullInfo trunkInfo;
 	char *filename;
 	int filename_len;
 	int64_t file_bytes;
@@ -4642,14 +4640,20 @@ static int storage_server_get_metadata(struct fast_task_info *pTask)
 		return result;
 	}
 
-	sprintf(pFileContext->filename, "%s/data/%s", \
-			g_store_paths[store_path_index], true_filename);
-	if (!fileExists(pFileContext->filename))
+	if ((result=trunk_file_stat(store_path_index, \
+		true_filename, filename_len, &stat_buf, &trunkInfo)) != 0)
 	{
-		return ENOENT;
+		logError("file: "__FILE__", line: %d, " \
+			"call stat fail, logic file: %s, "\
+			"error no: %d, error info: %s", \
+			__LINE__, filename, \
+			result, STRERROR(result));
+		return result;
 	}
 
-	strcat(pFileContext->filename, STORAGE_META_FILE_EXT);
+	sprintf(pFileContext->filename, "%s/data/%s%s", \
+			g_store_paths[store_path_index], \
+			true_filename, STORAGE_META_FILE_EXT);
 	if (lstat(pFileContext->filename, &stat_buf) == 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))

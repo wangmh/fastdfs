@@ -35,6 +35,7 @@
 #include "tracker_client_thread.h"
 #include "storage_client.h"
 #include "storage_sync.h"
+#include "trunk_mem.h"
 
 #define SYNC_BINLOG_FILE_MAX_SIZE	1024 * 1024 * 1024
 #define SYNC_BINLOG_FILE_PREFIX		"binlog"
@@ -78,7 +79,8 @@ filename bytes : filename
 file size bytes: file content
 **/
 static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
-	StorageBinLogReader *pReader, const StorageBinLogRecord *pRecord, char proto_cmd)
+	StorageBinLogReader *pReader, const StorageBinLogRecord *pRecord, \
+	char proto_cmd)
 {
 	TrackerHeader *pHeader;
 	char *p;
@@ -87,34 +89,35 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+256];
 	char in_buff[1];
 	struct stat stat_buf;
+	FDFSTrunkFullInfo trunkInfo;
+	int64_t file_offset;
 	int64_t in_bytes;
 	int64_t total_send_bytes;
 	int result;
 	bool need_sync_file;
 
-	snprintf(full_filename, sizeof(full_filename), \
-		"%s/data/%s", pRecord->pBasePath, pRecord->true_filename);
-	if (stat(full_filename, &stat_buf) != 0)
+	if ((result=trunk_file_stat(pRecord->store_path_index, \
+		pRecord->true_filename, pRecord->true_filename_len, \
+		&stat_buf, &trunkInfo)) == 0)
 	{
-		if (errno == ENOENT)
+		if (result == ENOENT)
 		{
 			if(pRecord->op_type==STORAGE_OP_TYPE_SOURCE_CREATE_FILE)
 			{
 				logDebug("file: "__FILE__", line: %d, " \
-					"sync data file, file: %s not exists, "\
-					"maybe deleted later?", \
-					__LINE__, full_filename);
+					"sync data file, logic file: %s " \
+					"not exists, maybe deleted later?", \
+					__LINE__, pRecord->filename);
 			}
 
 			return 0;
 		}
 		else
 		{
-			result = errno != 0 ? errno : EPERM;
 			logError("file: "__FILE__", line: %d, " \
-				"call stat fail, file: %s, "\
+				"call stat fail, logic file: %s, "\
 				"error no: %d, error info: %s", \
-				__LINE__, full_filename, \
+				__LINE__, pRecord->filename, \
 				result, STRERROR(result));
 			return result;
 		}
@@ -133,10 +136,10 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 			if (file_info.file_size == stat_buf.st_size)
 			{
 				logDebug("file: "__FILE__", line: %d, " \
-					"sync data file, file: %s on dest " \
-					"server %s:%d already exists, "\
+					"sync data file, logic file: %s " \
+					"on dest server %s:%d already exists, "\
 					"and same as mine, ignore it", \
-					__LINE__, full_filename, \
+					__LINE__, pRecord->filename, \
 					pStorageServer->ip_addr, \
 					pStorageServer->port);
 				need_sync_file = false;
@@ -144,12 +147,12 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 			else
 			{
 				logWarning("file: "__FILE__", line: %d, " \
-					"sync data file, file: %s on dest " \
-					"server %s:%d already exists, "\
+					"sync data file, logic file: %s " \
+					"on dest server %s:%d already exists, "\
 					"but file size: "INT64_PRINTF_FORMAT \
 					" not same as mine: "OFF_PRINTF_FORMAT\
 					", need re-sync it", __LINE__, \
-					full_filename, pStorageServer->ip_addr,\
+					pRecord->filename, pStorageServer->ip_addr,\
 					pStorageServer->port, \
 					file_info.file_size, stat_buf.st_size);
 
@@ -160,6 +163,20 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		{
 			return result;
 		}
+	}
+
+	if (STORAGE_IS_TRUNK_FILE(trunkInfo))
+	{
+		file_offset = TRUNK_FILE_START_OFFSET(trunkInfo);
+		trunk_get_full_filename((&trunkInfo), full_filename, \
+				sizeof(full_filename));
+	}
+	else
+	{
+		file_offset = 0;
+		sprintf(full_filename, "%s/data/%s", \
+			g_store_paths[pRecord->store_path_index], \
+			pRecord->true_filename);
 	}
 
 	total_send_bytes = 0;
@@ -213,8 +230,8 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		}
 
 		if (need_sync_file && (stat_buf.st_size > 0) && \
-			((result=tcpsendfile(pStorageServer->sock, \
-			full_filename, stat_buf.st_size, \
+			((result=tcpsendfile_ex(pStorageServer->sock, \
+			full_filename, file_offset, stat_buf.st_size, \
 			g_fdfs_network_timeout, &total_send_bytes)) != 0))
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -311,15 +328,16 @@ static int storage_sync_append_file(TrackerServerInfo *pStorageServer, \
 	
 	pRecord->filename_len = strlen(pRecord->filename);
 	pRecord->true_filename_len = pRecord->filename_len;
-	if ((result=storage_split_filename(pRecord->filename, \
+	if ((result=storage_split_filename_ex(pRecord->filename, \
 			&pRecord->true_filename_len, pRecord->true_filename, \
-			&pRecord->pBasePath)) != 0)
+			&pRecord->store_path_index)) != 0)
 	{
 		return result;
 	}
 
 	snprintf(full_filename, sizeof(full_filename), \
-		"%s/data/%s", pRecord->pBasePath, pRecord->true_filename);
+		"%s/data/%s", g_store_paths[pRecord->store_path_index], \
+		pRecord->true_filename);
 	if (lstat(full_filename, &stat_buf) != 0)
 	{
 		if (errno == ENOENT)
@@ -447,23 +465,24 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 			const StorageBinLogRecord *pRecord)
 {
 	TrackerHeader *pHeader;
-	char full_filename[MAX_PATH_SIZE];
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+256];
+	struct stat stat_buf;
+	FDFSTrunkFullInfo trunkInfo;
 	char in_buff[1];
 	char *pBuff;
 	int64_t in_bytes;
 	int result;
 
-	snprintf(full_filename, sizeof(full_filename), \
-		"%s/data/%s", pRecord->pBasePath, pRecord->true_filename);
-	if (fileExists(full_filename))
+	if ((result=trunk_file_stat(pRecord->store_path_index, \
+		pRecord->true_filename, pRecord->true_filename_len, \
+		&stat_buf, &trunkInfo)) == 0)
 	{
 		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_DELETE_FILE)
 		{
 			logWarning("file: "__FILE__", line: %d, " \
-				"sync data file, file: %s exists, " \
+				"sync data file, logic file: %s exists, " \
 				"maybe created later?", \
-				__LINE__, full_filename);
+				__LINE__, pRecord->filename);
 		}
 
 		return 0;
@@ -567,7 +586,8 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	int src_path_index;
 
 	snprintf(full_filename, sizeof(full_filename), \
-		"%s/data/%s", pRecord->pBasePath, pRecord->true_filename);
+		"%s/data/%s", g_store_paths[pRecord->store_path_index], \
+		pRecord->true_filename);
 	if (lstat(full_filename, &stat_buf) != 0)
 	{
 		if (errno == ENOENT)
@@ -2046,9 +2066,9 @@ int storage_binlog_read(StorageBinLogReader *pReader, \
 	memcpy(pRecord->filename, cols[2], pRecord->filename_len);
 	*(pRecord->filename + pRecord->filename_len) = '\0';
 	pRecord->true_filename_len = pRecord->filename_len;
-	if ((result=storage_split_filename(pRecord->filename, \
+	if ((result=storage_split_filename_ex(pRecord->filename, \
 			&pRecord->true_filename_len, pRecord->true_filename, \
-			&pRecord->pBasePath)) != 0)
+			&pRecord->store_path_index)) != 0)
 	{
 		return result;
 	}

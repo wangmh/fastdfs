@@ -57,7 +57,7 @@ typedef struct
 	char true_filename[128]; //pure filename
 	int filename_len;
 	int true_filename_len;
-	char *pBasePath;
+	int store_path_index;
 } StorageBinLogRecord;
 
 extern int g_binlog_fd;

@@ -539,7 +539,8 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 		 || record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_FILE)
 		{
 			sprintf(local_filename, "%s/data/%s", \
-				record.pBasePath, record.true_filename);
+				g_store_paths[record.store_path_index], \
+				record.true_filename);
 			result = storage_download_file_to_file(pTrackerServer, \
 					pSrcStorage, g_group_name, \
 					record.filename, local_filename, \
@@ -572,27 +573,27 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 			pSrcFilename++;
 
 			if ((result=storage_split_filename(record.filename, \
-					&record.filename_len, \
-					record.true_filename, \
-					&record.pBasePath)) != 0)
+				&record.filename_len, record.true_filename, \
+				&g_store_paths[record.store_path_index])) != 0)
 			{
 				bContinueFlag = false;
 				break;
 			}
 			sprintf(local_filename, "%s/data/%s", \
-				record.pBasePath, record.true_filename);
+				g_store_paths[record.store_path_index], \
+				record.true_filename);
 
 			record.filename_len = strlen(pSrcFilename);
 			if ((result=storage_split_filename(pSrcFilename, \
-					&record.filename_len, \
-					record.true_filename, \
-					&record.pBasePath)) != 0)
+				&record.filename_len, record.true_filename, \
+				&g_store_paths[record.store_path_index])) != 0)
 			{
 				bContinueFlag = false;
 				break;
 			}
 			sprintf(src_filename, "%s/data/%s", \
-				record.pBasePath, record.true_filename);
+				g_store_paths[record.store_path_index], \
+				record.true_filename);
 			if (symlink(src_filename, local_filename) == 0)
 			{
 				success_count++;
