@@ -266,13 +266,6 @@ static int trunk_add_node(FDFSTrunkNode *pNode)
 		pPrevious->next = pNode;
 	}
 
-	{
-	char buff[256];
-	logInfo("trunk_binlog_write: %c %s", 
-		TRUNK_OP_TYPE_ADD_SPACE, \
-		trunk_info_dump(&(pNode->trunk), buff, sizeof(buff)));
-	}
-
 	result = trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_ADD_SPACE, \
 				&(pNode->trunk));
 	pthread_mutex_unlock(&pSlot->lock);
