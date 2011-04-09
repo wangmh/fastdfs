@@ -802,9 +802,11 @@ static void storage_delete_fdfs_file_done_callback( \
 
 	if (err_no == 0)
 	{
+		logInfo("if trunk file: %d", pFileContext->extra_info.upload.if_trunk_file);
 		if (pFileContext->extra_info.upload.if_trunk_file)
 		{
-		trunk_free_space(&(pFileContext->extra_info.upload.trunk_info));
+			trunk_client_trunk_free_space( \
+				&(pFileContext->extra_info.upload.trunk_info));
 		}
 
 		result = storage_binlog_write(time(NULL), \
