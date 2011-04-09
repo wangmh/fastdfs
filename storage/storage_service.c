@@ -789,8 +789,8 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 	return 0;
 }
 
-static void storage_delete_fdfs_file_done_callback(struct fast_task_info *pTask, \
-			const int err_no)
+static void storage_delete_fdfs_file_done_callback( \
+		struct fast_task_info *pTask, const int err_no)
 {
 	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
@@ -802,8 +802,14 @@ static void storage_delete_fdfs_file_done_callback(struct fast_task_info *pTask,
 
 	if (err_no == 0)
 	{
+		if (pFileContext->extra_info.upload.if_trunk_file)
+		{
+		trunk_free_space(&(pFileContext->extra_info.upload.trunk_info));
+		}
+
 		result = storage_binlog_write(time(NULL), \
-			STORAGE_OP_TYPE_SOURCE_DELETE_FILE, pFileContext->fname2log);
+			STORAGE_OP_TYPE_SOURCE_DELETE_FILE, \
+			pFileContext->fname2log);
 	}
 	else
 	{
@@ -5195,6 +5201,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 
 	if (STORAGE_IS_TRUNK_FILE(pFileContext->extra_info.upload.trunk_info))
 	{
+		pFileContext->extra_info.upload.if_trunk_file = true;
 		pClientInfo->deal_func = dio_delete_trunk_file;
 		trunk_get_full_filename((&pFileContext->extra_info.upload.\
 				trunk_info), pFileContext->filename, \
@@ -5202,6 +5209,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 	}
 	else
 	{
+		pFileContext->extra_info.upload.if_trunk_file = false;
 		pClientInfo->deal_func = dio_delete_normal_file;
 		sprintf(pFileContext->filename, "%s/data/%s", \
 			g_store_paths[store_path_index], true_filename);
