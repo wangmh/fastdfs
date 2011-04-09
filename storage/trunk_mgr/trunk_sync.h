@@ -39,6 +39,7 @@ typedef struct
 
 typedef struct
 {
+	int64_t sn;
 	time_t timestamp;
 	char op_type;
 	FDFSTrunkFullInfo trunk;

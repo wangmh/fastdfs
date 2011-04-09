@@ -43,6 +43,7 @@
 #define SYNC_BINLOG_WRITE_BUFF_SIZE	4 * 1024
 
 static int trunk_binlog_fd = -1;
+static int64_t trunk_current_sn = 0;
 
 int g_trunk_sync_thread_count = 0;
 static pthread_mutex_t sync_thread_lock;
@@ -107,13 +108,93 @@ static char *get_writable_binlog_filename(char *full_filename)
 	return full_filename;
 }
 
-static char *get_writable_binlog_filename1(char *full_filename, \
-		const int binlog_index)
+static int get_last_sn()
 {
-	snprintf(full_filename, MAX_PATH_SIZE, \
-			"%s/data/"TRUNK_DIR_NAME"/"SYNC_BINLOG_FILENAME, \
-			g_fdfs_base_path);
-	return full_filename;
+	char full_filename[MAX_PATH_SIZE];
+	char line[TRUNK_BINLOG_LINE_SIZE + 1];
+	char *pStart;
+	off_t file_size;
+	off_t offset;
+	int fd;
+	int read_bytes;
+	int result;
+
+	get_writable_binlog_filename(full_filename);
+	file_size = lseek(trunk_binlog_fd, 0, SEEK_END);
+	if (file_size < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"lseek file \"%s\" fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, full_filename, \
+			errno, STRERROR(errno));
+		return errno != 0 ? errno : EACCES;
+	}
+	else if (file_size == 0)
+	{
+		trunk_current_sn = 0;
+		return 0;
+	}
+
+	fd = open(full_filename, O_RDONLY);
+	if (fd < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"open file \"%s\" fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, full_filename, \
+			errno, STRERROR(errno));
+		return errno != 0 ? errno : EACCES;
+	}
+
+	offset = file_size - TRUNK_BINLOG_LINE_SIZE;
+	if (offset < 0)
+	{
+		offset = 0;
+	}
+	if (lseek(fd, offset, SEEK_SET) < 0)
+	{
+		result = errno != 0 ? errno : EACCES;
+		close(fd);
+		logError("file: "__FILE__", line: %d, " \
+			"lseek file \"%s\" fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, full_filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	if ((read_bytes=read(fd, line, TRUNK_BINLOG_LINE_SIZE)) <= 0)
+	{
+		result = errno != 0 ? errno : EACCES;
+		close(fd);
+		logError("file: "__FILE__", line: %d, " \
+			"read from file \"%s\" fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, full_filename, \
+			result, STRERROR(result));
+		return result;
+	}
+	close(fd);
+
+	if (*(line + read_bytes - 1) == '\n')
+	{
+		--read_bytes;
+	}
+	*(line + read_bytes) = '\0';
+
+	pStart = strrchr(line, '\n');
+	if (pStart == NULL)
+	{
+		pStart = line;
+	}
+	else
+	{
+		pStart++;  //skip \n
+	}
+
+	trunk_current_sn = strtoll(pStart, NULL, 10);
+	return 0;
 }
 
 int trunk_sync_init()
@@ -173,6 +254,11 @@ int trunk_sync_init()
 			__LINE__, full_filename, \
 			errno, STRERROR(errno));
 		return errno != 0 ? errno : EACCES;
+	}
+
+	if ((result=get_last_sn()) != 0)
+	{
+		return result;
 	}
 
 	if ((result=init_pthread_lock(&sync_thread_lock)) != 0)
@@ -328,7 +414,9 @@ int trunk_binlog_write(const int timestamp, const char op_type, \
 
 	binlog_write_cache_len += sprintf(binlog_write_cache_buff + \
 					binlog_write_cache_len, \
-					"%d %c %d %d %d %d %d %d\n", \
+					INT64_PRINTF_FORMAT \
+					" %d %c %d %d %d %d %d %d\n", \
+					++trunk_current_sn, \
 					timestamp, op_type, \
 					pTrunk->path.store_path_index, \
 					pTrunk->path.sub_path_high, \
@@ -718,7 +806,7 @@ static int trunk_binlog_read_line(TrunkBinLogReader *pReader, \
 int trunk_binlog_read(TrunkBinLogReader *pReader, \
 			TrunkBinLogRecord *pRecord, int *record_length)
 {
-#define COL_COUNT  8
+#define COL_COUNT  9
 	char line[TRUNK_BINLOG_LINE_SIZE];
 	char *cols[COL_COUNT];
 	int result;
@@ -741,14 +829,15 @@ int trunk_binlog_read(TrunkBinLogReader *pReader, \
 		return ENOENT;
 	}
 
-	pRecord->timestamp = atoi(cols[0]);
-	pRecord->op_type = *(cols[1]);
-	pRecord->trunk.path.store_path_index = atoi(cols[2]);
-	pRecord->trunk.path.sub_path_high = atoi(cols[3]);
-	pRecord->trunk.path.sub_path_low = atoi(cols[4]);
-	pRecord->trunk.file.id = atoi(cols[5]);
-	pRecord->trunk.file.offset = atoi(cols[6]);
-	pRecord->trunk.file.size = atoi(cols[7]);
+	pRecord->sn = strtoll(cols[0], NULL, 10);
+	pRecord->timestamp = atoi(cols[1]);
+	pRecord->op_type = *(cols[2]);
+	pRecord->trunk.path.store_path_index = atoi(cols[3]);
+	pRecord->trunk.path.sub_path_high = atoi(cols[4]);
+	pRecord->trunk.path.sub_path_low = atoi(cols[5]);
+	pRecord->trunk.file.id = atoi(cols[6]);
+	pRecord->trunk.file.offset = atoi(cols[7]);
+	pRecord->trunk.file.size = atoi(cols[8]);
 
 	return 0;
 }
