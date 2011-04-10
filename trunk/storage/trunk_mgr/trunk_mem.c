@@ -378,7 +378,8 @@ static int storage_trunk_restore(const int64_t restore_offset)
 		{
 			if (result == ENOENT)
 			{
-				result = 0;
+				result = (reader.binlog_offset >= \
+					trunk_binlog_size) ? 0 : EINVAL;
 			}
 			break;
 		}
