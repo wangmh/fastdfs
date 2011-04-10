@@ -533,7 +533,10 @@ int trunk_reader_init(FDFSStorageBrief *pStorage, TrunkBinLogReader *pReader)
 	char full_filename[MAX_PATH_SIZE];
 	IniContext iniContext;
 	int result;
+	int64_t saved_binlog_offset;
 	bool bFileExist;
+
+	saved_binlog_offset = pReader->binlog_offset;
 
 	memset(pReader, 0, sizeof(TrunkBinLogReader));
 	pReader->mark_fd = -1;
@@ -565,6 +568,7 @@ int trunk_reader_init(FDFSStorageBrief *pStorage, TrunkBinLogReader *pReader)
 	if (pStorage == NULL)
 	{
 		bFileExist = false;
+		pReader->binlog_offset = saved_binlog_offset;
 	}
 	else
 	{

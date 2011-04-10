@@ -105,6 +105,9 @@ int storage_trunk_destroy();
 int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult);
 int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status);
 
+#define trunk_add_space(pTrunkInfo, bWriteBinLog) \
+	trunk_free_space(pTrunkInfo, bWriteBinLog)
+
 int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 		const bool bWriteBinLog);
 
