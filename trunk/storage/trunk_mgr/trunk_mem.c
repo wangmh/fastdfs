@@ -387,6 +387,7 @@ static int storage_trunk_restore(const int64_t restore_offset)
 
 		if (record.op_type == TRUNK_OP_TYPE_ADD_SPACE)
 		{
+			record.trunk.status = FDFS_TRUNK_STATUS_FREE;
 			if ((result=trunk_add_space(&record.trunk, false))!=0)
 			{
 				break;
@@ -394,6 +395,7 @@ static int storage_trunk_restore(const int64_t restore_offset)
 		}
 		else if (record.op_type == TRUNK_OP_TYPE_DEL_SPACE)
 		{
+			record.trunk.status = FDFS_TRUNK_STATUS_FREE;
 			if ((result=trunk_delete_space(&record.trunk,false))!=0)
 			{
 				if (result == ENOENT)
@@ -746,7 +748,7 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 
 		pthread_mutex_unlock(&pSlot->lock);
 		logError("file: "__FILE__", line: %d, " \
-			"can't find trunk entry: %s", \
+			"can't find trunk entry: %s", __LINE__, \
 			trunk_info_dump(pTrunkInfo, buff, sizeof(buff)));
 		return ENOENT;
 	}
@@ -805,7 +807,7 @@ static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
 		pthread_mutex_unlock(&pSlot->lock);
 
 		logError("file: "__FILE__", line: %d, " \
-			"can't find trunk entry: %s", \
+			"can't find trunk entry: %s", __LINE__, \
 			trunk_info_dump(pTrunkInfo, buff, sizeof(buff)));
 		return ENOENT;
 	}
@@ -954,6 +956,9 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 			fast_mblock_free(&trunk_blocks_man, pMblockNode);
 			return result;
 		}
+
+		trunk_binlog_write(time(NULL), \
+			TRUNK_OP_TYPE_ADD_SPACE, &(pTrunkNode->trunk));
 	}
 
 	result = trunk_split(pTrunkNode, size);
@@ -1133,11 +1138,6 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size)
 {
 	int fd;
 	int result;
-	/*
-	int64_t remain_bytes;
-	int write_bytes;
-	char buff[256 * 1024];
-	*/
 
 	fd = open(filename, O_WRONLY | O_CREAT | O_EXCL, 0644);
 	if (fd < 0)
@@ -1164,29 +1164,6 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size)
 			__LINE__, filename, \
 			result, STRERROR(result));
 	}
-
-/*
-	memset(buff, 0, sizeof(buff));
-	remain_bytes = file_size;
-	while (remain_bytes > 0)
-	{
-		write_bytes = remain_bytes > sizeof(buff) ? \
-				sizeof(buff) : remain_bytes;
-		if (write(fd, buff, write_bytes) != write_bytes)
-		{
-			result = errno != 0 ? errno : EIO;
-			logError("file: "__FILE__", line: %d, " \
-				"write file %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, filename, \
-				result, STRERROR(result));
-			close(fd);
-			return result;
-		}
-
-		remain_bytes -= write_bytes;
-	}
-*/
 
 	close(fd);
 	return result;
