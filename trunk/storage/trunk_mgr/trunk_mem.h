@@ -100,6 +100,7 @@ typedef struct {
 } FDFSTrunkSlot;
 
 int storage_trunk_init();
+int storage_trunk_destroy();
 
 int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult);
 int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status);

@@ -33,6 +33,8 @@
 #include "trunk_sync.h"
 #include "trunk_mem.h"
 
+#define STORAGE_TRUNK_DATA_FILENAME  "storage_trunk.dat"
+
 int g_slot_min_size;
 int g_trunk_file_size;
 
@@ -57,6 +59,9 @@ static int trunk_add_node(FDFSTrunkNode *pNode);
 
 static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo);
 static int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo);
+
+static int storage_trunk_save();
+static int storage_trunk_load();
 
 static int trunk_init_slot(FDFSTrunkSlot *pTrunkSlot, const int bytes)
 {
@@ -141,10 +146,136 @@ int storage_trunk_init()
 		return result;
 	}
 
+	if ((result=storage_trunk_load()) != 0)
+	{
+		return result;
+	}
+
 	return 0;
 }
 
 int storage_trunk_destroy()
+{
+	if (!g_if_trunker_self)
+	{
+		return 0;
+	}
+
+	return storage_trunk_save();
+}
+
+static int storage_trunk_save()
+{
+	FDFSTrunkSlot *pSlot;
+	FDFSTrunkNode *pCurrent;
+	FDFSTrunkFullInfo *pTrunkInfo;
+	char true_trunk_filename[MAX_PATH_SIZE];
+	char temp_trunk_filename[MAX_PATH_SIZE];
+	char buff[64 * 1024];
+	char *p;
+	int len;
+	int fd;
+	int result;
+
+	sprintf(temp_trunk_filename, "%s/data/.%s.tmp", \
+		g_fdfs_base_path, STORAGE_TRUNK_DATA_FILENAME);
+
+	fd = open(temp_trunk_filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (fd < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"open file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, temp_trunk_filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	p = buff;
+	result = 0;
+	pthread_mutex_lock(&trunk_file_lock);
+	for (pSlot=slots; pSlot<slot_end; pSlot++)
+	{
+		pCurrent = pSlot->free_trunk_head;
+		while (pCurrent != NULL)
+		{
+			pTrunkInfo = &pCurrent->trunk;
+			len = sprintf(p, "%d %d %d %d %d %d\n", \
+				pTrunkInfo->path.store_path_index, \
+				pTrunkInfo->path.sub_path_high, \
+				pTrunkInfo->path.sub_path_low,  \
+				pTrunkInfo->file.id, \
+				pTrunkInfo->file.offset, \
+				pTrunkInfo->file.size);
+			p += len;
+			if (p - buff > sizeof(buff) - 128)
+			{
+				if (write(fd, buff, p - buff) != p - buff)
+				{
+					result = errno != 0 ? errno : EIO;
+					logError("file: "__FILE__", line: %d, "\
+						"write to file %s fail, " \
+						"errno: %d, error info: %s", \
+						__LINE__, temp_trunk_filename, \
+						result, STRERROR(result));
+					break;
+				}
+
+				p = buff;
+			}
+
+			pCurrent = pCurrent->next;
+		}
+	}
+
+	if (p - buff > 0 && result == 0)
+	{
+		if (write(fd, buff, p - buff) != p - buff)
+		{
+			result = errno != 0 ? errno : EIO;
+			logError("file: "__FILE__", line: %d, "\
+				"write to file %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, temp_trunk_filename, \
+				result, STRERROR(result));
+		}
+	}
+
+	if (result == 0 && fsync(fd) != 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, "\
+			"fsync file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, temp_trunk_filename, \
+			result, STRERROR(result));
+	}
+
+	close(fd);
+	pthread_mutex_unlock(&trunk_file_lock);
+
+	if (result != 0)
+	{
+		return result;
+	}
+
+	sprintf(true_trunk_filename, "%s/data/%s", \
+		g_fdfs_base_path, STORAGE_TRUNK_DATA_FILENAME);
+	if (rename(temp_trunk_filename, true_trunk_filename) != 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, "\
+			"rename file %s to %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			temp_trunk_filename, true_trunk_filename, \
+			result, STRERROR(result));
+	}
+
+	return result;
+}
+
+static int storage_trunk_load()
 {
 	return 0;
 }
