@@ -370,6 +370,7 @@ int main(int argc, char *argv[])
 	if (g_if_use_trunk_file)
 	{
 		trunk_sync_destroy();
+		storage_trunk_destroy();
 	}
 
 	logInfo("exit nomally.\n");
