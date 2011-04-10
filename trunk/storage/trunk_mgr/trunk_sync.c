@@ -36,8 +36,8 @@
 #include "storage_client.h"
 #include "trunk_sync.h"
 
-#define SYNC_BINLOG_FILENAME		"binlog"
-#define SYNC_MARK_FILE_EXT		".mark"
+#define TRUNK_SYNC_BINLOG_FILENAME	"binlog"
+#define TRUNK_SYNC_MARK_FILE_EXT	".mark"
 #define TRUNK_DIR_NAME			"trunk"
 #define MARK_ITEM_BINLOG_FILE_OFFSET	"binlog_offset"
 #define SYNC_BINLOG_WRITE_BUFF_SIZE	4 * 1024
@@ -93,18 +93,11 @@ static int storage_report_client_ip(TrackerServerInfo *pStorageServer)
 	return fdfs_recv_response(pStorageServer, &pBuff, 0, &in_bytes);
 }
 
-static char *get_writable_binlog_filename(char *full_filename)
+char *get_trunk_binlog_filename(char *full_filename)
 {
-	static char buff[MAX_PATH_SIZE];
-
-	if (full_filename == NULL)
-	{
-		full_filename = buff;
-	}
-
 	snprintf(full_filename, MAX_PATH_SIZE, \
-			"%s/data/"TRUNK_DIR_NAME"/"SYNC_BINLOG_FILENAME, \
-			g_fdfs_base_path);
+		"%s/data/"TRUNK_DIR_NAME"/"TRUNK_SYNC_BINLOG_FILENAME, \
+		g_fdfs_base_path);
 	return full_filename;
 }
 
@@ -119,7 +112,7 @@ static int get_last_sn()
 	int read_bytes;
 	int result;
 
-	get_writable_binlog_filename(full_filename);
+	get_trunk_binlog_filename(full_filename);
 	file_size = lseek(trunk_binlog_fd, 0, SEEK_END);
 	if (file_size < 0)
 	{
@@ -244,7 +237,7 @@ int trunk_sync_init()
 		return errno != 0 ? errno : ENOMEM;
 	}
 
-	get_writable_binlog_filename(full_filename);
+	get_trunk_binlog_filename(full_filename);
 	trunk_binlog_fd = open(full_filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
 	if (trunk_binlog_fd < 0)
 	{
@@ -347,6 +340,7 @@ static int trunk_binlog_fsync(const bool bNeedLock)
 {
 	int result;
 	int write_ret;
+	char full_filename[MAX_PATH_SIZE];
 
 	if (bNeedLock && (result=pthread_mutex_lock(&sync_thread_lock)) != 0)
 	{
@@ -366,7 +360,7 @@ static int trunk_binlog_fsync(const bool bNeedLock)
 		logError("file: "__FILE__", line: %d, " \
 			"write to binlog file \"%s\" fail, fd=%d, " \
 			"errno: %d, error info: %s",  \
-			__LINE__, get_writable_binlog_filename(NULL), \
+			__LINE__, get_trunk_binlog_filename(full_filename), \
 			trunk_binlog_fd, errno, STRERROR(errno));
 		write_ret = errno != 0 ? errno : EIO;
 	}
@@ -375,7 +369,7 @@ static int trunk_binlog_fsync(const bool bNeedLock)
 		logError("file: "__FILE__", line: %d, " \
 			"sync to binlog file \"%s\" fail, " \
 			"errno: %d, error info: %s",  \
-			__LINE__, get_writable_binlog_filename(NULL), \
+			__LINE__, get_trunk_binlog_filename(full_filename), \
 			errno, STRERROR(errno));
 		write_ret = errno != 0 ? errno : EIO;
 	}
@@ -459,8 +453,8 @@ static char *get_binlog_readable_filename(const void *pArg, \
 	}
 
 	snprintf(full_filename, MAX_PATH_SIZE, \
-			"%s/data/"TRUNK_DIR_NAME"/"SYNC_BINLOG_FILENAME, \
-			g_fdfs_base_path);
+		"%s/data/"TRUNK_DIR_NAME"/"TRUNK_SYNC_BINLOG_FILENAME, \
+		g_fdfs_base_path);
 	return full_filename;
 }
 
@@ -508,7 +502,7 @@ static char *get_mark_filename_by_ip_and_port(const char *ip_addr, \
 {
 	snprintf(full_filename, filename_size, \
 			"%s/data/"TRUNK_DIR_NAME"/%s_%d%s", g_fdfs_base_path, \
-			ip_addr, port, SYNC_MARK_FILE_EXT);
+			ip_addr, port, TRUNK_SYNC_MARK_FILE_EXT);
 	return full_filename;
 }
 
