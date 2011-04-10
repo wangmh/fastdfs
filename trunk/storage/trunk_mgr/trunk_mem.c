@@ -335,6 +335,7 @@ static int storage_trunk_restore(const int64_t restore_offset)
 	int64_t trunk_binlog_size;
 	TrunkBinLogReader reader;
 	TrunkBinLogRecord record;
+	char trunk_mark_filename[MAX_PATH_SIZE];
 	int record_length;
 	int result;
 
@@ -410,6 +411,14 @@ static int storage_trunk_restore(const int64_t restore_offset)
 	}
 
 	trunk_reader_destroy(&reader);
+	trunk_mark_filename_by_reader(&reader, trunk_mark_filename);
+	if (unlink(trunk_mark_filename) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"unlink file %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			trunk_mark_filename, errno, STRERROR(errno));
+	}
 
 	if (result == 0)
 	{
@@ -810,7 +819,7 @@ static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
 	return result;
 }
 
-static int trunk_slit(FDFSTrunkNode *pNode, const int size)
+static int trunk_split(FDFSTrunkNode *pNode, const int size)
 {
 	int result;
 	struct fast_mblock_node *pMblockNode;
@@ -818,7 +827,8 @@ static int trunk_slit(FDFSTrunkNode *pNode, const int size)
 
 	if (pNode->trunk.file.size - size < g_slot_min_size)
 	{
-		return 0;
+		return trunk_binlog_write(time(NULL), \
+			TRUNK_OP_TYPE_DEL_SPACE, &(pNode->trunk));
 	}
 
 	pMblockNode = fast_mblock_alloc(&trunk_blocks_man);
@@ -849,9 +859,14 @@ static int trunk_slit(FDFSTrunkNode *pNode, const int size)
 
 	result = trunk_binlog_write(time(NULL), \
 			TRUNK_OP_TYPE_DEL_SPACE, &(pNode->trunk));
+	if (result != 0)
+	{
+		trunk_delete_space(&(pTrunkNode->trunk), true); //rollback
+		return result;
+	}
 
 	pNode->trunk.file.size = size;
-	return result;
+	return 0;
 }
 
 int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
@@ -941,20 +956,18 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 		}
 	}
 
-	result = trunk_slit(pTrunkNode, size);
-	if (result == 0)
+	result = trunk_split(pTrunkNode, size);
+	if (result != 0)
 	{
-		pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_HOLD;
-		result = trunk_add_node(pTrunkNode, true);
-	}
-	else
-	{
-		trunk_add_node(pTrunkNode, false);
+		return result;
 	}
 
+	pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_HOLD;
+	result = trunk_add_node(pTrunkNode, true);
 	if (result == 0)
 	{
-		memcpy(pResult, &(pTrunkNode->trunk), sizeof(FDFSTrunkFullInfo));
+		memcpy(pResult, &(pTrunkNode->trunk), \
+			sizeof(FDFSTrunkFullInfo));
 	}
 
 	return result;
