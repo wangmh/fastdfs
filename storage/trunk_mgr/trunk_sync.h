@@ -60,6 +60,7 @@ int trunk_sync_thread_start(const FDFSStorageBrief *pStorage);
 int kill_trunk_sync_threads();
 int trunk_binlog_sync_func(void *args);
 
+char *get_trunk_binlog_filename(char *full_filename);
 char *trunk_mark_filename_by_reader(const void *pArg, char *full_filename);
 int trunk_unlink_mark_file(const char *ip_addr);
 int trunk_rename_mark_file(const char *old_ip_addr, const int old_port, \

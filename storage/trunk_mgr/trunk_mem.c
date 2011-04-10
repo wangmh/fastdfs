@@ -164,18 +164,49 @@ int storage_trunk_destroy()
 	return storage_trunk_save();
 }
 
+static int64_t storage_trunk_get_binlog_size()
+{
+	char full_filename[MAX_PATH_SIZE];
+	struct stat stat_buf;
+
+	get_trunk_binlog_filename(full_filename);
+	if (stat(full_filename, &stat_buf) != 0)
+	{
+		if (errno == ENOENT)
+		{
+			return 0;
+		}
+
+		logError("file: "__FILE__", line: %d, " \
+			"stat file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, full_filename, \
+			errno, STRERROR(errno));
+		return -1;
+	}
+
+	return stat_buf.st_size;
+}
+
 static int storage_trunk_save()
 {
 	FDFSTrunkSlot *pSlot;
 	FDFSTrunkNode *pCurrent;
 	FDFSTrunkFullInfo *pTrunkInfo;
+	int64_t trunk_binlog_size;
 	char true_trunk_filename[MAX_PATH_SIZE];
 	char temp_trunk_filename[MAX_PATH_SIZE];
-	char buff[64 * 1024];
+	char buff[16 * 1024];
 	char *p;
 	int len;
 	int fd;
 	int result;
+
+	trunk_binlog_size = storage_trunk_get_binlog_size();
+	if (trunk_binlog_size < 0)
+	{
+		return errno != 0 ? errno : EPERM;
+	}
 
 	sprintf(temp_trunk_filename, "%s/data/.%s.tmp", \
 		g_fdfs_base_path, STORAGE_TRUNK_DATA_FILENAME);
@@ -193,6 +224,9 @@ static int storage_trunk_save()
 	}
 
 	p = buff;
+	len = sprintf(p, INT64_PRINTF_FORMAT"\n", trunk_binlog_size);
+	p += len;
+
 	result = 0;
 	pthread_mutex_lock(&trunk_file_lock);
 	for (pSlot=slots; pSlot<slot_end; pSlot++)
@@ -277,6 +311,17 @@ static int storage_trunk_save()
 
 static int storage_trunk_load()
 {
+	int64_t trunk_binlog_size;
+	char trunk_data_filename[MAX_PATH_SIZE];
+
+	trunk_binlog_size = storage_trunk_get_binlog_size();
+	if (trunk_binlog_size < 0)
+	{
+		return errno != 0 ? errno : EPERM;
+	}
+
+	sprintf(trunk_data_filename, "%s/data/%s", \
+		g_fdfs_base_path, STORAGE_TRUNK_DATA_FILENAME);
 	return 0;
 }
 
