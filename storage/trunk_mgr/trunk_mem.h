@@ -105,7 +105,8 @@ int storage_trunk_destroy();
 int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult);
 int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status);
 
-int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo);
+int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo, \
+		const bool bWriteBinLog);
 
 #define TRUNK_GET_FILENAME(file_id, filename) \
 	sprintf(filename, "%06d", file_id)

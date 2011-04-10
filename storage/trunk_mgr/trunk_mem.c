@@ -55,7 +55,7 @@ static pthread_mutex_t trunk_file_lock;
 static struct fast_mblock_man trunk_blocks_man;
 
 static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo);
-static int trunk_add_node(FDFSTrunkNode *pNode);
+static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog);
 
 static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo);
 static int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo);
@@ -309,10 +309,13 @@ static int storage_trunk_save()
 	return result;
 }
 
-static int storage_trunk_load()
+static int storage_trunk_restore(const int64_t restore_offset)
 {
 	int64_t trunk_binlog_size;
-	char trunk_data_filename[MAX_PATH_SIZE];
+	TrunkBinLogReader reader;
+	TrunkBinLogRecord record;
+	int record_length;
+	int result;
 
 	trunk_binlog_size = storage_trunk_get_binlog_size();
 	if (trunk_binlog_size < 0)
@@ -320,9 +323,215 @@ static int storage_trunk_load()
 		return errno != 0 ? errno : EPERM;
 	}
 
+	if (restore_offset == trunk_binlog_size)
+	{
+		return 0;
+	}
+
+	if (restore_offset > trunk_binlog_size)
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"restore_offset: "INT64_PRINTF_FORMAT \
+			" > trunk_binlog_size: "INT64_PRINTF_FORMAT, \
+			__LINE__, restore_offset, trunk_binlog_size);
+		return storage_trunk_save();
+	}
+
+	logDebug("file: "__FILE__", line: %d, " \
+		"trunk metadata recovering, start offset: " \
+		INT64_PRINTF_FORMAT", recovery file size: " \
+		INT64_PRINTF_FORMAT, __LINE__, \
+		restore_offset, trunk_binlog_size - restore_offset);
+
+	if ((result=trunk_reader_init(NULL, &reader)) != 0)
+	{
+		return result;
+	}
+
+	while (1)
+	{
+		result = trunk_binlog_read(&reader, &record, &record_length);
+		if (result != 0)
+		{
+			if (result == ENOENT)
+			{
+				result = 0;
+			}
+			break;
+		}
+
+		if (record.op_type == TRUNK_OP_TYPE_ADD_SPACE)
+		{
+			if ((result=trunk_free_space(&record.trunk, false))!=0)
+			{
+				break;
+			}
+		}
+		else if (record.op_type == TRUNK_OP_TYPE_DEL_SPACE)
+		{
+			if ((result=trunk_free_space(&record.trunk, false))!=0)
+			{
+				break;
+			}
+		}
+	}
+
+	trunk_reader_destroy(&reader);
+
+	if (result == 0)
+	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"trunk metadata recovery done. start offset: " \
+			INT64_PRINTF_FORMAT", recovery file size: " \
+			INT64_PRINTF_FORMAT, __LINE__, \
+			restore_offset, trunk_binlog_size - restore_offset);
+	}
+
+	return 0;
+}
+
+static int storage_trunk_load()
+{
+#define TRUNK_DATA_FIELD_COUNT  6
+
+	int64_t restore_offset;
+	char trunk_data_filename[MAX_PATH_SIZE];
+	char buff[4 * 1024 + 1];
+	int line_count;
+	char *pLineStart;
+	char *pLineEnd;
+	char *cols[TRUNK_DATA_FIELD_COUNT];
+	FDFSTrunkFullInfo trunkInfo;
+	int result;
+	int fd;
+	int bytes;
+	int len;
+
 	sprintf(trunk_data_filename, "%s/data/%s", \
 		g_fdfs_base_path, STORAGE_TRUNK_DATA_FILENAME);
-	return 0;
+	fd = open(trunk_data_filename, O_RDONLY);
+	if (fd < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		if (result == ENOENT)
+		{
+			restore_offset = 0;
+			return storage_trunk_restore(restore_offset);
+		}
+
+		logError("file: "__FILE__", line: %d, " \
+			"open file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, trunk_data_filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	if ((bytes=read(fd, buff, sizeof(buff) - 1)) < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"read from file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, trunk_data_filename, \
+			result, STRERROR(result));
+		close(fd);
+		return result;
+	}
+
+	*(buff + bytes) = '\0';
+	pLineEnd = strchr(buff, '\n');
+	if (pLineEnd == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"read offset from file %s fail", \
+			__LINE__, trunk_data_filename);
+		close(fd);
+		return EINVAL;
+	}
+
+	*pLineEnd = '\0';
+	restore_offset = strtoll(buff, NULL, 10);
+	pLineStart = pLineEnd + 1;  //skip \n
+	line_count = 0;
+	while (1)
+	{
+		pLineEnd = strchr(pLineStart, '\n');
+		if (pLineEnd == NULL)
+		{
+			if (bytes < sizeof(buff) - 1) //EOF
+			{
+				break;
+			}
+
+			len = strlen(pLineStart);
+			if (len > 64)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"file %s, line length: %d too long", \
+					__LINE__, trunk_data_filename, len);
+				close(fd);
+				return EINVAL;
+			}
+
+			memcpy(buff, pLineStart, len);
+			if ((bytes=read(fd, buff + len, sizeof(buff) \
+					- len - 1)) < 0)
+			{
+				result = errno != 0 ? errno : EIO;
+				logError("file: "__FILE__", line: %d, " \
+					"read from file %s fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, trunk_data_filename, \
+					result, STRERROR(result));
+				close(fd);
+				return result;
+			}
+
+			bytes += len;
+			*(buff + bytes) = '\0';
+			pLineStart = buff;
+			continue;
+		}
+
+		++line_count;
+		*pLineEnd = '\0';
+		if (splitEx(pLineStart, ' ', cols, TRUNK_DATA_FIELD_COUNT) \
+			!= TRUNK_DATA_FIELD_COUNT)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"file %s, line: %d is invalid", \
+				__LINE__, trunk_data_filename, line_count);
+			close(fd);
+			return EINVAL;
+		}
+
+		trunkInfo.path.store_path_index = atoi(cols[0]);
+		trunkInfo.path.sub_path_high = atoi(cols[1]);
+		trunkInfo.path.sub_path_low = atoi(cols[2]);
+		trunkInfo.file.id = atoi(cols[3]);
+		trunkInfo.file.offset = atoi(cols[4]);
+		trunkInfo.file.size = atoi(cols[5]);
+		if ((result=trunk_free_space(&trunkInfo, false)) != 0)
+		{
+			close(fd);
+			return result;
+		}
+
+		pLineStart = pLineEnd + 1;  //next line
+	}
+
+	close(fd);
+
+	if (*pLineStart != '\0')
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"file %s does not end correctly", \
+			__LINE__, trunk_data_filename);
+		return EINVAL;
+	}
+
+	return storage_trunk_restore(restore_offset);
 }
 
 char *trunk_info_dump(const FDFSTrunkFullInfo *pTrunkInfo, char *buff, \
@@ -374,7 +583,8 @@ static FDFSTrunkSlot *trunk_get_slot(const int size)
 	return NULL;
 }
 
-int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo)
+int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo, \
+		const bool bWriteBinLog)
 {
 	int result;
 	struct fast_mblock_node *pMblockNode;
@@ -403,10 +613,10 @@ int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo)
 	pTrunkNode->pMblockNode = pMblockNode;
 	pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
 
-	return trunk_add_node(pTrunkNode);
+	return trunk_add_node(pTrunkNode, bWriteBinLog);
 }
 
-static int trunk_add_node(FDFSTrunkNode *pNode)
+static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 {
 	int result;
 	FDFSTrunkSlot *pSlot;
@@ -442,8 +652,16 @@ static int trunk_add_node(FDFSTrunkNode *pNode)
 		pPrevious->next = pNode;
 	}
 
-	result = trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_ADD_SPACE, \
-				&(pNode->trunk));
+	if (bWriteBinLog)
+	{
+		result = trunk_binlog_write(time(NULL), \
+				TRUNK_OP_TYPE_ADD_SPACE, &(pNode->trunk));
+	}
+	else
+	{
+		result = 0;
+	}
+
 	pthread_mutex_unlock(&pSlot->lock);
 	return result;
 }
@@ -575,7 +793,7 @@ static int trunk_slit(FDFSTrunkNode *pNode, const int size)
 	pTrunkNode->trunk.file.size = pNode->trunk.file.size - size;
 	pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
 
-	result = trunk_add_node(pTrunkNode);
+	result = trunk_add_node(pTrunkNode, true);
 	if (result != 0)
 	{
 		return result;
@@ -671,11 +889,11 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	if (result == 0)
 	{
 		pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_HOLD;
-		result = trunk_add_node(pTrunkNode);
+		result = trunk_add_node(pTrunkNode, true);
 	}
 	else
 	{
-		trunk_add_node(pTrunkNode);
+		trunk_add_node(pTrunkNode, true);
 	}
 
 	if (result == 0)
