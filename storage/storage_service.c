@@ -2884,7 +2884,7 @@ static int storage_server_trunk_confirm_or_free(struct fast_task_info *pTask)
 	else
 	{
 		trunkInfo.status = FDFS_TRUNK_STATUS_FREE;
-		return trunk_free_space(&trunkInfo);
+		return trunk_free_space(&trunkInfo, true);
 	}
 }
 

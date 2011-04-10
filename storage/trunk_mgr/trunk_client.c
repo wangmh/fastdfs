@@ -220,7 +220,7 @@ int trunk_client_trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo)
 
 	if (g_if_trunker_self)
 	{
-		return trunk_free_space(pTrunkInfo);
+		return trunk_free_space(pTrunkInfo, true);
 	}
 
 	if (g_trunk_server.port <= 0)

@@ -58,7 +58,8 @@ static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo);
 static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog);
 
 static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo);
-static int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo);
+static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
+		const bool bWriteBinLog);
 
 static int storage_trunk_save();
 static int storage_trunk_load();
@@ -343,6 +344,8 @@ static int storage_trunk_restore(const int64_t restore_offset)
 		INT64_PRINTF_FORMAT, __LINE__, \
 		restore_offset, trunk_binlog_size - restore_offset);
 
+	memset(&reader, 0, sizeof(reader));
+	reader.binlog_offset = restore_offset;
 	if ((result=trunk_reader_init(NULL, &reader)) != 0)
 	{
 		return result;
@@ -362,18 +365,27 @@ static int storage_trunk_restore(const int64_t restore_offset)
 
 		if (record.op_type == TRUNK_OP_TYPE_ADD_SPACE)
 		{
-			if ((result=trunk_free_space(&record.trunk, false))!=0)
+			if ((result=trunk_add_space(&record.trunk, false))!=0)
 			{
 				break;
 			}
 		}
 		else if (record.op_type == TRUNK_OP_TYPE_DEL_SPACE)
 		{
-			if ((result=trunk_free_space(&record.trunk, false))!=0)
+			if ((result=trunk_delete_space(&record.trunk,false))!=0)
 			{
-				break;
+				if (result == ENOENT)
+				{
+					result = 0;
+				}
+				else
+				{
+					break;
+				}
 			}
 		}
+
+		reader.binlog_offset += record_length;
 	}
 
 	trunk_reader_destroy(&reader);
@@ -385,9 +397,10 @@ static int storage_trunk_restore(const int64_t restore_offset)
 			INT64_PRINTF_FORMAT", recovery file size: " \
 			INT64_PRINTF_FORMAT, __LINE__, \
 			restore_offset, trunk_binlog_size - restore_offset);
+		return storage_trunk_save();
 	}
 
-	return 0;
+	return result;
 }
 
 static int storage_trunk_load()
@@ -512,7 +525,7 @@ static int storage_trunk_load()
 		trunkInfo.file.id = atoi(cols[3]);
 		trunkInfo.file.offset = atoi(cols[4]);
 		trunkInfo.file.size = atoi(cols[5]);
-		if ((result=trunk_free_space(&trunkInfo, false)) != 0)
+		if ((result=trunk_add_space(&trunkInfo, false)) != 0)
 		{
 			close(fd);
 			return result;
@@ -666,7 +679,8 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 	return result;
 }
 
-static int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo)
+static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
+		const bool bWriteBinLog)
 {
 	int result;
 	FDFSTrunkSlot *pSlot;
@@ -712,8 +726,16 @@ static int trunk_delete_node(const FDFSTrunkFullInfo *pTrunkInfo)
 	}
 
 	pthread_mutex_unlock(&pSlot->lock);
-	result = trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_DEL_SPACE, \
-				&(pCurrent->trunk));
+	if (bWriteBinLog)
+	{
+		result = trunk_binlog_write(time(NULL), \
+				TRUNK_OP_TYPE_DEL_SPACE, &(pCurrent->trunk));
+	}
+	else
+	{
+		result = 0;
+	}
+
 	fast_mblock_free(&trunk_blocks_man, pCurrent->pMblockNode);
 
 	return result;
@@ -908,7 +930,7 @@ int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status)
 {
 	if (status == 0)
 	{
-		return trunk_delete_node(pTrunkInfo);
+		return trunk_delete_space(pTrunkInfo, true);
 	}
 	else
 	{
