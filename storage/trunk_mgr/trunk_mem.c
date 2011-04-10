@@ -89,6 +89,11 @@ int storage_trunk_init()
 	int bytes;
 	FDFSTrunkSlot *pTrunkSlot;
 
+	if (!g_if_trunker_self)
+	{
+		return 0;
+	}
+
 	memset(&g_trunk_server, 0, sizeof(g_trunk_server));
 	g_trunk_server.sock = -1;
 
@@ -157,12 +162,27 @@ int storage_trunk_init()
 
 int storage_trunk_destroy()
 {
+	int result;
+
 	if (!g_if_trunker_self)
 	{
 		return 0;
 	}
+	if (slots == NULL)
+	{
+		return 0;
+	}
 
-	return storage_trunk_save();
+	result = storage_trunk_save();
+
+	fast_mblock_destroy(&trunk_blocks_man);
+	pthread_mutex_destroy(&trunk_file_lock);
+
+	free(slots);
+	slots = NULL;
+	slot_end = NULL;
+
+	return result;
 }
 
 static int64_t storage_trunk_get_binlog_size()
@@ -603,6 +623,11 @@ int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 	struct fast_mblock_node *pMblockNode;
 	FDFSTrunkNode *pTrunkNode;
 
+	if (!g_if_trunker_self)
+	{
+		return EINVAL;
+	}
+
 	if (pTrunkInfo->file.size < g_slot_min_size)
 	{
 		return 0;
@@ -833,6 +858,11 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	struct fast_mblock_node *pMblockNode;
 	int result;
 
+	if (!g_if_trunker_self)
+	{
+		return EINVAL;
+	}
+
 	pSlot = trunk_get_slot(size);
 	if (pSlot == NULL)
 	{
@@ -928,6 +958,11 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 
 int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status)
 {
+	if (!g_if_trunker_self)
+	{
+		return EINVAL;
+	}
+
 	if (status == 0)
 	{
 		return trunk_delete_space(pTrunkInfo, true);
