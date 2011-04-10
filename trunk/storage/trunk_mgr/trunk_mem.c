@@ -847,8 +847,11 @@ static int trunk_slit(FDFSTrunkNode *pNode, const int size)
 		return result;
 	}
 
+	result = trunk_binlog_write(time(NULL), \
+			TRUNK_OP_TYPE_DEL_SPACE, &(pNode->trunk));
+
 	pNode->trunk.file.size = size;
-	return 0;
+	return result;
 }
 
 int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
@@ -946,7 +949,7 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	}
 	else
 	{
-		trunk_add_node(pTrunkNode, true);
+		trunk_add_node(pTrunkNode, false);
 	}
 
 	if (result == 0)
