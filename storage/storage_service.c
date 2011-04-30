@@ -43,6 +43,7 @@
 #include "storage_dio.h"
 #include "storage_sync.h"
 #include "trunk_mem.h"
+#include "trunk_sync.h"
 #include "trunk_client.h"
 
 pthread_mutex_t g_storage_thread_lock;
@@ -2558,6 +2559,52 @@ static int storage_server_report_client_ip(struct fast_task_info *pTask)
 			__LINE__, pTask->client_ip, tracker_client_ip);
 
 	return 0;
+}
+
+/**
+N bytes: binlog
+**/
+static int storage_server_trunk_sync_binlog(struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	char *binlog_buff;
+	int64_t nInPackLen;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof(TrackerHeader);
+	if (nInPackLen == 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT" is not correct", __LINE__, \
+			STORAGE_PROTO_CMD_TRUNK_SYNC_BINLOG, \
+			pTask->client_ip,  nInPackLen);
+		return EINVAL;
+	}
+
+	if (!g_if_use_trunk_file)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid command: %d, " \
+			"because i don't use trunk file!", \
+			__LINE__, pTask->client_ip, \
+			STORAGE_PROTO_CMD_TRUNK_SYNC_BINLOG);
+		return EINVAL;
+	}
+
+	if (g_if_trunker_self)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid command: %d, " \
+			"because i am the TRUNK server!", \
+			__LINE__, pTask->client_ip, \
+			STORAGE_PROTO_CMD_TRUNK_SYNC_BINLOG);
+		return EINVAL;
+	}
+
+	binlog_buff = pTask->data + sizeof(TrackerHeader);
+	return trunk_binlog_write_buffer(binlog_buff, nInPackLen);
 }
 
 /**
@@ -5746,6 +5793,9 @@ int storage_deal_task(struct fast_task_info *pTask)
 			break;
 		case STORAGE_PROTO_CMD_TRUNK_FREE_SPACE:
 			result = storage_server_trunk_free_space(pTask);
+			break;
+		case STORAGE_PROTO_CMD_TRUNK_SYNC_BINLOG:
+			result = storage_server_trunk_sync_binlog(pTask);
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "  \

@@ -121,6 +121,11 @@ int trunk_sync_init()
 		}
 	}
 
+	if (!g_if_use_trunk_file)
+	{
+		return 0;
+	}
+
 	snprintf(sync_path, sizeof(sync_path), \
 			"%s/"TRUNK_DIR_NAME, data_path);
 	if (!fileExists(sync_path))
@@ -172,6 +177,11 @@ int trunk_sync_init()
 int trunk_sync_destroy()
 {
 	int result;
+
+	if (!g_if_use_trunk_file)
+	{
+		return 0;
+	}
 
 	if (trunk_binlog_fd >= 0)
 	{
@@ -332,6 +342,46 @@ int trunk_binlog_write(const int timestamp, const char op_type, \
 		write_ret = 0;
 	}
 
+	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_unlock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, STRERROR(result));
+	}
+
+	return write_ret;
+}
+
+int trunk_binlog_write_buffer(const char *buff, const int length)
+{
+	int result;
+	int write_ret;
+
+	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, STRERROR(result));
+	}
+
+	//check if buff full
+	if (SYNC_BINLOG_WRITE_BUFF_SIZE - (binlog_write_cache_len + length) < 128)
+	{
+		write_ret = trunk_binlog_fsync(false);  //sync to disk
+	}
+	else
+	{
+		write_ret = 0;
+	}
+
+	if (write_ret == 0)
+	{
+		memcpy(binlog_write_cache_buff + binlog_write_cache_len, \
+			buff, length);
+		binlog_write_cache_len += length;
+	}
 	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -859,6 +909,65 @@ static void trunk_sync_thread_exit(TrackerServerInfo *pStorage)
 static int trunk_sync_data(TrunkBinLogReader *pReader, \
 		TrackerServerInfo *pStorage)
 {
+	int length;
+	char *p;
+	int result;
+	TrackerHeader header;
+	char in_buff[1];
+	char *pBuff;
+	int64_t in_bytes;
+
+	p = pReader->binlog_buff.buffer + pReader->binlog_buff.length - 1;
+	while (p != pReader->binlog_buff.buffer && *p != '\n')
+	{
+		p--;
+	}
+
+	length = p - pReader->binlog_buff.buffer;
+	if (length == 0)
+	{
+		return ENOENT;
+	}
+	length++;
+
+	memset(&header, 0, sizeof(header));
+	long2buff(length, header.pkg_len);
+	header.cmd = STORAGE_PROTO_CMD_TRUNK_SYNC_BINLOG;
+	if ((result=tcpsenddata_nb(pStorage->sock, &header, \
+		sizeof(TrackerHeader), g_fdfs_network_timeout)) != 0)
+	{
+		logError("FILE: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pStorage->ip_addr, pStorage->port, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	if ((result=tcpsenddata_nb(pStorage->sock, pReader->binlog_buff.buffer,\
+		length, g_fdfs_network_timeout)) != 0)
+	{
+		logError("FILE: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pStorage->ip_addr, pStorage->port, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	pBuff = in_buff;
+	if ((result=fdfs_recv_response(pStorage, &pBuff, 0, &in_bytes)) != 0)
+	{
+		return result;
+	}
+
+	pReader->binlog_offset += length;
+	pReader->binlog_buff.length -= length;
+	if (pReader->binlog_buff.length == 0)
+	{
+		pReader->binlog_buff.current = pReader->binlog_buff.buffer;
+	}
+
 	return 0;
 }
 
@@ -1097,10 +1206,6 @@ static void* trunk_sync_thread_entrance(void* arg)
 			{
 				break;
 			}
-
-			reader.binlog_offset += reader.binlog_buff.length;
-			reader.binlog_buff.current = reader.binlog_buff.buffer;
-			reader.binlog_buff.length = 0;
 
 			if (g_sync_interval > 0)
 			{

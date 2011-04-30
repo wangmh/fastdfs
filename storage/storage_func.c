@@ -1204,12 +1204,16 @@ int storage_func_init(const char *filename, \
 			return result;
 		}
 		g_buff_size = buff_size;
-		if (g_buff_size < 4 * 1024)
+		if (g_buff_size < 4 * 1024 || \
+			g_buff_size < sizeof(TrackerHeader) + \
+					TRUNK_BINLOG_BUFFER_SIZE)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"item \"buff_size\" is too small, " \
-				"value: %d < %d!", __LINE__, \
-				g_buff_size, 4 * 1024);
+				"value: %d < %d or < %d!", __LINE__, \
+				g_buff_size, 4 * 1024, \
+				(int)sizeof(TrackerHeader) + \
+				TRUNK_BINLOG_BUFFER_SIZE);
 			result = EINVAL;
                         break;
 		}
