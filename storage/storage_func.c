@@ -965,16 +965,12 @@ int storage_func_init(const char *filename, \
 	char *pThreadStackSize;
 	char *pBuffSize;
 	char *pIfAliasPrefix;
-	char *pSlotMinSize;
-	char *pTrunkFileSize;
 	char *pHttpDomain;
 	IniContext iniContext;
 	int result;
 	int64_t fsync_after_written_bytes;
 	int64_t thread_stack_size;
 	int64_t buff_size;
-	int64_t slot_min_size;
-	int64_t trunk_file_size;
 	TrackerServerInfo *pServer;
 	TrackerServerInfo *pEnd;
 
@@ -1447,71 +1443,6 @@ int storage_func_init(const char *filename, \
 				"%s", pIfAliasPrefix);
 		}
 
-
-		g_if_use_trunk_file = iniGetBoolValue(NULL, \
-			"use_trunk_file", &iniContext, false);
-
-		pSlotMinSize = iniGetStrValue(NULL, \
-			"slot_min_size", &iniContext);
-		if (pSlotMinSize == NULL)
-		{
-			slot_min_size = 256;
-		}
-		else if ((result=parse_bytes(pSlotMinSize, 1, \
-				&slot_min_size)) != 0)
-		{
-			return result;
-		}
-		g_slot_min_size = (int)slot_min_size;
-		if (g_slot_min_size <= 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"item \"slot_min_size\" %d is invalid, " \
-				"which <= 0", __LINE__, g_slot_min_size);
-			result = EINVAL;
-			break;
-		}
-		if (g_slot_min_size > 64 * 1024)
-		{
-			logWarning("file: "__FILE__", line: %d, " \
-				"item \"slot_min_size\" %d is too large, " \
-				"change to 64KB", __LINE__, g_slot_min_size);
-			g_slot_min_size = 64 * 1024;
-		}
-
-		pTrunkFileSize = iniGetStrValue(NULL, \
-			"trunk_file_size", &iniContext);
-		if (pTrunkFileSize == NULL)
-		{
-			trunk_file_size = 64 * 1024 * 1024;
-		}
-		else if ((result=parse_bytes(pTrunkFileSize, 1, \
-				&trunk_file_size)) != 0)
-		{
-			return result;
-		}
-		g_trunk_file_size = (int)trunk_file_size;
-		if (g_trunk_file_size < 4 * 1024 * 1024)
-		{
-			logWarning("file: "__FILE__", line: %d, " \
-				"item \"trunk_file_size\" %d is too small, " \
-				"change to 4MB", __LINE__, g_trunk_file_size);
-			g_trunk_file_size = 4 * 1024 * 1024;
-		}
-
-		if (g_if_use_trunk_file)
-		{
-			if ((result=storage_trunk_init()) != 0)
-			{
-				break;
-			}
-
-			if ((result=trunk_sync_init()) != 0)
-			{
-				break;
-			}
-		}
-
 		g_check_file_duplicate = iniGetBoolValue(NULL, \
 				"check_file_duplicate", &iniContext, false);
 		if (g_check_file_duplicate)
@@ -1622,9 +1553,6 @@ int storage_func_init(const char *filename, \
 			"sync_stat_file_interval=%ds, " \
 			"thread_stack_size=%d KB, upload_priority=%d, " \
 			"if_alias_prefix=%s, " \
-			"use_trunk_file=%d, " \
-			"slot_min_size=%d, " \
-			"trunk_file_size=%d MB, " \
 			"check_file_duplicate=%d, FDHT group count=%d, " \
 			"FDHT server count=%d, FDHT key_namespace=%s, " \
 			"FDHT keep_alive=%d, HTTP server port=%d, " \
@@ -1649,10 +1577,7 @@ int storage_func_init(const char *filename, \
 			g_fsync_after_written_bytes, g_sync_log_buff_interval, \
 			g_sync_binlog_buff_interval, g_sync_stat_file_interval, \
 			g_thread_stack_size/1024, g_upload_priority, \
-			g_if_alias_prefix, g_if_use_trunk_file, \
-			g_slot_min_size, \
-			g_trunk_file_size / (1024 * 1024), \
-			g_check_file_duplicate, \
+			g_if_alias_prefix, g_check_file_duplicate, \
 			g_group_array.group_count, g_group_array.server_count, \
 			g_key_namespace, g_keep_alive, \
 			g_http_port, g_http_domain);
@@ -1705,6 +1630,20 @@ int storage_func_init(const char *filename, \
 	if ((result=storage_get_params_from_tracker()) != 0)
 	{
 		return result;
+	}
+
+
+	if (g_if_use_trunk_file)
+	{
+		if ((result=storage_trunk_init()) != 0)
+		{
+			return result;
+		}
+
+		if ((result=trunk_sync_init()) != 0)
+		{
+			return result;
+		}
 	}
 
 	if ((result=storage_check_ip_changed()) != 0)

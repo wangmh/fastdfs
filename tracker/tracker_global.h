@@ -62,6 +62,10 @@ extern int g_thread_stack_size;
 extern int g_storage_sync_file_max_delay;
 extern int g_storage_sync_file_max_time;
 
+extern bool g_if_use_trunk_file;   //if use trunk file
+extern int g_slot_min_size;    //slot min size, such as 256 bytes
+extern int g_trunk_file_size;  //the trunk file size, such as 64MB
+
 extern time_t g_up_time;
 extern TrackerStatus g_tracker_last_status;  //the status of last running
 

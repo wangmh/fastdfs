@@ -102,6 +102,8 @@ int tracker_load_from_conf_file(const char *filename, \
 	char *pRunByGroup;
 	char *pRunByUser;
 	char *pThreadStackSize;
+	char *pSlotMinSize;
+	char *pTrunkFileSize;
 #ifdef WITH_HTTPD
 	char *pHttpCheckUri;
 	char *pHttpCheckType;
@@ -110,6 +112,8 @@ int tracker_load_from_conf_file(const char *filename, \
 	int result;
 	int64_t storage_reserved;
 	int64_t thread_stack_size;
+	int64_t trunk_file_size;
+	int64_t slot_min_size;
 
 	memset(&g_groups, 0, sizeof(FDFSGroups));
 	memset(&iniContext, 0, sizeof(IniContext));
@@ -416,6 +420,57 @@ int tracker_load_from_conf_file(const char *filename, \
 				DEFAULT_STORAGE_SYNC_FILE_MAX_TIME;
 		}
 
+		g_if_use_trunk_file = iniGetBoolValue(NULL, \
+			"use_trunk_file", &iniContext, false);
+
+		pSlotMinSize = iniGetStrValue(NULL, \
+			"slot_min_size", &iniContext);
+		if (pSlotMinSize == NULL)
+		{
+			slot_min_size = 256;
+		}
+		else if ((result=parse_bytes(pSlotMinSize, 1, \
+				&slot_min_size)) != 0)
+		{
+			return result;
+		}
+		g_slot_min_size = (int)slot_min_size;
+		if (g_slot_min_size <= 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"item \"slot_min_size\" %d is invalid, " \
+				"which <= 0", __LINE__, g_slot_min_size);
+			result = EINVAL;
+			break;
+		}
+		if (g_slot_min_size > 64 * 1024)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"item \"slot_min_size\" %d is too large, " \
+				"change to 64KB", __LINE__, g_slot_min_size);
+			g_slot_min_size = 64 * 1024;
+		}
+
+		pTrunkFileSize = iniGetStrValue(NULL, \
+			"trunk_file_size", &iniContext);
+		if (pTrunkFileSize == NULL)
+		{
+			trunk_file_size = 64 * 1024 * 1024;
+		}
+		else if ((result=parse_bytes(pTrunkFileSize, 1, \
+				&trunk_file_size)) != 0)
+		{
+			return result;
+		}
+		g_trunk_file_size = (int)trunk_file_size;
+		if (g_trunk_file_size < 4 * 1024 * 1024)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"item \"trunk_file_size\" %d is too small, " \
+				"change to 4MB", __LINE__, g_trunk_file_size);
+			g_trunk_file_size = 4 * 1024 * 1024;
+		}
+
 #ifdef WITH_HTTPD
 		if ((result=fdfs_http_params_load(&iniContext, \
 				filename, &g_http_params)) != 0)
@@ -475,7 +530,10 @@ int tracker_load_from_conf_file(const char *filename, \
 			"thread_stack_size=%d KB, " \
 			"storage_ip_changed_auto_adjust=%d, "  \
 			"storage_sync_file_max_delay=%ds, " \
-			"storage_sync_file_max_time=%ds",  \
+			"storage_sync_file_max_time=%ds, "  \
+			"use_trunk_file=%d, " \
+			"slot_min_size=%d, " \
+			"trunk_file_size=%d MB", \
 			g_fdfs_version.major, g_fdfs_version.minor,  \
 			g_fdfs_base_path, g_run_by_group, g_run_by_user, \
 			g_fdfs_connect_timeout, \
@@ -488,7 +546,9 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_check_active_interval, g_thread_stack_size / 1024, \
 			g_storage_ip_changed_auto_adjust, \
 			g_storage_sync_file_max_delay, \
-			g_storage_sync_file_max_time);
+			g_storage_sync_file_max_time, \
+			g_if_use_trunk_file, g_slot_min_size, \
+			g_trunk_file_size / (1024 * 1024));
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)
