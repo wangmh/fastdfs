@@ -780,7 +780,6 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 
 static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
 {
-	int result;
 	FDFSTrunkSlot *pSlot;
 	FDFSTrunkNode *pCurrent;
 
@@ -815,10 +814,7 @@ static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
 	pCurrent->trunk.status = FDFS_TRUNK_STATUS_FREE;
 	pthread_mutex_unlock(&pSlot->lock);
 
-	result = trunk_binlog_write(time(NULL), TRUNK_OP_TYPE_SET_SPACE_FREE, \
-				pTrunkInfo);
-
-	return result;
+	return 0;
 }
 
 static int trunk_split(FDFSTrunkNode *pNode, const int size)

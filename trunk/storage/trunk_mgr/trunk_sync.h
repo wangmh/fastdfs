@@ -17,10 +17,8 @@
 
 #define TRUNK_OP_TYPE_ADD_SPACE		'A'
 #define TRUNK_OP_TYPE_DEL_SPACE		'D'
-#define TRUNK_OP_TYPE_SET_SPACE_FREE	'F'
-#define TRUNK_OP_TYPE_SET_SPACE_HOLD	'H'
 
-#define TRUNK_BINLOG_BUFFER_SIZE	16 * 1024
+#define TRUNK_BINLOG_BUFFER_SIZE	8 * 1024
 #define TRUNK_BINLOG_LINE_SIZE		128
 
 #ifdef __cplusplus
@@ -48,6 +46,8 @@ extern int g_trunk_sync_thread_count;
 
 int trunk_sync_init();
 int trunk_sync_destroy();
+
+int trunk_binlog_write_buffer(const char *buff, const int length);
 
 int trunk_binlog_write(const int timestamp, const char op_type, \
 		const FDFSTrunkFullInfo *pTrunk);

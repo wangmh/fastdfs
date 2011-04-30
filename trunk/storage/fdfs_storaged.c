@@ -272,7 +272,6 @@ int main(int argc, char *argv[])
 	}
 
 	scheduleArray.entries = scheduleEntries;
-	scheduleArray.count = SCHEDULE_ENTRIES_COUNT;
 
 	memset(scheduleEntries, 0, sizeof(scheduleEntries));
 	scheduleEntries[0].id = 1;
@@ -296,12 +295,21 @@ int main(int argc, char *argv[])
 	scheduleEntries[2].task_func = fdfs_stat_file_sync_func;
 	scheduleEntries[2].func_args = NULL;
 
-	scheduleEntries[3].id = 4;
-	scheduleEntries[3].time_base.hour = TIME_NONE;
-	scheduleEntries[3].time_base.minute = TIME_NONE;
-	scheduleEntries[3].interval = 1;
-	scheduleEntries[3].task_func = trunk_binlog_sync_func;
-	scheduleEntries[3].func_args = NULL;
+	if (g_if_use_trunk_file)
+	{
+		scheduleArray.count = SCHEDULE_ENTRIES_COUNT;
+
+		scheduleEntries[3].id = 4;
+		scheduleEntries[3].time_base.hour = TIME_NONE;
+		scheduleEntries[3].time_base.minute = TIME_NONE;
+		scheduleEntries[3].interval = 1;
+		scheduleEntries[3].task_func = trunk_binlog_sync_func;
+		scheduleEntries[3].func_args = NULL;
+	}
+	else
+	{
+		scheduleArray.count = SCHEDULE_ENTRIES_COUNT - 1;
+	}
 
 	if ((result=sched_start(&scheduleArray, &schedule_tid, \
 			g_thread_stack_size, &g_continue_flag)) != 0)
