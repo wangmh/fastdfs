@@ -66,15 +66,27 @@ int storage_get_params_from_tracker()
 
 	g_avg_storage_reserved_mb = g_storage_reserved_mb / g_path_count;
 
+	g_if_use_trunk_file = iniGetBoolValue(NULL, "use_trunk_file", \
+				&iniContext, false);
+	g_slot_min_size = iniGetIntValue(NULL, "slot_min_size", \
+				&iniContext, 256);
+	g_trunk_file_size = iniGetIntValue(NULL, "trunk_file_size", \
+				&iniContext, 64 * 1024 * 1024);
+
 	iniFreeContext(&iniContext);
 
 	logInfo("file: "__FILE__", line: %d, " \
 		"storage_ip_changed_auto_adjust=%d, " \
 		"store_path=%d, " \
-		"reserved_storage_space=%dMB", __LINE__, \
+		"reserved_storage_space=%d MB, " \
+		"use_trunk_file=%d, " \
+		"slot_min_size=%d, " \
+		"trunk_file_size=%d MB", __LINE__, \
 		g_storage_ip_changed_auto_adjust, \
 		g_store_path_mode, \
-		g_storage_reserved_mb);
+		g_storage_reserved_mb, \
+		g_if_use_trunk_file, g_slot_min_size, \
+		g_trunk_file_size / (1024 * 1024));
 
 	return 0;
 }
