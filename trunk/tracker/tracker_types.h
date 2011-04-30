@@ -86,6 +86,9 @@
 #define FDFS_APPENDER_FILE_SIZE  INFINITE_FILE_SIZE
 #define FDFS_TRUNK_FILE_SIZE  (512 * 1024LL * 1024 * 1024 * 1024 * 1024LL)
 
+#define FDFS_CHANGE_FLAG_TRUNK_SERVER	1  //trunk server changed
+#define FDFS_CHANGE_FLAG_GROUP_SERVER	2  //group server changed
+
 typedef struct
 {
 	char status;
@@ -233,6 +236,7 @@ typedef struct StructFDFSStorageDetail
 	int current_write_path; //current write path index
 
 	int chg_count;    //current server changed counter
+	int trunk_chg_count;   //trunk server changed count
 	FDFSStorageStat stat;
 
 #ifdef WITH_HTTPD
@@ -258,6 +262,7 @@ typedef struct
 	FDFSStorageDetail **active_servers;  //storages order by ip addr
 	FDFSStorageDetail *pStoreServer;  //for upload priority mode
 	FDFSStorageDetail *pTrunkServer;  //point to the trunk server
+	FDFSStorageDetail *pNextTrunkServer;  //point to the next generation trunk server
 
 #ifdef WITH_HTTPD
 	FDFSStorageDetail **http_servers;  //storages order by ip addr
@@ -278,6 +283,7 @@ typedef struct
 	int **last_sync_timestamps;//row for src storage, col for dest storage
 
 	int chg_count;   //current group changed count
+	int trunk_chg_count;   //trunk server changed count
 	time_t last_source_update;  //last source update timestamp
 	time_t last_sync_update;    //last synced update timestamp
 } FDFSGroupInfo;

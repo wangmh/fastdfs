@@ -917,7 +917,10 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader resp;
 	int server_count;
 	int result;
-	FDFSStorageBrief briefServers[FDFS_MAX_SERVERS_EACH_GROUP];
+	char in_buff[1 + (2 + FDFS_MAX_SERVERS_EACH_GROUP) * \
+			sizeof(FDFSStorageBrief)];
+	FDFSStorageBrief *pBriefServers;
+	char *pFlags;
 
 	if ((result=tcprecvdata_nb(pTrackerServer->sock, &resp, \
 			sizeof(resp), g_fdfs_network_timeout)) != 0)
@@ -938,7 +941,13 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 	}
 
 	nInPackLen = buff2long(resp.pkg_len);
-	if ((nInPackLen < 0) || (nInPackLen % sizeof(FDFSStorageBrief) != 0))
+	if (nInPackLen == 0)
+	{
+		return 0;
+	}
+
+	if ((nInPackLen <= 0) || ((nInPackLen - 1) % \
+			sizeof(FDFSStorageBrief) != 0))
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, " \
@@ -947,24 +956,20 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 			pTrackerServer->port, nInPackLen);
 		return EINVAL;
 	}
-	if (nInPackLen == 0)
-	{
-		return resp.status;
-	}
 
-	server_count = nInPackLen / sizeof(FDFSStorageBrief);
-	if (server_count > FDFS_MAX_SERVERS_EACH_GROUP)
+	if (nInPackLen > sizeof(in_buff))
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"tracker server %s:%d, return storage count: %d" \
-			" exceed max: %d", \
+			"tracker server %s:%d, package size " \
+			INT64_PRINTF_FORMAT" is too large, " \
+			"exceed max: %d", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
-			server_count, FDFS_MAX_SERVERS_EACH_GROUP);
+			nInPackLen, (int)sizeof(in_buff));
 		return EINVAL;
 	}
 
-	if ((result=tcprecvdata_nb(pTrackerServer->sock, briefServers, \
+	if ((result=tcprecvdata_nb(pTrackerServer->sock, in_buff, \
 			nInPackLen, g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -976,14 +981,38 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 		return result;
 	}
 
+	pFlags = in_buff;
+	server_count = (nInPackLen - 1) / sizeof(FDFSStorageBrief);
+	pBriefServers = (FDFSStorageBrief *)(in_buff + 1);
+
+	if ((*pFlags) & FDFS_CHANGE_FLAG_TRUNK_SERVER)
+	{
+		if (server_count < 2)
+		{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, reponse server count: %d < 2", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, server_count);
+		return EINVAL;
+		}
+
+		pBriefServers += 2;
+		server_count -= 2;
+	}
+
+	if (!((*pFlags) & FDFS_CHANGE_FLAG_GROUP_SERVER))
+	{
+		return 0;
+	}
+
 	/*
 	//printf("resp server count=%d\n", server_count);
 	{
 		int i;
 		for (i=0; i<server_count; i++)
 		{	
-			//printf("%d. %d:%s\n", i+1, briefServers[i].status, \
-				briefServers[i].ip_addr);
+			//printf("%d. %d:%s\n", i+1, pBriefServers[i].status, \
+				pBriefServers[i].ip_addr);
 		}
 	}
 	*/
@@ -994,8 +1023,8 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 		FDFSStorageBrief *pStorage;
 
 		*bServerPortChanged = false;
-		pStorageEnd = briefServers + server_count;
-		for (pStorage=briefServers; pStorage<pStorageEnd; pStorage++)
+		pStorageEnd = pBriefServers + server_count;
+		for (pStorage=pBriefServers; pStorage<pStorageEnd; pStorage++)
 		{
 			if (strcmp(pStorage->ip_addr, g_tracker_client_ip) == 0)
 			{
@@ -1018,7 +1047,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 	}
 
 	return tracker_merge_servers(pTrackerServer, \
-                briefServers, server_count);
+                pBriefServers, server_count);
 }
 
 int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \

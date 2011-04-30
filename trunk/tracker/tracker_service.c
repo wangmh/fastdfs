@@ -290,34 +290,80 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 {
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppEnd;
+	FDFSStorageDetail *pServer;
 	FDFSStorageBrief *pDestServer;
 	TrackerClientInfo *pClientInfo;
-	
+	char *pFlags;
+	char *p;
+
 	pClientInfo = (TrackerClientInfo *)pTask->arg;
 
 	if (status != 0 || pClientInfo->pGroup == NULL ||
-	pClientInfo->pGroup->chg_count == pClientInfo->pStorage->chg_count)
+		((pClientInfo->pGroup->chg_count == \
+		  pClientInfo->pStorage->chg_count) &&
+		 (pClientInfo->pGroup->trunk_chg_count == \
+		  pClientInfo->pStorage->trunk_chg_count)))
 	{
 		pTask->length = sizeof(TrackerHeader);
 		return status;
 	}
-
-	pDestServer = (FDFSStorageBrief *)(pTask->data + sizeof(TrackerHeader));
-	ppEnd = pClientInfo->pGroup->sorted_servers + \
-			pClientInfo->pGroup->count;
-	for (ppServer=pClientInfo->pGroup->sorted_servers; \
-		ppServer<ppEnd; ppServer++)
+	
+	p = pTask->data + sizeof(TrackerHeader);
+	pFlags = p++;
+	*pFlags = 0;
+	if (pClientInfo->pStorage->trunk_chg_count != \
+		pClientInfo->pGroup->trunk_chg_count)
 	{
-		pDestServer->status = (*ppServer)->status;
-		memcpy(pDestServer->ip_addr, (*ppServer)->ip_addr, \
-			IP_ADDRESS_SIZE);
+		*pFlags |= FDFS_CHANGE_FLAG_TRUNK_SERVER;
+
+		pDestServer = (FDFSStorageBrief *)p;
+		memset(p, 0, sizeof(FDFSStorageBrief) * 2);
+
+		pServer = pClientInfo->pGroup->pTrunkServer;
+		if (pServer != NULL)
+		{
+			pDestServer->status = pServer->status;
+			memcpy(pDestServer->ip_addr, pServer->ip_addr, \
+				IP_ADDRESS_SIZE);
+		}
 		pDestServer++;
+
+		pServer = pClientInfo->pGroup->pNextTrunkServer;
+		if (pServer != NULL)
+		{
+			pDestServer->status = pServer->status;
+			memcpy(pDestServer->ip_addr, pServer->ip_addr, \
+				IP_ADDRESS_SIZE);
+		}
+		pDestServer++;
+
+		pClientInfo->pStorage->trunk_chg_count = \
+			pClientInfo->pGroup->trunk_chg_count;
+		p = (char *)pDestServer;
 	}
 
-	pTask->length = sizeof(TrackerHeader) + sizeof(FDFSStorageBrief) * \
-				pClientInfo->pGroup->count;
+	if (pClientInfo->pStorage->chg_count != pClientInfo->pGroup->chg_count)
+	{
+		*pFlags |= FDFS_CHANGE_FLAG_GROUP_SERVER;
 
-	pClientInfo->pStorage->chg_count = pClientInfo->pGroup->chg_count;
+		pDestServer = (FDFSStorageBrief *)p;
+		ppEnd = pClientInfo->pGroup->sorted_servers + \
+				pClientInfo->pGroup->count;
+		for (ppServer=pClientInfo->pGroup->sorted_servers; \
+			ppServer<ppEnd; ppServer++)
+		{
+			pDestServer->status = (*ppServer)->status;
+			memcpy(pDestServer->ip_addr, (*ppServer)->ip_addr, \
+				IP_ADDRESS_SIZE);
+			pDestServer++;
+		}
+
+		pClientInfo->pStorage->chg_count = \
+			pClientInfo->pGroup->chg_count;
+		p = (char *)pDestServer;
+	}
+
+	pTask->length = p - pTask->data;
 	return status;
 }
 
