@@ -31,6 +31,7 @@
 #include "tracker_global.h"
 #include "tracker_func.h"
 #include "tracker_mem.h"
+#include "local_ip_func.h"
 
 #ifdef WITH_HTTPD
 #include "fdfs_http_shared.h"
@@ -580,6 +581,8 @@ int tracker_load_from_conf_file(const char *filename, \
 	} while (0);
 
 	iniFreeContext(&iniContext);
+
+	load_local_host_ip_addrs();
 
 	return result;
 }

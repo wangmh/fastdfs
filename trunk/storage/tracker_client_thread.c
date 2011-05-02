@@ -1334,7 +1334,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 	FDFSStorageServer **ppFound;
 	FDFSStorageServer targetServer;
 	int out_len;
-	int other_tracker_count;
+	//int tracker_count;
 	int result;
 	int i;
 	int64_t in_bytes;
@@ -1395,24 +1395,26 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 		}
 	}
 
-	other_tracker_count = 0;
+	//tracker_count = 0;
 	p = out_buff + sizeof(TrackerHeader) + sizeof(TrackerStorageJoinBody);
 	pServerEnd = g_tracker_group.servers + g_tracker_group.server_count;
 	for (pServer=g_tracker_group.servers; pServer<pServerEnd; pServer++)
 	{
+		/*
 		if (strcmp(pServer->ip_addr, pTrackerServer->ip_addr) == 0 && \
 			pServer->port == pTrackerServer->port)
 		{
 			continue;
 		}
+		tracker_count++;
+		*/
 
-		other_tracker_count++;
 		sprintf(p, "%s:%d", pServer->ip_addr, pServer->port);
 		p += FDFS_PROTO_IP_PORT_SIZE;
 	}
 
 	out_len = p - out_buff;
-	long2buff(other_tracker_count, pReqBody->other_tracker_count);
+	long2buff(g_tracker_group.server_count, pReqBody->tracker_count);
 	long2buff(out_len - (int)sizeof(TrackerHeader), pHeader->pkg_len);
 
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \

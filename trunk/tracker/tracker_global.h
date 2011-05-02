@@ -20,6 +20,7 @@
 #include "tracker_types.h"
 #include "tracker_status.h"
 #include "base64.h"
+#include "local_ip_func.h"
 
 #ifdef WITH_HTTPD
 #include "fdfs_http_shared.h"
