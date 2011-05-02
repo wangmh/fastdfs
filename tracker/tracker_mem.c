@@ -101,6 +101,7 @@
 
 TrackerServerGroup g_tracker_servers = {0, 0, -1, NULL};
 TrackerServerInfo *g_last_tracker_servers = NULL;  //for delay free
+int g_next_leader_index = -1;			   //next leader index
 
 int64_t g_changelog_fsize = 0; //storage server change log file size
 static int changelog_fd = -1;  //storage server change log fd for write
@@ -3259,10 +3260,10 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 	return result;
 }
 
-static int tracker_mem_get_status(TrackerServerInfo *pTrackerServer, \
+int tracker_mem_get_status(TrackerServerInfo *pTrackerServer, \
 		TrackerRunningStatus *pStatus)
 {
-	char in_buff[2 * FDFS_PROTO_PKG_LEN_SIZE];
+	char in_buff[1 + 2 * FDFS_PROTO_PKG_LEN_SIZE];
 	TrackerHeader header;
 	char *pInBuff;
 	int64_t in_bytes;
@@ -3312,8 +3313,10 @@ static int tracker_mem_get_status(TrackerServerInfo *pTrackerServer, \
 		break;
 	}
 
-	pStatus->running_time = buff2long(in_buff);
-	pStatus->restart_interval = buff2long(in_buff + FDFS_PROTO_PKG_LEN_SIZE);
+	pStatus->if_leader = *in_buff;
+	pStatus->running_time = buff2long(in_buff + 1);
+	pStatus->restart_interval = buff2long(in_buff + 1 + \
+					FDFS_PROTO_PKG_LEN_SIZE);
 
 	} while (0);
 
@@ -3637,11 +3640,11 @@ static int tracker_mem_check_add_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 	memcpy(new_servers, g_tracker_servers.servers, sizeof(TrackerServerInfo)* \
 				g_tracker_servers.server_count);
 	pNewServer = new_servers + g_tracker_servers.server_count;
-        for (pJoinTracker=pJoinBody->tracker_servers; \
-                pJoinTracker<pJoinEnd; pJoinTracker++)
+	for (pJoinTracker=pJoinBody->tracker_servers; \
+		pJoinTracker<pJoinEnd; pJoinTracker++)
 	{
-        	for (pLocalTracker=g_tracker_servers.servers; \
-               		pLocalTracker<pLocalEnd; pLocalTracker++)
+		for (pLocalTracker=g_tracker_servers.servers; \
+			pLocalTracker<pLocalEnd; pLocalTracker++)
 		{
 			if (pJoinTracker->port == pLocalTracker->port && \
 				strcmp(pJoinTracker->ip_addr, \
@@ -3667,8 +3670,8 @@ static int tracker_mem_get_tracker_server(FDFSStorageJoinBody *pJoinBody, \
 {
 	TrackerServerInfo *pTrackerServer;
 	TrackerServerInfo *pTrackerEnd;
-	TrackerRunningStatus trackerStatus[FDFS_MAX_TRACKERS];
 	TrackerRunningStatus *pStatus;
+	TrackerRunningStatus trackerStatus[FDFS_MAX_TRACKERS];
 	int count;
 	int result;
 	int r;
@@ -3825,6 +3828,45 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	FDFSStorageDetail **ppEnd;
 
 	tracker_mem_file_lock();
+
+	if (need_get_sys_files)
+	{
+		if (g_tracker_last_status.last_check_time > 0 && \
+			g_up_time - g_tracker_last_status.last_check_time > \
+				2 * TRACKER_SYNC_STATUS_FILE_INTERVAL)
+		{ /* stop time exceeds 2 * interval */
+			TrackerRunningStatus runningStatus;
+
+			tracker_calc_running_times(&runningStatus);
+			result = tracker_mem_get_sys_files_from_others(\
+						pJoinBody, &runningStatus);
+			if (result != 0)
+			{
+				tracker_mem_file_unlock();
+				return EAGAIN;
+			}
+
+			get_sys_files_done = true;
+		}
+
+		need_get_sys_files = false;
+	}
+
+	if ((!get_sys_files_done) && (g_groups.count == 0))
+	{
+		if (g_groups.count == 0)
+		{
+			if ((result=tracker_mem_get_sys_files_from_others( \
+				pJoinBody, NULL)) != 0)
+			{
+				tracker_mem_file_unlock();
+				return EAGAIN;
+			}
+
+			get_sys_files_done = true;
+		}
+	}
+
 	if (g_tracker_servers.servers == NULL)
 	{
 		result = tracker_mem_first_add_tracker_servers(pJoinBody);
@@ -3844,49 +3886,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		}
 	}
 
-	if (need_get_sys_files)
-	{
-		if (need_get_sys_files)
-		{
-			if (g_tracker_last_status.last_check_time > 0 && \
-			g_up_time - g_tracker_last_status.last_check_time > \
-				2 * TRACKER_SYNC_STATUS_FILE_INTERVAL)
-			{ /* stop time exceeds 2 * interval */
-				TrackerRunningStatus runningStatus;
-
-				tracker_calc_running_times(&runningStatus);
-				result = tracker_mem_get_sys_files_from_others(\
-						pJoinBody, &runningStatus);
-				if (result != 0)
-				{
-					tracker_mem_file_unlock();
-					return EAGAIN;
-				}
-
-				get_sys_files_done = true;
-			}
-
-			need_get_sys_files = false;
-		}
-	}
 	tracker_mem_file_unlock();
-
-	if ((!get_sys_files_done) && (g_groups.count == 0))
-	{
-		tracker_mem_file_lock();
-		if (g_groups.count == 0)
-		{
-			if ((result=tracker_mem_get_sys_files_from_others( \
-				pJoinBody, NULL)) != 0)
-			{
-				tracker_mem_file_unlock();
-				return EAGAIN;
-			}
-
-			get_sys_files_done = true;
-		}
-		tracker_mem_file_unlock();
-	}
 
 	if ((result=tracker_mem_add_group_ex(&g_groups, pClientInfo, \
 		pJoinBody->group_name, bNeedSleep, &bGroupInserted)) != 0)
