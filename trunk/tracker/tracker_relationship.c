@@ -41,7 +41,6 @@ static int relationship_cmp_tracker_status(const void *p1, const void *p2)
 
 	pStatus1 = (TrackerRunningStatus *)p1;
 	pStatus2 = (TrackerRunningStatus *)p2;
-
 	sub = pStatus1->if_leader - pStatus2->if_leader;
 	if (sub != 0)
 	{
@@ -117,6 +116,7 @@ static int relationship_get_tracker_leader(TrackerRunningStatus *pTrackerStatus)
 			"restart interval: %d", __LINE__, \
 			trackerStatus[i].pTrackerServer->ip_addr, \
 			trackerStatus[i].pTrackerServer->port, \
+			trackerStatus[i].if_leader, \
 			trackerStatus[i].running_time, \
 			trackerStatus[i].restart_interval);
 	}
@@ -269,6 +269,9 @@ static int relationship_select_leader()
 		return 0;
 	}
 
+	logInfo("file: "__FILE__", line: %d, " \
+		"selecting leader...", __LINE__);
+
 	if ((result=relationship_get_tracker_leader(&trackerStatus)) != 0)
 	{
 		return result;
@@ -287,6 +290,27 @@ static int relationship_select_leader()
 			"I am the new tracker leader %s:%d", \
 			__LINE__, trackerStatus.pTrackerServer->ip_addr, \
 			trackerStatus.pTrackerServer->port);
+	}
+	else
+	{
+		if (trackerStatus.if_leader)
+		{
+			g_tracker_servers.leader_index = \
+				trackerStatus.pTrackerServer - \
+				g_tracker_servers.servers;
+			if (g_tracker_servers.leader_index < 0 || \
+				g_tracker_servers.leader_index >= \
+				g_tracker_servers.server_count)
+			{
+				g_tracker_servers.leader_index = -1;
+				return EINVAL;
+			}
+
+			logInfo("file: "__FILE__", line: %d, " \
+				"the tracker leader %s:%d", __LINE__, \
+				trackerStatus.pTrackerServer->ip_addr, \
+				trackerStatus.pTrackerServer->port);
+		}
 	}
 
 	return 0;

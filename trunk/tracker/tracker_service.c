@@ -1029,8 +1029,6 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 		tracker_ip, IP_ADDRESS_SIZE);
 	insert_into_local_host_ip(tracker_ip);
 
-	logInfo("tracker_ip=%s", tracker_ip);
-
 	result = tracker_mem_add_group_and_storage(pClientInfo, \
 			pTask->client_ip, &joinBody, true);
 	if (result != 0)
