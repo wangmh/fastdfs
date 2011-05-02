@@ -214,12 +214,6 @@ static int relationship_notify_leader_changed(TrackerServerInfo *pLeader)
 	for (pTrackerServer=g_tracker_servers.servers; \
 		pTrackerServer<pTrackerEnd; pTrackerServer++)
 	{
-		if (pTrackerServer->port == g_server_port && \
-			is_local_host_ip(pTrackerServer->ip_addr))
-		{
-			continue;
-		}
-
 		if ((result=relationship_notify_next_leader(pTrackerServer, \
 				pLeader, &bConnectFail)) != 0)
 		{
@@ -243,12 +237,6 @@ static int relationship_notify_leader_changed(TrackerServerInfo *pLeader)
 	for (pTrackerServer=g_tracker_servers.servers; \
 		pTrackerServer<pTrackerEnd; pTrackerServer++)
 	{
-		if (pTrackerServer->port == g_server_port && \
-			is_local_host_ip(pTrackerServer->ip_addr))
-		{
-			continue;
-		}
-
 		if ((result=relationship_commit_next_leader(pTrackerServer, \
 				pLeader, &bConnectFail)) != 0)
 		{
@@ -285,11 +273,6 @@ static int relationship_select_leader()
 		return result;
 	}
 
-	if (trackerStatus.if_leader)  //leader not changed
-	{
-		return 0;
-	}
-
 	if (trackerStatus.pTrackerServer->port == g_server_port && \
 		is_local_host_ip(trackerStatus.pTrackerServer->ip_addr))
 	{
@@ -298,10 +281,6 @@ static int relationship_select_leader()
 		{
 			return result;
 		}
-
-		g_tracker_servers.leader_index = trackerStatus.pTrackerServer \
-						 - g_tracker_servers.servers;
-		g_if_leader_self = true;
 	}
 
 	return 0;
@@ -309,12 +288,37 @@ static int relationship_select_leader()
 
 static int relationship_ping_leader()
 {
+	int result;
+	int leader_index;
+	TrackerServerInfo *pTrackerServer;
+
 	if (g_if_leader_self)
 	{
-		return 0;
+		return 0;  //do not need ping myself
 	}
 
-	return 0;
+	leader_index = g_tracker_servers.leader_index;
+	if (leader_index < 0)
+	{
+		return EINVAL;
+	}
+
+	pTrackerServer = g_tracker_servers.servers + leader_index;
+	if (pTrackerServer->sock < 0)
+	{
+		if ((result=tracker_connect_server(pTrackerServer)) != 0)
+		{
+			return result;
+		}
+	}
+
+	if ((result=fdfs_active_test(pTrackerServer)) != 0)
+	{
+		close(pTrackerServer->sock);
+		pTrackerServer->sock = -1;
+	}
+
+	return result;
 }
 
 static void *relationship_thread_entrance(void* arg)
@@ -329,7 +333,10 @@ static void *relationship_thread_entrance(void* arg)
 			}
 			else
 			{
-				relationship_ping_leader();
+				if (relationship_ping_leader() != 0)
+				{
+					g_tracker_servers.leader_index = -1;
+				}
 			}
 		}
 
