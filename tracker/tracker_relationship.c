@@ -27,6 +27,7 @@
 #include "tracker_global.h"
 #include "tracker_proto.h"
 #include "tracker_mem.h"
+#include "tracker_relationship.h"
 
 bool g_if_leader_self = false;  //if I am leader
 
@@ -281,6 +282,11 @@ static int relationship_select_leader()
 		{
 			return result;
 		}
+
+		logInfo("file: "__FILE__", line: %d, " \
+			"I am the new tracker leader %s:%d", \
+			__LINE__, trackerStatus.pTrackerServer->ip_addr, \
+			trackerStatus.pTrackerServer->port);
 	}
 
 	return 0;

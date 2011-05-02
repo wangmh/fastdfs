@@ -20,6 +20,7 @@
 #include "tracker_global.h"
 #include "tracker_mem.h"
 #include "tracker_service.h"
+#include "tracker_relationship.h"
 
 static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer, 
 		char *buff, const int buffSize);
@@ -302,6 +303,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_up_time=%d\n"
 		"g_tracker_last_status.up_time=%d\n"
 		"g_tracker_last_status.last_check_time=%d\n"
+		"g_if_leader_self=%d\n"
 	#ifdef WITH_HTTPD
 		"g_http_params.disabled=%d\n"
 		"g_http_params.anti_steal_token=%d\n"
@@ -345,6 +347,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, (int)g_up_time
 		, (int)g_tracker_last_status.up_time
 		, (int)g_tracker_last_status.last_check_time
+		, g_if_leader_self
 	#ifdef WITH_HTTPD
 		, g_http_params.disabled
 		, g_http_params.anti_steal_token
@@ -365,6 +368,35 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_exe_name
 	#endif
 	);
+
+	return total_len;
+}
+
+static int fdfs_dump_tracker_servers(char *buff, const int buffSize)
+{
+	int total_len;
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pTrackerEnd;
+
+	total_len = snprintf(buff, buffSize, \
+		"g_tracker_servers.server_count=%d, " \
+		"g_tracker_servers.leader_index=%d\n", \
+		g_tracker_servers.server_count, \
+		g_tracker_servers.leader_index);
+	if (g_tracker_servers.server_count == 0)
+	{
+		return total_len;
+	}
+
+	pTrackerEnd = g_tracker_servers.servers + g_tracker_servers.server_count;
+	for (pTrackerServer=g_tracker_servers.servers; \
+		pTrackerServer<pTrackerEnd; pTrackerServer++)
+	{
+		total_len += snprintf(buff + total_len, buffSize - total_len,
+			"\t%d. tracker server=%s:%d\n", \
+			(pTrackerServer - g_tracker_servers.servers) + 1, \
+			pTrackerServer->ip_addr, pTrackerServer->port);
+	}
 
 	return total_len;
 }
@@ -438,6 +470,9 @@ int fdfs_dump_tracker_global_vars_to_file(const char *filename)
 		WRITE_TO_FILE(fd, buff, len)
 
 		len = fdfs_dump_global_vars(buff, sizeof(buff));
+		WRITE_TO_FILE(fd, buff, len)
+
+		len = fdfs_dump_tracker_servers(buff, sizeof(buff));
 		WRITE_TO_FILE(fd, buff, len)
 
 		len = fdfs_dump_groups_info(buff, sizeof(buff));

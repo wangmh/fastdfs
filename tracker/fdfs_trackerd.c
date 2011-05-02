@@ -34,6 +34,7 @@
 #include "tracker_proto.h"
 #include "tracker_func.h"
 #include "tracker_status.h"
+#include "tracker_relationship.h"
 
 #ifdef WITH_HTTPD
 #include "tracker_httpd.h"
@@ -295,6 +296,12 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
+	if ((result=tracker_relationship_init()) != 0)
+	{
+		log_destroy();
+		return result;
+	}
+
 	log_set_cache(true);
 
 	bTerminateFlag = false;
@@ -338,6 +345,7 @@ int main(int argc, char *argv[])
 	
 	tracker_mem_destroy();
 	tracker_service_destroy();
+	tracker_relationship_destroy();
 	
 	logInfo("exit nomally.\n");
 	log_destroy();
