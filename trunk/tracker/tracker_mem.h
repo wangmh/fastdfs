@@ -34,6 +34,9 @@ typedef struct {
 extern "C" {
 #endif
 
+extern TrackerServerGroup g_tracker_servers;  //save all tracker servers from storage server
+extern TrackerServerInfo *g_last_tracker_servers;  //for delay free
+
 extern int64_t g_changelog_fsize; //storage server change log file size
 extern char *g_tracker_sys_filenames[TRACKER_SYS_FILE_COUNT];
 

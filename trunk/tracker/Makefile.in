@@ -13,7 +13,7 @@ SHARED_OBJS = ../common/hash.o ../common/chain.o ../common/base64.o \
               ../common/pthread_func.o ../common/local_ip_func.o \
               tracker_proto.o tracker_mem.o tracker_service.o tracker_status.o \
               tracker_global.o tracker_func.o fast_task_queue.o \
-              tracker_nio.o $(TRACKER_HTTPD_OBJS)
+              tracker_nio.o tracker_relationship.o $(TRACKER_HTTPD_OBJS)
 
 ALL_OBJS = $(SHARED_OBJS)
 
