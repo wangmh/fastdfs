@@ -28,6 +28,7 @@ typedef struct {
 	TrackerServerInfo *pTrackerServer;
 	int running_time;     //running seconds, more means higher weight
 	int restart_interval; //restart interval, less mean higher weight
+	bool if_leader;       //if leader
 } TrackerRunningStatus;
 
 #ifdef __cplusplus
@@ -36,6 +37,7 @@ extern "C" {
 
 extern TrackerServerGroup g_tracker_servers;  //save all tracker servers from storage server
 extern TrackerServerInfo *g_last_tracker_servers;  //for delay free
+extern int g_next_leader_index;			   //next leader index
 
 extern int64_t g_changelog_fsize; //storage server change log file size
 extern char *g_tracker_sys_filenames[TRACKER_SYS_FILE_COUNT];
@@ -113,6 +115,9 @@ int tracker_mem_get_storage_index(FDFSGroupInfo *pGroup, \
 		TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_END)
 
 void tracker_calc_running_times(TrackerRunningStatus *pStatus);
+
+int tracker_mem_get_status(TrackerServerInfo *pTrackerServer, \
+		TrackerRunningStatus *pStatus);
 
 #ifdef __cplusplus
 }

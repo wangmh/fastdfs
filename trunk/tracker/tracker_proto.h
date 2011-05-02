@@ -35,6 +35,8 @@
 #define TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_END   62  //end of tracker get system data files
 #define TRACKER_PROTO_CMD_TRACKER_GET_ONE_SYS_FILE    63  //tracker get a system data file
 #define TRACKER_PROTO_CMD_TRACKER_GET_STATUS          64  //tracker get status of other tracker
+#define TRACKER_PROTO_CMD_TRACKER_NOTIFY_NEXT_LEADER  65  //notify next leader to other trackers
+#define TRACKER_PROTO_CMD_TRACKER_COMMIT_NEXT_LEADER  66  //commit next leader to other trackers
 
 #define TRACKER_PROTO_CMD_SERVER_LIST_ONE_GROUP			90
 #define TRACKER_PROTO_CMD_SERVER_LIST_ALL_GROUPS		91

@@ -19,6 +19,8 @@
 extern "C" {
 #endif
 
+extern bool g_if_leader_self;  //if I am leader
+
 int tracker_relationship_init();
 int tracker_relationship_destroy();
 
