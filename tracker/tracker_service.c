@@ -826,6 +826,12 @@ static int tracker_deal_commit_next_leader(struct fast_task_info *pTask)
 	{
 		g_if_leader_self = true;
 	}
+	else
+	{
+		logInfo("file: "__FILE__", line: %d, " \
+			"the tracker leader is %s:%d", __LINE__, \
+			leader.ip_addr, leader.port);
+	}
 
 	return 0;
 }
