@@ -344,8 +344,8 @@ typedef struct
         char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE];
         char init_flag;
 	signed char status;
-	int other_tracker_count;
-	TrackerServerInfo other_tracker_servers[FDFS_MAX_TRACKERS];
+	int tracker_count;
+	TrackerServerInfo tracker_servers[FDFS_MAX_TRACKERS];
 } FDFSStorageJoinBody;
 
 struct tracker_thread_data
@@ -358,6 +358,7 @@ typedef struct
 {
 	int server_count;
 	int server_index;  //server index for roundrobin
+	int leader_index;  //leader server index
 	TrackerServerInfo *servers;
 } TrackerServerGroup;
 

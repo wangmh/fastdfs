@@ -115,7 +115,7 @@ typedef struct
 	char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE];
 	char init_flag;
 	signed char status;
-	char other_tracker_count[FDFS_PROTO_PKG_LEN_SIZE];  //tracker server count excluding current tracker
+	char tracker_count[FDFS_PROTO_PKG_LEN_SIZE];  //all tracker server count
 } TrackerStorageJoinBody;
 
 typedef struct
