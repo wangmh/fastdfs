@@ -108,6 +108,7 @@ static bool need_get_sys_files = true;
 static bool get_sys_files_done = false;
 
 static TrackerServerGroup tracker_group = {0, 0, -1, NULL};
+static TrackerServerInfo *last_tracker_servers = NULL;  //for delay free
 
 static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup);
 
@@ -3529,14 +3530,18 @@ static int tracker_mem_cmp_tracker_running_status(const void *p1, const void *p2
 	return pStatus2->restart_interval - pStatus1->restart_interval;
 }
 
-static int tracker_mem_save_tracker_servers(FDFSStorageJoinBody *pJoinBody)
+static int tracker_mem_first_add_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 {
+	TrackerServerInfo *pLocalTracker;
+	TrackerServerInfo *pLocalEnd;
+	TrackerServerInfo *servers;
+	int tracker_count;
 	int bytes;
 
-	tracker_group.server_count = pJoinBody->tracker_count;
-	bytes = sizeof(TrackerServerInfo) * tracker_group.server_count;
-	tracker_group.servers == (TrackerServerInfo *)malloc(bytes);
-	if (tracker_group.servers == NULL)
+	tracker_count = pJoinBody->tracker_count;
+	bytes = sizeof(TrackerServerInfo) * tracker_count;
+	servers = (TrackerServerInfo *)malloc(bytes);
+	if (servers == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, " \
@@ -3544,21 +3549,32 @@ static int tracker_mem_save_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 			__LINE__, bytes, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
+	memcpy(servers, pJoinBody->tracker_servers, bytes);
 
-	memcpy(tracker_group.servers, pJoinBody->tracker_servers, bytes);
+	pLocalEnd = servers + tracker_count;
+       	for (pLocalTracker=servers; pLocalTracker<pLocalEnd; \
+		pLocalTracker++)
+	{
+		pLocalTracker->sock = -1;
+	}
+
+	tracker_group.servers = servers;
+	tracker_group.server_count = tracker_count;
 	return 0;
 }
 
-static int tracker_mem_check_tracker_servers(FDFSStorageJoinBody *pJoinBody)
+static int tracker_mem_check_add_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 {
 	TrackerServerInfo *pJoinTracker;
 	TrackerServerInfo *pJoinEnd;
 	TrackerServerInfo *pLocalTracker;
 	TrackerServerInfo *pLocalEnd;
-	int new_count;
+	TrackerServerInfo *pNewServer;
+	TrackerServerInfo *new_servers;
+	int add_count;
 	int bytes;
 
-	new_count = 0;
+	add_count = 0;
 	pLocalEnd = tracker_group.servers + tracker_group.server_count;
 	pJoinEnd = pJoinBody->tracker_servers + pJoinBody->tracker_count;
         for (pJoinTracker=pJoinBody->tracker_servers; \
@@ -3577,13 +3593,39 @@ static int tracker_mem_check_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 
 		if (pLocalTracker == pLocalEnd)
 		{
-			new_count++;
+			add_count++;
 		}
 	}
 
-	bytes = sizeof(TrackerServerInfo) * tracker_group.server_count;
-	tracker_group.servers == (TrackerServerInfo *)malloc(bytes);
-	if (tracker_group.servers == NULL)
+	if (add_count == 0)
+	{
+		return 0;
+	}
+
+	if (last_tracker_servers != NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"last tracker servers does not freed, " \
+			"should try again!", __LINE__);
+		return EAGAIN;
+	}
+
+	if (tracker_group.server_count + add_count > FDFS_MAX_TRACKERS)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"too many tracker servers: %d", \
+			__LINE__, tracker_group.server_count + add_count);
+		return ENOSPC;
+	}
+
+	logInfo("file: "__FILE__", line: %d, " \
+		"add %d tracker servers", \
+		__LINE__, add_count);
+
+	bytes = sizeof(TrackerServerInfo) * (tracker_group.server_count \
+						 + add_count);
+	new_servers = (TrackerServerInfo *)malloc(bytes);
+	if (new_servers == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, " \
@@ -3592,7 +3634,31 @@ static int tracker_mem_check_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 		return errno != 0 ? errno : ENOMEM;
 	}
 
-	memcpy(tracker_group.servers, pJoinBody->tracker_servers, bytes);
+	memcpy(new_servers, tracker_group.servers, sizeof(TrackerServerInfo)* \
+				tracker_group.server_count);
+	pNewServer = new_servers + tracker_group.server_count;
+        for (pJoinTracker=pJoinBody->tracker_servers; \
+                pJoinTracker<pJoinEnd; pJoinTracker++)
+	{
+        	for (pLocalTracker=tracker_group.servers; \
+               		pLocalTracker<pLocalEnd; pLocalTracker++)
+		{
+			if (pJoinTracker->port == pLocalTracker->port && \
+				strcmp(pJoinTracker->ip_addr, \
+					pLocalTracker->ip_addr) == 0)
+			{
+				memcpy(pNewServer, pJoinTracker, \
+					sizeof(TrackerServerInfo));
+				pNewServer->sock = -1;
+				pNewServer++;
+			}
+		}
+	}
+
+	last_tracker_servers = tracker_group.servers;
+	tracker_group.servers = new_servers;
+	tracker_group.server_count += add_count;
+
 	return 0;
 }
 
@@ -3758,21 +3824,28 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppEnd;
 
+	tracker_mem_file_lock();
 	if (tracker_group.servers == NULL)
 	{
-		if ((result=tracker_mem_save_tracker_servers(pJoinBody)) != 0)
+		result = tracker_mem_first_add_tracker_servers(pJoinBody);
+		if (result != 0)
 		{
+			tracker_mem_file_unlock();
 			return result;
 		}
 	}
 	else
 	{
+		result = tracker_mem_check_add_tracker_servers(pJoinBody);
+		if (result != 0)
+		{
+			tracker_mem_file_unlock();
+			return result;
+		}
 	}
 
 	if (need_get_sys_files)
 	{
-		tracker_mem_file_lock();
-
 		if (need_get_sys_files)
 		{
 			if (g_tracker_last_status.last_check_time > 0 && \
@@ -3795,9 +3868,8 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 
 			need_get_sys_files = false;
 		}
-
-		tracker_mem_file_unlock();
 	}
+	tracker_mem_file_unlock();
 
 	if ((!get_sys_files_done) && (g_groups.count == 0))
 	{
