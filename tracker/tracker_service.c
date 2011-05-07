@@ -1127,6 +1127,11 @@ static int tracker_deal_active_test(struct fast_task_info *pTask)
 static int tracker_deal_ping_leader(struct fast_task_info *pTask)
 {
 	int *nLastCounter;
+	FDFSGroupInfo **ppGroup;
+	FDFSGroupInfo **ppEnd;
+	int body_len;
+	char *p;
+
 	if (pTask->length - sizeof(TrackerHeader) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1151,9 +1156,44 @@ static int tracker_deal_ping_leader(struct fast_task_info *pTask)
 	}
 
 	nLastCounter = (int *)pTask->arg;
+	if (*nLastCounter == g_trunk_server_chg_count)
+	{
+		pTask->length = sizeof(TrackerHeader);
+		return 0;
+	}
 
-	logInfo("nLastCounter=%p, pTask->arg=%p, counter=%d", nLastCounter, pTask->arg, *nLastCounter);
-	pTask->length = sizeof(TrackerHeader);
+	logInfo("nLastCounter=%d, g_trunk_server_chg_count=%d", *nLastCounter, g_trunk_server_chg_count);
+
+	body_len = (FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE) * g_groups.count;
+	if (body_len + sizeof(TrackerHeader) > pTask->size)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, " \
+			"exceeds max package size: %d!", \
+			__LINE__, TRACKER_PROTO_CMD_TRACKER_PING_LEADER, \
+			pTask->client_ip, pTask->size);
+		pTask->length = sizeof(TrackerHeader);
+		return ENOSPC;
+	}
+
+	p = pTask->data + sizeof(TrackerHeader);
+	memset(p, 0, body_len);
+
+	ppEnd = g_groups.sorted_groups + g_groups.count;
+	for (ppGroup=g_groups.sorted_groups; ppGroup<ppEnd; ppGroup++)
+	{
+		memcpy(p, (*ppGroup)->group_name, FDFS_GROUP_NAME_MAX_LEN);
+		p += FDFS_GROUP_NAME_MAX_LEN;
+
+		if ((*ppGroup)->pTrunkServer != NULL)
+		{
+		memcpy(p, (*ppGroup)->pTrunkServer->ip_addr, IP_ADDRESS_SIZE);
+		}
+		p += IP_ADDRESS_SIZE;
+	}
+
+	pTask->length = p - pTask->data;
+	*nLastCounter = g_trunk_server_chg_count;
 
 	return 0;
 }

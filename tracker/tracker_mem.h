@@ -38,6 +38,7 @@ extern "C" {
 extern TrackerServerGroup g_tracker_servers;  //save all tracker servers from storage server
 extern TrackerServerInfo *g_last_tracker_servers;  //for delay free
 extern int g_next_leader_index;			   //next leader index
+extern int g_trunk_server_chg_count;		   //for notify other trackers
 
 extern int64_t g_changelog_fsize; //storage server change log file size
 extern char *g_tracker_sys_filenames[TRACKER_SYS_FILE_COUNT];
