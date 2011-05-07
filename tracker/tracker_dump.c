@@ -48,8 +48,11 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 		"current_write_server=%d\n"
 		"store_path_count=%d\n"
 		"subdir_count_per_path=%d\n" 
+		"current_trunk_file_id=%d\n"
 		"pStoreServer=%s\n" 
+		"pTrunkServer=%s\n" 
 		"chg_count=%d\n"
+		"trunk_chg_count=%d\n"
 		"last_source_update=%s\n"
 		"last_sync_update=%s\n",
 		pGroup->group_name, 
@@ -63,8 +66,11 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 		pGroup->current_write_server, 
 		pGroup->store_path_count,
 		pGroup->subdir_count_per_path,
+		pGroup->current_trunk_file_id,
 		pGroup->pStoreServer != NULL ? pGroup->pStoreServer->ip_addr : "",
+		pGroup->pTrunkServer != NULL ? pGroup->pTrunkServer->ip_addr : "",
 		pGroup->chg_count,
+		pGroup->trunk_chg_count,
 		formatDatetime(pGroup->last_source_update, 
 			"%Y-%m-%d %H:%M:%S", 
 			szLastSourceUpdate, sizeof(szLastSourceUpdate)),
@@ -72,7 +78,6 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 			"%Y-%m-%d %H:%M:%S", 
 			szLastSyncUpdate, sizeof(szLastSyncUpdate))
 	);
-
 
 	total_len += snprintf(buff + total_len, buffSize - total_len, 
 		"total server count=%d\n", pGroup->count);
@@ -304,6 +309,8 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_tracker_last_status.up_time=%d\n"
 		"g_tracker_last_status.last_check_time=%d\n"
 		"g_if_leader_self=%d\n"
+		"g_next_leader_index=%d\n"
+		"g_trunk_server_chg_count=%d\n"
 	#ifdef WITH_HTTPD
 		"g_http_params.disabled=%d\n"
 		"g_http_params.anti_steal_token=%d\n"
@@ -348,6 +355,8 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, (int)g_tracker_last_status.up_time
 		, (int)g_tracker_last_status.last_check_time
 		, g_if_leader_self
+		, g_next_leader_index
+		, g_trunk_server_chg_count
 	#ifdef WITH_HTTPD
 		, g_http_params.disabled
 		, g_http_params.anti_steal_token

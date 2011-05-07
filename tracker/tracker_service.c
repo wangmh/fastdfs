@@ -1162,8 +1162,6 @@ static int tracker_deal_ping_leader(struct fast_task_info *pTask)
 		return 0;
 	}
 
-	logInfo("nLastCounter=%d, g_trunk_server_chg_count=%d", *nLastCounter, g_trunk_server_chg_count);
-
 	body_len = (FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE) * g_groups.count;
 	if (body_len + sizeof(TrackerHeader) > pTask->size)
 	{
