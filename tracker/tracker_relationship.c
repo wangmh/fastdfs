@@ -31,6 +31,11 @@
 
 bool g_if_leader_self = false;  //if I am leader
 
+
+#define fdfs_ping_leader(pTrackerServer) \
+        fdfs_deal_no_body_cmd(pTrackerServer, \
+		TRACKER_PROTO_CMD_TRACKER_PING_LEADER)
+
 static int relationship_cmp_tracker_status(const void *p1, const void *p2)
 {
 	TrackerRunningStatus *pStatus1;
@@ -351,7 +356,7 @@ static int relationship_ping_leader()
 		}
 	}
 
-	if ((result=fdfs_active_test(pTrackerServer)) != 0)
+	if ((result=fdfs_ping_leader(pTrackerServer)) != 0)
 	{
 		close(pTrackerServer->sock);
 		pTrackerServer->sock = -1;
@@ -362,7 +367,7 @@ static int relationship_ping_leader()
 
 static void *relationship_thread_entrance(void* arg)
 {
-#define MAX_SLEEP_SECONDS  5
+#define MAX_SLEEP_SECONDS  10
 
 	int fail_count;
 	int sleep_seconds;
