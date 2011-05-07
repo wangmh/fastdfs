@@ -22,11 +22,12 @@
 #include "logger.h"
 #include "sockopt.h"
 #include "fdfs_global.h"
+#include "shared_func.h"
+#include "pthread_func.h"
 #include "tracker_global.h"
 #include "tracker_proto.h"
 #include "tracker_mem.h"
-#include "shared_func.h"
-#include "pthread_func.h"
+#include "tracker_relationship.h"
 
 #define TRACKER_MEM_ALLOC_ONCE	2
 
@@ -112,6 +113,7 @@ static pthread_mutex_t mem_thread_lock;
 static pthread_mutex_t mem_file_lock;
 
 static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup);
+static void tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup);
 
 static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 	FDFSStorageDetail **ppStorageServer, const char *ip_addr, \
@@ -2745,6 +2747,10 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 	pGroup->last_sync_timestamps = new_last_sync_timestamps;
 
 	tracker_mem_find_store_server(pGroup);
+	if (g_if_leader_self && pGroup->pTrunkServer == NULL)
+	{
+		tracker_mem_find_trunk_server(pGroup);
+	}
 
 #ifdef WITH_HTTPD
 	if (g_http_check_interval <= 0)
@@ -4383,6 +4389,24 @@ static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup)
 	}
 }
 
+static void tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup)
+{
+	FDFSStorageDetail *pStoreServer;
+
+	pStoreServer = pGroup->pStoreServer;
+	if (pStoreServer == NULL)
+	{
+		return;
+	}
+
+	pGroup->pTrunkServer = pStoreServer;
+	pGroup->trunk_chg_count++;
+	logInfo("file: "__FILE__", line: %d, " \
+		"group: %s, trunk server set to %s:%d", __LINE__, \
+		pGroup->group_name, pGroup->pTrunkServer->ip_addr, \
+		pGroup->storage_port);
+}
+
 int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
 			FDFSStorageDetail *pTargetServer) 
 {
@@ -4513,6 +4537,10 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 	}
 
 	tracker_mem_find_store_server(pGroup);
+	if (g_if_leader_self && pGroup->pTrunkServer == NULL)
+	{
+		tracker_mem_find_trunk_server(pGroup);
+	}
 
 	if ((result=pthread_mutex_unlock(&mem_thread_lock)) != 0)
 	{
@@ -4987,9 +5015,32 @@ int tracker_mem_check_alive(void *arg)
 	ppServerEnd = deactiveServers + deactiveCount;
 	for (ppServer=deactiveServers; ppServer<ppServerEnd; ppServer++)
 	{
-	(*ppServer)->status = FDFS_STORAGE_STATUS_OFFLINE;
-	tracker_mem_deactive_store_server(*ppGroup, *ppServer);
-	logInfo("ip=%s idle too long, status change to offline!", (*ppServer)->ip_addr);
+		(*ppServer)->status = FDFS_STORAGE_STATUS_OFFLINE;
+		tracker_mem_deactive_store_server(*ppGroup, *ppServer);
+		logInfo("ip=%s idle too long, status change to offline!", \
+			(*ppServer)->ip_addr);
+	}
+	}
+
+	if (!g_if_leader_self)
+	{
+		return 0;
+	}
+
+	for (ppGroup=g_groups.groups; ppGroup<ppGroupEnd; ppGroup++)
+	{
+	if ((*ppGroup)->pTrunkServer != NULL && 
+	    current_time - (*ppGroup)->pTrunkServer->stat.last_heart_beat_time 
+			> g_check_active_interval)
+	{
+		logInfo("trunk server=%s:%d offline, " \
+			"should re-select trunk server", \
+			(*ppGroup)->pTrunkServer->ip_addr, \
+			(*ppGroup)->storage_port);
+
+		(*ppGroup)->pTrunkServer = NULL;
+		tracker_mem_find_trunk_server(*ppGroup);
+		(*ppGroup)->trunk_chg_count++;
 	}
 	}
 

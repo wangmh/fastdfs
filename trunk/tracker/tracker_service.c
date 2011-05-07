@@ -329,15 +329,6 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 		}
 		pDestServer++;
 
-		pServer = pClientInfo->pGroup->pNextTrunkServer;
-		if (pServer != NULL)
-		{
-			pDestServer->status = pServer->status;
-			memcpy(pDestServer->ip_addr, pServer->ip_addr, \
-				IP_ADDRESS_SIZE);
-		}
-		pDestServer++;
-
 		pClientInfo->pStorage->trunk_chg_count = \
 			pClientInfo->pGroup->trunk_chg_count;
 		p = (char *)pDestServer;
@@ -688,6 +679,11 @@ static int tracker_find_tracker_server_index(TrackerServerInfo *pTargetServer)
 {
 	TrackerServerInfo *pTrackerServer;
 	TrackerServerInfo *pTrackerEnd;
+
+	if (g_tracker_servers.server_count == 0)
+	{
+		return -1;
+	}
 
 	pTrackerEnd = g_tracker_servers.servers + g_tracker_servers.server_count;
 	for (pTrackerServer=g_tracker_servers.servers; \
