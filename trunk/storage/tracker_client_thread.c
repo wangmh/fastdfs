@@ -1006,8 +1006,9 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 			if (g_if_trunker_self)
 			{
 			logWarning("file: "__FILE__", line: %d, " \
-				"I am already trunk server, ip: %s", __LINE__, \
-				g_trunk_server.ip_addr);
+				"I am already trunk server, my ip: %s, " \
+				"may be the tracker server restart", \
+				__LINE__, g_trunk_server.ip_addr);
 			}
 			else
 			{
@@ -1356,7 +1357,7 @@ static int tracker_fetch_trunk_fid(TrackerServerInfo *pTrackerServer)
 		return EINVAL;
 	}
 
-	if (g_current_trunk_file_id != trunk_fid)
+	if (g_current_trunk_file_id < trunk_fid)
 	{
 		logInfo("file: "__FILE__", line: %d, " \
 			"old trunk file id: %d, " \
@@ -1364,6 +1365,7 @@ static int tracker_fetch_trunk_fid(TrackerServerInfo *pTrackerServer)
 			__LINE__, g_current_trunk_file_id, trunk_fid);
 	
 		g_current_trunk_file_id = trunk_fid;
+		storage_write_to_sync_ini_file();
 	}
 
 	return 0;
