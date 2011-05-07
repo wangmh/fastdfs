@@ -318,7 +318,7 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 		*pFlags |= FDFS_CHANGE_FLAG_TRUNK_SERVER;
 
 		pDestServer = (FDFSStorageBrief *)p;
-		memset(p, 0, sizeof(FDFSStorageBrief) * 2);
+		memset(p, 0, sizeof(FDFSStorageBrief));
 
 		pServer = pClientInfo->pGroup->pTrunkServer;
 		if (pServer != NULL)
@@ -529,10 +529,10 @@ static int tracker_deal_changelog_req(struct fast_task_info *pTask)
 
 static int tracker_deal_get_trunk_fid(struct fast_task_info *pTask)
 {
-	char *group_name;
-	FDFSGroupInfo *pGroup;
+	TrackerClientInfo *pClientInfo;
 	
-	if (pTask->length - sizeof(TrackerHeader) != FDFS_GROUP_NAME_MAX_LEN)
+	pClientInfo = (TrackerClientInfo *)pTask->arg;
+	if (pTask->length - sizeof(TrackerHeader) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
@@ -540,28 +540,14 @@ static int tracker_deal_get_trunk_fid(struct fast_task_info *pTask)
 			"expect length = %d", __LINE__, \
 			TRACKER_PROTO_CMD_STORAGE_FETCH_TRUNK_FID, \
 			pTask->client_ip, pTask->length - \
-			(int)sizeof(TrackerHeader), \
-			FDFS_GROUP_NAME_MAX_LEN);
+			(int)sizeof(TrackerHeader), 0);
 
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
-	group_name = pTask->data + sizeof(TrackerHeader);
-	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
-	pGroup = tracker_mem_get_group(group_name);
-	if (pGroup == NULL)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, invalid group_name: %s", \
-			__LINE__, pTask->client_ip, group_name);
-
-		pTask->length = sizeof(TrackerHeader);
-		return ENOENT;
-	}
-
 	pTask->length = sizeof(TrackerHeader) + sizeof(int);
-	int2buff(pGroup->current_trunk_file_id, \
+	int2buff(pClientInfo->pGroup->current_trunk_file_id, \
 		pTask->data + sizeof(TrackerHeader));
 
 	return 0;
@@ -3086,6 +3072,7 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			result = tracker_deal_report_trunk_fid(pTask);
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_FETCH_TRUNK_FID:
+			TRACKER_CHECK_LOGINED(pTask)
 			result = tracker_deal_get_trunk_fid(pTask);
 			break;
 		case TRACKER_PROTO_CMD_TRACKER_PING_LEADER:

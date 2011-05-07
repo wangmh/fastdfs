@@ -52,6 +52,7 @@ static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer);
 static int tracker_sync_notify(TrackerServerInfo *pTrackerServer);
 static int tracker_storage_changelog_req(TrackerServerInfo *pTrackerServer);
 static int tracker_report_trunk_fid(TrackerServerInfo *pTrackerServer);
+static int tracker_fetch_trunk_fid(TrackerServerInfo *pTrackerServer);
 
 static bool tracker_insert_into_sorted_servers( \
 		FDFSStorageServer *pInsertedServer);
@@ -989,11 +990,42 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 	{
 		if (server_count < 1)
 		{
-		logError("file: "__FILE__", line: %d, " \
-			"tracker server %s:%d, reponse server count: %d < 1", \
-			__LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, server_count);
-		return EINVAL;
+			logError("file: "__FILE__", line: %d, " \
+				"tracker server %s:%d, reponse server " \
+				"count: %d < 1", __LINE__, \
+				pTrackerServer->ip_addr, \
+				pTrackerServer->port, server_count);
+			return EINVAL;
+		}
+
+		memcpy(g_trunk_server.ip_addr, pBriefServers->ip_addr, \
+			IP_ADDRESS_SIZE - 1);
+		*(g_trunk_server.ip_addr + (IP_ADDRESS_SIZE - 1)) = '\0';
+		if (is_local_host_ip(g_trunk_server.ip_addr))
+		{
+			if (g_if_trunker_self)
+			{
+			logWarning("file: "__FILE__", line: %d, " \
+				"I am already trunk server, ip: %s", __LINE__, \
+				g_trunk_server.ip_addr);
+			}
+			else
+			{
+			logInfo("file: "__FILE__", line: %d, " \
+				"I am the trunk server, ip: %s", __LINE__, \
+				g_trunk_server.ip_addr);
+
+			tracker_fetch_trunk_fid(pTrackerServer);
+			g_if_trunker_self = true;
+			}
+		}
+		else
+		{
+			if (g_if_trunker_self)
+			{
+				tracker_report_trunk_fid(pTrackerServer);
+				g_if_trunker_self = false;
+			}
 		}
 
 		pBriefServers += 1;
@@ -1266,6 +1298,72 @@ static int tracker_report_trunk_fid(TrackerServerInfo *pTrackerServer)
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes);
 		return EINVAL;
+	}
+
+	return 0;
+}
+
+static int tracker_fetch_trunk_fid(TrackerServerInfo *pTrackerServer)
+{
+	char out_buff[sizeof(TrackerHeader)];
+	char in_buff[4];
+	TrackerHeader *pHeader;
+	char *pInBuff;
+	int64_t in_bytes;
+	int trunk_fid;
+	int result;
+
+	pHeader = (TrackerHeader *)out_buff;
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_FETCH_TRUNK_FID;
+	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, send data fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	pInBuff = in_buff;
+	if ((result=fdfs_recv_response(pTrackerServer, \
+		&pInBuff, sizeof(in_buff), &in_bytes)) != 0)
+	{
+		return result;
+	}
+
+	if (in_bytes != sizeof(in_buff))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, recv body length: " \
+			INT64_PRINTF_FORMAT" != %d",  \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, in_bytes, (int)sizeof(in_buff));
+		return EINVAL;
+	}
+
+	trunk_fid = buff2int(in_buff);
+	if (trunk_fid < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, " \
+			"trunk file id: %d is invalid!", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, trunk_fid);
+		return EINVAL;
+	}
+
+	if (g_current_trunk_file_id != trunk_fid)
+	{
+		logInfo("file: "__FILE__", line: %d, " \
+			"old trunk file id: %d, " \
+			"change to new trunk file id: %d", \
+			__LINE__, g_current_trunk_file_id, trunk_fid);
+	
+		g_current_trunk_file_id = trunk_fid;
 	}
 
 	return 0;
