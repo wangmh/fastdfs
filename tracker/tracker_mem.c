@@ -523,12 +523,14 @@ static int tracker_load_groups_old(FDFSGroups *pGroups, const char *data_path)
 	return result;
 }
 
-static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path)
+static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path, 
+		FDFSStorageSync **ppTrunkServers, int *nTrunkServerCount)
 {
 	IniContext iniContext;
 	FDFSGroupInfo *pGroup;
 	char *group_name;
 	char *pValue;
+	int nStorageSyncSize;
 	int group_count;
 	int result;
 	int i;
@@ -536,6 +538,8 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path)
 	TrackerClientInfo clientInfo;
 	bool bInserted;
 
+	*nTrunkServerCount = 0;
+	*ppTrunkServers = NULL;
 	if (!fileExists(STORAGE_GROUPS_LIST_FILENAME_NEW) && \
 	     fileExists(STORAGE_GROUPS_LIST_FILENAME_OLD))
 	{
@@ -575,6 +579,7 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path)
 		return ENOENT;
 	}
 
+	nStorageSyncSize = 0;
 	for (i=1; i<=group_count; i++)
 	{
 		sprintf(section_name, "%s"GROUP_SECTION_NO_FORMAT, \
@@ -628,12 +633,91 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path)
 			GROUP_ITEM_TRUNK_SERVER, &iniContext);
 		if (pValue != NULL && *pValue != '\0')
 		{
+		if (nStorageSyncSize <= *nTrunkServerCount)
+		{
+			nStorageSyncSize += 8;
+			*ppTrunkServers = (FDFSStorageSync *)realloc( \
+				*ppTrunkServers, \
+				sizeof(FDFSStorageSync) * nStorageSyncSize);
+			if (*ppTrunkServers == NULL)
+			{
+				result = errno != 0 ? errno : ENOMEM;
+				logError("file: "__FILE__", line: %d, " \
+					"realloc %d bytes fail", __LINE__, \
+					(int)sizeof(FDFSStorageSync) * \
+					nStorageSyncSize);
+				break;
+			}
+		}
+
+		strcpy((*ppTrunkServers)[*nTrunkServerCount].group_name, \
+			clientInfo.pGroup->group_name);
+		snprintf((*ppTrunkServers)[*nTrunkServerCount].ip_addr, \
+			IP_ADDRESS_SIZE, "%s", pValue);
+
+		(*nTrunkServerCount)++;
 		}
 	}
 
 	iniFreeContext(&iniContext);
 
 	return result;
+}
+
+static int tracker_locate_group_trunk_servers(FDFSGroups *pGroups, \
+		FDFSStorageSync *pTrunkServers, \
+		const int nTrunkServerCount, const bool bLoadFromFile)
+{
+	FDFSGroupInfo *pGroup;
+	FDFSStorageDetail *pStorage;
+	FDFSStorageSync *pServer;
+	FDFSStorageSync *pTrunkEnd;
+
+	if (nTrunkServerCount == 0)
+	{
+		return 0;
+	}
+
+	pTrunkEnd = pTrunkServers + nTrunkServerCount;
+	for (pServer=pTrunkServers; pServer<pTrunkEnd; pServer++)
+	{
+		pGroup = tracker_mem_get_group_ex(pGroups, \
+				pServer->group_name);
+		if (pGroup == NULL)
+		{
+			continue;
+		}
+
+		pStorage = tracker_mem_get_storage(pGroup, pServer->ip_addr);
+		if (pStorage == NULL)
+		{
+			char buff[MAX_PATH_SIZE+64];
+			if (bLoadFromFile)
+			{
+				snprintf(buff, sizeof(buff), \
+					"in the file \"%s/data/%s\", ", \
+					g_fdfs_base_path, \
+					STORAGE_GROUPS_LIST_FILENAME_NEW);
+			}
+			else
+			{
+				*buff = '\0';
+			}
+
+			logError("file: "__FILE__", line: %d, " \
+				"%sgroup_name: %s, trunk server \"%s:%d\" " \
+				"does not exist", \
+				__LINE__, buff, pServer->group_name, \
+				pServer->ip_addr, \
+				pGroup->storage_port);
+
+			return ENOENT;
+		}
+
+		pGroup->pTrunkServer = pStorage;
+	}
+
+	return 0;
 }
 
 static int tracker_locate_storage_sync_server(FDFSGroups *pGroups, \
@@ -644,6 +728,11 @@ static int tracker_locate_storage_sync_server(FDFSGroups *pGroups, \
 	FDFSStorageDetail *pStorage;
 	FDFSStorageSync *pSyncServer;
 	FDFSStorageSync *pSyncEnd;
+
+	if (nStorageSyncCount == 0)
+	{
+		return 0;
+	}
 
 	pSyncEnd = pStorageSyncs + nStorageSyncCount;
 	for (pSyncServer=pStorageSyncs; pSyncServer<pSyncEnd; pSyncServer++)
@@ -675,7 +764,7 @@ static int tracker_locate_storage_sync_server(FDFSGroups *pGroups, \
 			}
 			else
 			{
-				buff[0] = '\0';
+				*buff = '\0';
 			}
 
 			logError("file: "__FILE__", line: %d, " \
@@ -1446,6 +1535,8 @@ static int tracker_load_data(FDFSGroups *pGroups)
 {
 	char data_path[MAX_PATH_SIZE];
 	int result;
+	FDFSStorageSync *pTrunkServers;
+	int nTrunkServerCount;
 
 	snprintf(data_path, sizeof(data_path), "%s/data", g_fdfs_base_path);
 	if (!fileExists(data_path))
@@ -1476,7 +1567,8 @@ static int tracker_load_data(FDFSGroups *pGroups)
 		return 0;
 	}
 
-	if ((result=tracker_load_groups_new(pGroups, data_path)) != 0)
+	if ((result=tracker_load_groups_new(pGroups, data_path, \
+		&pTrunkServers, &nTrunkServerCount)) != 0)
 	{
 		return result;
 	}
@@ -1494,6 +1586,17 @@ static int tracker_load_data(FDFSGroups *pGroups)
 	if ((result=tracker_load_sync_timestamps(pGroups, data_path)) != 0)
 	{
 		return result;
+	}
+
+	if ((result=tracker_locate_group_trunk_servers(pGroups, \
+		pTrunkServers, nTrunkServerCount, true)) != 0)
+	{
+		return result;
+	}
+
+	if (pTrunkServers != NULL)
+	{
+		free(pTrunkServers);
 	}
 
 	return 0;
