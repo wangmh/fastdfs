@@ -277,6 +277,9 @@ static int relationship_select_leader()
 		return result;
 	}
 
+	logInfo("maybe the leader: %s:%d, if_leader=%d", 
+		trackerStatus.pTrackerServer->ip_addr, 
+		trackerStatus.pTrackerServer->port, trackerStatus.if_leader);
 	if (trackerStatus.pTrackerServer->port == g_server_port && \
 		is_local_host_ip(trackerStatus.pTrackerServer->ip_addr))
 	{
@@ -310,6 +313,12 @@ static int relationship_select_leader()
 				"the tracker leader %s:%d", __LINE__, \
 				trackerStatus.pTrackerServer->ip_addr, \
 				trackerStatus.pTrackerServer->port);
+		}
+		else
+		{
+			logDebug("file: "__FILE__", line: %d, " \
+				"waiting for leader notify", __LINE__);
+			return ENOENT;
 		}
 	}
 
@@ -366,6 +375,8 @@ static void *relationship_thread_entrance(void* arg)
 		{
 			if (g_tracker_servers.leader_index < 0)
 			{
+				logInfo("g_tracker_servers.leader_index: %d", g_tracker_servers.leader_index);
+
 				if (relationship_select_leader() != 0)
 				{
 					sleep_seconds = 1 + (int)((double)rand()
