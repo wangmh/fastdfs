@@ -92,6 +92,8 @@ int main(int argc, char *argv[])
 	}
 
 	g_up_time = time(NULL);
+	srand(g_up_time);
+
 	log_init();
 
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)

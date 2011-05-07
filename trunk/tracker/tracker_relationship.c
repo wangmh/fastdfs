@@ -353,19 +353,40 @@ static int relationship_ping_leader()
 
 static void *relationship_thread_entrance(void* arg)
 {
+#define MAX_SLEEP_SECONDS  5
+
+	int fail_count;
+	int sleep_seconds;
+
+	fail_count = 0;
 	while (g_continue_flag)
 	{
+		sleep_seconds = 1;
 		if (g_tracker_servers.servers != NULL)
 		{
 			if (g_tracker_servers.leader_index < 0)
 			{
-				relationship_select_leader();
+				if (relationship_select_leader() != 0)
+				{
+					sleep_seconds = 1 + (int)((double)rand()
+					* (double)MAX_SLEEP_SECONDS / RAND_MAX);
+
+					logInfo("sleep seconds: %d", sleep_seconds);
+				}
 			}
 			else
 			{
-				if (relationship_ping_leader() != 0)
+				if (relationship_ping_leader() == 0)
 				{
-					g_tracker_servers.leader_index = -1;
+					fail_count = 0;
+				}
+				else
+				{
+					fail_count++;
+					if (fail_count >= 3)
+					{
+						g_tracker_servers.leader_index = -1;
+					}
 				}
 			}
 		}
@@ -380,7 +401,7 @@ static void *relationship_thread_entrance(void* arg)
 			tracker_mem_file_unlock();
 		}
 
-		sleep(1);
+		sleep(sleep_seconds);
 	}
 
 	return NULL;
