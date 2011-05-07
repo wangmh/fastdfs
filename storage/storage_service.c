@@ -1210,9 +1210,10 @@ int storage_terminate_threads()
 			pTask = free_queue_pop();
 			if (pTask == NULL)
 			{
-				logError("file: "__FILE__", line: %d, " \
-					"malloc task buff failed", \
-					__LINE__);
+			logError("file: "__FILE__", line: %d, " \
+				"malloc task buff failed, you should " \
+				"increase the parameter: max_connections",
+				__LINE__);
 				continue;
 			}
 

@@ -130,7 +130,8 @@ void recv_notify_read(int sock, short event, void *arg)
 		if (pTask == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"malloc task buff failed", \
+				"malloc task buff failed, you should " \
+				"increase the parameter: max_connections", \
 				__LINE__);
 			close(incomesock);
 			continue;
