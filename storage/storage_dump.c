@@ -20,6 +20,7 @@
 #include "storage_global.h"
 #include "storage_service.h"
 #include "storage_sync.h"
+#include "trunk_mem.h"
 
 static int fdfs_dump_global_vars(char *buff, const int buffSize)
 {
@@ -87,6 +88,16 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_binlog_fd=%d\n"
 		"g_binlog_index=%d\n"
 		"g_storage_sync_thread_count=%d\n"
+		"g_if_use_trunk_file=%d\n"
+		"g_if_trunker_self=%d\n"
+		"g_slot_min_size=%d\n"
+		"g_trunk_file_size=%d\n"
+		"g_store_path_mode=%d\n"
+		"g_storage_reserved_mb=%d\n"
+		"g_avg_storage_reserved_mb=%d\n"
+		"g_store_path_index=%d\n"
+		"g_current_trunk_file_id=%d\n"
+		"g_trunk_server=%s:%d\n"
 	#ifdef WITH_HTTPD
 		"g_http_params.disabled=%d\n"
 		"g_http_params.anti_steal_token=%d\n"
@@ -162,6 +173,16 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_binlog_fd
 		, g_binlog_index
 		, g_storage_sync_thread_count
+		, g_if_use_trunk_file
+		, g_if_trunker_self
+		, g_slot_min_size
+		, g_trunk_file_size
+		, g_store_path_mode
+		, g_storage_reserved_mb
+		, g_avg_storage_reserved_mb
+		, g_store_path_index
+		, g_current_trunk_file_id
+		, g_trunk_server.ip_addr, g_trunk_server.port
 	#ifdef WITH_HTTPD
 		, g_http_params.disabled
 		, g_http_params.anti_steal_token
