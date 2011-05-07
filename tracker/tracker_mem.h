@@ -120,6 +120,8 @@ void tracker_calc_running_times(TrackerRunningStatus *pStatus);
 int tracker_mem_get_status(TrackerServerInfo *pTrackerServer, \
 		TrackerRunningStatus *pStatus);
 
+int tracker_save_groups();
+
 #ifdef __cplusplus
 }
 #endif

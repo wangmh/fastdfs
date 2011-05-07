@@ -35,6 +35,7 @@ static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
 {
 	TrackerHeader header;
 	int result;
+	int success_count;
 	int64_t in_bytes;
 	char in_buff[(FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE) * \
 			FDFS_MAX_GROUPS];
@@ -79,6 +80,7 @@ static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
 		return EINVAL;
 	}
 
+	success_count = 0;
 	memset(group_name, 0, sizeof(group_name));
 	memset(trunk_server_ip, 0, sizeof(trunk_server_ip));
 
@@ -101,6 +103,7 @@ static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
 		if (*trunk_server_ip == '\0')
 		{
 			pGroup->pTrunkServer = NULL;
+			success_count++;
 			continue;
 		}
 
@@ -114,6 +117,13 @@ static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
 				__LINE__, pTrackerServer->ip_addr, \
 				group_name, trunk_server_ip);
 		}
+		success_count++;
+	}
+
+	if (success_count > 0)
+	{
+		tracker_save_groups();
+
 	}
 
 	return 0;

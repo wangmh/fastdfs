@@ -129,8 +129,6 @@ static int tracker_mem_add_group_ex(FDFSGroups *pGroups, \
 	TrackerClientInfo *pClientInfo, const char *group_name, \
 	const bool bNeedSleep, bool *bInserted);
 
-static int tracker_save_groups();
-
 static int tracker_mem_destroy_groups(FDFSGroups *pGroups, const bool saveFiles);
 
 char *g_tracker_sys_filenames[TRACKER_SYS_FILE_COUNT] = {
@@ -1603,7 +1601,7 @@ static int tracker_load_data(FDFSGroups *pGroups)
 	return 0;
 }
 
-static int tracker_save_groups()
+int tracker_save_groups()
 {
 	char tmpFilename[MAX_PATH_SIZE];
 	char trueFilename[MAX_PATH_SIZE];
