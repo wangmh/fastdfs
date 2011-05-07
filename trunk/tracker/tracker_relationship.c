@@ -282,9 +282,6 @@ static int relationship_select_leader()
 		return result;
 	}
 
-	logInfo("maybe the leader: %s:%d, if_leader=%d", 
-		trackerStatus.pTrackerServer->ip_addr, 
-		trackerStatus.pTrackerServer->port, trackerStatus.if_leader);
 	if (trackerStatus.pTrackerServer->port == g_server_port && \
 		is_local_host_ip(trackerStatus.pTrackerServer->ip_addr))
 	{
@@ -380,14 +377,10 @@ static void *relationship_thread_entrance(void* arg)
 		{
 			if (g_tracker_servers.leader_index < 0)
 			{
-				logInfo("g_tracker_servers.leader_index: %d", g_tracker_servers.leader_index);
-
 				if (relationship_select_leader() != 0)
 				{
 					sleep_seconds = 1 + (int)((double)rand()
 					* (double)MAX_SLEEP_SECONDS / RAND_MAX);
-
-					logInfo("sleep seconds: %d", sleep_seconds);
 				}
 			}
 			else
