@@ -1128,6 +1128,35 @@ static int tracker_deal_active_test(struct fast_task_info *pTask)
 	return 0;
 }
 
+static int tracker_deal_ping_leader(struct fast_task_info *pTask)
+{
+	if (pTask->length - sizeof(TrackerHeader) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length 0", __LINE__, \
+			TRACKER_PROTO_CMD_TRACKER_PING_LEADER, \
+			pTask->client_ip, \
+			pTask->length - (int)sizeof(TrackerHeader));
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	pTask->length = sizeof(TrackerHeader);
+	if (!g_if_leader_self)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, i am not the leader!", \
+			__LINE__, TRACKER_PROTO_CMD_TRACKER_PING_LEADER, \
+			pTask->client_ip);
+		return EOPNOTSUPP;
+	}
+
+	logInfo("tracker_deal_ping_leader!");
+	return 0;
+}
+
 static int tracker_unlock_by_client(struct fast_task_info *pTask)
 {
 	if (lock_by_client_count <= 0 || pTask->finish_callback == NULL)
@@ -3019,6 +3048,9 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_FETCH_TRUNK_FID:
 			result = tracker_deal_get_trunk_fid(pTask);
+			break;
+		case TRACKER_PROTO_CMD_TRACKER_PING_LEADER:
+			result = tracker_deal_ping_leader(pTask);
 			break;
 		case TRACKER_PROTO_CMD_TRACKER_NOTIFY_NEXT_LEADER:
 			result = tracker_deal_notify_next_leader(pTask);
