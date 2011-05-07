@@ -714,6 +714,7 @@ static int tracker_locate_group_trunk_servers(FDFSGroups *pGroups, \
 		}
 
 		pGroup->pTrunkServer = pStorage;
+		pGroup->trunk_chg_count++;
 	}
 
 	return 0;
