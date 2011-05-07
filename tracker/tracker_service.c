@@ -1153,7 +1153,6 @@ static int tracker_deal_ping_leader(struct fast_task_info *pTask)
 		return EOPNOTSUPP;
 	}
 
-	logInfo("tracker_deal_ping_leader!");
 	return 0;
 }
 
