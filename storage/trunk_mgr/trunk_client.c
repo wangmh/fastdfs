@@ -98,7 +98,7 @@ int trunk_client_trunk_alloc_space(const int file_size, \
 		return trunk_alloc_space(file_size, pTrunkInfo);
 	}
 
-	if (g_trunk_server.port <= 0)
+	if (*(g_trunk_server.ip_addr) == '\0')
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"no trunk server", __LINE__);
@@ -195,7 +195,7 @@ int trunk_client_trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, \
 		return trunk_alloc_confirm(pTrunkInfo, status);
 	}
 
-	if (g_trunk_server.port <= 0)
+	if (*(g_trunk_server.ip_addr) == '\0')
 	{
 		return EAGAIN;
 	}
@@ -223,7 +223,7 @@ int trunk_client_trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo)
 		return trunk_free_space(pTrunkInfo, true);
 	}
 
-	if (g_trunk_server.port <= 0)
+	if (*(g_trunk_server.ip_addr) == '\0')
 	{
 		return EAGAIN;
 	}

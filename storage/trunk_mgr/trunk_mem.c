@@ -46,8 +46,7 @@ int g_store_path_index = 0;
 int g_current_trunk_file_id = 0;
 TrackerServerInfo g_trunk_server = {-1, 0};
 bool g_if_use_trunk_file = false;
-//bool g_if_trunker_self = false;
-bool g_if_trunker_self = true;
+bool g_if_trunker_self = false;
 
 static FDFSTrunkSlot *slots = NULL;
 static FDFSTrunkSlot *slot_end = NULL;
@@ -96,6 +95,7 @@ int storage_trunk_init()
 
 	memset(&g_trunk_server, 0, sizeof(g_trunk_server));
 	g_trunk_server.sock = -1;
+	g_trunk_server.port = g_server_port;
 
 	slot_count = 1;
 	slot_max_size = g_trunk_file_size / 2;
