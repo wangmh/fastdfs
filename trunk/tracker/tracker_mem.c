@@ -41,6 +41,7 @@
 #define GROUP_ITEM_STORE_PATH_COUNT          "store_path_count"
 #define GROUP_ITEM_SUBDIR_COUNT_PER_PATH     "subdir_count_per_path"
 #define GROUP_ITEM_CURRENT_TRUNK_FILE_ID     "current_trunk_file_id"
+#define GROUP_ITEM_TRUNK_SERVER              "trunk_server"
 
 #define STORAGE_SECTION_NAME_GLOBAL            "Global"
 #define STORAGE_SECTION_NAME_PREFIX            "Storage"
@@ -113,7 +114,8 @@ static pthread_mutex_t mem_thread_lock;
 static pthread_mutex_t mem_file_lock;
 
 static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup);
-static void tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup);
+static void tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup, 
+		const bool save);
 
 static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 	FDFSStorageDetail **ppStorageServer, const char *ip_addr, \
@@ -526,6 +528,7 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path)
 	IniContext iniContext;
 	FDFSGroupInfo *pGroup;
 	char *group_name;
+	char *pValue;
 	int group_count;
 	int result;
 	int i;
@@ -621,6 +624,11 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path)
 			GROUP_ITEM_SUBDIR_COUNT_PER_PATH, &iniContext, 0);
 		pGroup->current_trunk_file_id = iniGetIntValue(section_name, \
 			GROUP_ITEM_CURRENT_TRUNK_FILE_ID, &iniContext, 0);
+		pValue = iniGetStrValue(section_name, \
+			GROUP_ITEM_TRUNK_SERVER, &iniContext);
+		if (pValue != NULL && *pValue != '\0')
+		{
+		}
 	}
 
 	iniFreeContext(&iniContext);
@@ -1548,7 +1556,8 @@ static int tracker_save_groups()
 				"\t%s=%d\n" \
 				"\t%s=%d\n" \
 				"\t%s=%d\n" \
-				"\t%s=%d\n\n", \
+				"\t%s=%d\n" \
+				"\t%s=%s\n\n", \
 				(*ppGroup)->group_name, \
 				GROUP_SECTION_NAME_PREFIX, \
 				(int)(ppGroup - g_groups.sorted_groups) + 1, \
@@ -1563,7 +1572,11 @@ static int tracker_save_groups()
 				GROUP_ITEM_SUBDIR_COUNT_PER_PATH, \
 				(*ppGroup)->subdir_count_per_path, \
 				GROUP_ITEM_CURRENT_TRUNK_FILE_ID, \
-				(*ppGroup)->current_trunk_file_id);
+				(*ppGroup)->current_trunk_file_id, \
+				GROUP_ITEM_TRUNK_SERVER, \
+				(*ppGroup)->pTrunkServer ? \
+					(*ppGroup)->pTrunkServer->ip_addr : ""
+			);
 
 		if (write(fd, buff, len) != len)
 		{
@@ -2749,7 +2762,7 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 	tracker_mem_find_store_server(pGroup);
 	if (g_if_leader_self && pGroup->pTrunkServer == NULL)
 	{
-		tracker_mem_find_trunk_server(pGroup);
+		tracker_mem_find_trunk_server(pGroup, true);
 	}
 
 #ifdef WITH_HTTPD
@@ -4389,7 +4402,8 @@ static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup)
 	}
 }
 
-static void tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup)
+static void tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup, 
+		const bool save)
 {
 	FDFSStorageDetail *pStoreServer;
 
@@ -4405,6 +4419,10 @@ static void tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup)
 		"group: %s, trunk server set to %s:%d", __LINE__, \
 		pGroup->group_name, pGroup->pTrunkServer->ip_addr, \
 		pGroup->storage_port);
+	if (save)
+	{
+		tracker_save_groups();
+	}
 }
 
 int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
@@ -4539,7 +4557,7 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 	tracker_mem_find_store_server(pGroup);
 	if (g_if_leader_self && pGroup->pTrunkServer == NULL)
 	{
-		tracker_mem_find_trunk_server(pGroup);
+		tracker_mem_find_trunk_server(pGroup, true);
 	}
 
 	if ((result=pthread_mutex_unlock(&mem_thread_lock)) != 0)
@@ -5039,8 +5057,10 @@ int tracker_mem_check_alive(void *arg)
 			(*ppGroup)->storage_port);
 
 		(*ppGroup)->pTrunkServer = NULL;
-		tracker_mem_find_trunk_server(*ppGroup);
+		tracker_mem_find_trunk_server(*ppGroup, false);
 		(*ppGroup)->trunk_chg_count++;
+
+		tracker_save_groups();
 	}
 	}
 
