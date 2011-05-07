@@ -917,7 +917,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader resp;
 	int server_count;
 	int result;
-	char in_buff[1 + (2 + FDFS_MAX_SERVERS_EACH_GROUP) * \
+	char in_buff[1 + (1 + FDFS_MAX_SERVERS_EACH_GROUP) * \
 			sizeof(FDFSStorageBrief)];
 	FDFSStorageBrief *pBriefServers;
 	char *pFlags;
@@ -987,17 +987,17 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 
 	if ((*pFlags) & FDFS_CHANGE_FLAG_TRUNK_SERVER)
 	{
-		if (server_count < 2)
+		if (server_count < 1)
 		{
 		logError("file: "__FILE__", line: %d, " \
-			"tracker server %s:%d, reponse server count: %d < 2", \
+			"tracker server %s:%d, reponse server count: %d < 1", \
 			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, server_count);
 		return EINVAL;
 		}
 
-		pBriefServers += 2;
-		server_count -= 2;
+		pBriefServers += 1;
+		server_count -= 1;
 	}
 
 	if (!((*pFlags) & FDFS_CHANGE_FLAG_GROUP_SERVER))

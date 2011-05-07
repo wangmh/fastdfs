@@ -1126,6 +1126,7 @@ static int tracker_deal_active_test(struct fast_task_info *pTask)
 
 static int tracker_deal_ping_leader(struct fast_task_info *pTask)
 {
+	int *nLastCounter;
 	if (pTask->length - sizeof(TrackerHeader) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1139,15 +1140,20 @@ static int tracker_deal_ping_leader(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
-	pTask->length = sizeof(TrackerHeader);
 	if (!g_if_leader_self)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, i am not the leader!", \
 			__LINE__, TRACKER_PROTO_CMD_TRACKER_PING_LEADER, \
 			pTask->client_ip);
+		pTask->length = sizeof(TrackerHeader);
 		return EOPNOTSUPP;
 	}
+
+	nLastCounter = (int *)pTask->arg;
+
+	logInfo("nLastCounter=%p, pTask->arg=%p, counter=%d", nLastCounter, pTask->arg, *nLastCounter);
+	pTask->length = sizeof(TrackerHeader);
 
 	return 0;
 }
