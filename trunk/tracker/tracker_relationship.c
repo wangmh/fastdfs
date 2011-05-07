@@ -31,10 +31,93 @@
 
 bool g_if_leader_self = false;  //if I am leader
 
+static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
+{
+	TrackerHeader header;
+	int result;
+	int64_t in_bytes;
+	char in_buff[(FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE) * \
+			FDFS_MAX_GROUPS];
+	char *pInBuff;
+	char *p;
+	char *pEnd;
+	FDFSGroupInfo *pGroup;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char trunk_server_ip[IP_ADDRESS_SIZE];
 
-#define fdfs_ping_leader(pTrackerServer) \
-        fdfs_deal_no_body_cmd(pTrackerServer, \
-		TRACKER_PROTO_CMD_TRACKER_PING_LEADER)
+	memset(&header, 0, sizeof(header));
+	header.cmd = TRACKER_PROTO_CMD_TRACKER_PING_LEADER;
+	result = tcpsenddata_nb(pTrackerServer->sock, &header, \
+			sizeof(header), g_fdfs_network_timeout);
+	if(result != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server ip: %s, send data fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pTrackerServer->ip_addr, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	pInBuff = in_buff;
+	if ((result=fdfs_recv_response(pTrackerServer, &pInBuff, \
+			sizeof(in_buff), &in_bytes)) != 0)
+	{
+		return result;
+	}
+
+	if (in_bytes == 0)
+	{
+		return 0;
+	}
+	else if (in_bytes % (FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server ip: %s, invalid body length: " \
+			INT64_PRINTF_FORMAT, __LINE__, \
+			pTrackerServer->ip_addr, in_bytes);
+		return EINVAL;
+	}
+
+	memset(group_name, 0, sizeof(group_name));
+	memset(trunk_server_ip, 0, sizeof(trunk_server_ip));
+
+	pEnd = in_buff + in_bytes;
+	for (p=in_buff; p<pEnd; p += FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE)
+	{
+		memcpy(group_name, p, FDFS_GROUP_NAME_MAX_LEN);
+		memcpy(trunk_server_ip, p + FDFS_GROUP_NAME_MAX_LEN, \
+			IP_ADDRESS_SIZE - 1);
+
+		pGroup = tracker_mem_get_group(group_name);
+		if (pGroup == NULL)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"tracker server ip: %s, group: %s not exists", \
+				__LINE__, pTrackerServer->ip_addr, group_name);
+			continue;
+		}
+
+		if (*trunk_server_ip == '\0')
+		{
+			pGroup->pTrunkServer = NULL;
+			continue;
+		}
+
+		pGroup->pTrunkServer = tracker_mem_get_storage(pGroup, \
+							trunk_server_ip);
+		if (pGroup->pTrunkServer == NULL)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"tracker server ip: %s, group: %s, " \
+				"trunk server: %s not exists", \
+				__LINE__, pTrackerServer->ip_addr, \
+				group_name, trunk_server_ip);
+		}
+	}
+
+	return 0;
+}
 
 static int relationship_cmp_tracker_status(const void *p1, const void *p2)
 {

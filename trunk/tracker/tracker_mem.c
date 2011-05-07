@@ -104,6 +104,7 @@
 TrackerServerGroup g_tracker_servers = {0, 0, -1, NULL};
 TrackerServerInfo *g_last_tracker_servers = NULL;  //for delay free
 int g_next_leader_index = -1;			   //next leader index
+int g_trunk_server_chg_count = 1;		   //for notify other trackers
 
 int64_t g_changelog_fsize = 0; //storage server change log file size
 static int changelog_fd = -1;  //storage server change log fd for write
@@ -4518,6 +4519,8 @@ static void tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 
 	pGroup->pTrunkServer = pStoreServer;
 	pGroup->trunk_chg_count++;
+	g_trunk_server_chg_count++;
+
 	logInfo("file: "__FILE__", line: %d, " \
 		"group: %s, trunk server set to %s:%d", __LINE__, \
 		pGroup->group_name, pGroup->pTrunkServer->ip_addr, \
@@ -5162,6 +5165,7 @@ int tracker_mem_check_alive(void *arg)
 		(*ppGroup)->pTrunkServer = NULL;
 		tracker_mem_find_trunk_server(*ppGroup, false);
 		(*ppGroup)->trunk_chg_count++;
+		g_trunk_server_chg_count++;
 
 		tracker_save_groups();
 	}
