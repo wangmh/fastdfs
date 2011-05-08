@@ -169,19 +169,12 @@ int trunk_sync_init()
 		return result;
 	}
 
-	load_local_host_ip_addrs();
-
 	return 0;
 }
 
 int trunk_sync_destroy()
 {
 	int result;
-
-	if (!g_if_use_trunk_file)
-	{
-		return 0;
-	}
 
 	if (trunk_binlog_fd >= 0)
 	{

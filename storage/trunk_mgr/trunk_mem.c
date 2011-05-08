@@ -164,10 +164,6 @@ int storage_trunk_destroy()
 {
 	int result;
 
-	if (!g_if_trunker_self)
-	{
-		return 0;
-	}
 	if (slots == NULL)
 	{
 		return 0;

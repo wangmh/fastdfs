@@ -1150,6 +1150,11 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 
 			tracker_fetch_trunk_fid(pTrackerServer);
 			g_if_trunker_self = true;
+
+			if ((result=storage_trunk_init()) != 0)
+			{
+				return result;
+			}
 			trunk_sync_thread_start_all();
 			}
 		}
@@ -1161,6 +1166,8 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 
 			if (g_if_trunker_self)
 			{
+				int saved_trunk_sync_thread_count;
+
 				logWarning("file: "__FILE__", line: %d, " \
 					"I am the old trunk server, " \
 					"the new trunk server is %s:%d", \
@@ -1169,6 +1176,31 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 
 				tracker_report_trunk_fid(pTrackerServer);
 				g_if_trunker_self = false;
+
+				saved_trunk_sync_thread_count = \
+						g_trunk_sync_thread_count;
+				if (saved_trunk_sync_thread_count > 0)
+				{
+					logInfo("file: "__FILE__", line: %d, "\
+						"waiting %d trunk sync " \
+						"threads exit ...", __LINE__, \
+						saved_trunk_sync_thread_count);
+				}
+
+				while (g_trunk_sync_thread_count > 0)
+				{
+					usleep(50000);
+				}
+
+				if (saved_trunk_sync_thread_count > 0)
+				{
+					logInfo("file: "__FILE__", line: %d, " \
+						"%d trunk sync threads exited",\
+						__LINE__, \
+						saved_trunk_sync_thread_count);
+				}
+				
+				storage_trunk_destroy();
 			}
 		}
 		}
