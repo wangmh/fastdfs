@@ -86,12 +86,14 @@
 #define FDFS_APPENDER_FILE_SIZE  INFINITE_FILE_SIZE
 #define FDFS_TRUNK_FILE_SIZE  (512 * 1024LL * 1024 * 1024 * 1024 * 1024LL)
 
-#define FDFS_CHANGE_FLAG_TRUNK_SERVER	1  //trunk server changed
-#define FDFS_CHANGE_FLAG_GROUP_SERVER	2  //group server changed
+#define FDFS_CHANGE_FLAG_TRACKER_LEADER	1  //tracker leader changed
+#define FDFS_CHANGE_FLAG_TRUNK_SERVER	2  //trunk server changed
+#define FDFS_CHANGE_FLAG_GROUP_SERVER	4  //group server changed
 
 typedef struct
 {
 	char status;
+	char port[4];
 	char ip_addr[IP_ADDRESS_SIZE];
 } FDFSStorageBrief;
 
@@ -314,6 +316,7 @@ typedef struct
 {
 	FDFSGroupInfo *pGroup;
 	FDFSStorageDetail *pStorage;
+	int tracker_leader_chg_count;
 } TrackerClientInfo;
 
 typedef struct

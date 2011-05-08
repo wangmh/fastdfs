@@ -24,6 +24,12 @@ extern TrackerServerGroup g_tracker_group;
 extern bool g_anti_steal_token;
 extern BufferInfo g_anti_steal_secret_key;
 
+#define fdfs_set_tracker_leader(leaderIp, leaderPort) \
+	fdfs_set_tracker_leader_ex((&g_tracker_group), leaderIp, leaderPort)
+
+int fdfs_set_tracker_leader_ex(TrackerServerGroup *pServerGroup, \
+		const char *leaderIp, const int leaderPort);
+
 #ifdef __cplusplus
 }
 #endif

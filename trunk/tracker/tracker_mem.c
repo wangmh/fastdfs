@@ -105,6 +105,7 @@ TrackerServerGroup g_tracker_servers = {0, 0, -1, NULL};
 TrackerServerInfo *g_last_tracker_servers = NULL;  //for delay free
 int g_next_leader_index = -1;			   //next leader index
 int g_trunk_server_chg_count = 1;		   //for notify other trackers
+int g_tracker_leader_chg_count = 0;		   //for notify storage servers
 
 int64_t g_changelog_fsize = 0; //storage server change log file size
 static int changelog_fd = -1;  //storage server change log fd for write

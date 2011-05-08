@@ -302,6 +302,8 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 	if (status != 0 || pClientInfo->pGroup == NULL ||
 		((pClientInfo->pGroup->chg_count == \
 		  pClientInfo->pStorage->chg_count) &&
+		 (pClientInfo->tracker_leader_chg_count == \
+		  g_tracker_leader_chg_count) &&
 		 (pClientInfo->pGroup->trunk_chg_count == \
 		  pClientInfo->pStorage->trunk_chg_count)))
 	{
@@ -312,6 +314,31 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 	p = pTask->data + sizeof(TrackerHeader);
 	pFlags = p++;
 	*pFlags = 0;
+	if (pClientInfo->tracker_leader_chg_count != g_tracker_leader_chg_count)
+	{
+		int leader_index;
+
+		*pFlags |= FDFS_CHANGE_FLAG_TRACKER_LEADER;
+
+		pDestServer = (FDFSStorageBrief *)p;
+		memset(p, 0, sizeof(FDFSStorageBrief));
+
+		leader_index = g_tracker_servers.leader_index;
+		if (leader_index >= 0)
+		{
+			TrackerServerInfo *pTServer;
+			pTServer = g_tracker_servers.servers + leader_index;
+			memcpy(pDestServer->ip_addr, pTServer->ip_addr, \
+				IP_ADDRESS_SIZE);
+			int2buff(pTServer->port, pDestServer->port);
+		}
+		pDestServer++;
+
+		pClientInfo->tracker_leader_chg_count = \
+				g_tracker_leader_chg_count;
+		p = (char *)pDestServer;
+	}
+
 	if (pClientInfo->pStorage->trunk_chg_count != \
 		pClientInfo->pGroup->trunk_chg_count)
 	{
@@ -326,6 +353,8 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 			pDestServer->status = pServer->status;
 			memcpy(pDestServer->ip_addr, pServer->ip_addr, \
 				IP_ADDRESS_SIZE);
+			int2buff(pClientInfo->pGroup->storage_port, \
+				pDestServer->port);
 		}
 		pDestServer++;
 
@@ -347,6 +376,8 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 			pDestServer->status = (*ppServer)->status;
 			memcpy(pDestServer->ip_addr, (*ppServer)->ip_addr, \
 				IP_ADDRESS_SIZE);
+			int2buff(pClientInfo->pGroup->storage_port, \
+				pDestServer->port);
 			pDestServer++;
 		}
 
