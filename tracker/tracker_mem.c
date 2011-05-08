@@ -1589,10 +1589,13 @@ static int tracker_load_data(FDFSGroups *pGroups)
 		return result;
 	}
 
+	if (g_if_use_trunk_file)
+	{
 	if ((result=tracker_locate_group_trunk_servers(pGroups, \
 		pTrunkServers, nTrunkServerCount, true)) != 0)
 	{
 		return result;
+	}
 	}
 
 	if (pTrunkServers != NULL)
@@ -2864,7 +2867,8 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 	pGroup->last_sync_timestamps = new_last_sync_timestamps;
 
 	tracker_mem_find_store_server(pGroup);
-	if (g_if_leader_self && pGroup->pTrunkServer == NULL)
+	if (g_if_leader_self && g_if_use_trunk_file && \
+		pGroup->pTrunkServer == NULL)
 	{
 		tracker_mem_find_trunk_server(pGroup, true);
 	}
@@ -4663,7 +4667,8 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 	}
 
 	tracker_mem_find_store_server(pGroup);
-	if (g_if_leader_self && pGroup->pTrunkServer == NULL)
+	if (g_if_leader_self && g_if_use_trunk_file && \
+		pGroup->pTrunkServer == NULL)
 	{
 		tracker_mem_find_trunk_server(pGroup, true);
 	}
@@ -5148,7 +5153,7 @@ int tracker_mem_check_alive(void *arg)
 	}
 	}
 
-	if (!g_if_leader_self)
+	if ((!g_if_leader_self) || (!g_if_use_trunk_file))
 	{
 		return 0;
 	}
