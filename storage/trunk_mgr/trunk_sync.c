@@ -236,6 +236,11 @@ int kill_trunk_sync_threads()
 			__LINE__, result, STRERROR(result));
 	}
 
+	while (g_trunk_sync_thread_count > 0)
+	{
+		usleep(50000);
+	}
+
 	return kill_res;
 }
 
@@ -901,8 +906,8 @@ static void trunk_sync_thread_exit(TrackerServerInfo *pStorage)
 			__LINE__, result, STRERROR(result));
 	}
 
-	logDebug("file: "__FILE__", line: %d, " \
-		"sync thread to storage server %s:%d exit", 
+	logInfo("file: "__FILE__", line: %d, " \
+		"trunk sync thread to storage server %s:%d exit", 
 		__LINE__, pStorage->ip_addr, pStorage->port);
 }
 
@@ -1001,11 +1006,11 @@ static void* trunk_sync_thread_entrance(void* arg)
 	storage_server.port = g_server_port;
 	storage_server.sock = -1;
 
-	logDebug("file: "__FILE__", line: %d, " \
+	logInfo("file: "__FILE__", line: %d, " \
 		"trunk sync thread to storage server %s:%d started", \
 		__LINE__, storage_server.ip_addr, storage_server.port);
 
-	while (g_continue_flag && \
+	while (g_continue_flag && g_if_trunker_self && \
 		pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
 		pStorage->status != FDFS_STORAGE_STATUS_IP_CHANGED && \
 		pStorage->status != FDFS_STORAGE_STATUS_NONE)
@@ -1013,7 +1018,7 @@ static void* trunk_sync_thread_entrance(void* arg)
 		previousCode = 0;
 		nContinuousFail = 0;
 		conn_result = 0;
-		while (g_continue_flag && \
+		while (g_continue_flag && g_if_trunker_self && \
 			pStorage->status != FDFS_STORAGE_STATUS_DELETED && \
 			pStorage->status != FDFS_STORAGE_STATUS_IP_CHANGED && \
 			pStorage->status != FDFS_STORAGE_STATUS_NONE)
@@ -1103,7 +1108,7 @@ static void* trunk_sync_thread_entrance(void* arg)
 				conn_result, STRERROR(conn_result));
 		}
 
-		if ((!g_continue_flag) ||
+		if ((!g_continue_flag) || (!g_if_trunker_self) || \
 			pStorage->status == FDFS_STORAGE_STATUS_DELETED || \
 			pStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED || \
 			pStorage->status == FDFS_STORAGE_STATUS_NONE)
@@ -1190,6 +1195,11 @@ static void* trunk_sync_thread_entrance(void* arg)
 					last_keep_alive_time = current_time;
 				}
 
+				if (!g_if_trunker_self)
+				{
+					break;
+				}
+
 				usleep(g_sync_wait_usec);
 				continue;
 			}
@@ -1249,6 +1259,27 @@ static void* trunk_sync_thread_entrance(void* arg)
 	trunk_sync_thread_exit(&storage_server);
 
 	return NULL;
+}
+
+int trunk_sync_thread_start_all()
+{
+	FDFSStorageServer *pServer;
+	FDFSStorageServer *pEnd;
+	int result;
+	int ret;
+
+	result = 0;
+	pEnd = g_storage_servers + g_storage_count;
+	for (pServer=g_storage_servers; pServer<pEnd; pServer++)
+	{
+		ret = trunk_sync_thread_start(&(pServer->server));
+		if (ret != 0)
+		{
+			result = ret;
+		}
+	}
+
+	return result;
 }
 
 int trunk_sync_thread_start(const FDFSStorageBrief *pStorage)

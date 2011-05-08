@@ -32,6 +32,7 @@
 #include "storage_func.h"
 #include "tracker_client.h"
 #include "trunk_mem.h"
+#include "trunk_sync.h"
 
 static pthread_mutex_t reporter_thread_lock;
 
@@ -160,6 +161,28 @@ static void thracker_report_thread_exit(TrackerServerInfo *pTrackerServer)
 	logDebug("file: "__FILE__", line: %d, " \
 		"report thread to tracker server %s:%d exit", \
 		__LINE__, pTrackerServer->ip_addr, pTrackerServer->port);
+}
+
+static int tracker_unlink_mark_files(const char *ip_addr)
+{
+	int result;
+
+	result = storage_unlink_mark_file(ip_addr);
+	result += trunk_unlink_mark_file(ip_addr);
+
+	return result;
+}
+
+static int tracker_rename_mark_files(const char *old_ip_addr, \
+	const int old_port, const char *new_ip_addr, const int new_port)
+{
+	int result;
+
+	result = storage_rename_mark_file(old_ip_addr, old_port, \
+				new_ip_addr, new_port);
+	result += trunk_rename_mark_file(old_ip_addr, old_port, \
+					new_ip_addr, new_port);
+	return result;
 }
 
 static void *tracker_report_thread_entrance(void *arg)
@@ -683,6 +706,22 @@ int tracker_report_storage_status(TrackerServerInfo *pTrackerServer, \
 	return resp.status;
 }
 
+static int tracker_start_sync_threads(const FDFSStorageBrief *pStorage)
+{
+	int result;
+
+	result = storage_sync_thread_start(pStorage);
+	if (result == 0)
+	{
+		if (g_if_trunker_self)
+		{
+			result = trunk_sync_thread_start(pStorage);
+		}
+	}
+
+	return result;
+}
+
 static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		FDFSStorageBrief *briefServers, const int server_count)
 {
@@ -759,7 +798,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 				{
 					(*ppFound)->server.status = \
 							pServer->status;
-					if ((result=storage_sync_thread_start( \
+					if ((result=tracker_start_sync_threads(\
 						&((*ppFound)->server))) != 0)
 					{
 						return result;
@@ -810,7 +849,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 					g_storage_count++;
 				}
 
-				result = storage_sync_thread_start( \
+				result = tracker_start_sync_threads( \
 					&(pInsertedServer->server));
 			}
 			else
@@ -1068,6 +1107,17 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 			return EINVAL;
 		}
 
+		if (!g_if_use_trunk_file)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"tracker server %s:%d, " \
+				"my g_if_use_trunk_file is false, " \
+				"can't support trunk server!", \
+				__LINE__, pTrackerServer->ip_addr, \
+				pTrackerServer->port);
+		}
+		else
+		{
 		memcpy(g_trunk_server.ip_addr, pBriefServers->ip_addr, \
 			IP_ADDRESS_SIZE - 1);
 		*(g_trunk_server.ip_addr + (IP_ADDRESS_SIZE - 1)) = '\0';
@@ -1091,6 +1141,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 
 			tracker_fetch_trunk_fid(pTrackerServer);
 			g_if_trunker_self = true;
+			trunk_sync_thread_start_all();
 			}
 		}
 		else
@@ -1110,6 +1161,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 				tracker_report_trunk_fid(pTrackerServer);
 				g_if_trunker_self = false;
 			}
+		}
 		}
 
 		pBriefServers += 1;
@@ -1147,7 +1199,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 				continue;
 			}
 
-			storage_rename_mark_file(pStorage->ip_addr, \
+			tracker_rename_mark_files(pStorage->ip_addr, \
 					g_last_server_port, pStorage->ip_addr, \
 					g_server_port);
 		}
@@ -2009,7 +2061,7 @@ int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer)
 
 			if (server_status == FDFS_STORAGE_STATUS_DELETED)
 			{
-				storage_unlink_mark_file(pOldIpAddr);
+				tracker_unlink_mark_files(pOldIpAddr);
 
 				if (strcmp(g_sync_src_ip_addr, pOldIpAddr) == 0)
 				{
@@ -2019,7 +2071,7 @@ int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer)
 			}
 			else if (server_status == FDFS_STORAGE_STATUS_IP_CHANGED)
 			{
-				storage_rename_mark_file(pOldIpAddr, \
+				tracker_rename_mark_files(pOldIpAddr, \
 					g_server_port, pNewIpAddr, g_server_port);
 				if (strcmp(g_sync_src_ip_addr, pOldIpAddr) == 0)
 				{

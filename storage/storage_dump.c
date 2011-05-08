@@ -21,6 +21,7 @@
 #include "storage_service.h"
 #include "storage_sync.h"
 #include "trunk_mem.h"
+#include "trunk_sync.h"
 
 static int fdfs_dump_global_vars(char *buff, const int buffSize)
 {
@@ -97,6 +98,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_avg_storage_reserved_mb=%d\n"
 		"g_store_path_index=%d\n"
 		"g_current_trunk_file_id=%d\n"
+		"g_trunk_sync_thread_count=%d\n"
 		"g_trunk_server=%s:%d\n"
 	#ifdef WITH_HTTPD
 		"g_http_params.disabled=%d\n"
@@ -182,6 +184,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_avg_storage_reserved_mb
 		, g_store_path_index
 		, g_current_trunk_file_id
+		, g_trunk_sync_thread_count
 		, g_trunk_server.ip_addr, g_trunk_server.port
 	#ifdef WITH_HTTPD
 		, g_http_params.disabled
