@@ -53,13 +53,10 @@ void task_finish_clean_up(struct fast_task_info *pTask)
 		{
 			tracker_mem_offline_store_server(pClientInfo->pGroup, \
 						pClientInfo->pStorage);
-
-			pClientInfo->pStorage = NULL;
 		}
-
-		pClientInfo->pGroup = NULL;
 	}
 
+	memset(pTask->arg, 0, sizeof(TrackerClientInfo));
 	free_queue_push(pTask);
 }
 
