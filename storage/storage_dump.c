@@ -222,6 +222,35 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 	return total_len;
 }
 
+static int fdfs_dump_tracker_servers(char *buff, const int buffSize)
+{
+	int total_len;
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pTrackerEnd;
+
+	total_len = snprintf(buff, buffSize, \
+		"\ng_tracker_group.server_count=%d, " \
+		"g_tracker_group.leader_index=%d\n", \
+		g_tracker_group.server_count, \
+		g_tracker_group.leader_index);
+	if (g_tracker_group.server_count == 0)
+	{
+		return total_len;
+	}
+
+	pTrackerEnd = g_tracker_group.servers + g_tracker_group.server_count;
+	for (pTrackerServer=g_tracker_group.servers; \
+		pTrackerServer<pTrackerEnd; pTrackerServer++)
+	{
+		total_len += snprintf(buff + total_len, buffSize - total_len,
+			"\t%d. tracker server=%s:%d\n", \
+			(pTrackerServer - g_tracker_group.servers) + 1, \
+			pTrackerServer->ip_addr, pTrackerServer->port);
+	}
+
+	return total_len;
+}
+
 static int fdfs_dump_storage_servers(char *buff, const int buffSize)
 {
 	int total_len;
@@ -357,6 +386,9 @@ int fdfs_dump_storage_global_vars_to_file(const char *filename)
 		WRITE_TO_FILE(fd, buff, len)
 
 		len = fdfs_dump_global_vars(buff, sizeof(buff));
+		WRITE_TO_FILE(fd, buff, len)
+
+		len = fdfs_dump_tracker_servers(buff, sizeof(buff));
 		WRITE_TO_FILE(fd, buff, len)
 
 		len = fdfs_dump_storage_stat(buff, sizeof(buff));

@@ -347,11 +347,6 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 		p = (char *)pDestServer;
 	}
 
-	logInfo("Storage: %s, pStorage->trunk_chg_count=%d, " \
-		"pGroup->trunk_chg_count=%d", pClientInfo->pStorage->ip_addr, 
-		pClientInfo->pStorage->trunk_chg_count,
-		pClientInfo->pGroup->trunk_chg_count);
-
 	if (pClientInfo->pStorage->trunk_chg_count != \
 		pClientInfo->pGroup->trunk_chg_count)
 	{
