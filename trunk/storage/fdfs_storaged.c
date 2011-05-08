@@ -353,7 +353,6 @@ int main(int argc, char *argv[])
 	while (g_storage_thread_count != 0 || \
 		g_dio_thread_count != 0 || \
 		g_tracker_reporter_count > 0 || \
-		g_storage_sync_thread_count > 0 || \
 		g_schedule_flag)
 	{
 

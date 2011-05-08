@@ -1126,6 +1126,11 @@ int kill_storage_sync_threads()
 			__LINE__, result, STRERROR(result));
 	}
 
+	while (g_storage_sync_thread_count > 0)
+	{
+		usleep(50000);
+	}
+
 	return kill_res;
 }
 

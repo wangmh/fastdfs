@@ -55,6 +55,7 @@ int trunk_binlog_write(const int timestamp, const char op_type, \
 int trunk_binlog_read(TrunkBinLogReader *pReader, \
 		      TrunkBinLogRecord *pRecord, int *record_length);
 
+int trunk_sync_thread_start_all();
 int trunk_sync_thread_start(const FDFSStorageBrief *pStorage);
 int kill_trunk_sync_threads();
 int trunk_binlog_sync_func(void *args);
