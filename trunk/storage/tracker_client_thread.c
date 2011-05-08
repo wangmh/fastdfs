@@ -33,6 +33,7 @@
 #include "tracker_client.h"
 #include "trunk_mem.h"
 #include "trunk_sync.h"
+#include "storage_param_getter.h"
 
 static pthread_mutex_t reporter_thread_lock;
 
@@ -1105,6 +1106,14 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 				pTrackerServer->ip_addr, \
 				pTrackerServer->port, server_count);
 			return EINVAL;
+		}
+
+		if (!g_if_use_trunk_file)
+		{
+			logInfo("file: "__FILE__", line: %d, " \
+				"reload parameters from tracker server", \
+				__LINE__);
+			storage_get_params_from_tracker();
 		}
 
 		if (!g_if_use_trunk_file)
