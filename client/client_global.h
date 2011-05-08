@@ -13,6 +13,7 @@
 
 #include "common_define.h"
 #include "tracker_types.h"
+#include "fdfs_shared_func.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,12 +25,9 @@ extern TrackerServerGroup g_tracker_group;
 extern bool g_anti_steal_token;
 extern BufferInfo g_anti_steal_secret_key;
 
-#define fdfs_set_tracker_leader(leaderIp, leaderPort) \
-	fdfs_set_tracker_leader_ex((&g_tracker_group), leaderIp, leaderPort)
-
-int fdfs_set_tracker_leader_ex(TrackerServerGroup *pServerGroup, \
-		const char *leaderIp, const int leaderPort);
-
+#define fdfs_get_tracker_leader_index(leaderIp, leaderPort) \
+	fdfs_get_tracker_leader_index_ex(&g_tracker_group, \
+					leaderIp, leaderPort)
 #ifdef __cplusplus
 }
 #endif

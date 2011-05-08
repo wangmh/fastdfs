@@ -32,6 +32,7 @@
 #include "tracker_proto.h"
 #include "tracker_nio.h"
 #include "tracker_relationship.h"
+#include "fdfs_shared_func.h"
 #include "tracker_service.h"
 
 #define PKG_LEN_PRINTF_FORMAT  "%d"
@@ -302,7 +303,7 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 	if (status != 0 || pClientInfo->pGroup == NULL ||
 		((pClientInfo->pGroup->chg_count == \
 		  pClientInfo->pStorage->chg_count) &&
-		 (pClientInfo->tracker_leader_chg_count == \
+		 (pClientInfo->chg_count.tracker_leader == \
 		  g_tracker_leader_chg_count) &&
 		 (pClientInfo->pGroup->trunk_chg_count == \
 		  pClientInfo->pStorage->trunk_chg_count)))
@@ -314,7 +315,7 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 	p = pTask->data + sizeof(TrackerHeader);
 	pFlags = p++;
 	*pFlags = 0;
-	if (pClientInfo->tracker_leader_chg_count != g_tracker_leader_chg_count)
+	if (pClientInfo->chg_count.tracker_leader != g_tracker_leader_chg_count)
 	{
 		int leader_index;
 
@@ -334,7 +335,7 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 		}
 		pDestServer++;
 
-		pClientInfo->tracker_leader_chg_count = \
+		pClientInfo->chg_count.tracker_leader = \
 				g_tracker_leader_chg_count;
 		p = (char *)pDestServer;
 	}
@@ -692,30 +693,6 @@ static int tracker_deal_report_trunk_fid(struct fast_task_info *pTask)
 	return 0;
 }
 
-static int tracker_find_tracker_server_index(TrackerServerInfo *pTargetServer)
-{
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pTrackerEnd;
-
-	if (g_tracker_servers.server_count == 0)
-	{
-		return -1;
-	}
-
-	pTrackerEnd = g_tracker_servers.servers + g_tracker_servers.server_count;
-	for (pTrackerServer=g_tracker_servers.servers; \
-		pTrackerServer<pTrackerEnd; pTrackerServer++)
-	{
-		if (strcmp(pTrackerServer->ip_addr, pTargetServer->ip_addr)==0\
-			&& pTrackerServer->port == pTargetServer->port)
-		{
-			return pTrackerServer - g_tracker_servers.servers;
-		}
-	}
-
-	return -1;
-}
-
 static int tracker_deal_notify_next_leader(struct fast_task_info *pTask)
 {
 	TrackerClientInfo *pClientInfo;
@@ -752,7 +729,8 @@ static int tracker_deal_notify_next_leader(struct fast_task_info *pTask)
 	pTask->length = sizeof(TrackerHeader);
 	strcpy(leader.ip_addr, ipAndPort[0]);
 	leader.port = atoi(ipAndPort[1]);
-	server_index = tracker_find_tracker_server_index(&leader);
+	server_index = fdfs_get_tracker_leader_index_ex(&g_tracker_servers, \
+					leader.ip_addr, leader.port);
 	if (server_index < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -767,6 +745,7 @@ static int tracker_deal_notify_next_leader(struct fast_task_info *pTask)
 	{
 		g_if_leader_self = false;
 		g_tracker_servers.leader_index = -1;
+		g_tracker_leader_chg_count++;
 
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, two leader occur, " \
@@ -816,7 +795,8 @@ static int tracker_deal_commit_next_leader(struct fast_task_info *pTask)
 	pTask->length = sizeof(TrackerHeader);
 	strcpy(leader.ip_addr, ipAndPort[0]);
 	leader.port = atoi(ipAndPort[1]);
-	server_index = tracker_find_tracker_server_index(&leader);
+	server_index = fdfs_get_tracker_leader_index_ex(&g_tracker_servers, \
+					leader.ip_addr, leader.port);
 	if (server_index < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -838,6 +818,7 @@ static int tracker_deal_commit_next_leader(struct fast_task_info *pTask)
 	if (leader.port == g_server_port && is_local_host_ip(leader.ip_addr))
 	{
 		g_if_leader_self = true;
+		g_tracker_leader_chg_count++;
 	}
 	else
 	{
@@ -1143,12 +1124,13 @@ static int tracker_deal_active_test(struct fast_task_info *pTask)
 
 static int tracker_deal_ping_leader(struct fast_task_info *pTask)
 {
-	int *nLastCounter;
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppEnd;
 	int body_len;
 	char *p;
-
+	TrackerClientInfo *pClientInfo;
+	
+	pClientInfo = (TrackerClientInfo *)pTask->arg;
 	if (pTask->length - sizeof(TrackerHeader) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1172,8 +1154,7 @@ static int tracker_deal_ping_leader(struct fast_task_info *pTask)
 		return EOPNOTSUPP;
 	}
 
-	nLastCounter = (int *)pTask->arg;
-	if (*nLastCounter == g_trunk_server_chg_count)
+	if (pClientInfo->chg_count.trunk_server == g_trunk_server_chg_count)
 	{
 		pTask->length = sizeof(TrackerHeader);
 		return 0;
@@ -1208,7 +1189,7 @@ static int tracker_deal_ping_leader(struct fast_task_info *pTask)
 	}
 
 	pTask->length = p - pTask->data;
-	*nLastCounter = g_trunk_server_chg_count;
+	pClientInfo->chg_count.trunk_server = g_trunk_server_chg_count;
 
 	return 0;
 }
