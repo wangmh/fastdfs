@@ -27,6 +27,7 @@
 #include "storage_global.h"
 #include "storage_param_getter.h"
 #include "trunk_mem.h"
+#include "trunk_sync.h"
 
 int storage_get_params_from_tracker()
 {
@@ -34,6 +35,7 @@ int storage_get_params_from_tracker()
 	int result;
 	char *pSpaceSize;
 	int64_t reserved_storage_space;
+	bool use_trunk_file;
 
 	if ((result=fdfs_get_ini_context_from_tracker(&g_tracker_group, \
 		&iniContext, &g_continue_flag, \
@@ -66,7 +68,7 @@ int storage_get_params_from_tracker()
 
 	g_avg_storage_reserved_mb = g_storage_reserved_mb / g_path_count;
 
-	g_if_use_trunk_file = iniGetBoolValue(NULL, "use_trunk_file", \
+	use_trunk_file = iniGetBoolValue(NULL, "use_trunk_file", \
 				&iniContext, false);
 	g_slot_min_size = iniGetIntValue(NULL, "slot_min_size", \
 				&iniContext, 256);
@@ -74,6 +76,15 @@ int storage_get_params_from_tracker()
 				&iniContext, 64 * 1024 * 1024);
 
 	iniFreeContext(&iniContext);
+
+	if (use_trunk_file && !g_if_use_trunk_file)
+	{
+		if ((result=trunk_sync_init()) != 0)
+		{
+			return result;
+		}
+	}
+	g_if_use_trunk_file = use_trunk_file;
 
 	logInfo("file: "__FILE__", line: %d, " \
 		"storage_ip_changed_auto_adjust=%d, " \

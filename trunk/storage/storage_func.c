@@ -1632,20 +1632,6 @@ int storage_func_init(const char *filename, \
 		return result;
 	}
 
-
-	if (g_if_use_trunk_file)
-	{
-		if ((result=storage_trunk_init()) != 0)
-		{
-			return result;
-		}
-
-		if ((result=trunk_sync_init()) != 0)
-		{
-			return result;
-		}
-	}
-
 	if ((result=storage_check_ip_changed()) != 0)
 	{
 		return result;
