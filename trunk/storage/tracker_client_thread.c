@@ -1071,20 +1071,23 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 		memcpy(g_trunk_server.ip_addr, pBriefServers->ip_addr, \
 			IP_ADDRESS_SIZE - 1);
 		*(g_trunk_server.ip_addr + (IP_ADDRESS_SIZE - 1)) = '\0';
-		if (is_local_host_ip(g_trunk_server.ip_addr))
+		g_trunk_server.port = buff2int(pBriefServers->port);
+		if (is_local_host_ip(g_trunk_server.ip_addr) && \
+			g_trunk_server.port == g_server_port)
 		{
 			if (g_if_trunker_self)
 			{
 			logWarning("file: "__FILE__", line: %d, " \
-				"I am already trunk server, my ip: %s, " \
+				"I am already the trunk server %s:%d, " \
 				"may be the tracker server restart", \
-				__LINE__, g_trunk_server.ip_addr);
+				__LINE__, g_trunk_server.ip_addr, \
+				g_trunk_server.port);
 			}
 			else
 			{
 			logInfo("file: "__FILE__", line: %d, " \
-				"I am the trunk server, ip: %s", __LINE__, \
-				g_trunk_server.ip_addr);
+				"I am the the trunk server %s:%d", __LINE__, \
+				g_trunk_server.ip_addr, g_trunk_server.port);
 
 			tracker_fetch_trunk_fid(pTrackerServer);
 			g_if_trunker_self = true;
@@ -1092,8 +1095,18 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 		}
 		else
 		{
+			logInfo("file: "__FILE__", line: %d, " \
+				"the trunk server is %s:%d", __LINE__, \
+				g_trunk_server.ip_addr, g_trunk_server.port);
+
 			if (g_if_trunker_self)
 			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"I am the old trunk server, " \
+					"the new trunk server is %s:%d", \
+					__LINE__, g_trunk_server.ip_addr, \
+					g_trunk_server.port);
+
 				tracker_report_trunk_fid(pTrackerServer);
 				g_if_trunker_self = false;
 			}
