@@ -121,11 +121,6 @@ int trunk_sync_init()
 		}
 	}
 
-	if (!g_if_use_trunk_file)
-	{
-		return 0;
-	}
-
 	snprintf(sync_path, sizeof(sync_path), \
 			"%s/"TRUNK_DIR_NAME, data_path);
 	if (!fileExists(sync_path))
