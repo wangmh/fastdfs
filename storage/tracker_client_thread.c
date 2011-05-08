@@ -918,7 +918,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 	TrackerHeader resp;
 	int server_count;
 	int result;
-	char in_buff[1 + (1 + FDFS_MAX_SERVERS_EACH_GROUP) * \
+	char in_buff[1 + (2 + FDFS_MAX_SERVERS_EACH_GROUP) * \
 			sizeof(FDFSStorageBrief)];
 	FDFSStorageBrief *pBriefServers;
 	char *pFlags;
@@ -985,6 +985,71 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 	pFlags = in_buff;
 	server_count = (nInPackLen - 1) / sizeof(FDFSStorageBrief);
 	pBriefServers = (FDFSStorageBrief *)(in_buff + 1);
+
+	if ((*pFlags) & FDFS_CHANGE_FLAG_TRACKER_LEADER)
+	{
+		char tracker_leader_ip[IP_ADDRESS_SIZE];
+		int tracker_leader_port;
+
+		if (server_count < 1)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"tracker server %s:%d, reponse server " \
+				"count: %d < 1", __LINE__, \
+				pTrackerServer->ip_addr, \
+				pTrackerServer->port, server_count);
+			return EINVAL;
+		}
+
+		memcpy(tracker_leader_ip, pBriefServers->ip_addr, \
+			IP_ADDRESS_SIZE - 1);
+		*(tracker_leader_ip + (IP_ADDRESS_SIZE - 1)) = '\0';
+		tracker_leader_port = buff2int(pBriefServers->port);
+
+		if (*tracker_leader_ip == '\0')
+		{
+			if (g_tracker_group.leader_index >= 0)
+			{
+			TrackerServerInfo *pTrackerLeader;
+			pTrackerLeader = g_tracker_group.servers + \
+					g_tracker_group.leader_index;
+			logWarning("file: "__FILE__", line: %d, " \
+				"tracker server %s:%d, " \
+				"my tracker leader is: %s:%d, " \
+				"but reponse tracker leader is null", \
+ 				__LINE__, pTrackerServer->ip_addr, \
+				pTrackerServer->port, pTrackerLeader->ip_addr, \
+				pTrackerLeader->port);
+
+			g_tracker_group.leader_index = -1;
+			}
+		}
+		else
+		{
+			if (fdfs_set_tracker_leader(tracker_leader_ip, \
+				tracker_leader_port) != 0)
+			{
+			logWarning("file: "__FILE__", line: %d, " \
+				"tracker server %s:%d, " \
+				"reponse tracker leader: %s:%d" \
+				" not exist in local", __LINE__, \
+				pTrackerServer->ip_addr, \
+				pTrackerServer->port, tracker_leader_ip, \
+				tracker_leader_port);
+			}
+			else
+			{
+			logInfo("file: "__FILE__", line: %d, " \
+				"tracker server %s:%d, " \
+				"set tracker leader: %s:%d", __LINE__, \
+				pTrackerServer->ip_addr, pTrackerServer->port,\
+				tracker_leader_ip, tracker_leader_port);
+			}
+		}
+
+		pBriefServers += 1;
+		server_count -= 1;
+	}
 
 	if ((*pFlags) & FDFS_CHANGE_FLAG_TRUNK_SERVER)
 	{
