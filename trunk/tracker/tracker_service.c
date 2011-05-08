@@ -301,9 +301,14 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 	pClientInfo = (TrackerClientInfo *)pTask->arg;
 
 	if (status != 0 || pClientInfo->pGroup == NULL ||
-		((pClientInfo->pGroup->chg_count == \
-		  pClientInfo->pStorage->chg_count) &&
-		 (pClientInfo->chg_count.tracker_leader == \
+		(pClientInfo->pGroup->chg_count == 
+		  pClientInfo->pStorage->chg_count))
+	{
+		pTask->length = sizeof(TrackerHeader);
+		return status;
+	}
+	else if ((!g_if_leader_self) || 
+		 ((pClientInfo->chg_count.tracker_leader == \
 		  g_tracker_leader_chg_count) &&
 		 (pClientInfo->pGroup->trunk_chg_count == \
 		  pClientInfo->pStorage->trunk_chg_count)))
@@ -315,6 +320,8 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 	p = pTask->data + sizeof(TrackerHeader);
 	pFlags = p++;
 	*pFlags = 0;
+	if (g_if_leader_self)
+	{
 	if (pClientInfo->chg_count.tracker_leader != g_tracker_leader_chg_count)
 	{
 		int leader_index;
@@ -340,6 +347,11 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 		p = (char *)pDestServer;
 	}
 
+	logInfo("Storage: %s, pStorage->trunk_chg_count=%d, " \
+		"pGroup->trunk_chg_count=%d", pClientInfo->pStorage->ip_addr, 
+		pClientInfo->pStorage->trunk_chg_count,
+		pClientInfo->pGroup->trunk_chg_count);
+
 	if (pClientInfo->pStorage->trunk_chg_count != \
 		pClientInfo->pGroup->trunk_chg_count)
 	{
@@ -362,6 +374,7 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 		pClientInfo->pStorage->trunk_chg_count = \
 			pClientInfo->pGroup->trunk_chg_count;
 		p = (char *)pDestServer;
+	}
 	}
 
 	if (pClientInfo->pStorage->chg_count != pClientInfo->pGroup->chg_count)

@@ -4556,6 +4556,9 @@ int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
 			tracker_mem_cmp_by_ip_addr);
 	if (ppStorageServer != NULL)
 	{
+		(*ppStorageServer)->chg_count = 0;
+		(*ppStorageServer)->trunk_chg_count = 0;
+
 		ppEnd = pGroup->active_servers + pGroup->active_count - 1;
 		for (ppServer=ppStorageServer; ppServer<ppEnd; ppServer++)
 		{
@@ -4571,7 +4574,6 @@ int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
 			pGroup->http_server_count = pGroup->active_count;
 		}
 #endif
-
 	}
 
 	tracker_mem_find_store_server(pGroup);
