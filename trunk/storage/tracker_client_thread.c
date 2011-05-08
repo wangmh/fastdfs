@@ -1026,8 +1026,11 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 		}
 		else
 		{
-			if (fdfs_set_tracker_leader(tracker_leader_ip, \
-				tracker_leader_port) != 0)
+			int leader_index;
+
+			leader_index = fdfs_get_tracker_leader_index( \
+					tracker_leader_ip, tracker_leader_port);
+			if (leader_index < 0)
 			{
 			logWarning("file: "__FILE__", line: %d, " \
 				"tracker server %s:%d, " \
@@ -1044,6 +1047,8 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 				"set tracker leader: %s:%d", __LINE__, \
 				pTrackerServer->ip_addr, pTrackerServer->port,\
 				tracker_leader_ip, tracker_leader_port);
+
+			g_tracker_group.leader_index = leader_index;
 			}
 		}
 

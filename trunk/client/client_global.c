@@ -16,29 +16,3 @@ TrackerServerGroup g_tracker_group = {0, 0, -1, NULL};
 bool g_anti_steal_token = false;
 BufferInfo g_anti_steal_secret_key = {0};
 
-int fdfs_set_tracker_leader_ex(TrackerServerGroup *pServerGroup, \
-		const char *leaderIp, const int leaderPort)
-{
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pEnd;
-
-	if (pServerGroup->server_count == 0)
-	{
-		return ENOENT;
-	}
-
-	pEnd = pServerGroup->servers + pServerGroup->server_count;
-	for (pServer=pServerGroup->servers; pServer<pEnd; pServer++)
-	{
-		if (strcmp(pServer->ip_addr, leaderIp) == 0 && \
-			pServer->port == leaderPort)
-		{
-			pServerGroup->leader_index = \
-					pServer - pServerGroup->servers;
-			return 0;
-		}
-	}
-
-	return ENOENT;
-}
-

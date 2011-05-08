@@ -310,6 +310,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_tracker_last_status.last_check_time=%d\n"
 		"g_if_leader_self=%d\n"
 		"g_next_leader_index=%d\n"
+		"g_tracker_leader_chg_count=%d\n"
 		"g_trunk_server_chg_count=%d\n"
 	#ifdef WITH_HTTPD
 		"g_http_params.disabled=%d\n"
@@ -356,6 +357,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, (int)g_tracker_last_status.last_check_time
 		, g_if_leader_self
 		, g_next_leader_index
+		, g_tracker_leader_chg_count
 		, g_trunk_server_chg_count
 	#ifdef WITH_HTTPD
 		, g_http_params.disabled

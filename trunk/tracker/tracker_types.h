@@ -316,7 +316,10 @@ typedef struct
 {
 	FDFSGroupInfo *pGroup;
 	FDFSStorageDetail *pStorage;
-	int tracker_leader_chg_count;
+	union {
+		int tracker_leader;  //for notify storage servers
+		int trunk_server;    //for notify other tracker servers
+	} chg_count;
 } TrackerClientInfo;
 
 typedef struct
