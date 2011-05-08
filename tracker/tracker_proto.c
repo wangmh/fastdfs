@@ -475,21 +475,31 @@ int fdfs_get_ini_context_from_tracker(TrackerServerGroup *pTrackerGroup, \
 {
 	TrackerServerInfo *pGlobalServer;
 	TrackerServerInfo *pTServer;
-	TrackerServerInfo *pTServerEnd;
+	TrackerServerInfo *pServerStart;
+	TrackerServerInfo *pServerEnd;
 	TrackerServerInfo trackerServer;
 	char in_buff[1024];
 	int result;
+	int leader_index;
 	int i;
-	bool saved_continue_flag;
 
 	result = 0;
 	pTServer = &trackerServer;
-	pTServerEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
-	saved_continue_flag = *continue_flag;
+	pServerEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
+
+	leader_index = pTrackerGroup->leader_index;
+	if (leader_index >= 0)
+	{
+		pServerStart = pTrackerGroup->servers + leader_index;
+	}
+	else
+	{
+		pServerStart = pTrackerGroup->servers;
+	}
 
 	do
 	{
-	for (pGlobalServer=pTrackerGroup->servers; pGlobalServer<pTServerEnd; \
+	for (pGlobalServer=pServerStart; pGlobalServer<pServerEnd; \
 			pGlobalServer++)
 	{
 		memcpy(pTServer, pGlobalServer, sizeof(TrackerServerInfo));
@@ -557,6 +567,11 @@ int fdfs_get_ini_context_from_tracker(TrackerServerGroup *pTrackerGroup, \
 		fdfs_quit(pTServer);
 		close(pTServer->sock);
 		sleep(1);
+	}
+
+	if (pServerStart != pTrackerGroup->servers)
+	{
+		pServerStart = pTrackerGroup->servers;
 	}
 	} while (*continue_flag);
 
