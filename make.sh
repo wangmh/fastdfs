@@ -56,6 +56,8 @@ cat <<EOF > common/_os_bits.h
 #endif
 EOF
 
+ENABLE_STATIC_LIB=0
+ENABLE_SHARED_LIB=1
 TARGET_PREFIX=/usr/local
 TARGET_CONF_PATH=/etc/fdfs
 
@@ -140,6 +142,8 @@ perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_PREFIX\)#$TARGET_PREFIX#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_CONF_PATH\)#$TARGET_CONF_PATH#g" Makefile
+perl -pi -e "s#\\\$\(ENABLE_STATIC_LIB\)#$ENABLE_STATIC_LIB#g" Makefile
+perl -pi -e "s#\\\$\(ENABLE_SHARED_LIB\)#$ENABLE_SHARED_LIB#g" Makefile
 
 cp fdfs_link_library.sh.in fdfs_link_library.sh
 perl -pi -e "s#\\\$\(TARGET_PREFIX\)#$TARGET_PREFIX#g" fdfs_link_library.sh

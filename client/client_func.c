@@ -221,13 +221,12 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 		pBasePath = iniGetStrValue(NULL, "base_path", &iniContext);
 		if (pBasePath == NULL)
 		{
-			logError("conf file \"%s\" must have item " \
-				"\"base_path\"!", conf_filename);
-			result = ENOENT;
-			break;
+			strcpy(g_fdfs_base_path, "/tmp");
 		}
-
-		snprintf(g_fdfs_base_path, sizeof(g_fdfs_base_path), "%s", pBasePath);
+		else
+		{
+		snprintf(g_fdfs_base_path, sizeof(g_fdfs_base_path), 
+			"%s", pBasePath);
 		chopPath(g_fdfs_base_path);
 		if (!fileExists(g_fdfs_base_path))
 		{
@@ -241,6 +240,7 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 			logError("\"%s\" is not a directory!", g_fdfs_base_path);
 			result = ENOTDIR;
 			break;
+		}
 		}
 
 		g_fdfs_connect_timeout = iniGetIntValue(NULL, "connect_timeout", \
