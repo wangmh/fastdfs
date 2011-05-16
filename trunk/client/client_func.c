@@ -202,10 +202,132 @@ int fdfs_load_tracker_group(TrackerServerGroup *pTrackerGroup, \
 	return result;
 }
 
+static int fdfs_client_do_init_ex(TrackerServerGroup *pTrackerGroup, \
+		const char *conf_filename, IniContext *iniContext)
+{
+	char *pBasePath;
+	int result;
+
+	pBasePath = iniGetStrValue(NULL, "base_path", iniContext);
+	if (pBasePath == NULL)
+	{
+		strcpy(g_fdfs_base_path, "/tmp");
+	}
+	else
+	{
+		snprintf(g_fdfs_base_path, sizeof(g_fdfs_base_path), 
+			"%s", pBasePath);
+		chopPath(g_fdfs_base_path);
+		if (!fileExists(g_fdfs_base_path))
+		{
+			logError("\"%s\" can't be accessed, error info: %s", \
+				g_fdfs_base_path, STRERROR(errno));
+			return errno != 0 ? errno : ENOENT;
+		}
+		if (!isDir(g_fdfs_base_path))
+		{
+			logError("\"%s\" is not a directory!", g_fdfs_base_path);
+			return ENOTDIR;
+		}
+	}
+
+	g_fdfs_connect_timeout = iniGetIntValue(NULL, "connect_timeout", \
+				iniContext, DEFAULT_CONNECT_TIMEOUT);
+	if (g_fdfs_connect_timeout <= 0)
+	{
+		g_fdfs_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+	}
+
+	g_fdfs_network_timeout = iniGetIntValue(NULL, "network_timeout", \
+				iniContext, DEFAULT_NETWORK_TIMEOUT);
+	if (g_fdfs_network_timeout <= 0)
+	{
+		g_fdfs_network_timeout = DEFAULT_NETWORK_TIMEOUT;
+	}
+
+	if ((result=fdfs_load_tracker_group_ex(pTrackerGroup, \
+			conf_filename, iniContext)) != 0)
+	{
+		return result;
+	}
+
+	g_anti_steal_token = iniGetBoolValue(NULL, \
+				"http.anti_steal.check_token", \
+				iniContext, false);
+	if (g_anti_steal_token)
+	{
+		char *anti_steal_secret_key;
+
+		anti_steal_secret_key = iniGetStrValue(NULL, \
+					"http.anti_steal.secret_key", \
+					iniContext);
+		if (anti_steal_secret_key == NULL || \
+			*anti_steal_secret_key == '\0')
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"param \"http.anti_steal.secret_key\""\
+				" not exist or is empty", __LINE__);
+			return EINVAL;
+		}
+
+		buffer_strcpy(&g_anti_steal_secret_key, anti_steal_secret_key);
+	}
+
+	g_tracker_server_http_port = iniGetIntValue(NULL, \
+				"http.tracker_server_port", \
+				iniContext, 80);
+	if (g_tracker_server_http_port <= 0)
+	{
+		g_tracker_server_http_port = 80;
+	}
+
+#ifdef DEBUG_FLAG
+	logInfo("base_path=%s, " \
+		"connect_timeout=%d, "\
+		"network_timeout=%d, "\
+		"tracker_server_count=%d, " \
+		"anti_steal_token=%d, " \
+		"anti_steal_secret_key length=%d\n", \
+		g_fdfs_base_path, g_fdfs_connect_timeout, \
+		g_fdfs_network_timeout, pTrackerGroup->server_count, \
+		g_anti_steal_token, g_anti_steal_secret_key.length);
+#endif
+
+
+	return 0;
+}
+
+int fdfs_client_init_from_buffer_ex(TrackerServerGroup *pTrackerGroup, \
+		const char *buffer)
+{
+	IniContext iniContext;
+	char *new_buff;
+	int result;
+
+	new_buff = strdup(buffer);
+	if (new_buff == NULL)
+	{
+		logError("strdup %d bytes fail", (int)strlen(buffer));
+		return ENOMEM;
+	}
+
+	result = iniLoadFromBuffer(new_buff, &iniContext);
+	free(new_buff);
+	if (result != 0)
+	{
+		logError("load parameters from buffer fail, ret code: %d", \
+			 result);
+		return result;
+	}
+
+	result = fdfs_client_do_init_ex(pTrackerGroup, "buffer", &iniContext);
+	iniFreeContext(&iniContext);
+	return result;
+}
+
 int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 		const char *conf_filename)
 {
-	char *pBasePath;
 	IniContext iniContext;
 	int result;
 
@@ -216,102 +338,9 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 		return result;
 	}
 
-	do
-	{
-		pBasePath = iniGetStrValue(NULL, "base_path", &iniContext);
-		if (pBasePath == NULL)
-		{
-			strcpy(g_fdfs_base_path, "/tmp");
-		}
-		else
-		{
-		snprintf(g_fdfs_base_path, sizeof(g_fdfs_base_path), 
-			"%s", pBasePath);
-		chopPath(g_fdfs_base_path);
-		if (!fileExists(g_fdfs_base_path))
-		{
-			logError("\"%s\" can't be accessed, error info: %s", \
-				g_fdfs_base_path, STRERROR(errno));
-			result = errno != 0 ? errno : ENOENT;
-			break;
-		}
-		if (!isDir(g_fdfs_base_path))
-		{
-			logError("\"%s\" is not a directory!", g_fdfs_base_path);
-			result = ENOTDIR;
-			break;
-		}
-		}
-
-		g_fdfs_connect_timeout = iniGetIntValue(NULL, "connect_timeout", \
-				&iniContext, DEFAULT_CONNECT_TIMEOUT);
-		if (g_fdfs_connect_timeout <= 0)
-		{
-			g_fdfs_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
-		}
-
-		g_fdfs_network_timeout = iniGetIntValue(NULL, "network_timeout", \
-				&iniContext, DEFAULT_NETWORK_TIMEOUT);
-		if (g_fdfs_network_timeout <= 0)
-		{
-			g_fdfs_network_timeout = DEFAULT_NETWORK_TIMEOUT;
-		}
-
-		result = fdfs_load_tracker_group_ex(pTrackerGroup, \
-			conf_filename, &iniContext);
-		if (result != 0)
-		{
-			break;
-		}
-
-		g_anti_steal_token = iniGetBoolValue(NULL, \
-				"http.anti_steal.check_token", \
-				&iniContext, false);
-		if (g_anti_steal_token)
-		{
-			char *anti_steal_secret_key;
-
-			anti_steal_secret_key = iniGetStrValue(NULL, \
-					"http.anti_steal.secret_key", \
-					&iniContext);
-			if (anti_steal_secret_key == NULL || \
-				*anti_steal_secret_key == '\0')
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"param \"http.anti_steal.secret_key\""\
-					" not exist or is empty", __LINE__);
-				result = EINVAL;
-				break;
-			}
-
-			buffer_strcpy(&g_anti_steal_secret_key, \
-				anti_steal_secret_key);
-		}
-
-		g_tracker_server_http_port = iniGetIntValue(NULL, \
-				"http.tracker_server_port", \
-				&iniContext, 80);
-		if (g_tracker_server_http_port <= 0)
-		{
-			g_tracker_server_http_port = 80;
-		}
-
-#ifdef DEBUG_FLAG
-		logInfo("base_path=%s, " \
-			"connect_timeout=%d, "\
-			"network_timeout=%d, "\
-			"tracker_server_count=%d, " \
-			"anti_steal_token=%d, " \
-			"anti_steal_secret_key length=%d\n", \
-			g_fdfs_base_path, g_fdfs_connect_timeout, \
-			g_fdfs_network_timeout, pTrackerGroup->server_count, \
-			g_anti_steal_token, g_anti_steal_secret_key.length);
-#endif
-
-	} while (0);
-
+	result = fdfs_client_do_init_ex(pTrackerGroup, conf_filename, \
+				&iniContext);
 	iniFreeContext(&iniContext);
-
 	return result;
 }
 

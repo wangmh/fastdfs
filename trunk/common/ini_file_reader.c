@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 #include "shared_func.h"
 #include "logger.h"
 #include "http_func.h"
@@ -76,8 +77,8 @@ int iniLoadFromFile(const char *szFilename, IniContext *pContext)
 {
 	int result;
 	char *pLast;
-	char full_filename[MAX_PATH_SIZE];
-	char old_cwd[MAX_PATH_SIZE];
+	char full_filename[PATH_MAX];
+	char old_cwd[PATH_MAX];
 
 	memset(old_cwd, 0, sizeof(old_cwd));
 	if (strncasecmp(szFilename, "http://", 7) != 0)

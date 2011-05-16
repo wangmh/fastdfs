@@ -28,11 +28,14 @@ extern "C" {
 #define fdfs_client_init(filename) \
 	fdfs_client_init_ex((&g_tracker_group), filename)
 
+#define fdfs_client_init_from_buffer(buffer) \
+	fdfs_client_init_from_buffer_ex((&g_tracker_group), buffer)
+
 #define fdfs_client_destroy() \
 	fdfs_client_destroy_ex((&g_tracker_group))
 
 /**
-* client initial function
+* client initial from config file
 * params:
 *       pTrackerGroup: tracker group
 *	conf_filename: client config filename
@@ -41,6 +44,16 @@ extern "C" {
 int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 		const char *conf_filename);
 
+
+/**
+* client initial from buffer
+* params:
+*       pTrackerGroup: tracker group
+*	conf_filename: client config filename
+* return: 0 success, !=0 fail, return the error code
+**/
+int fdfs_client_init_from_buffer_ex(TrackerServerGroup *pTrackerGroup, \
+		const char *buffer);
 
 /**
 * load tracker server group
