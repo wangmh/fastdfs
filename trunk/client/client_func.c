@@ -293,7 +293,6 @@ static int fdfs_client_do_init_ex(TrackerServerGroup *pTrackerGroup, \
 		g_anti_steal_token, g_anti_steal_secret_key.length);
 #endif
 
-
 	return 0;
 }
 
@@ -375,6 +374,36 @@ int fdfs_copy_tracker_group(TrackerServerGroup *pDestTrackerGroup, \
 	return 0;
 }
 
+bool fdfs_tracker_group_equals(TrackerServerGroup *pGroup1, \
+        TrackerServerGroup *pGroup2)
+{
+    TrackerServerInfo *pServer1;
+    TrackerServerInfo *pServer2;
+    TrackerServerInfo *pEnd1;
+
+    if (pGroup1->server_count != pGroup1->server_count)
+    {
+        return false;
+    }
+
+    pEnd1 = pGroup1->servers + pGroup1->server_count;
+    pServer1 = pGroup1->servers;
+    pServer2 = pGroup2->servers;
+    while (pServer1 < pEnd1)
+    {
+        if (!(strcmp(pServer1->ip_addr, pServer2->ip_addr) == 0 && 
+                    pServer1->port == pServer2->port))
+        {
+            return false;
+        }
+
+        pServer1++;
+        pServer2++;
+    }
+
+    return true;
+}
+
 void fdfs_client_destroy_ex(TrackerServerGroup *pTrackerGroup)
 {
 	if (pTrackerGroup->servers != NULL)
@@ -387,4 +416,50 @@ void fdfs_client_destroy_ex(TrackerServerGroup *pTrackerGroup)
 	}
 }
 
+const char *fdfs_get_file_ext_name(const char *filename)
+{
+	const char *fileExtName;
+	const char *p;
+	const char *pStart;
+	int extNameLen;
+
+	fileExtName = strrchr(filename, '.');
+	if (fileExtName == NULL)
+	{
+		return NULL;
+	}
+
+	extNameLen = strlen(fileExtName + 1);
+	if (extNameLen > FDFS_FILE_EXT_NAME_MAX_LEN)
+	{
+		return NULL;
+	}
+
+	if (strchr(fileExtName + 1, '/') != NULL) //invalid extension name
+	{
+		return NULL;
+	}
+
+	pStart = fileExtName - (FDFS_FILE_EXT_NAME_MAX_LEN - extNameLen) - 1;
+	if (pStart < filename)
+	{
+		pStart = filename;
+	}
+
+	p = fileExtName - 1;  //before .
+	while ((p > pStart) && (*p != '.'))
+	{
+		p--;
+	}
+
+	if (p > pStart)  //found (extension name have a dot)
+	{
+		if (strchr(p + 1, '/') == NULL)  //valid extension name
+		{
+			return p + 1;   //skip .
+		}
+	}
+
+	return fileExtName + 1;  //skip .
+}
 

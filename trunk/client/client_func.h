@@ -95,6 +95,24 @@ int fdfs_copy_tracker_group(TrackerServerGroup *pDestTrackerGroup, \
 **/
 void fdfs_client_destroy_ex(TrackerServerGroup *pTrackerGroup);
 
+/**
+* tracker group equals
+* params:
+*       pGroup1: tracker group 1
+*       pGroup2: tracker group 2
+* return: true for equals, otherwise false
+**/
+bool fdfs_tracker_group_equals(TrackerServerGroup *pGroup1, \
+        TrackerServerGroup *pGroup2);
+
+/**
+* get file ext name from filename
+* params:
+*       filename:  the filename
+* return: file ext name, NULL for no ext name
+**/
+const char *fdfs_get_file_ext_name(const char *filename);
+
 #ifdef __cplusplus
 }
 #endif

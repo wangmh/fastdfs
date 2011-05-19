@@ -1092,7 +1092,6 @@ int storage_upload_by_filename_ex(TrackerServerInfo *pTrackerServer, \
 		const int meta_count, char *group_name, char *remote_filename)
 {
 	struct stat stat_buf;
-	char *pDot;
 
 	if (stat(local_filename, &stat_buf) != 0)
 	{
@@ -1110,15 +1109,7 @@ int storage_upload_by_filename_ex(TrackerServerInfo *pTrackerServer, \
 
 	if (file_ext_name == NULL)
 	{
-		pDot = strrchr(local_filename, '.');
-		if (pDot != NULL && strchr(pDot + 1, '/') == NULL)
-		{
-			if (strlen(local_filename) - (pDot - local_filename) <=\
-				FDFS_FILE_EXT_NAME_MAX_LEN + 1)
-			{
-				file_ext_name = pDot + 1;
-			}
-		}
+		file_ext_name = fdfs_get_file_ext_name(local_filename);
 	}
 
 	return storage_do_upload_file(pTrackerServer, pStorageServer, \
@@ -1512,7 +1503,6 @@ int storage_upload_slave_by_filename(TrackerServerInfo *pTrackerServer, \
 		char *group_name, char *remote_filename)
 {
 	struct stat stat_buf;
-	char *pDot;
 
 	if (master_filename == NULL || *master_filename == '\0' || \
 	prefix_name == NULL || group_name == NULL || *group_name == '\0')
@@ -1536,15 +1526,7 @@ int storage_upload_slave_by_filename(TrackerServerInfo *pTrackerServer, \
 
 	if (file_ext_name == NULL)
 	{
-		pDot = strrchr(local_filename, '.');
-		if (pDot != NULL && strchr(pDot + 1, '/') == NULL)
-		{
-			if (strlen(local_filename) - (pDot - local_filename) <=\
-				FDFS_FILE_EXT_NAME_MAX_LEN + 1)
-			{
-				file_ext_name = pDot + 1;
-			}
-		}
+		file_ext_name = fdfs_get_file_ext_name(local_filename);
 	}
 
 	return storage_do_upload_file(pTrackerServer, pStorageServer, \
@@ -1948,7 +1930,7 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	}
 
 	filename_len = strlen(remote_filename);
-	if (filename_len < FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
+	if (filename_len < FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
 			 + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
 	{
 		return EINVAL;
@@ -1956,7 +1938,7 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 
 	memset(buff, 0, sizeof(buff));
 	base64_decode_auto(&context, (char *)remote_filename + \
-		FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
+		FDFS_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
 		buff, &buff_len);
 
 	memset(&ip_addr, 0, sizeof(ip_addr));

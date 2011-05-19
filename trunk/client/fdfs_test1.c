@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
 	{
 		int upload_type;
 		char *prefix_name;
-		char *file_ext_name;
+		const char *file_ext_name;
 		char slave_file_id[256];
 		int slave_file_id_len;
 
@@ -212,23 +212,7 @@ int main(int argc, char *argv[])
 		strcpy(meta_list[meta_count].value, "115120");
 		meta_count++;
 
-		file_ext_name = strrchr(local_filename, '.');
-		if (file_ext_name != NULL)
-		{
-			if (strchr(file_ext_name + 1, '/') != NULL)
-			{
-				file_ext_name = NULL;
-			}
-			else if (strlen(local_filename) - (file_ext_name - \
-			local_filename) <= FDFS_FILE_EXT_NAME_MAX_LEN + 1)
-			{
-				file_ext_name++;
-			}
-			else
-			{
-				file_ext_name = NULL;
-			}
-		}
+		file_ext_name = fdfs_get_file_ext_name(local_filename);
 		strcpy(group_name, "");
 
 		if (upload_type == FDFS_UPLOAD_BY_FILE)
