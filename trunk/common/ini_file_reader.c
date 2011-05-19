@@ -399,14 +399,14 @@ static int iniDoLoadItemsFromBuffer(char *content, IniContext *pContext)
 		
 		nNameLen = pEqualChar - pLine;
 		nValueLen = strlen(pLine) - (nNameLen + 1);
-		if (nNameLen > INI_ITEM_NAME_LEN)
+		if (nNameLen > FAST_INI_ITEM_NAME_LEN)
 		{
-			nNameLen = INI_ITEM_NAME_LEN;
+			nNameLen = FAST_INI_ITEM_NAME_LEN;
 		}
 		
-		if (nValueLen > INI_ITEM_VALUE_LEN)
+		if (nValueLen > FAST_INI_ITEM_VALUE_LEN)
 		{
-			nValueLen = INI_ITEM_VALUE_LEN;
+			nValueLen = FAST_INI_ITEM_VALUE_LEN;
 		}
 	
 		if (pSection->count >= pSection->alloc_count)

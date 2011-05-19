@@ -16,13 +16,13 @@
 #include "common_define.h"
 #include "hash.h"
 
-#define INI_ITEM_NAME_LEN		64
-#define INI_ITEM_VALUE_LEN		128
+#define FAST_INI_ITEM_NAME_LEN		64
+#define FAST_INI_ITEM_VALUE_LEN		256
 
 typedef struct
 {
-	char name[INI_ITEM_NAME_LEN + 1];
-	char value[INI_ITEM_VALUE_LEN + 1];
+	char name[FAST_INI_ITEM_NAME_LEN + 1];
+	char value[FAST_INI_ITEM_VALUE_LEN + 1];
 } IniItem;
 
 typedef struct
