@@ -10,6 +10,7 @@
 
 #include "tracker_types.h"
 #include "client_global.h"
+#include "ini_file_reader.h"
 
 #ifndef _CLIENT_FUNC_H_
 #define _CLIENT_FUNC_H_
@@ -106,12 +107,35 @@ bool fdfs_tracker_group_equals(TrackerServerGroup *pGroup1, \
         TrackerServerGroup *pGroup2);
 
 /**
-* get file ext name from filename
+* get file ext name from filename, extension name do not include dot
 * params:
 *       filename:  the filename
 * return: file ext name, NULL for no ext name
 **/
-const char *fdfs_get_file_ext_name(const char *filename);
+#define fdfs_get_file_ext_name1(filename) \
+	fdfs_get_file_ext_name_ex(filename, false)
+
+/**
+* get file ext name from filename, extension name maybe include dot
+* params:
+*       filename:  the filename
+* return: file ext name, NULL for no ext name
+**/
+#define fdfs_get_file_ext_name2(filename) \
+	fdfs_get_file_ext_name_ex(filename, true)
+
+#define fdfs_get_file_ext_name(filename) \
+	fdfs_get_file_ext_name_ex(filename, true)
+
+/**
+* get file ext name from filename
+* params:
+*       filename:  the filename
+*       twoExtName: two extension name as the extension name
+* return: file ext name, NULL for no ext name
+**/
+const char *fdfs_get_file_ext_name_ex(const char *filename, 
+	const bool twoExtName);
 
 #ifdef __cplusplus
 }

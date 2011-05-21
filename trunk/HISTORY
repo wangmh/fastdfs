@@ -1,5 +1,5 @@
 
-Version 3.00  2011-05-19
+Version 3.00  2011-05-21
  * mass small files optimization
  * add fixed block memory pool: common/fast_mblock.c
  * bug fixed: tracker_mem.c do NOT clear g_groups fields
