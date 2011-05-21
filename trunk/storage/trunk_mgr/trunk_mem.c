@@ -38,7 +38,7 @@
 int g_slot_min_size;
 int g_trunk_file_size;
 
-static int slot_max_size;
+int g_slot_max_size;
 int g_store_path_mode = FDFS_STORE_PATH_ROUND_ROBIN;
 int g_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
 int g_avg_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
@@ -98,9 +98,8 @@ int storage_trunk_init()
 	g_trunk_server.port = g_server_port;
 
 	slot_count = 1;
-	slot_max_size = g_trunk_file_size / 2;
 	bytes = g_slot_min_size;
-	while (bytes < slot_max_size)
+	while (bytes < g_slot_max_size)
 	{
 		slot_count++;
 		bytes *= 2;
@@ -135,7 +134,7 @@ int storage_trunk_init()
 
 		bytes *= 2;
 	}
-	(slot_end - 1)->size = slot_max_size;
+	(slot_end - 1)->size = g_slot_max_size;
 
 	if ((result=init_pthread_lock(&trunk_file_lock)) != 0)
 	{
@@ -1250,7 +1249,7 @@ void trunk_file_info_decode(const char *str, FDFSTrunkFileInfo *pTrunkFile)
 
 bool trunk_check_size(const int64_t file_size)
 {
-	return file_size <= slot_max_size;
+	return file_size <= g_slot_max_size;
 }
 
 int trunk_file_stat_func(const int store_path_index, const char *true_filename,\

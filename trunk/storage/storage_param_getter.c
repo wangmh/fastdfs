@@ -75,6 +75,8 @@ int storage_get_params_from_tracker()
 	g_trunk_file_size = iniGetIntValue(NULL, "trunk_file_size", \
 				&iniContext, 64 * 1024 * 1024);
 
+	g_slot_max_size = g_trunk_file_size / 2;
+
 	iniFreeContext(&iniContext);
 
 	if (use_trunk_file && !g_if_use_trunk_file)

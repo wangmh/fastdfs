@@ -50,6 +50,7 @@ extern "C" {
 typedef int (*stat_func)(const char *filename, struct stat *buf);
 
 extern int g_slot_min_size;    //slot min size, such as 256 bytes
+extern int g_slot_max_size;    //slot max size
 extern int g_trunk_file_size;  //the trunk file size, such as 64MB
 extern int g_store_path_mode;  //store which path mode, fetch from tracker
 extern int g_storage_reserved_mb;  //fetch from tracker
