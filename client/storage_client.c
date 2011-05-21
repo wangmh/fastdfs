@@ -1930,7 +1930,7 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	}
 
 	filename_len = strlen(remote_filename);
-	if (filename_len < FDFS_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
+	if (filename_len < FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
 			 + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
 	{
 		return EINVAL;
@@ -1938,7 +1938,7 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 
 	memset(buff, 0, sizeof(buff));
 	base64_decode_auto(&context, (char *)remote_filename + \
-		FDFS_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
+		FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
 		buff, &buff_len);
 
 	memset(&ip_addr, 0, sizeof(ip_addr));

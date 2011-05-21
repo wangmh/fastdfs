@@ -416,7 +416,8 @@ void fdfs_client_destroy_ex(TrackerServerGroup *pTrackerGroup)
 	}
 }
 
-const char *fdfs_get_file_ext_name(const char *filename)
+const char *fdfs_get_file_ext_name_ex(const char *filename, 
+	const bool twoExtName)
 {
 	const char *fileExtName;
 	const char *p;
@@ -438,6 +439,11 @@ const char *fdfs_get_file_ext_name(const char *filename)
 	if (strchr(fileExtName + 1, '/') != NULL) //invalid extension name
 	{
 		return NULL;
+	}
+
+	if (!twoExtName)
+	{
+		return fileExtName + 1;
 	}
 
 	pStart = fileExtName - (FDFS_FILE_EXT_NAME_MAX_LEN - extNameLen) - 1;
