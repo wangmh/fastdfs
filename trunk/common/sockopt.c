@@ -617,12 +617,8 @@ char *getHostnameByIp(const char *szIpAddr, char *buff, const int bufferSize)
 in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize)
 {
     	struct in_addr ip_addr;
-	struct hostent ent;
-	struct hostent *pHostEnt;
-	int the_h_errno;
-	char extra_buff[1024];
+	struct hostent *ent;
 	in_addr_t **addr_list;
-	int result;
 
 	if ((*name >= '0' && *name <= '9') && 
 		inet_pton(AF_INET, name, &ip_addr) == 1)
@@ -634,16 +630,13 @@ in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize)
 		return ip_addr.s_addr;
 	}
 
-	memset(&ent, 0, sizeof(ent));
-	pHostEnt = NULL;
-	result = gethostbyname_r(name, &ent, extra_buff, sizeof(extra_buff), 
-		&pHostEnt, &the_h_errno);
-	if (result != 0 || the_h_errno != 0)
+	ent = gethostbyname(name);
+	if (ent == NULL)
 	{
 		return INADDR_NONE;
 	}
 
-        addr_list = (in_addr_t **)ent.h_addr_list;
+        addr_list = (in_addr_t **)ent->h_addr_list;
 	if (addr_list[0] == NULL)
 	{
 		return INADDR_NONE;
