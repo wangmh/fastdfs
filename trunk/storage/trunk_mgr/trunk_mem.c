@@ -1257,6 +1257,10 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	const int filename_len, stat_func statfunc, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo)
 {
+#define TRUNK_FILENAME_LENGTH (FDFS_TRUE_FILE_PATH_LEN + \
+		FDFS_FILENAME_BASE64_LENGTH + FDFS_TRUNK_FILE_INFO_LEN + \
+		1 + FDFS_FILE_EXT_NAME_MAX_LEN)
+
 	char full_filename[MAX_PATH_SIZE];
 	char buff[128];
 	char temp[265];
@@ -1271,8 +1275,7 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	FDFSTrunkHeader trueTrunkHeader;
 
 	pTrunkInfo->file.id = 0;
-	if (filename_len <= FDFS_TRUE_FILE_PATH_LEN + \
-		FDFS_FILENAME_BASE64_LENGTH + 3 + FDFS_FILE_EXT_NAME_MAX_LEN)
+	if (filename_len != TRUNK_FILENAME_LENGTH) //not trunk file
 	{
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
 			g_store_paths[store_path_index], true_filename);
@@ -1293,11 +1296,8 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 		buff, &buff_len);
 
 	file_size = buff2long(buff + sizeof(int) * 2);
-	if ((file_size & FDFS_TRUNK_FILE_SIZE) == 0 || \
-		filename_len > FDFS_TRUE_FILE_PATH_LEN + \
-		FDFS_FILENAME_BASE64_LENGTH + FDFS_TRUNK_FILE_INFO_LEN + \
-			 1 + FDFS_FILE_EXT_NAME_MAX_LEN)
-	{  //normal file or slave file or meta data file
+	if ((file_size & FDFS_TRUNK_FILE_SIZE) == 0)  //slave file
+	{
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
 			g_store_paths[store_path_index], true_filename);
 
@@ -1309,13 +1309,6 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 		{
 			return errno != 0 ? errno : ENOENT;
 		}
-	}
-
-	if (filename_len != FDFS_TRUE_FILE_PATH_LEN + \
-		FDFS_FILENAME_BASE64_LENGTH + FDFS_TRUNK_FILE_INFO_LEN + \
-			 1 + FDFS_FILE_EXT_NAME_MAX_LEN)
-	{
-		return EINVAL;
 	}
 
 	trunk_file_info_decode(true_filename + FDFS_TRUE_FILE_PATH_LEN + \
