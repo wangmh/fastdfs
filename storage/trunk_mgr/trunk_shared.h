@@ -17,6 +17,7 @@
 #include <pthread.h>
 #include "base64.h"
 #include "common_define.h"
+#include "ini_file_reader.h"
 #include "fdfs_global.h"
 #include "tracker_types.h"
 
@@ -83,7 +84,13 @@ typedef struct tagFDFSTrunkFullInfo {
 #define TRUNK_GET_FILENAME(file_id, filename) \
 	sprintf(filename, "%06d", file_id)
 
+int storage_load_paths_from_conf_file(IniContext *pItemContext);
 void trunk_shared_init();
+
+int storage_split_filename(const char *logic_filename, \
+		int *filename_len, char *true_filename, char **ppStorePath);
+int storage_split_filename_ex(const char *logic_filename, \
+		int *filename_len, char *true_filename, int *store_path_index);
 
 void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str);
 void trunk_file_info_decode(const char *str, FDFSTrunkFileInfo *pTrunkFile);

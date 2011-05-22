@@ -28,11 +28,6 @@ int storage_write_to_stat_file();
 
 int storage_write_to_sync_ini_file();
 
-int storage_split_filename(const char *logic_filename, \
-		int *filename_len, char *true_filename, char **ppStorePath);
-int storage_split_filename_ex(const char *logic_filename, \
-		int *filename_len, char *true_filename, int *store_path_index);
-
 #define STORAGE_CHOWN(path, current_uid, current_gid) \
 	if (!(g_run_by_gid == current_gid && g_run_by_uid == current_uid)) \
 	{ \
