@@ -3841,7 +3841,6 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	StorageFileContext *pFileContext;
 	TaskDealFunc deal_func;
 	DisconnectCleanFunc clean_func;
-	FDFSTrunkFullInfo trunkInfo;
 	FDFSTrunkHeader trunkHeader;
 	char *p;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
@@ -3992,7 +3991,8 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 
 		if ((result=trunk_file_lstat(store_path_index, \
 			true_filename, filename_len, &stat_buf, \
-			&trunkInfo, &trunkHeader)) != 0)
+			&(pFileContext->extra_info.upload.trunk_info), \
+			&trunkHeader)) != 0)
 		{
 			if (result != ENOENT)  //accept no exist
 			{
@@ -4034,11 +4034,8 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 		}
 
 		pFileContext->extra_info.upload.if_trunk_file = \
-				STORAGE_IS_TRUNK_FILE(trunkInfo);
-	}
-	else
-	{
-		memset(&trunkInfo, 0, sizeof(trunkInfo));
+				STORAGE_IS_TRUNK_FILE(pFileContext-> \
+					extra_info.upload.trunk_info);
 	}
 
 	if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
@@ -4052,9 +4049,11 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 			"%s", trunkHeader.formatted_ext_name);
 
 		clean_func = dio_trunk_write_finish_clean_up;
-		file_offset = TRUNK_FILE_START_OFFSET(trunkInfo);
-		trunk_get_full_filename(&trunkInfo, pFileContext->filename, \
-				sizeof(pFileContext->filename));
+		file_offset = TRUNK_FILE_START_OFFSET(pFileContext-> \
+					extra_info.upload.trunk_info);
+		trunk_get_full_filename(&pFileContext-> \
+			extra_info.upload.trunk_info, pFileContext->filename, \
+			sizeof(pFileContext->filename));
 		pFileContext->extra_info.upload.before_open_callback = \
 					dio_check_trunk_file;
 		pFileContext->extra_info.upload.before_close_callback = \

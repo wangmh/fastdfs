@@ -29,6 +29,7 @@
 #include "tracker_types.h"
 #include "tracker_proto.h"
 #include "storage_global.h"
+#include "storage_func.h"
 #include "storage_service.h"
 #include "trunk_sync.h"
 #include "trunk_mem.h"
@@ -1045,7 +1046,12 @@ static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo)
 	{
 		pthread_mutex_lock(&trunk_file_lock);
 		pTrunkInfo->file.id = ++g_current_trunk_file_id;
+		result = storage_write_to_sync_ini_file();
 		pthread_mutex_unlock(&trunk_file_lock);
+		if (result != 0)
+		{
+			return result;
+		}
 
 		int2buff(pTrunkInfo->file.id, buff);
 		base64_encode_ex(&g_base64_context, buff, sizeof(int), \
