@@ -15,9 +15,7 @@
 #include "storage_global.h"
 
 bool g_continue_flag = true;
-char **g_store_paths = NULL;
 int *g_path_free_mbs = NULL;
-int g_path_count = 0;
 int g_subdir_count_per_path = DEFAULT_DATA_DIR_COUNT_PER_PATH;
 
 int g_server_port = FDFS_STORAGE_SERVER_DEF_PORT;
@@ -80,8 +78,6 @@ in_addr_t *g_allow_ip_addrs = NULL;
 bool g_check_file_duplicate = false;
 char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1] = {0};
 int g_namespace_len = 0;
-
-struct base64_context g_base64_context;
 
 gid_t g_run_by_gid;
 uid_t g_run_by_uid;

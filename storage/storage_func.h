@@ -11,9 +11,6 @@
 #ifndef _STORAGE_FUNC_H_
 #define _STORAGE_FUNC_H_
 
-#define STORAGE_DATA_DIR_FORMAT		"%02X"
-#define STORAGE_META_FILE_EXT		"-m"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

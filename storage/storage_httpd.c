@@ -36,7 +36,7 @@ static void generic_handler(struct evhttp_request *req, void *arg)
 	char *filename;
 	char *pStorePath;
 	char true_filename[128];
-	char full_filename[MAX_PATH_SIZE + 64 + sizeof(STORAGE_META_FILE_EXT)];
+	char full_filename[MAX_PATH_SIZE + 64 + sizeof(FDFS_STORAGE_META_FILE_EXT)];
 	char content_type[64];
 	char szContentLength[16];
 	struct stat file_stat;

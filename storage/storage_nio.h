@@ -72,7 +72,7 @@ typedef struct
 typedef struct
 {
 	char filename[MAX_PATH_SIZE + 128];  	//full filename
-	char fname2log[128+sizeof(STORAGE_META_FILE_EXT)];  //filename to log
+	char fname2log[128+sizeof(FDFS_STORAGE_META_FILE_EXT)];  //filename to log
 	char op;            //w for writing, r for reading, d for deleting etc.
 	char sync_flag;     //sync flag log to binlog
 	bool calc_crc32;    //if calculate file content hash code

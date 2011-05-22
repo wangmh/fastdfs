@@ -176,7 +176,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	{
 		file_offset = 0;
 		sprintf(full_filename, "%s/data/%s", \
-			g_store_paths[pRecord->store_path_index], \
+			g_fdfs_store_paths[pRecord->store_path_index], \
 			pRecord->true_filename);
 	}
 
@@ -337,7 +337,7 @@ static int storage_sync_append_file(TrackerServerInfo *pStorageServer, \
 	}
 
 	snprintf(full_filename, sizeof(full_filename), \
-		"%s/data/%s", g_store_paths[pRecord->store_path_index], \
+		"%s/data/%s", g_fdfs_store_paths[pRecord->store_path_index], \
 		pRecord->true_filename);
 	if (lstat(full_filename, &stat_buf) != 0)
 	{
@@ -588,7 +588,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	int src_path_index;
 
 	snprintf(full_filename, sizeof(full_filename), \
-		"%s/data/%s", g_store_paths[pRecord->store_path_index], \
+		"%s/data/%s", g_fdfs_store_paths[pRecord->store_path_index], \
 		pRecord->true_filename);
 	if (lstat(full_filename, &stat_buf) != 0)
 	{
@@ -656,7 +656,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 		p = strstr(pSrcFilename, "/data/");
 	}
 
-	if (g_path_count == 1)
+	if (g_fdfs_path_count == 1)
 	{
 		src_path_index = 0;
 	}
@@ -664,17 +664,17 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	{
 		*(pSrcFilename - 6) = '\0';
 
-		for (src_path_index=0; src_path_index<g_path_count; \
+		for (src_path_index=0; src_path_index<g_fdfs_path_count; \
 			src_path_index++)
 		{
 			if (strcmp(src_full_filename, \
-				g_store_paths[src_path_index]) == 0)
+				g_fdfs_store_paths[src_path_index]) == 0)
 			{
 				break;
 			}
 		}
 
-		if (src_path_index == g_path_count)
+		if (src_path_index == g_fdfs_path_count)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"source data file: %s is invalid", \
@@ -693,7 +693,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 		return EINVAL;
 	}
 
-	sprintf(out_buff, "%c"STORAGE_DATA_DIR_FORMAT"/", \
+	sprintf(out_buff, "%c"FDFS_STORAGE_DATA_DIR_FORMAT"/", \
 			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, src_path_index);
 	memcpy(pSrcFilename, out_buff, 4);
 

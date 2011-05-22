@@ -57,7 +57,7 @@ static int storage_do_fetch_binlog(TrackerServerInfo *pSrcStorage, \
 	int64_t in_bytes;
 	int64_t file_bytes;
 
-	pBasePath = g_store_paths[store_path_index];
+	pBasePath = g_fdfs_store_paths[store_path_index];
 	recovery_get_binlog_filename(pBasePath, full_binlog_filename);
 
 	memset(out_buff, 0, sizeof(out_buff));
@@ -196,13 +196,13 @@ static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
 			return ENOENT;
 		}
 
-		if (g_path_count > groupStat.store_path_count)
+		if (g_fdfs_path_count > groupStat.store_path_count)
 		{
 			logInfo("file: "__FILE__", line: %d, " \
 				"storage store path count: %d > " \
 				"which of the group: %d, " \
 				"does not need recovery", __LINE__, \
-				g_path_count, groupStat.store_path_count);
+				g_fdfs_path_count, groupStat.store_path_count);
 
 			close(trackerServer.sock);
 			return ENOENT;
@@ -539,7 +539,7 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 		 || record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_FILE)
 		{
 			sprintf(local_filename, "%s/data/%s", \
-				g_store_paths[record.store_path_index], \
+				g_fdfs_store_paths[record.store_path_index], \
 				record.true_filename);
 			result = storage_download_file_to_file(pTrackerServer, \
 					pSrcStorage, g_group_name, \
@@ -574,25 +574,25 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 
 			if ((result=storage_split_filename(record.filename, \
 				&record.filename_len, record.true_filename, \
-				&g_store_paths[record.store_path_index])) != 0)
+				&g_fdfs_store_paths[record.store_path_index])) != 0)
 			{
 				bContinueFlag = false;
 				break;
 			}
 			sprintf(local_filename, "%s/data/%s", \
-				g_store_paths[record.store_path_index], \
+				g_fdfs_store_paths[record.store_path_index], \
 				record.true_filename);
 
 			record.filename_len = strlen(pSrcFilename);
 			if ((result=storage_split_filename(pSrcFilename, \
 				&record.filename_len, record.true_filename, \
-				&g_store_paths[record.store_path_index])) != 0)
+				&g_fdfs_store_paths[record.store_path_index])) != 0)
 			{
 				bContinueFlag = false;
 				break;
 			}
 			sprintf(src_filename, "%s/data/%s", \
-				g_store_paths[record.store_path_index], \
+				g_fdfs_store_paths[record.store_path_index], \
 				record.true_filename);
 			if (symlink(src_filename, local_filename) == 0)
 			{
@@ -758,7 +758,7 @@ int storage_disk_recovery_start(const int store_path_index)
 	int result;
 	char *pBasePath;
 
-	pBasePath = g_store_paths[store_path_index];
+	pBasePath = g_fdfs_store_paths[store_path_index];
 	if ((result=recovery_init_mark_file(pBasePath, false)) != 0)
 	{
 		return result;

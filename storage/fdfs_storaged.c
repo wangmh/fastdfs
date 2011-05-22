@@ -34,11 +34,11 @@
 #include "storage_func.h"
 #include "storage_sync.h"
 #include "storage_service.h"
-#include "base64.h"
 #include "sched_thread.h"
 #include "storage_dio.h"
 #include "trunk_mem.h"
 #include "trunk_sync.h"
+#include "trunk_shared.h"
 
 #ifdef WITH_HTTPD
 #include "storage_httpd.h"
@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	base64_init_ex(&g_base64_context, 0, '-', '_', '.');
+	trunk_shared_init();
 	if ((result=set_rand_seed()) != 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
