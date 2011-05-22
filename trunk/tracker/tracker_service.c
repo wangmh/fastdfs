@@ -686,19 +686,25 @@ static int tracker_deal_report_trunk_fid(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
+	pTask->length = sizeof(TrackerHeader);
 	current_trunk_fid = buff2int(pTask->data + sizeof(TrackerHeader));
 	if (current_trunk_fid < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, invalid current trunk file id: %d", \
 			__LINE__, pTask->client_ip, current_trunk_fid);
-		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
-	pClientInfo->pGroup->current_trunk_file_id = current_trunk_fid;
-	pTask->length = sizeof(TrackerHeader);
-	return 0;
+	if (pClientInfo->pGroup->current_trunk_file_id < current_trunk_fid)
+	{
+		pClientInfo->pGroup->current_trunk_file_id = current_trunk_fid;
+		return tracker_save_groups();
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 static int tracker_deal_notify_next_leader(struct fast_task_info *pTask)
