@@ -19,35 +19,11 @@
 #include "fdfs_global.h"
 #include "tracker_types.h"
 #include "fast_mblock.h"
-
-#define FDFS_TRUNK_STATUS_FREE  0
-#define FDFS_TRUNK_STATUS_HOLD  1
-
-#define FDFS_TRUNK_FILE_TYPE_NONE     '\0'
-#define FDFS_TRUNK_FILE_TYPE_REGULAR  'F'
-#define FDFS_TRUNK_FILE_TYPE_LINK     'L'
-
-#define FDFS_TRUNK_FILE_INFO_LEN  16
-
-#define FDFS_TRUNK_FILE_FILE_TYPE_OFFSET	0
-#define FDFS_TRUNK_FILE_ALLOC_SIZE_OFFSET	1
-#define FDFS_TRUNK_FILE_FILE_SIZE_OFFSET	5
-#define FDFS_TRUNK_FILE_FILE_CRC32_OFFSET	9
-#define FDFS_TRUNK_FILE_FILE_MTIME_OFFSET  	13
-#define FDFS_TRUNK_FILE_FILE_EXT_NAME_OFFSET	17
-#define FDFS_TRUNK_FILE_HEADER_SIZE	(17 + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
-
-#define TRUNK_CALC_SIZE(file_size) (FDFS_TRUNK_FILE_HEADER_SIZE + file_size)
-#define TRUNK_FILE_START_OFFSET(trunkInfo) \
-		(FDFS_TRUNK_FILE_HEADER_SIZE + trunkInfo.file.offset)
-
-#define STORAGE_IS_TRUNK_FILE(trunkInfo) (trunkInfo.file.id > 0)
+#include "trunk_shared.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef int (*stat_func)(const char *filename, struct stat *buf);
 
 extern int g_slot_min_size;    //slot min size, such as 256 bytes
 extern int g_slot_max_size;    //slot max size
@@ -60,33 +36,6 @@ extern int g_current_trunk_file_id;  //current trunk file id
 extern TrackerServerInfo g_trunk_server;  //the trunk server
 extern bool g_if_use_trunk_file;   //if use trunk file
 extern bool g_if_trunker_self;   //if am i trunk server
-
-typedef struct tagFDFSTrunkHeader {
-	char file_type;
-	char formatted_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 2];
-	int alloc_size;
-	int file_size;
-	int crc32;
-	int mtime;
-} FDFSTrunkHeader;
-
-typedef struct tagFDFSTrunkPathInfo {
-	unsigned char store_path_index;   //store which path as Mxx
-	unsigned char sub_path_high;      //high sub dir index, front part of HH/HH
-	unsigned char sub_path_low;       //low sub dir index, tail part of HH/HH
-} FDFSTrunkPathInfo;
-
-typedef struct tagFDFSTrunkFileInfo {
-	int id;      //trunk file id
-	int offset;  //file offset
-	int size;    //space size
-} FDFSTrunkFileInfo;
-
-typedef struct tagFDFSTrunkFullInfo {
-	char status;  //normal or hold
-	FDFSTrunkPathInfo path;
-	FDFSTrunkFileInfo file;
-} FDFSTrunkFullInfo;
 
 typedef struct tagFDFSTrunkNode {
 	FDFSTrunkFullInfo trunk;    //trunk info
@@ -112,25 +61,7 @@ int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status);
 int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 		const bool bWriteBinLog);
 
-#define TRUNK_GET_FILENAME(file_id, filename) \
-	sprintf(filename, "%06d", file_id)
-
-void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str);
-void trunk_file_info_decode(const char *str, FDFSTrunkFileInfo *pTrunkFile);
-
-char *trunk_info_dump(const FDFSTrunkFullInfo *pTrunkInfo, char *buff, \
-				const int buff_size);
-
-char *trunk_header_dump(const FDFSTrunkHeader *pTrunkHeader, char *buff, \
-				const int buff_size);
-
 bool trunk_check_size(const int64_t file_size);
-
-char *trunk_get_full_filename(const FDFSTrunkFullInfo *pTrunkInfo, \
-		char *full_filename, const int buff_size);
-
-void trunk_pack_header(const FDFSTrunkHeader *pTrunkHeader, char *buff);
-void trunk_unpack_header(const char *buff, FDFSTrunkHeader *pTrunkHeader);
 
 #define trunk_init_file(filename) \
 	trunk_init_file_ex(filename, g_trunk_file_size)
@@ -142,21 +73,6 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size);
 
 int trunk_check_and_init_file_ex(const char *filename, const int64_t file_size);
 
-#define trunk_file_stat(store_path_index, true_filename, filename_len, \
-			pStat, pTrunkInfo, pTrunkHeader) \
-	trunk_file_stat_func(store_path_index, true_filename, filename_len, \
-			stat, pStat, pTrunkInfo, pTrunkHeader)
-
-#define trunk_file_lstat(store_path_index, true_filename, filename_len, \
-			pStat, pTrunkInfo, pTrunkHeader) \
-	trunk_file_stat_func(store_path_index, true_filename, filename_len, \
-			lstat, pStat, pTrunkInfo, pTrunkHeader)
-
-int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
-	const int filename_len, stat_func statfunc, \
-	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
-	FDFSTrunkHeader *pTrunkHeader);
-
 int trunk_file_delete(const char *trunk_filename, \
 			FDFSTrunkFullInfo *pTrunkInfo);
 
@@ -165,3 +81,4 @@ int trunk_file_delete(const char *trunk_filename, \
 #endif
 
 #endif
+

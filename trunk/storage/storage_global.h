@@ -20,8 +20,8 @@
 #include "tracker_types.h"
 #include "client_global.h"
 #include "fdht_types.h"
-#include "base64.h"
 #include "local_ip_func.h"
+#include "trunk_shared.h"
 
 #ifdef WITH_HTTPD
 #include "fdfs_http_shared.h"
@@ -49,9 +49,7 @@ typedef struct
 } FDFSStorageServer;
 
 extern bool g_continue_flag;
-extern char **g_store_paths; //file store paths
 extern int *g_path_free_mbs; //store path free spaces
-extern int g_path_count;   //store path count
 
 /* subdirs under store path, g_subdir_count * g_subdir_count 2 level subdirs */
 extern int g_subdir_count_per_path;
@@ -116,7 +114,6 @@ extern in_addr_t *g_allow_ip_addrs;  /* sorted array, asc order */
 extern bool g_check_file_duplicate;  //if check file content duplicate
 extern char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1];
 extern int g_namespace_len;
-extern struct base64_context g_base64_context;   //base64 context
 
 extern gid_t g_run_by_gid;
 extern uid_t g_run_by_uid;

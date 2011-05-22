@@ -66,7 +66,7 @@ int storage_get_params_from_tracker()
 		g_storage_reserved_mb = reserved_storage_space / FDFS_ONE_MB;
 	}
 
-	g_avg_storage_reserved_mb = g_storage_reserved_mb / g_path_count;
+	g_avg_storage_reserved_mb = g_storage_reserved_mb / g_fdfs_path_count;
 
 	use_trunk_file = iniGetBoolValue(NULL, "use_trunk_file", \
 				&iniContext, false);

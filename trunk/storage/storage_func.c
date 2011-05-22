@@ -656,9 +656,9 @@ static int storage_check_and_make_data_dirs()
 		}
 	}
 
-	for (i=0; i<g_path_count; i++)
+	for (i=0; i<g_fdfs_path_count; i++)
 	{
-		if ((result=storage_make_data_dirs(g_store_paths[i], \
+		if ((result=storage_make_data_dirs(g_fdfs_store_paths[i], \
 				&pathCreated)) != 0)
 		{
 			return result;
@@ -672,7 +672,7 @@ static int storage_check_and_make_data_dirs()
 			}
 		}
 
-		result = storage_disk_recovery_restore(g_store_paths[i]);
+		result = storage_disk_recovery_restore(g_fdfs_store_paths[i]);
 		if (result == EAGAIN) //need to re-fetch binlog
 		{
 			if ((result=storage_disk_recovery_start(i)) != 0)
@@ -680,7 +680,7 @@ static int storage_check_and_make_data_dirs()
 				return result;
 			}
 
-			result=storage_disk_recovery_restore(g_store_paths[i]);
+			result=storage_disk_recovery_restore(g_fdfs_store_paths[i]);
 		}
 
 		if (result != 0)
@@ -731,9 +731,9 @@ static int storage_make_data_dirs(const char *pBasePath, bool *pathCreated)
 		return errno != 0 ? errno : ENOENT;
 	}
 
-	sprintf(min_sub_path, STORAGE_DATA_DIR_FORMAT"/"STORAGE_DATA_DIR_FORMAT,
+	sprintf(min_sub_path, FDFS_STORAGE_DATA_DIR_FORMAT"/"FDFS_STORAGE_DATA_DIR_FORMAT,
 			0, 0);
-	sprintf(max_sub_path, STORAGE_DATA_DIR_FORMAT"/"STORAGE_DATA_DIR_FORMAT,
+	sprintf(max_sub_path, FDFS_STORAGE_DATA_DIR_FORMAT"/"FDFS_STORAGE_DATA_DIR_FORMAT,
 			g_subdir_count_per_path-1, g_subdir_count_per_path-1);
 	if (fileExists(min_sub_path) && fileExists(max_sub_path))
 	{
@@ -743,7 +743,7 @@ static int storage_make_data_dirs(const char *pBasePath, bool *pathCreated)
 	fprintf(stderr, "data path: %s, mkdir sub dir...\n", data_path);
 	for (i=0; i<g_subdir_count_per_path; i++)
 	{
-		sprintf(dir_name, STORAGE_DATA_DIR_FORMAT, i);
+		sprintf(dir_name, FDFS_STORAGE_DATA_DIR_FORMAT, i);
 
 		fprintf(stderr, "mkdir data path: %s ...\n", dir_name);
 		if (mkdir(dir_name, 0755) != 0)
@@ -773,7 +773,7 @@ static int storage_make_data_dirs(const char *pBasePath, bool *pathCreated)
 
 		for (k=0; k<g_subdir_count_per_path; k++)
 		{
-			sprintf(sub_name, STORAGE_DATA_DIR_FORMAT, k);
+			sprintf(sub_name, FDFS_STORAGE_DATA_DIR_FORMAT, k);
 			if (mkdir(sub_name, 0755) != 0)
 			{
 				if (!(errno == EEXIST && isDir(sub_name)))
@@ -867,44 +867,44 @@ static int storage_load_paths(IniContext *pItemContext)
 		return ENOTDIR;
 	}
 
-	g_path_count = iniGetIntValue(NULL, "store_path_count", pItemContext,1);
-	if (g_path_count <= 0)
+	g_fdfs_path_count = iniGetIntValue(NULL, "store_path_count", pItemContext,1);
+	if (g_fdfs_path_count <= 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"store_path_count: %d is invalid!", \
-			__LINE__, g_path_count);
+			__LINE__, g_fdfs_path_count);
 		return EINVAL;
 	}
 
-	g_store_paths = (char **)malloc(sizeof(char *) * g_path_count);
-	if (g_store_paths == NULL)
+	g_fdfs_store_paths = (char **)malloc(sizeof(char *) * g_fdfs_path_count);
+	if (g_fdfs_store_paths == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, (int)sizeof(char *) *g_path_count, \
+			__LINE__, (int)sizeof(char *) *g_fdfs_path_count, \
 			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
-	memset(g_store_paths, 0, sizeof(char *) * g_path_count);
+	memset(g_fdfs_store_paths, 0, sizeof(char *) * g_fdfs_path_count);
 
-	g_path_free_mbs = (int *)malloc(sizeof(int) * g_path_count);
+	g_path_free_mbs = (int *)malloc(sizeof(int) * g_fdfs_path_count);
 	if (g_path_free_mbs == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, (int)sizeof(int) *g_path_count, \
+			__LINE__, (int)sizeof(int) *g_fdfs_path_count, \
 			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
-	memset(g_path_free_mbs, 0, sizeof(int) * g_path_count);
+	memset(g_path_free_mbs, 0, sizeof(int) * g_fdfs_path_count);
 
 	pPath = iniGetStrValue(NULL, "store_path0", pItemContext);
 	if (pPath == NULL)
 	{
 		pPath = g_fdfs_base_path;
 	}
-	g_store_paths[0] = strdup(pPath);
-	if (g_store_paths[0] == NULL)
+	g_fdfs_store_paths[0] = strdup(pPath);
+	if (g_fdfs_store_paths[0] == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
@@ -912,7 +912,7 @@ static int storage_load_paths(IniContext *pItemContext)
 		return errno != 0 ? errno : ENOMEM;
 	}
 
-	for (i=1; i<g_path_count; i++)
+	for (i=1; i<g_fdfs_path_count; i++)
 	{
 		sprintf(item_name, "store_path%d", i);
 		pPath = iniGetStrValue(NULL, item_name, pItemContext);
@@ -940,8 +940,8 @@ static int storage_load_paths(IniContext *pItemContext)
 			return ENOTDIR;
 		}
 
-		g_store_paths[i] = strdup(pPath);
-		if (g_store_paths[i] == NULL)
+		g_fdfs_store_paths[i] = strdup(pPath);
+		if (g_fdfs_store_paths[i] == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"malloc %d bytes fail, " \
@@ -1558,7 +1558,7 @@ int storage_func_init(const char *filename, \
 			"FDHT keep_alive=%d, HTTP server port=%d, " \
 			"domain name=%s", \
 			g_fdfs_version.major, g_fdfs_version.minor, \
-			g_fdfs_base_path, g_path_count, g_subdir_count_per_path,\
+			g_fdfs_base_path, g_fdfs_path_count, g_subdir_count_per_path,\
 			g_group_name, g_run_by_group, g_run_by_user, \
 			g_fdfs_connect_timeout, \
 			g_fdfs_network_timeout, g_server_port, bind_addr, \
@@ -1651,18 +1651,18 @@ int storage_func_destroy()
 	int result;
 	int close_ret;
 
-	if (g_store_paths != NULL)
+	if (g_fdfs_store_paths != NULL)
 	{
-		for (i=0; i<g_path_count; i++)
+		for (i=0; i<g_fdfs_path_count; i++)
 		{
-			if (g_store_paths[i] != NULL)
+			if (g_fdfs_store_paths[i] != NULL)
 			{
-				free(g_store_paths[i]);
-				g_store_paths[i] = NULL;
+				free(g_fdfs_store_paths[i]);
+				g_fdfs_store_paths[i] = NULL;
 			}
 		}
 
-		g_store_paths = NULL;
+		g_fdfs_store_paths = NULL;
 	}
 
 	if (g_tracker_group.servers != NULL)
@@ -1731,7 +1731,7 @@ int storage_func_destroy()
 		return EINVAL; \
 	} \
  \
-	if (store_path_index < 0 || store_path_index >= g_path_count) \
+	if (store_path_index < 0 || store_path_index >= g_fdfs_path_count) \
 	{ \
 		logError("file: "__FILE__", line: %d, " \
 			"filename: %s is invalid, " \
@@ -1754,7 +1754,7 @@ int storage_split_filename(const char *logic_filename, \
 	SPLIT_FILENAME_BODY(logic_filename, \
 		filename_len, true_filename, store_path_index)
 
-	*ppStorePath = g_store_paths[store_path_index];
+	*ppStorePath = g_fdfs_store_paths[store_path_index];
 
 	return 0;
 }

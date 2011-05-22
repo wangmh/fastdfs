@@ -62,18 +62,18 @@ int storage_dio_init()
 	}
 
 	g_dio_thread_data = (struct storage_dio_thread_data *)malloc(sizeof( \
-				struct storage_dio_thread_data) * g_path_count);
+				struct storage_dio_thread_data) * g_fdfs_path_count);
 	if (g_dio_thread_data == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
 			__LINE__, (int)sizeof(struct storage_dio_thread_data) * \
-			g_path_count, errno, STRERROR(errno));
+			g_fdfs_path_count, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
 	threads_count_per_path = g_disk_reader_threads + g_disk_writer_threads;
-	context_count = threads_count_per_path * g_path_count;
+	context_count = threads_count_per_path * g_fdfs_path_count;
 	g_dio_contexts = (struct storage_dio_context *)malloc(\
 			sizeof(struct storage_dio_context) * context_count);
 	if (g_dio_contexts == NULL)
@@ -87,7 +87,7 @@ int storage_dio_init()
 	}
 
 	g_dio_thread_count = 0;
-	pDataEnd = g_dio_thread_data + g_path_count;
+	pDataEnd = g_dio_thread_data + g_fdfs_path_count;
 	for (pThreadData=g_dio_thread_data; pThreadData<pDataEnd; pThreadData++)
 	{
 		pThreadData->count = threads_count_per_path;

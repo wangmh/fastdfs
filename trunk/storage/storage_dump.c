@@ -205,11 +205,11 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 	);
 
 	total_len += snprintf(buff + total_len, buffSize - total_len,
-			"\ng_path_count=%d\n", g_path_count);
-	for (i=0; i<g_path_count; i++)
+			"\ng_fdfs_path_count=%d\n", g_fdfs_path_count);
+	for (i=0; i<g_fdfs_path_count; i++)
 	{
 		total_len += snprintf(buff + total_len, buffSize - total_len,
-				"\tg_store_paths[%d]=%s\n", i, g_store_paths[i]);
+				"\tg_fdfs_store_paths[%d]=%s\n", i, g_fdfs_store_paths[i]);
 
 	}
 
