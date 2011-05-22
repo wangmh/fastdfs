@@ -90,6 +90,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 	char in_buff[1];
 	struct stat stat_buf;
 	FDFSTrunkFullInfo trunkInfo;
+	FDFSTrunkHeader trunkHeader;
 	int64_t file_offset;
 	int64_t in_bytes;
 	int64_t total_send_bytes;
@@ -98,7 +99,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 
 	if ((result=trunk_file_stat(pRecord->store_path_index, \
 		pRecord->true_filename, pRecord->true_filename_len, \
-		&stat_buf, &trunkInfo)) != 0)
+		&stat_buf, &trunkInfo, &trunkHeader)) != 0)
 	{
 		if (result == ENOENT)
 		{
@@ -468,6 +469,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+256];
 	struct stat stat_buf;
 	FDFSTrunkFullInfo trunkInfo;
+	FDFSTrunkHeader trunkHeader;
 	char in_buff[1];
 	char *pBuff;
 	int64_t in_bytes;
@@ -475,7 +477,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 
 	if ((result=trunk_file_stat(pRecord->store_path_index, \
 		pRecord->true_filename, pRecord->true_filename_len, \
-		&stat_buf, &trunkInfo)) == 0)
+		&stat_buf, &trunkInfo, &trunkHeader)) == 0)
 	{
 		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_DELETE_FILE)
 		{
