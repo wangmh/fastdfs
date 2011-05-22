@@ -143,18 +143,19 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size);
 int trunk_check_and_init_file_ex(const char *filename, const int64_t file_size);
 
 #define trunk_file_stat(store_path_index, true_filename, filename_len, \
-			pStat, pTrunkInfo) \
+			pStat, pTrunkInfo, pTrunkHeader) \
 	trunk_file_stat_func(store_path_index, true_filename, filename_len, \
-			stat, pStat, pTrunkInfo)
+			stat, pStat, pTrunkInfo, pTrunkHeader)
 
 #define trunk_file_lstat(store_path_index, true_filename, filename_len, \
-			pStat, pTrunkInfo) \
+			pStat, pTrunkInfo, pTrunkHeader) \
 	trunk_file_stat_func(store_path_index, true_filename, filename_len, \
-			lstat, pStat, pTrunkInfo)
+			lstat, pStat, pTrunkInfo, pTrunkHeader)
 
 int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	const int filename_len, stat_func statfunc, \
-	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo);
+	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
+	FDFSTrunkHeader *pTrunkHeader);
 
 int trunk_file_delete(const char *trunk_filename, \
 			FDFSTrunkFullInfo *pTrunkInfo);
