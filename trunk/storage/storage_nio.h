@@ -50,12 +50,12 @@ typedef struct
 {
 	bool if_gen_filename;	//if upload generate filename
 	bool if_appender_file;  //if upload appender file
-	bool if_trunk_file;     //if trunk file
+	bool if_trunk_file;     //if trunk file, since V3.0
+	bool if_sub_path_alloced; //if sub path alloced since V3.0
 	char master_filename[128];
 	char file_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 1];
 	char formatted_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 2];
 	char prefix_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
-	int store_path_index;
 	int start_time;		//upload start timestamp
 	FDFSTrunkFullInfo trunk_info;
 	FileBeforeOpenCallback before_open_callback;

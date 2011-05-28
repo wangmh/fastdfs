@@ -736,6 +736,7 @@ int dio_write_chunk_header(struct fast_task_info *pTask)
 	char header[FDFS_TRUNK_FILE_HEADER_SIZE];
 	char buff1[256];
 	char buff2[256];
+	char buff3[1024];
 	FDFSTrunkHeader trunkHeader;
 	int result;
 
@@ -761,6 +762,8 @@ int dio_write_chunk_header(struct fast_task_info *pTask)
 			result, STRERROR(result));
 		return result;
 	}
+
+	trunk_header_dump(&trunkHeader, buff3, sizeof(buff3));
 
 	trunk_pack_header(&trunkHeader, header);
 	logInfo("file: "__FILE__", line: %d, my trunk=%s, my fields=%s", __LINE__, \

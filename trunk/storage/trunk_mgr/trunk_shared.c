@@ -248,10 +248,11 @@ char *trunk_header_dump(const FDFSTrunkHeader *pTrunkHeader, char *buff, \
 		"file_size=%d, " \
 		"crc32=%d, " \
 		"mtime=%d, " \
-		"ext_name=%s", \
+		"ext_name(%d)=%s", \
 		pTrunkHeader->file_type, pTrunkHeader->alloc_size, \
 		pTrunkHeader->file_size, pTrunkHeader->crc32, \
-		pTrunkHeader->mtime, pTrunkHeader->formatted_ext_name);
+		pTrunkHeader->mtime, strlen(pTrunkHeader->formatted_ext_name),\
+		pTrunkHeader->formatted_ext_name);
 
 	return buff;
 }
