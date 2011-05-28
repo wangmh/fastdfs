@@ -1789,9 +1789,9 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 				pStatBuff->sz_total_file_write_count);
 		long2buff(pStorageStat->success_file_write_count, \
 				pStatBuff->sz_success_file_write_count);
-
 		long2buff(pStorageStat->last_heart_beat_time, \
 				pStatBuff->sz_last_heart_beat_time);
+		pDest->if_trunk_server = (pGroup->pTrunkServer == *ppServer);
 
 		pDest++;
 	}
@@ -2248,7 +2248,6 @@ static int tracker_deal_server_list_one_group(struct fast_task_info *pTask)
 			pDest->sz_subdir_count_per_path);
 	long2buff(pGroup->current_trunk_file_id, \
 			pDest->sz_current_trunk_file_id);
-
 	pTask->length = sizeof(TrackerHeader) + sizeof(TrackerGroupStat);
 
 	return 0;

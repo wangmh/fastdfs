@@ -383,6 +383,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_success_file_write_count);
 		pStorageStat->last_heart_beat_time = buff2long( \
 			pStatBuff->sz_last_heart_beat_time);
+		pDest->if_trunk_server = pSrc->if_trunk_server;
 		pDest++;
 	}
 

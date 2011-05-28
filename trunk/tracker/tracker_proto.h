@@ -158,6 +158,7 @@ typedef struct
 	char sz_storage_port[8];
 	char sz_storage_http_port[8];
 	FDFSStorageStatBuff stat_buff;
+	char if_trunk_server;
 } TrackerStorageStat;
 
 typedef struct

@@ -19,6 +19,7 @@ extern "C" {
 
 typedef struct
 {
+	bool if_trunk_server;
 	char status;
 	char ip_addr[IP_ADDRESS_SIZE];
 	char src_ip_addr[IP_ADDRESS_SIZE];

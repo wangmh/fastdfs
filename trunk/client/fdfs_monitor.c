@@ -369,6 +369,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tstorage_http_port = %d\n" \
 			"\t\tcurrent_write_path = %d\n" \
 			"\t\tsource ip_addr = %s\n" \
+			"\t\tif_trunk_server= %d\n" \
 			"\t\ttotal_upload_count = "INT64_PRINTF_FORMAT"\n"   \
 			"\t\tsuccess_upload_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\ttotal_append_count = "INT64_PRINTF_FORMAT"\n"   \
@@ -421,6 +422,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			pStorage->storage_http_port,  \
 			pStorage->current_write_path,  \
 			pStorage->src_ip_addr,  \
+			pStorage->if_trunk_server,  \
 			pStorageStat->total_upload_count, \
 			pStorageStat->success_upload_count, \
 			pStorageStat->total_append_count, \
