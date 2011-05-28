@@ -5235,15 +5235,19 @@ static int load_config_files()
 	if (zend_get_configuration_directive(ITEM_NAME_BASE_PATH, \
 			sizeof(ITEM_NAME_BASE_PATH), &base_path) != SUCCESS)
 	{
+		strcpy(g_fdfs_base_path, "/tmp");
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
-			"fastdht_client.ini must have item " \
-			"\"%s\"!", __LINE__, ITEM_NAME_BASE_PATH);
-		return ENOENT;
+			"fastdht_client.ini does not have item " \
+			"\"%s\", set to %s!", __LINE__, 
+			ITEM_NAME_BASE_PATH, g_fdfs_base_path);
+	}
+	else
+	{
+		snprintf(g_fdfs_base_path, sizeof(g_fdfs_base_path), "%s", \
+			base_path.value.str.val);
+		chopPath(g_fdfs_base_path);
 	}
 
-	snprintf(g_fdfs_base_path, sizeof(g_fdfs_base_path), "%s", \
-		base_path.value.str.val);
-	chopPath(g_fdfs_base_path);
 	if (!fileExists(g_fdfs_base_path))
 	{
 		logError("\"%s\" can't be accessed, error info: %s", \
