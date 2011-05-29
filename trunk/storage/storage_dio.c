@@ -734,6 +734,8 @@ int dio_write_chunk_header(struct fast_task_info *pTask)
 {
 	StorageFileContext *pFileContext;
 	char header[FDFS_TRUNK_FILE_HEADER_SIZE];
+	char old_header[FDFS_TRUNK_FILE_HEADER_SIZE];
+	char expect_header[FDFS_TRUNK_FILE_HEADER_SIZE];
 	char buff1[256];
 	char buff2[256];
 	char buff3[1024];
@@ -753,6 +755,53 @@ int dio_write_chunk_header(struct fast_task_info *pTask)
 
 	if (lseek(pFileContext->fd, pFileContext->start - \
 		FDFS_TRUNK_FILE_HEADER_SIZE, SEEK_SET) < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"lseek file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pFileContext->filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	if (read(pFileContext->fd, old_header, FDFS_TRUNK_FILE_HEADER_SIZE) != 
+		FDFS_TRUNK_FILE_HEADER_SIZE)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"read trunk header of file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pFileContext->filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	memset(expect_header, 0, sizeof(expect_header));
+	if (memcmp(old_header, expect_header, FDFS_TRUNK_FILE_HEADER_SIZE) != 0)
+	{
+		FDFSTrunkHeader oldTrunkHeader;
+		int old_file_size;
+
+		trunk_unpack_header(old_header, &oldTrunkHeader);
+		old_file_size = oldTrunkHeader.file_size;
+		oldTrunkHeader.file_size = 0;
+		oldTrunkHeader.file_type = 0;
+		trunk_pack_header(&oldTrunkHeader, old_header);
+		if (memcmp(old_header, expect_header, \
+			FDFS_TRUNK_FILE_HEADER_SIZE) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"trunk file: %s, offset: "INT64_PRINTF_FORMAT \
+				", size: %d already occupied by other file", \
+				__LINE__, pFileContext->filename, \
+				pFileContext->start-FDFS_TRUNK_FILE_HEADER_SIZE,
+				old_file_size);
+			return EEXIST;
+		}
+	}
+
+	if (lseek(pFileContext->fd, -FDFS_TRUNK_FILE_HEADER_SIZE, SEEK_CUR) < 0)
 	{
 		result = errno != 0 ? errno : EIO;
 		logError("file: "__FILE__", line: %d, " \

@@ -1151,10 +1151,12 @@ int trunk_file_delete(const char *trunk_filename, \
 			FDFSTrunkFullInfo *pTrunkInfo)
 {
 	char pack_buff[FDFS_TRUNK_FILE_HEADER_SIZE];
-	FDFSTrunkHeader trunkHeader;
+	char buff[64 * 1024];
 	int fd;
 	int write_bytes;
 	int result;
+	int remain_bytes;
+	FDFSTrunkHeader trunkHeader;
 
 	fd = open(trunk_filename, O_WRONLY);
 	if (fd < 0)
@@ -1175,13 +1177,30 @@ int trunk_file_delete(const char *trunk_filename, \
 	trunk_pack_header(&trunkHeader, pack_buff);
 
 	write_bytes = write(fd, pack_buff, FDFS_TRUNK_FILE_HEADER_SIZE);
-	result = errno;
-	close(fd);
 	if (write_bytes != FDFS_TRUNK_FILE_HEADER_SIZE)
 	{
-		return result != 0 ? errno : EINVAL;
+		result = errno != 0 ? errno : EIO;
+		close(fd);
+		return result;
 	}
 
-	return 0;
+	memset(buff, 0, sizeof(buff));
+	result = 0;
+	remain_bytes = pTrunkInfo->file.size;
+	while (remain_bytes > 0)
+	{
+		write_bytes = remain_bytes > sizeof(buff) ? \
+				sizeof(buff) : remain_bytes;
+		if (write(fd, buff, write_bytes) != write_bytes)
+		{
+			result = errno != 0 ? errno : EIO;
+			break;
+		}
+
+		remain_bytes -= write_bytes;
+	}
+
+	close(fd);
+	return result;
 }
 

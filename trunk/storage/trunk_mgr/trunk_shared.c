@@ -305,8 +305,7 @@ void trunk_unpack_header(const char *buff, FDFSTrunkHeader *pTrunkHeader)
 	memcpy(pTrunkHeader->formatted_ext_name, buff + \
 		FDFS_TRUNK_FILE_FILE_EXT_NAME_OFFSET, \
 		FDFS_FILE_EXT_NAME_MAX_LEN + 1);
-	*(pTrunkHeader->formatted_ext_name + FDFS_FILE_EXT_NAME_MAX_LEN \
-		 				+ 1) = '\0';
+	*(pTrunkHeader->formatted_ext_name+FDFS_FILE_EXT_NAME_MAX_LEN+1)='\0';
 }
 
 void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str)
