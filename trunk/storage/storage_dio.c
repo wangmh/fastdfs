@@ -313,6 +313,59 @@ int dio_discard_file(struct fast_task_info *pTask)
 	return 0;
 }
 
+int dio_open_file(StorageFileContext *pFileContext)
+{
+	int result;
+
+	if (pFileContext->fd >= 0)
+	{
+		return 0;
+	}
+
+	pFileContext->fd = open(pFileContext->filename, 
+					pFileContext->open_flags);
+	if (pFileContext->fd < 0)
+	{
+		result = errno != 0 ? errno : EACCES;
+		logError("file: "__FILE__", line: %d, " \
+			"open file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pFileContext->filename, \
+			result, STRERROR(result));
+	}
+	else
+	{
+		result = 0;
+	}
+
+	pthread_mutex_lock(&g_dio_thread_lock);
+	g_storage_stat.total_file_open_count++;
+	if (result == 0)
+	{
+		g_storage_stat.success_file_open_count++;
+	}
+	pthread_mutex_unlock(&g_dio_thread_lock);
+
+	if (result != 0)
+	{
+		return result;
+	}
+
+	if (pFileContext->offset > 0 && lseek(pFileContext->fd, \
+		pFileContext->offset, SEEK_SET) < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"lseek file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pFileContext->filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	return 0;
+}
+
 int dio_read_file(struct fast_task_info *pTask)
 {
 	StorageFileContext *pFileContext;
@@ -323,47 +376,11 @@ int dio_read_file(struct fast_task_info *pTask)
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 
-	result = 0;
 	do
 	{
-	if (pFileContext->fd < 0)
+	if ((result=dio_open_file(pFileContext)) != 0)
 	{
-		pFileContext->fd = open(pFileContext->filename, \
-					pFileContext->open_flags);
-		if (pFileContext->fd < 0)
-		{
-			result = errno != 0 ? errno : EACCES;
-			logError("file: "__FILE__", line: %d, " \
-				"open file: %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, pFileContext->filename, \
-				result, STRERROR(result));
-		}
-
-		pthread_mutex_lock(&g_dio_thread_lock);
-		g_storage_stat.total_file_open_count++;
-		if (result == 0)
-		{
-			g_storage_stat.success_file_open_count++;
-		}
-		pthread_mutex_unlock(&g_dio_thread_lock);
-
-		if (result != 0)
-		{
-			break;
-		}
-
-		if (pFileContext->offset > 0 && lseek(pFileContext->fd, \
-			pFileContext->offset, SEEK_SET) < 0)
-		{
-			result = errno != 0 ? errno : EIO;
-			logError("file: "__FILE__", line: %d, " \
-				"lseek file: %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, pFileContext->filename, \
-				result, STRERROR(result));
-			break;
-		}
+		break;
 	}
 
 	remain_bytes = pFileContext->end - pFileContext->offset;
@@ -724,44 +741,19 @@ static void *dio_thread_entrance(void* arg)
 
 int dio_check_trunk_file(struct fast_task_info *pTask)
 {
+	int result;
 	StorageFileContext *pFileContext;
-
-	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
-	return trunk_check_and_init_file(pFileContext->filename);
-}
-
-int dio_write_chunk_header(struct fast_task_info *pTask)
-{
-	StorageFileContext *pFileContext;
-	char header[FDFS_TRUNK_FILE_HEADER_SIZE];
 	char old_header[FDFS_TRUNK_FILE_HEADER_SIZE];
 	char expect_header[FDFS_TRUNK_FILE_HEADER_SIZE];
-	char buff1[256];
-	char buff2[256];
-	char buff3[1024];
-	FDFSTrunkHeader trunkHeader;
-	int result;
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
-
-	trunkHeader.file_type = FDFS_TRUNK_FILE_TYPE_REGULAR;
-	trunkHeader.alloc_size = pFileContext->extra_info.upload.trunk_info.file.size;
-	trunkHeader.file_size = pFileContext->end - pFileContext->start;
-	trunkHeader.crc32 = pFileContext->crc32;
-	trunkHeader.mtime = pFileContext->extra_info.upload.start_time;
-	snprintf(trunkHeader.formatted_ext_name, \
-		sizeof(trunkHeader.formatted_ext_name), "%s", \
-		pFileContext->extra_info.upload.formatted_ext_name);
-
-	if (lseek(pFileContext->fd, pFileContext->start - \
-		FDFS_TRUNK_FILE_HEADER_SIZE, SEEK_SET) < 0)
+	if ((result=trunk_check_and_init_file(pFileContext->filename)) != 0)
 	{
-		result = errno != 0 ? errno : EIO;
-		logError("file: "__FILE__", line: %d, " \
-			"lseek file: %s fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pFileContext->filename, \
-			result, STRERROR(result));
+		return result;
+	}
+
+	if ((result=dio_open_file(pFileContext)) != 0)
+	{
 		return result;
 	}
 
@@ -802,6 +794,42 @@ int dio_write_chunk_header(struct fast_task_info *pTask)
 	}
 
 	if (lseek(pFileContext->fd, -FDFS_TRUNK_FILE_HEADER_SIZE, SEEK_CUR) < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"lseek file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pFileContext->filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	return 0;
+}
+
+int dio_write_chunk_header(struct fast_task_info *pTask)
+{
+	StorageFileContext *pFileContext;
+	char header[FDFS_TRUNK_FILE_HEADER_SIZE];
+	char buff1[256];
+	char buff2[256];
+	char buff3[1024];
+	FDFSTrunkHeader trunkHeader;
+	int result;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+
+	trunkHeader.file_type = FDFS_TRUNK_FILE_TYPE_REGULAR;
+	trunkHeader.alloc_size = pFileContext->extra_info.upload.trunk_info.file.size;
+	trunkHeader.file_size = pFileContext->end - pFileContext->start;
+	trunkHeader.crc32 = pFileContext->crc32;
+	trunkHeader.mtime = pFileContext->extra_info.upload.start_time;
+	snprintf(trunkHeader.formatted_ext_name, \
+		sizeof(trunkHeader.formatted_ext_name), "%s", \
+		pFileContext->extra_info.upload.formatted_ext_name);
+
+	if (lseek(pFileContext->fd, pFileContext->start - \
+		FDFS_TRUNK_FILE_HEADER_SIZE, SEEK_SET) < 0)
 	{
 		result = errno != 0 ? errno : EIO;
 		logError("file: "__FILE__", line: %d, " \
