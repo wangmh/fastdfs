@@ -3417,7 +3417,7 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 					dio_check_trunk_file;
 		pFileContext->extra_info.upload.before_close_callback = \
 					dio_write_chunk_header;
-		pFileContext->open_flags = O_WRONLY | extra_open_flags;
+		pFileContext->open_flags = O_RDWR | extra_open_flags;
 	}
 	else
 	{
@@ -4078,7 +4078,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 					dio_check_trunk_file;
 		pFileContext->extra_info.upload.before_close_callback = \
 					dio_write_chunk_header;
-		pFileContext->open_flags = O_WRONLY | extra_open_flags;
+		pFileContext->open_flags = O_RDWR | extra_open_flags;
 	}
 	else
 	{
