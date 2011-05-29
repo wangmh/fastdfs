@@ -680,7 +680,9 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		add_assoc_long_ex(group_info_array, "current_write_server", \
 			sizeof("current_write_server"), \
 			pGroupStat->current_write_server);
-
+		add_assoc_long_ex(group_info_array, "current_trunk_file_id", \
+			sizeof("current_trunk_file_id"), \
+			pGroupStat->current_trunk_file_id);
 		       
 		result = tracker_list_servers(pTrackerServer, \
 				pGroupStat->group_name, NULL, \
@@ -723,6 +725,10 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				"src_ip_addr", sizeof("src_ip_addr"), \
 				pStorage->src_ip_addr, \
 				strlen(pStorage->src_ip_addr), 1);
+
+			add_assoc_bool_ex(server_info_array, \
+				"if_trunk_server", sizeof("if_trunk_server"), \
+				pStorage->if_trunk_server);
 
 			add_assoc_long_ex(server_info_array, \
 				"upload_priority", sizeof("upload_priority"), \
