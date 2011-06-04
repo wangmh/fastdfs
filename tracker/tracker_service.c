@@ -299,19 +299,7 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 	char *p;
 
 	pClientInfo = (TrackerClientInfo *)pTask->arg;
-
-	if (status != 0 || pClientInfo->pGroup == NULL ||
-		(pClientInfo->pGroup->chg_count == 
-		  pClientInfo->pStorage->chg_count))
-	{
-		pTask->length = sizeof(TrackerHeader);
-		return status;
-	}
-	else if ((!g_if_leader_self) || 
-		 ((pClientInfo->chg_count.tracker_leader == \
-		  g_tracker_leader_chg_count) &&
-		 (pClientInfo->pGroup->trunk_chg_count == \
-		  pClientInfo->pStorage->trunk_chg_count)))
+	if (status != 0 || pClientInfo->pGroup == NULL)
 	{
 		pTask->length = sizeof(TrackerHeader);
 		return status;
