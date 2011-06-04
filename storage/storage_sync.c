@@ -1526,7 +1526,15 @@ static int storage_reader_sync_init_req(StorageBinLogReader *pReader)
 	}
 
 	result = EINTR;
-	pTServer = pTrackerServers;
+	if (g_tracker_group.leader_index >= 0 && \
+		g_tracker_group.leader_index < g_tracker_group.server_count)
+	{
+		pTServer = pTrackerServers + g_tracker_group.leader_index;
+	}
+	else
+	{
+		pTServer = pTrackerServers;
+	}
 	do
 	{
 		while (g_continue_flag)
@@ -2483,7 +2491,6 @@ static void* storage_sync_thread_entrance(void* arg)
 				continue;
 			}
 		}
-
 
 		getSockIpaddr(storage_server.sock, \
 			local_ip_addr, IP_ADDRESS_SIZE);
