@@ -476,7 +476,7 @@ static void sigSegvHandler(int signum, siginfo_t *info, void *ptr)
 static void sigDumpHandler(int sig)
 {
 	static bool bDumpFlag = false;
-	char filename[256];
+	char filename[MAX_PATH_SIZE];
 
 	if (bDumpFlag)
 	{

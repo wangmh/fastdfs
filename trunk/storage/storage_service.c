@@ -3487,7 +3487,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 	char *p;
 	char appender_filename[128];
 	char true_filename[128];
-	char buff[64];
+	char decode_buff[64];
 	struct stat stat_buf;
 	int appender_filename_len;
 	int64_t nInPackLen;
@@ -3603,12 +3603,12 @@ static int storage_append_file(struct fast_task_info *pTask)
 
 	strcpy(pFileContext->fname2log, appender_filename);
 
-	memset(buff, 0, sizeof(buff));
+	memset(decode_buff, 0, sizeof(decode_buff));
 	base64_decode_auto(&g_fdfs_base64_context, pFileContext->fname2log + \
 		FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
-		buff, &buff_len);
+		decode_buff, &buff_len);
 
-	appender_file_size = buff2long(buff + sizeof(int) * 2);
+	appender_file_size = buff2long(decode_buff + sizeof(int) * 2);
 	if (appender_file_size != FDFS_APPENDER_FILE_SIZE)
 	{
 		logError("file: "__FILE__", line: %d, " \

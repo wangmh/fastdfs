@@ -434,6 +434,7 @@ static int storage_trunk_restore(const int64_t restore_offset)
 static int storage_trunk_load()
 {
 #define TRUNK_DATA_FIELD_COUNT  6
+#define TRUNK_LINE_MAX_LENGHT  64
 
 	int64_t restore_offset;
 	char trunk_data_filename[MAX_PATH_SIZE];
@@ -506,7 +507,7 @@ static int storage_trunk_load()
 			}
 
 			len = strlen(pLineStart);
-			if (len > 64)
+			if (len > TRUNK_LINE_MAX_LENGHT)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"file %s, line length: %d too long", \
@@ -959,7 +960,7 @@ static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo)
 	int i;
 	int result;
 	int filename_len;
-	char filename[64];
+	char short_filename[64];
 	char full_filename[MAX_PATH_SIZE];
 	int store_path_index;
 	int sub_path_high;
@@ -1021,9 +1022,9 @@ static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo)
 
 		int2buff(pTrunkInfo->file.id, buff);
 		base64_encode_ex(&g_fdfs_base64_context, buff, sizeof(int), \
-				filename, &filename_len, false);
+				short_filename, &filename_len, false);
 
-		storage_get_store_path(filename, filename_len, \
+		storage_get_store_path(short_filename, filename_len, \
 					&sub_path_high, &sub_path_low);
 
 		pTrunkInfo->path.sub_path_high = sub_path_high;

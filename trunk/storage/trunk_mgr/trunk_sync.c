@@ -620,7 +620,7 @@ void trunk_reader_destroy(TrunkBinLogReader *pReader)
 
 static int trunk_write_to_mark_file(TrunkBinLogReader *pReader)
 {
-	char buff[64];
+	char buff[128];
 	int len;
 	int result;
 
