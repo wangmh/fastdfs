@@ -1081,21 +1081,19 @@ int storage_sync_destroy()
 		g_binlog_fd = -1;
 	}
 
-	if ((result=pthread_mutex_destroy(&sync_thread_lock)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"call pthread_mutex_destroy fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, STRERROR(result));
-		return result;
-	}
-
 	if (binlog_write_cache_buff != NULL)
 	{
 		free(binlog_write_cache_buff);
 		binlog_write_cache_buff = NULL;
+		if ((result=pthread_mutex_destroy(&sync_thread_lock)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"call pthread_mutex_destroy fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
+			return result;
+		}
 	}
-
 
 	return 0;
 }
