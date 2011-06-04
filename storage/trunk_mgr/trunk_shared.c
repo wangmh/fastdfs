@@ -260,17 +260,17 @@ char *trunk_header_dump(const FDFSTrunkHeader *pTrunkHeader, char *buff, \
 char *trunk_get_full_filename(const FDFSTrunkFullInfo *pTrunkInfo, \
 		char *full_filename, const int buff_size)
 {
-	char filename[64];
+	char short_filename[64];
 	char *pStorePath;
 
 	pStorePath = g_fdfs_store_paths[pTrunkInfo->path.store_path_index];
-	TRUNK_GET_FILENAME(pTrunkInfo->file.id, filename);
+	TRUNK_GET_FILENAME(pTrunkInfo->file.id, short_filename);
 
 	snprintf(full_filename, buff_size, \
 			"%s/data/"FDFS_STORAGE_DATA_DIR_FORMAT"/" \
 			FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
 			pStorePath, pTrunkInfo->path.sub_path_high, \
-			pTrunkInfo->path.sub_path_low, filename);
+			pTrunkInfo->path.sub_path_low, short_filename);
 
 	return full_filename;
 }
