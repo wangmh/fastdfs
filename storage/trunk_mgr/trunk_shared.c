@@ -345,15 +345,12 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 
 	char full_filename[MAX_PATH_SIZE];
 	char buff[128];
-	char temp[265];
 	char pack_buff[FDFS_TRUNK_FILE_HEADER_SIZE];
-	char szHexBuff[2 * FDFS_TRUNK_FILE_HEADER_SIZE + 1];
 	int64_t file_size;
 	int buff_len;
 	int fd;
 	int read_bytes;
 	int result;
-	FDFSTrunkHeader trueTrunkHeader;
 
 	pTrunkInfo->file.id = 0;
 	if (filename_len != TRUNK_FILENAME_LENGTH) //not trunk file
@@ -433,6 +430,12 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 
 	trunk_pack_header(pTrunkHeader, pack_buff);
 
+	/*
+	{
+	char temp[265];
+	char szHexBuff[2 * FDFS_TRUNK_FILE_HEADER_SIZE + 1];
+	FDFSTrunkHeader trueTrunkHeader;
+
 	fprintf(stderr, "file: "__FILE__", line: %d, true buff=%s\n", __LINE__, \
 		bin2hex(buff+1, FDFS_TRUNK_FILE_HEADER_SIZE - 1, szHexBuff));
 	trunk_unpack_header(buff, &trueTrunkHeader);
@@ -444,6 +447,8 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	fprintf(stderr, "file: "__FILE__", line: %d, my trunk=%s, my fields=%s\n", __LINE__, \
 		trunk_info_dump(pTrunkInfo, temp, sizeof(temp)), \
 		trunk_header_dump(pTrunkHeader, full_filename, sizeof(full_filename)));
+	}
+	*/
 
 	if (memcmp(pack_buff+1, buff+1, FDFS_TRUNK_FILE_HEADER_SIZE - 1) != 0)
 	{
