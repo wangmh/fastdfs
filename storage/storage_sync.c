@@ -809,6 +809,9 @@ static int storage_sync_data(StorageBinLogReader *pReader, \
 		case STORAGE_OP_TYPE_REPLICA_APPEND_FILE:
 			return 0;
 		default:
+			logError("file: "__FILE__", line: %d, " \
+				"invalid file operation type: %d", \
+				__LINE__, pRecord->op_type);
 			return EINVAL;
 	}
 
