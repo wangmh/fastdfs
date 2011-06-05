@@ -1,5 +1,5 @@
 
-Version 3.00  2011-05-28
+Version 3.00  2011-06-05
  * mass small files optimization
  * add fixed block memory pool: common/fast_mblock.c
  * bug fixed: tracker_mem.c do NOT clear g_groups fields
@@ -9,6 +9,7 @@ Version 3.00  2011-05-28
  * client support static library
  * client_func.h add functions fdfs_tracker_group_equals and 
    fdfs_get_file_ext_name
+ * bug fixed: test/dfs_func_pc.c compile ok
 
 Version 2.09  2011-02-19
  * bug fixed: write_to_binlog_index then increase g_binlog_index (feedback 
