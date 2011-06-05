@@ -30,12 +30,12 @@ typedef struct {
 #ifdef DEBUG  //for debug
 
 static TestFileInfo files[FILE_TYPE_COUNT] = {
-	{5 * 1024, "5K",        30000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
-	{50 * 1024, "50K",      60000 / PROCESS_COUNT, 0, 0, -1, 0, NULL}, 
-	{200 * 1024, "200K",     30000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
-	{1 * 1024 * 1024, "1M",   3000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
-	{10 * 1024 * 1024, "10M",  300 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
-	{100 * 1024 * 1024, "100M", 30 / PROCESS_COUNT, 0, 0, -1, 0, NULL}
+	{5 * 1024, "5K",        10000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
+	{50 * 1024, "50K",      20000 / PROCESS_COUNT, 0, 0, -1, 0, NULL}, 
+	{200 * 1024, "200K",     10000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
+	{1 * 1024 * 1024, "1M",   1000 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
+	{10 * 1024 * 1024, "10M",  100 / PROCESS_COUNT, 0, 0, -1, 0, NULL},
+	{100 * 1024 * 1024, "100M", 10 / PROCESS_COUNT, 0, 0, -1, 0, NULL}
 };
 
 #else

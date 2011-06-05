@@ -14,7 +14,8 @@ static TrackerServerInfo *pTrackerServer;
 static TrackerServerInfo storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
 static int storage_server_count = 0;
 
-static TrackerServerInfo *getConnectedStorageServer(TrackerServerInfo *pStorageServer, int *err_no)
+static TrackerServerInfo *getConnectedStorageServer(
+		TrackerServerInfo *pStorageServer, int *err_no)
 {
 	TrackerServerInfo *pEnd;
 	TrackerServerInfo *pServer;
@@ -24,7 +25,19 @@ static TrackerServerInfo *getConnectedStorageServer(TrackerServerInfo *pStorageS
 	{
 		if (strcmp(pStorageServer->ip_addr, pServer->ip_addr) == 0)
 		{
-			*err_no = 0;
+			if (pServer->sock < 0)
+			{
+				*err_no = tracker_connect_server(pServer);
+				if (*err_no != 0)
+				{
+					return NULL;
+				}
+			}
+			else
+			{
+				*err_no = 0;
+			}
+
 			return pServer;
 		}
 	}
@@ -43,13 +56,9 @@ static TrackerServerInfo *getConnectedStorageServer(TrackerServerInfo *pStorageS
 	return pServer;
 }
 
-int dfs_init(const int proccess_index)
+int dfs_init(const int proccess_index, const char *conf_filename)
 {
 	int result;
-	char *conf_filename;
-
-	conf_filename = "/etc/fdfs/client.conf";
-
 	if ((result=fdfs_client_init(conf_filename)) != 0)
 	{
 		return result;
@@ -81,13 +90,14 @@ void dfs_destroy()
 	fdfs_client_destroy();
 }
 
-static int downloadFileCallback(void *arg, const int64_t file_size, const char *data, \
-                const int current_size)
+static int downloadFileCallback(void *arg, const int64_t file_size, 
+		const char *data, const int current_size)
 {
 	return 0;
 }
 
-int upload_file(const char *file_buff, const int file_size, char *file_id, char *storage_ip)
+int upload_file(const char *file_buff, const int file_size, char *file_id, 
+		char *storage_ip)
 {
 	int result;
 	TrackerServerInfo storageServer;
@@ -101,7 +111,8 @@ int upload_file(const char *file_buff, const int file_size, char *file_id, char 
 	}
 
 
-	if ((pStorageServer=getConnectedStorageServer(&storageServer, &result)) == NULL)
+	if ((pStorageServer=getConnectedStorageServer(&storageServer, 
+			&result)) == NULL)
 	{
 		return result;
 	}
@@ -120,18 +131,21 @@ int download_file(const char *file_id, int *file_size, char *storage_ip)
 	TrackerServerInfo *pStorageServer;
 	int64_t file_bytes;
 
-	if ((result=tracker_query_storage_fetch1(pTrackerServer, &storageServer, file_id)) != 0)
+	if ((result=tracker_query_storage_fetch1(pTrackerServer, 
+			&storageServer, file_id)) != 0)
 	{
 		return result;
 	}
 
-	if ((pStorageServer=getConnectedStorageServer(&storageServer, &result)) == NULL)
+	if ((pStorageServer=getConnectedStorageServer(&storageServer, 
+			&result)) == NULL)
 	{
 		return result;
 	}
 
 	strcpy(storage_ip, storageServer.ip_addr);
-	result = storage_download_file_ex1(pTrackerServer, pStorageServer, file_id, 0, 0, downloadFileCallback, NULL, &file_bytes);
+	result = storage_download_file_ex1(pTrackerServer, pStorageServer, 
+			file_id, 0, 0, downloadFileCallback, NULL, &file_bytes);
 	*file_size = file_bytes;
 
 	return result;
@@ -143,12 +157,14 @@ int delete_file(const char *file_id, char *storage_ip)
 	TrackerServerInfo storageServer;
 	TrackerServerInfo *pStorageServer;
 
-	if ((result=tracker_query_storage_update1(pTrackerServer, &storageServer, file_id)) != 0)
+	if ((result=tracker_query_storage_update1(pTrackerServer, 
+			&storageServer, file_id)) != 0)
 	{
 		return result;
 	}
 
-	if ((pStorageServer=getConnectedStorageServer(&storageServer, &result)) == NULL)
+	if ((pStorageServer=getConnectedStorageServer(&storageServer, 
+			&result)) == NULL)
 	{
 		return result;
 	}

@@ -323,7 +323,7 @@ int dio_open_file(StorageFileContext *pFileContext)
 	}
 
 	pFileContext->fd = open(pFileContext->filename, 
-					pFileContext->open_flags);
+				pFileContext->open_flags, 0644);
 	if (pFileContext->fd < 0)
 	{
 		result = errno != 0 ? errno : EACCES;
@@ -468,7 +468,7 @@ int dio_write_file(struct fast_task_info *pTask)
 	{
 	if (pFileContext->fd < 0)
 	{
-		if (pFileContext->extra_info.upload.before_open_callback != NULL)
+		if (pFileContext->extra_info.upload.before_open_callback!=NULL)
 		{
 			result = pFileContext->extra_info.upload. \
 					before_open_callback(pTask);
@@ -478,40 +478,8 @@ int dio_write_file(struct fast_task_info *pTask)
 			}
 		}
 
-		pFileContext->fd = open(pFileContext->filename, \
-					pFileContext->open_flags, 0644);
-		if (pFileContext->fd < 0)
+		if ((result=dio_open_file(pFileContext)) != 0)
 		{
-			result = errno != 0 ? errno : EACCES;
-			logError("file: "__FILE__", line: %d, " \
-				"open file: %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, pFileContext->filename, \
-				result, STRERROR(result));
-		}
-
-		pthread_mutex_lock(&g_dio_thread_lock);
-		g_storage_stat.total_file_open_count++;
-		if (result == 0)
-		{
-			g_storage_stat.success_file_open_count++;
-		}
-		pthread_mutex_unlock(&g_dio_thread_lock);
-
-		if (result != 0)
-		{
-			break;
-		}
-
-		if (pFileContext->offset > 0 && lseek(pFileContext->fd, \
-			pFileContext->offset, SEEK_SET) < 0)
-		{
-			result = errno != 0 ? errno : EIO;
-			logError("file: "__FILE__", line: %d, " \
-				"lseek file: %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, pFileContext->filename, \
-				result, STRERROR(result));
 			break;
 		}
 	}
