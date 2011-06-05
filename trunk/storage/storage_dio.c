@@ -616,7 +616,8 @@ void dio_append_finish_clean_up(struct fast_task_info *pTask)
 		/* if file does not write to the end, 
                    delete the appended contents 
                 */
-		if (pFileContext->offset < pFileContext->end)
+		if (pFileContext->offset > pFileContext->start && \
+		    pFileContext->offset < pFileContext->end)
 		{
 			if (ftruncate(pFileContext->fd,pFileContext->start)!=0)
 			{
@@ -648,12 +649,25 @@ void dio_append_finish_clean_up(struct fast_task_info *pTask)
 void dio_trunk_write_finish_clean_up(struct fast_task_info *pTask)
 {
 	StorageFileContext *pFileContext;
+	int result;
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 	if (pFileContext->fd > 0)
 	{
 		close(pFileContext->fd);
 		pFileContext->fd = -1;
+
+		/* if file does not write to the end, 
+                   delete the appended contents 
+                */
+		if (pFileContext->offset > pFileContext->start && \
+		    pFileContext->offset < pFileContext->end)
+		{
+			if ((result=trunk_file_delete(pFileContext->filename, \
+			&(pFileContext->extra_info.upload.trunk_info))) != 0)
+			{
+			}
+		}
 	}
 }
 
@@ -725,6 +739,17 @@ int dio_check_trunk_file(struct fast_task_info *pTask)
 		return result;
 	}
 
+	if (lseek(pFileContext->fd, -FDFS_TRUNK_FILE_HEADER_SIZE, SEEK_CUR) < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"lseek file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pFileContext->filename, \
+			result, STRERROR(result));
+		return result;
+	}
+
 	if (read(pFileContext->fd, old_header, FDFS_TRUNK_FILE_HEADER_SIZE) != 
 		FDFS_TRUNK_FILE_HEADER_SIZE)
 	{
@@ -761,17 +786,6 @@ int dio_check_trunk_file(struct fast_task_info *pTask)
 		}
 	}
 
-	if (lseek(pFileContext->fd, -FDFS_TRUNK_FILE_HEADER_SIZE, SEEK_CUR) < 0)
-	{
-		result = errno != 0 ? errno : EIO;
-		logError("file: "__FILE__", line: %d, " \
-			"lseek file: %s fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pFileContext->filename, \
-			result, STRERROR(result));
-		return result;
-	}
-
 	return 0;
 }
 
@@ -779,9 +793,6 @@ int dio_write_chunk_header(struct fast_task_info *pTask)
 {
 	StorageFileContext *pFileContext;
 	char header[FDFS_TRUNK_FILE_HEADER_SIZE];
-	char buff1[256];
-	char buff2[256];
-	char buff3[1024];
 	FDFSTrunkHeader trunkHeader;
 	int result;
 
@@ -808,12 +819,18 @@ int dio_write_chunk_header(struct fast_task_info *pTask)
 		return result;
 	}
 
-	trunk_header_dump(&trunkHeader, buff3, sizeof(buff3));
-
 	trunk_pack_header(&trunkHeader, header);
+	/*
+	{
+	char buff1[256];
+	char buff2[256];
+	char buff3[1024];
+	trunk_header_dump(&trunkHeader, buff3, sizeof(buff3));
 	logInfo("file: "__FILE__", line: %d, my trunk=%s, my fields=%s", __LINE__, \
                 trunk_info_dump(&pFileContext->extra_info.upload.trunk_info, buff1, sizeof(buff1)), \
                 trunk_header_dump(&trunkHeader, buff2, sizeof(buff2)));
+	}
+	*/
 
 	if (write(pFileContext->fd, header, FDFS_TRUNK_FILE_HEADER_SIZE) != \
 		FDFS_TRUNK_FILE_HEADER_SIZE)

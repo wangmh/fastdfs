@@ -41,16 +41,13 @@ void task_finish_clean_up(struct fast_task_info *pTask)
 	StorageClientInfo *pClientInfo;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
-
 	if (pClientInfo->clean_func != NULL)
 	{
 		pClientInfo->clean_func(pTask);
 	}
 
 	close(pClientInfo->sock);
-
 	memset(pTask->arg, 0, sizeof(StorageClientInfo));
-
 	free_queue_push(pTask);
 }
 
