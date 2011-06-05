@@ -45,13 +45,13 @@
 static int trunk_binlog_fd = -1;
 
 int g_trunk_sync_thread_count = 0;
-static pthread_mutex_t sync_thread_lock;
-static char *binlog_write_cache_buff = NULL;
-static int binlog_write_cache_len = 0;
-static int binlog_write_version = 1;
+static pthread_mutex_t trunk_sync_thread_lock;
+static char *trunk_binlog_write_cache_buff = NULL;
+static int trunk_binlog_write_cache_len = 0;
+static int trunk_binlog_write_version = 1;
 
 /* save sync thread ids */
-static pthread_t *sync_tids = NULL;
+static pthread_t *trunk_sync_tids = NULL;
 
 static int trunk_write_to_mark_file(TrunkBinLogReader *pReader);
 static int trunk_binlog_fsync(const bool bNeedLock);
@@ -136,8 +136,9 @@ int trunk_sync_init()
 		}
 	}
 
-	binlog_write_cache_buff = (char *)malloc(SYNC_BINLOG_WRITE_BUFF_SIZE);
-	if (binlog_write_cache_buff == NULL)
+	trunk_binlog_write_cache_buff = (char *)malloc( \
+					SYNC_BINLOG_WRITE_BUFF_SIZE);
+	if (trunk_binlog_write_cache_buff == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, " \
@@ -159,7 +160,7 @@ int trunk_sync_init()
 		return errno != 0 ? errno : EACCES;
 	}
 
-	if ((result=init_pthread_lock(&sync_thread_lock)) != 0)
+	if ((result=init_pthread_lock(&trunk_sync_thread_lock)) != 0)
 	{
 		return result;
 	}
@@ -178,11 +179,11 @@ int trunk_sync_destroy()
 		trunk_binlog_fd = -1;
 	}
 
-	if (binlog_write_cache_buff != NULL)
+	if (trunk_binlog_write_cache_buff != NULL)
 	{
-		free(binlog_write_cache_buff);
-		binlog_write_cache_buff = NULL;
-		if ((result=pthread_mutex_destroy(&sync_thread_lock)) != 0)
+		free(trunk_binlog_write_cache_buff);
+		trunk_binlog_write_cache_buff = NULL;
+		if ((result=pthread_mutex_destroy(&trunk_sync_thread_lock)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"call pthread_mutex_destroy fail, " \
@@ -200,12 +201,12 @@ int kill_trunk_sync_threads()
 	int result;
 	int kill_res;
 
-	if (sync_tids == NULL)
+	if (trunk_sync_tids == NULL)
 	{
 		return 0;
 	}
 
-	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
+	if ((result=pthread_mutex_lock(&trunk_sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -213,9 +214,9 @@ int kill_trunk_sync_threads()
 			__LINE__, result, STRERROR(result));
 	}
 
-	kill_res = kill_work_threads(sync_tids, g_trunk_sync_thread_count);
+	kill_res = kill_work_threads(trunk_sync_tids, g_trunk_sync_thread_count);
 
-	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
+	if ((result=pthread_mutex_unlock(&trunk_sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
@@ -233,7 +234,7 @@ int kill_trunk_sync_threads()
 
 int trunk_binlog_sync_func(void *args)
 {
-	if (binlog_write_cache_len > 0)
+	if (trunk_binlog_write_cache_len > 0)
 	{
 		return trunk_binlog_fsync(true);
 	}
@@ -249,7 +250,7 @@ static int trunk_binlog_fsync(const bool bNeedLock)
 	int write_ret;
 	char full_filename[MAX_PATH_SIZE];
 
-	if (bNeedLock && (result=pthread_mutex_lock(&sync_thread_lock)) != 0)
+	if (bNeedLock && (result=pthread_mutex_lock(&trunk_sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -257,12 +258,12 @@ static int trunk_binlog_fsync(const bool bNeedLock)
 			__LINE__, result, STRERROR(result));
 	}
 
-	if (binlog_write_cache_len == 0) //ignore
+	if (trunk_binlog_write_cache_len == 0) //ignore
 	{
 		write_ret = 0;  //skip
 	}
-	else if (write(trunk_binlog_fd, binlog_write_cache_buff, \
-		binlog_write_cache_len) != binlog_write_cache_len)
+	else if (write(trunk_binlog_fd, trunk_binlog_write_cache_buff, \
+		trunk_binlog_write_cache_len) != trunk_binlog_write_cache_len)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"write to binlog file \"%s\" fail, fd=%d, " \
@@ -285,10 +286,10 @@ static int trunk_binlog_fsync(const bool bNeedLock)
 		write_ret = 0;
 	}
 
-	binlog_write_version++;
-	binlog_write_cache_len = 0;  //reset cache buff
+	trunk_binlog_write_version++;
+	trunk_binlog_write_cache_len = 0;  //reset cache buff
 
-	if (bNeedLock && (result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
+	if (bNeedLock && (result=pthread_mutex_unlock(&trunk_sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
@@ -305,7 +306,7 @@ int trunk_binlog_write(const int timestamp, const char op_type, \
 	int result;
 	int write_ret;
 
-	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
+	if ((result=pthread_mutex_lock(&trunk_sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -313,8 +314,8 @@ int trunk_binlog_write(const int timestamp, const char op_type, \
 			__LINE__, result, STRERROR(result));
 	}
 
-	binlog_write_cache_len += sprintf(binlog_write_cache_buff + \
-					binlog_write_cache_len, \
+	trunk_binlog_write_cache_len += sprintf(trunk_binlog_write_cache_buff + \
+					trunk_binlog_write_cache_len, \
 					"%d %c %d %d %d %d %d %d\n", \
 					timestamp, op_type, \
 					pTrunk->path.store_path_index, \
@@ -325,7 +326,7 @@ int trunk_binlog_write(const int timestamp, const char op_type, \
 					pTrunk->file.size);
 
 	//check if buff full
-	if (SYNC_BINLOG_WRITE_BUFF_SIZE - binlog_write_cache_len < 128)
+	if (SYNC_BINLOG_WRITE_BUFF_SIZE - trunk_binlog_write_cache_len < 128)
 	{
 		write_ret = trunk_binlog_fsync(false);  //sync to disk
 	}
@@ -334,7 +335,7 @@ int trunk_binlog_write(const int timestamp, const char op_type, \
 		write_ret = 0;
 	}
 
-	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
+	if ((result=pthread_mutex_unlock(&trunk_sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
@@ -350,7 +351,7 @@ int trunk_binlog_write_buffer(const char *buff, const int length)
 	int result;
 	int write_ret;
 
-	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
+	if ((result=pthread_mutex_lock(&trunk_sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -359,7 +360,7 @@ int trunk_binlog_write_buffer(const char *buff, const int length)
 	}
 
 	//check if buff full
-	if (SYNC_BINLOG_WRITE_BUFF_SIZE - (binlog_write_cache_len + length) < 128)
+	if (SYNC_BINLOG_WRITE_BUFF_SIZE - (trunk_binlog_write_cache_len + length) < 128)
 	{
 		write_ret = trunk_binlog_fsync(false);  //sync to disk
 	}
@@ -370,11 +371,11 @@ int trunk_binlog_write_buffer(const char *buff, const int length)
 
 	if (write_ret == 0)
 	{
-		memcpy(binlog_write_cache_buff + binlog_write_cache_len, \
+		memcpy(trunk_binlog_write_cache_buff + trunk_binlog_write_cache_len, \
 			buff, length);
-		binlog_write_cache_len += length;
+		trunk_binlog_write_cache_len += length;
 	}
-	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
+	if ((result=pthread_mutex_unlock(&trunk_sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
@@ -442,7 +443,7 @@ int trunk_open_readable_binlog(TrunkBinLogReader *pReader, \
 	return 0;
 }
 
-static char *get_mark_filename_by_ip_and_port(const char *ip_addr, \
+static char *trunk_get_mark_filename_by_ip_and_port(const char *ip_addr, \
 		const int port, char *full_filename, const int filename_size)
 {
 	snprintf(full_filename, filename_size, \
@@ -462,14 +463,14 @@ char *trunk_mark_filename_by_reader(const void *pArg, char *full_filename)
 		full_filename = buff;
 	}
 
-	return get_mark_filename_by_ip_and_port(pReader->ip_addr, \
+	return trunk_get_mark_filename_by_ip_and_port(pReader->ip_addr, \
 			g_server_port, full_filename, MAX_PATH_SIZE);
 }
 
-static char *get_mark_filename_by_ip(const char *ip_addr, char *full_filename, \
+static char *trunk_get_mark_filename_by_ip(const char *ip_addr, char *full_filename, \
 		const int filename_size)
 {
-	return get_mark_filename_by_ip_and_port(ip_addr, g_server_port, \
+	return trunk_get_mark_filename_by_ip_and_port(ip_addr, g_server_port, \
 				full_filename, filename_size);
 }
 
@@ -640,15 +641,15 @@ static int trunk_write_to_mark_file(TrunkBinLogReader *pReader)
 static int trunk_binlog_preread(TrunkBinLogReader *pReader)
 {
 	int bytes_read;
-	int saved_binlog_write_version;
+	int saved_trunk_binlog_write_version;
 
-	if (pReader->binlog_buff.version == binlog_write_version && \
+	if (pReader->binlog_buff.version == trunk_binlog_write_version && \
 		pReader->binlog_buff.length == 0)
 	{
 		return ENOENT;
 	}
 
-	saved_binlog_write_version = binlog_write_version;
+	saved_trunk_binlog_write_version = trunk_binlog_write_version;
 	if (pReader->binlog_buff.current != pReader->binlog_buff.buffer)
 	{
 		if (pReader->binlog_buff.length > 0)
@@ -677,7 +678,7 @@ static int trunk_binlog_preread(TrunkBinLogReader *pReader)
 	}
 	else if (bytes_read == 0) //end of binlog file
 	{
-		pReader->binlog_buff.version = saved_binlog_write_version;
+		pReader->binlog_buff.version = saved_trunk_binlog_write_version;
 		return ENOENT;
 	}
 
@@ -794,7 +795,7 @@ int trunk_unlink_mark_file(const char *ip_addr)
 	t = time(NULL);
 	localtime_r(&t, &tm);
 
-	get_mark_filename_by_ip(ip_addr, old_filename, sizeof(old_filename));
+	trunk_get_mark_filename_by_ip(ip_addr, old_filename, sizeof(old_filename));
 	if (!fileExists(old_filename))
 	{
 		return ENOENT;
@@ -823,14 +824,14 @@ int trunk_rename_mark_file(const char *old_ip_addr, const int old_port, \
 	char old_filename[MAX_PATH_SIZE];
 	char new_filename[MAX_PATH_SIZE];
 
-	get_mark_filename_by_ip_and_port(old_ip_addr, old_port, \
+	trunk_get_mark_filename_by_ip_and_port(old_ip_addr, old_port, \
 			old_filename, sizeof(old_filename));
 	if (!fileExists(old_filename))
 	{
 		return ENOENT;
 	}
 
-	get_mark_filename_by_ip_and_port(new_ip_addr, new_port, \
+	trunk_get_mark_filename_by_ip_and_port(new_ip_addr, new_port, \
 			new_filename, sizeof(new_filename));
 	if (fileExists(new_filename))
 	{
@@ -860,7 +861,7 @@ static void trunk_sync_thread_exit(TrackerServerInfo *pStorage)
 	int i;
 	pthread_t tid;
 
-	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
+	if ((result=pthread_mutex_lock(&trunk_sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -871,7 +872,7 @@ static void trunk_sync_thread_exit(TrackerServerInfo *pStorage)
 	tid = pthread_self();
 	for (i=0; i<g_trunk_sync_thread_count; i++)
 	{
-		if (pthread_equal(sync_tids[i], tid))
+		if (pthread_equal(trunk_sync_tids[i], tid))
 		{
 			break;
 		}
@@ -879,13 +880,13 @@ static void trunk_sync_thread_exit(TrackerServerInfo *pStorage)
 
 	while (i < g_trunk_sync_thread_count - 1)
 	{
-		sync_tids[i] = sync_tids[i + 1];
+		trunk_sync_tids[i] = trunk_sync_tids[i + 1];
 		i++;
 	}
 	
 	g_trunk_sync_thread_count--;
 
-	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
+	if ((result=pthread_mutex_unlock(&trunk_sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
@@ -1309,7 +1310,7 @@ int trunk_sync_thread_start(const FDFSStorageBrief *pStorage)
 		return result;
 	}
 
-	if ((result=pthread_mutex_lock(&sync_thread_lock)) != 0)
+	if ((result=pthread_mutex_lock(&trunk_sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -1318,9 +1319,9 @@ int trunk_sync_thread_start(const FDFSStorageBrief *pStorage)
 	}
 
 	g_trunk_sync_thread_count++;
-	sync_tids = (pthread_t *)realloc(sync_tids, sizeof(pthread_t) * \
+	trunk_sync_tids = (pthread_t *)realloc(trunk_sync_tids, sizeof(pthread_t) * \
 					g_trunk_sync_thread_count);
-	if (sync_tids == NULL)
+	if (trunk_sync_tids == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, " \
@@ -1331,10 +1332,10 @@ int trunk_sync_thread_start(const FDFSStorageBrief *pStorage)
 	}
 	else
 	{
-		sync_tids[g_trunk_sync_thread_count - 1] = tid;
+		trunk_sync_tids[g_trunk_sync_thread_count - 1] = tid;
 	}
 
-	if ((result=pthread_mutex_unlock(&sync_thread_lock)) != 0)
+	if ((result=pthread_mutex_unlock(&trunk_sync_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
