@@ -40,7 +40,6 @@
 #define TRUNK_SYNC_MARK_FILE_EXT	".mark"
 #define TRUNK_DIR_NAME			"trunk"
 #define MARK_ITEM_BINLOG_FILE_OFFSET	"binlog_offset"
-#define SYNC_BINLOG_WRITE_BUFF_SIZE	4 * 1024
 
 static int trunk_binlog_fd = -1;
 
@@ -54,8 +53,12 @@ static int trunk_binlog_write_version = 1;
 static pthread_t *trunk_sync_tids = NULL;
 
 static int trunk_write_to_mark_file(TrunkBinLogReader *pReader);
-static int trunk_binlog_fsync(const bool bNeedLock);
+static int trunk_binlog_fsync_ex(const bool bNeedLock, \
+		const char *buff, int *length);
 static int trunk_binlog_preread(TrunkBinLogReader *pReader);
+
+#define trunk_binlog_fsync(bNeedLock) trunk_binlog_fsync_ex(bNeedLock, \
+	trunk_binlog_write_cache_buff, (&trunk_binlog_write_cache_len))
 
 /**
 IP_ADDRESS_SIZE bytes: tracker client ip address
@@ -119,6 +122,8 @@ int trunk_sync_init()
 				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
+
+		STORAGE_CHOWN(data_path, geteuid(), getegid())
 	}
 
 	snprintf(sync_path, sizeof(sync_path), \
@@ -134,22 +139,24 @@ int trunk_sync_init()
 				errno, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
+
+		STORAGE_CHOWN(sync_path, geteuid(), getegid())
 	}
 
 	trunk_binlog_write_cache_buff = (char *)malloc( \
-					SYNC_BINLOG_WRITE_BUFF_SIZE);
+					TRUNK_BINLOG_BUFFER_SIZE);
 	if (trunk_binlog_write_cache_buff == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, SYNC_BINLOG_WRITE_BUFF_SIZE, \
+			__LINE__, TRUNK_BINLOG_BUFFER_SIZE, \
 			errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
 
 	get_trunk_binlog_filename(full_filename);
-	trunk_binlog_fd = open(full_filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	trunk_binlog_fd = open(full_filename, O_WRONLY|O_CREAT|O_APPEND, 0644);
 	if (trunk_binlog_fd < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -164,6 +171,8 @@ int trunk_sync_init()
 	{
 		return result;
 	}
+
+	STORAGE_FCHOWN(trunk_binlog_fd, full_filename, geteuid(), getegid())
 
 	return 0;
 }
@@ -244,7 +253,8 @@ int trunk_binlog_sync_func(void *args)
 	}
 }
 
-static int trunk_binlog_fsync(const bool bNeedLock)
+static int trunk_binlog_fsync_ex(const bool bNeedLock, \
+		const char *buff, int *length)
 {
 	int result;
 	int write_ret;
@@ -258,12 +268,11 @@ static int trunk_binlog_fsync(const bool bNeedLock)
 			__LINE__, result, STRERROR(result));
 	}
 
-	if (trunk_binlog_write_cache_len == 0) //ignore
+	if (*length == 0) //ignore
 	{
 		write_ret = 0;  //skip
 	}
-	else if (write(trunk_binlog_fd, trunk_binlog_write_cache_buff, \
-		trunk_binlog_write_cache_len) != trunk_binlog_write_cache_len)
+	else if (write(trunk_binlog_fd, buff, *length) != *length)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"write to binlog file \"%s\" fail, fd=%d, " \
@@ -286,8 +295,11 @@ static int trunk_binlog_fsync(const bool bNeedLock)
 		write_ret = 0;
 	}
 
-	trunk_binlog_write_version++;
-	trunk_binlog_write_cache_len = 0;  //reset cache buff
+	if (write_ret == 0)
+	{
+		trunk_binlog_write_version++;
+		*length = 0;  //reset cache buff
+	}
 
 	if (bNeedLock && (result=pthread_mutex_unlock(&trunk_sync_thread_lock)) != 0)
 	{
@@ -326,7 +338,7 @@ int trunk_binlog_write(const int timestamp, const char op_type, \
 					pTrunk->file.size);
 
 	//check if buff full
-	if (SYNC_BINLOG_WRITE_BUFF_SIZE - trunk_binlog_write_cache_len < 128)
+	if (TRUNK_BINLOG_BUFFER_SIZE - trunk_binlog_write_cache_len < 128)
 	{
 		write_ret = trunk_binlog_fsync(false);  //sync to disk
 	}
@@ -360,7 +372,8 @@ int trunk_binlog_write_buffer(const char *buff, const int length)
 	}
 
 	//check if buff full
-	if (SYNC_BINLOG_WRITE_BUFF_SIZE - (trunk_binlog_write_cache_len + length) < 128)
+	if (TRUNK_BINLOG_BUFFER_SIZE - (trunk_binlog_write_cache_len + \
+			length) < 128)
 	{
 		write_ret = trunk_binlog_fsync(false);  //sync to disk
 	}
@@ -371,9 +384,27 @@ int trunk_binlog_write_buffer(const char *buff, const int length)
 
 	if (write_ret == 0)
 	{
-		memcpy(trunk_binlog_write_cache_buff + trunk_binlog_write_cache_len, \
-			buff, length);
-		trunk_binlog_write_cache_len += length;
+		if (length >= TRUNK_BINLOG_BUFFER_SIZE)
+		{
+			if (trunk_binlog_write_cache_len > 0)
+			{
+				write_ret = trunk_binlog_fsync(false);
+			}
+
+			if (write_ret == 0)
+			{
+				int len;
+				len = length;
+				write_ret = trunk_binlog_fsync_ex(false, \
+					buff, &len);
+			}
+		}
+		else
+		{
+			memcpy(trunk_binlog_write_cache_buff + \
+				trunk_binlog_write_cache_len, buff, length);
+			trunk_binlog_write_cache_len += length;
+		}
 	}
 	if ((result=pthread_mutex_unlock(&trunk_sync_thread_lock)) != 0)
 	{
@@ -398,7 +429,7 @@ static char *get_binlog_readable_filename(const void *pArg, \
 		full_filename = buff;
 	}
 
-	snprintf(full_filename, MAX_PATH_SIZE, \
+	snprintf(full_filename, MAX_PATH_SIZE, 
 		"%s/data/"TRUNK_DIR_NAME"/"TRUNK_SYNC_BINLOG_FILENAME, \
 		g_fdfs_base_path);
 	return full_filename;
