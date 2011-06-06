@@ -36,6 +36,7 @@ extern int g_current_trunk_file_id;  //current trunk file id
 extern TrackerServerInfo g_trunk_server;  //the trunk server
 extern bool g_if_use_trunk_file;   //if use trunk file
 extern bool g_if_trunker_self;   //if am i trunk server
+extern int64_t g_trunk_total_free_space;  //trunk total free space in bytes
 
 typedef struct tagFDFSTrunkNode {
 	FDFSTrunkFullInfo trunk;    //trunk info
