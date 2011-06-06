@@ -48,6 +48,7 @@ int g_current_trunk_file_id = 0;
 TrackerServerInfo g_trunk_server = {-1, 0};
 bool g_if_use_trunk_file = false;
 bool g_if_trunker_self = false;
+int64_t g_trunk_total_free_space = 0;
 
 static FDFSTrunkSlot *slots = NULL;
 static FDFSTrunkSlot *slot_end = NULL;
@@ -63,6 +64,23 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 
 static int storage_trunk_save();
 static int storage_trunk_load();
+
+static int trunk_mem_binlog_write(const int timestamp, const char op_type, \
+		const FDFSTrunkFullInfo *pTrunk)
+{
+	pthread_mutex_lock(&trunk_file_lock);
+	if (op_type == TRUNK_OP_TYPE_ADD_SPACE)
+	{
+		g_trunk_total_free_space += pTrunk->file.size;
+	}
+	else if (op_type == TRUNK_OP_TYPE_DEL_SPACE)
+	{
+		g_trunk_total_free_space -= pTrunk->file.size;
+	}
+	pthread_mutex_unlock(&trunk_file_lock);
+
+	return trunk_binlog_write(timestamp, op_type, pTrunk);
+}
 
 static int trunk_init_slot(FDFSTrunkSlot *pTrunkSlot, const int bytes)
 {
@@ -625,7 +643,6 @@ int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 
 	pTrunkNode->pMblockNode = pMblockNode;
 	pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
-
 	return trunk_add_node(pTrunkNode, bWriteBinLog);
 }
 
@@ -667,11 +684,14 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 
 	if (bWriteBinLog)
 	{
-		result = trunk_binlog_write(time(NULL), \
+		result = trunk_mem_binlog_write(time(NULL), \
 				TRUNK_OP_TYPE_ADD_SPACE, &(pNode->trunk));
 	}
 	else
 	{
+		pthread_mutex_lock(&trunk_file_lock);
+		g_trunk_total_free_space += pNode->trunk.file.size;
+		pthread_mutex_unlock(&trunk_file_lock);
 		result = 0;
 	}
 
@@ -728,16 +748,18 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 	pthread_mutex_unlock(&pSlot->lock);
 	if (bWriteBinLog)
 	{
-		result = trunk_binlog_write(time(NULL), \
+		result = trunk_mem_binlog_write(time(NULL), \
 				TRUNK_OP_TYPE_DEL_SPACE, &(pCurrent->trunk));
 	}
 	else
 	{
+		pthread_mutex_lock(&trunk_file_lock);
+		g_trunk_total_free_space -= pCurrent->trunk.file.size;
+		pthread_mutex_unlock(&trunk_file_lock);
 		result = 0;
 	}
 
 	fast_mblock_free(&trunk_blocks_man, pCurrent->pMblockNode);
-
 	return result;
 }
 
@@ -788,7 +810,7 @@ static int trunk_split(FDFSTrunkNode *pNode, const int size)
 
 	if (pNode->trunk.file.size - size < g_slot_min_size)
 	{
-		return trunk_binlog_write(time(NULL), \
+		return trunk_mem_binlog_write(time(NULL), \
 			TRUNK_OP_TYPE_DEL_SPACE, &(pNode->trunk));
 	}
 
@@ -818,7 +840,7 @@ static int trunk_split(FDFSTrunkNode *pNode, const int size)
 		return result;
 	}
 
-	result = trunk_binlog_write(time(NULL), \
+	result = trunk_mem_binlog_write(time(NULL), \
 			TRUNK_OP_TYPE_DEL_SPACE, &(pNode->trunk));
 	if (result != 0)
 	{
@@ -916,7 +938,7 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 			return result;
 		}
 
-		trunk_binlog_write(time(NULL), \
+		trunk_mem_binlog_write(time(NULL), \
 			TRUNK_OP_TYPE_ADD_SPACE, &(pTrunkNode->trunk));
 	}
 
@@ -1187,7 +1209,7 @@ int trunk_file_delete(const char *trunk_filename, \
 
 	memset(buff, 0, sizeof(buff));
 	result = 0;
-	remain_bytes = pTrunkInfo->file.size;
+	remain_bytes = pTrunkInfo->file.size - FDFS_TRUNK_FILE_HEADER_SIZE;
 	while (remain_bytes > 0)
 	{
 		write_bytes = remain_bytes > sizeof(buff) ? \

@@ -235,7 +235,6 @@ int trunk_client_trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo)
 	}
 
 	result = trunk_client_trunk_do_free_space(&trunk_server, pTrunkInfo);
-
 	tracker_disconnect_server(&trunk_server);
 	return result;
 }
