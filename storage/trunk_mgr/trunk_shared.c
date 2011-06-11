@@ -23,6 +23,7 @@
 #include "logger.h"
 #include "shared_func.h"
 #include "trunk_shared.h"
+#include "storage_global.h"
 #include "tracker_proto.h"
 
 char **g_fdfs_store_paths = NULL;
@@ -338,7 +339,7 @@ void trunk_file_info_decode(const char *str, FDFSTrunkFileInfo *pTrunkFile)
 int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	const int filename_len, stat_func statfunc, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
-	FDFSTrunkHeader *pTrunkHeader)
+	FDFSTrunkHeader *pTrunkHeader, int *pfd)
 {
 	char full_filename[MAX_PATH_SIZE];
 	char buff[128];
@@ -402,14 +403,16 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	pTrunkInfo->path.sub_path_high = strtol(true_filename, NULL, 16);
 	pTrunkInfo->path.sub_path_low = strtol(true_filename + 3, NULL, 16);
 
+	g_storage_stat.total_file_open_count++;
 	trunk_get_full_filename(pTrunkInfo, full_filename, \
 				sizeof(full_filename));
-	fd = open(full_filename, O_RDONLY);
+	fd = open(full_filename, O_RDONLY | g_extra_open_file_flags);
 	if (fd < 0)
 	{
 		return errno != 0 ? errno : EIO;
 	}
 
+	g_storage_stat.success_file_open_count++;
 	if (lseek(fd, pTrunkInfo->file.offset, SEEK_SET) < 0)
 	{
 		result = errno != 0 ? errno : EIO;
@@ -419,9 +422,9 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 
 	read_bytes = read(fd, buff, FDFS_TRUNK_FILE_HEADER_SIZE);
 	result = errno;
-	close(fd);
 	if (read_bytes != FDFS_TRUNK_FILE_HEADER_SIZE)
 	{
+		close(fd);
 		return result != 0 ? errno : EINVAL;
 	}
 
@@ -449,6 +452,7 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 
 	if (memcmp(pack_buff+1, buff+1, FDFS_TRUNK_FILE_HEADER_SIZE - 1) != 0)
 	{
+		close(fd);
 		return ENOENT;
 	}
 
@@ -456,6 +460,15 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	pStat->st_size = pTrunkHeader->file_size;
 	pStat->st_mtime = pTrunkHeader->mtime;
 	pStat->st_mode = S_IFREG;
+
+	if (pfd != NULL)
+	{
+		*pfd = fd;
+	}
+	else
+	{
+		close(fd);
+	}
 
 	return 0;
 }

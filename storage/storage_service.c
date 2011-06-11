@@ -48,7 +48,6 @@
 
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
-static int extra_open_flags = 0;
 static int last_stat_change_count = 1;  //for sync to stat file
 static int64_t temp_file_sequence = 0;
 
@@ -1177,7 +1176,7 @@ int storage_service_init()
 	pthread_attr_destroy(&thread_attr);
 
 	last_stat_change_count = g_stat_change_count;
-	extra_open_flags = g_disk_rw_direct ? O_DIRECT : 0;
+	g_extra_open_file_flags = g_disk_rw_direct ? O_DIRECT : 0;
 
 	return result;
 }
@@ -3417,7 +3416,7 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 					dio_check_trunk_file;
 		pFileContext->extra_info.upload.before_close_callback = \
 					dio_write_chunk_header;
-		pFileContext->open_flags = O_RDWR | extra_open_flags;
+		pFileContext->open_flags = O_RDWR | g_extra_open_file_flags;
 	}
 	else
 	{
@@ -3443,7 +3442,7 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 		pFileContext->extra_info.upload.before_open_callback = NULL;
 		pFileContext->extra_info.upload.before_close_callback = NULL;
 		pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC \
-						| extra_open_flags;
+						| g_extra_open_file_flags;
 	}
 
  	return storage_write_to_file(pTask, file_offset, file_bytes, \
@@ -3644,7 +3643,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 	pFileContext->extra_info.upload.before_close_callback = NULL;
 	pFileContext->extra_info.upload.trunk_info.path.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_APPEND;
-	pFileContext->open_flags = O_WRONLY | O_APPEND | extra_open_flags;
+	pFileContext->open_flags = O_WRONLY | O_APPEND | g_extra_open_file_flags;
 
  	return storage_write_to_file(pTask, stat_buf.st_size, file_bytes, \
 			p - pTask->data, dio_write_file, \
@@ -3839,7 +3838,7 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	pFileContext->extra_info.upload.before_close_callback = NULL;
 	pFileContext->extra_info.upload.trunk_info.path.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
-	pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC | extra_open_flags;
+	pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC | g_extra_open_file_flags;
 
  	return storage_write_to_file(pTask, 0, file_bytes, p - pTask->data, \
 			dio_write_file, storage_upload_file_done_callback, \
@@ -4078,7 +4077,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 					dio_check_trunk_file;
 		pFileContext->extra_info.upload.before_close_callback = \
 					dio_write_chunk_header;
-		pFileContext->open_flags = O_RDWR | extra_open_flags;
+		pFileContext->open_flags = O_RDWR | g_extra_open_file_flags;
 	}
 	else
 	{
@@ -4122,7 +4121,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 		pFileContext->extra_info.upload.before_open_callback = NULL;
 		pFileContext->extra_info.upload.before_close_callback = NULL;
 		pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC \
-						| extra_open_flags;
+						| g_extra_open_file_flags;
 	}
 
 		deal_func = dio_write_file;
@@ -4365,7 +4364,7 @@ static int storage_sync_append_file(struct fast_task_info *pTask)
 	{
 		deal_func = dio_write_file;
 		pFileContext->op = FDFS_STORAGE_FILE_OP_APPEND;
-		pFileContext->open_flags = O_WRONLY | O_APPEND | extra_open_flags;
+		pFileContext->open_flags = O_WRONLY | O_APPEND | g_extra_open_file_flags;
 
 		snprintf(pFileContext->fname2log, \
 			sizeof(pFileContext->fname2log), \
@@ -4769,6 +4768,7 @@ static int storage_server_get_metadata(struct fast_task_info *pTask)
 		return result;
 	}
 
+	pFileContext->fd = -1;
 	return storage_read_from_file(pTask, 0, file_bytes, \
 			storage_get_metadata_done_callback, store_path_index);
 }
@@ -4880,9 +4880,10 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 		return result;
 	}
 
-	if ((result=trunk_file_stat(store_path_index, \
+	pFileContext->fd = -1;
+	if ((result=trunk_file_stat_ex(store_path_index, \
 		true_filename, filename_len, &stat_buf, \
-		&trunkInfo, &trunkHeader)) == 0)
+		&trunkInfo, &trunkHeader, &pFileContext->fd)) == 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))
 		{
@@ -4981,9 +4982,8 @@ static int storage_read_from_file(struct fast_task_info *pTask, \
 	pClientInfo->total_length = sizeof(TrackerHeader) + download_bytes;
 	pClientInfo->total_offset = 0;
 
-	pFileContext->fd = -1;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_READ;
-	pFileContext->open_flags = O_RDONLY | extra_open_flags;
+	pFileContext->open_flags = O_RDONLY | g_extra_open_file_flags;
 	pFileContext->offset = file_offset;
 	pFileContext->start = file_offset;
 	pFileContext->end = file_offset + download_bytes;

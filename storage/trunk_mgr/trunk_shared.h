@@ -113,17 +113,22 @@ void trunk_unpack_header(const char *buff, FDFSTrunkHeader *pTrunkHeader);
 #define trunk_file_stat(store_path_index, true_filename, filename_len, \
 			pStat, pTrunkInfo, pTrunkHeader) \
 	trunk_file_stat_func(store_path_index, true_filename, filename_len, \
-			stat, pStat, pTrunkInfo, pTrunkHeader)
+			stat, pStat, pTrunkInfo, pTrunkHeader, NULL)
 
 #define trunk_file_lstat(store_path_index, true_filename, filename_len, \
 			pStat, pTrunkInfo, pTrunkHeader) \
 	trunk_file_stat_func(store_path_index, true_filename, filename_len, \
-			lstat, pStat, pTrunkInfo, pTrunkHeader)
+			lstat, pStat, pTrunkInfo, pTrunkHeader, NULL)
+
+#define trunk_file_stat_ex(store_path_index, true_filename, filename_len, \
+			pStat, pTrunkInfo, pTrunkHeader, pfd) \
+	trunk_file_stat_func(store_path_index, true_filename, filename_len, \
+			stat, pStat, pTrunkInfo, pTrunkHeader, pfd)
 
 int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	const int filename_len, stat_func statfunc, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
-	FDFSTrunkHeader *pTrunkHeader);
+	FDFSTrunkHeader *pTrunkHeader, int *pfd);
 
 #ifdef __cplusplus
 }
