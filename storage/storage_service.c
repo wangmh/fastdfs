@@ -4932,6 +4932,10 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 			INT64_PRINTF_FORMAT,  __LINE__, \
 			pTask->client_ip, download_bytes, \
 			file_bytes - file_offset);
+		if (pFileContext->fd >= 0)
+		{
+			close(pFileContext->fd);
+		}
 		return EINVAL;
 	}
 
@@ -5014,6 +5018,10 @@ static int storage_read_from_file(struct fast_task_info *pTask, \
 
 	if ((result=storage_dio_queue_push(pTask)) != 0)
 	{
+		if (pFileContext->fd >= 0)
+		{
+			close(pFileContext->fd);
+		}
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
