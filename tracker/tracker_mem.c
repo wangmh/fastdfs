@@ -28,7 +28,6 @@
 #include "tracker_proto.h"
 #include "tracker_mem.h"
 #include "tracker_relationship.h"
-#include "trunk_define.h"
 
 #define TRACKER_MEM_ALLOC_ONCE	2
 

@@ -13,7 +13,6 @@
 
 #include "tracker_types.h"
 #include "ini_file_reader.h"
-#include "trunk_define.h"
 
 #define TRACKER_PROTO_CMD_STORAGE_JOIN              81
 #define FDFS_PROTO_CMD_QUIT			    82
