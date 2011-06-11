@@ -770,18 +770,22 @@ int dio_check_trunk_file(struct fast_task_info *pTask)
 
 		trunk_unpack_header(old_header, &oldTrunkHeader);
 		old_file_size = oldTrunkHeader.file_size;
-		oldTrunkHeader.file_size = 0;
+		oldTrunkHeader.alloc_size = 0;
 		oldTrunkHeader.file_type = 0;
 		trunk_pack_header(&oldTrunkHeader, old_header);
 		if (memcmp(old_header, expect_header, \
 			FDFS_TRUNK_FILE_HEADER_SIZE) != 0)
 		{
+			char buff[256];
+			trunk_header_dump(&oldTrunkHeader, buff, sizeof(buff));
+
 			logError("file: "__FILE__", line: %d, " \
 				"trunk file: %s, offset: "INT64_PRINTF_FORMAT \
-				", size: %d already occupied by other file", \
-				__LINE__, pFileContext->filename, \
+				", size: %d already occupied by other file, " \
+				"trunk header info: %s", __LINE__, \
+				pFileContext->filename, \
 				pFileContext->start-FDFS_TRUNK_FILE_HEADER_SIZE,
-				old_file_size);
+				old_file_size, buff);
 			return EEXIST;
 		}
 	}
