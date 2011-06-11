@@ -23,7 +23,6 @@
 #include "logger.h"
 #include "shared_func.h"
 #include "trunk_shared.h"
-#include "storage_global.h"
 #include "tracker_proto.h"
 
 char **g_fdfs_store_paths = NULL;
@@ -403,16 +402,14 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	pTrunkInfo->path.sub_path_high = strtol(true_filename, NULL, 16);
 	pTrunkInfo->path.sub_path_low = strtol(true_filename + 3, NULL, 16);
 
-	g_storage_stat.total_file_open_count++;
 	trunk_get_full_filename(pTrunkInfo, full_filename, \
 				sizeof(full_filename));
-	fd = open(full_filename, O_RDONLY | g_extra_open_file_flags);
+	fd = open(full_filename, O_RDONLY);
 	if (fd < 0)
 	{
 		return errno != 0 ? errno : EIO;
 	}
 
-	g_storage_stat.success_file_open_count++;
 	if (lseek(fd, pTrunkInfo->file.offset, SEEK_SET) < 0)
 	{
 		result = errno != 0 ? errno : EIO;
