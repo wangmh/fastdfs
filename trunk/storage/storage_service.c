@@ -4560,7 +4560,7 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, package size " \
-			INT64_PRINTF_FORMAT"is not correct, " \
+			INT64_PRINTF_FORMAT" is not correct, " \
 			"expect length > %d", __LINE__, \
 			pTask->client_ip,  nInPackLen, \
 			2 * FDFS_PROTO_PKG_LEN_SIZE + \
