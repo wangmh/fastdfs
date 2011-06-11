@@ -23,6 +23,7 @@
 #include "logger.h"
 #include "shared_func.h"
 #include "trunk_shared.h"
+#include "tracker_proto.h"
 
 char **g_fdfs_store_paths = NULL;
 int g_fdfs_path_count = 0;
@@ -339,10 +340,6 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
 	FDFSTrunkHeader *pTrunkHeader)
 {
-#define TRUNK_FILENAME_LENGTH (FDFS_TRUE_FILE_PATH_LEN + \
-		FDFS_FILENAME_BASE64_LENGTH + FDFS_TRUNK_FILE_INFO_LEN + \
-		1 + FDFS_FILE_EXT_NAME_MAX_LEN)
-
 	char full_filename[MAX_PATH_SIZE];
 	char buff[128];
 	char pack_buff[FDFS_TRUNK_FILE_HEADER_SIZE];
@@ -353,7 +350,7 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	int result;
 
 	pTrunkInfo->file.id = 0;
-	if (filename_len != TRUNK_FILENAME_LENGTH) //not trunk file
+	if (filename_len != FDFS_TRUNK_FILENAME_LENGTH) //not trunk file
 	{
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
 			g_fdfs_store_paths[store_path_index], true_filename);
@@ -374,7 +371,7 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 		buff, &buff_len);
 
 	file_size = buff2long(buff + sizeof(int) * 2);
-	if ((file_size & FDFS_TRUNK_FILE_SIZE) == 0)  //slave file
+	if (!IS_TRUNK_FILE(file_size))  //slave file
 	{
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
 			g_fdfs_store_paths[store_path_index], true_filename);
@@ -392,7 +389,7 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	trunk_file_info_decode(true_filename + FDFS_TRUE_FILE_PATH_LEN + \
 		 FDFS_FILENAME_BASE64_LENGTH, &pTrunkInfo->file);
 
-	pTrunkHeader->file_size = file_size & (~(FDFS_TRUNK_FILE_SIZE));
+	pTrunkHeader->file_size = FDFS_TRUNK_FILE_TRUE_SIZE(file_size);
 	pTrunkHeader->mtime = buff2int(buff + sizeof(int));
 	pTrunkHeader->crc32 = buff2int(buff + sizeof(int) * 4);
 	memcpy(pTrunkHeader->formatted_ext_name, true_filename + \

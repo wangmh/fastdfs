@@ -38,11 +38,17 @@
 #define FDFS_TRUNK_FILE_FILE_EXT_NAME_OFFSET	17
 #define FDFS_TRUNK_FILE_HEADER_SIZE	(17 + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
 
+#define FDFS_TRUNK_FILENAME_LENGTH (FDFS_TRUE_FILE_PATH_LEN + \
+		FDFS_FILENAME_BASE64_LENGTH + FDFS_TRUNK_FILE_INFO_LEN + \
+		1 + FDFS_FILE_EXT_NAME_MAX_LEN)
 #define TRUNK_CALC_SIZE(file_size) (FDFS_TRUNK_FILE_HEADER_SIZE + file_size)
 #define TRUNK_FILE_START_OFFSET(trunkInfo) \
 		(FDFS_TRUNK_FILE_HEADER_SIZE + trunkInfo.file.offset)
 
-#define STORAGE_IS_TRUNK_FILE(trunkInfo) (trunkInfo.file.id > 0)
+#define IS_TRUNK_FILE_BY_ID(trunkInfo) (trunkInfo.file.id > 0)
+
+#define TRUNK_GET_FILENAME(file_id, filename) \
+	sprintf(filename, "%06d", file_id)
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,9 +86,6 @@ typedef struct tagFDFSTrunkFullInfo {
 	FDFSTrunkPathInfo path;
 	FDFSTrunkFileInfo file;
 } FDFSTrunkFullInfo;
-
-#define TRUNK_GET_FILENAME(file_id, filename) \
-	sprintf(filename, "%06d", file_id)
 
 int storage_load_paths_from_conf_file(IniContext *pItemContext);
 void trunk_shared_init();

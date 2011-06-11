@@ -28,6 +28,7 @@
 #include "tracker_proto.h"
 #include "tracker_mem.h"
 #include "tracker_relationship.h"
+#include "trunk_define.h"
 
 #define TRACKER_MEM_ALLOC_ONCE	2
 
@@ -4808,11 +4809,14 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 		file_timestamp = buff2int(name_buff+sizeof(int));
 		file_size = buff2long(name_buff + sizeof (int) * 2);
 
-		bNormalFile = !(IS_SLAVE_FILE(filename_len) || \
+		bNormalFile = !(IS_SLAVE_FILE(filename_len, file_size) || \
 				IS_APPENDER_FILE(file_size));
 	}
 
-	//logInfo("storage_ip=%d, file_timestamp=%d\n", storage_ip,file_timestamp);
+	/*
+	//logInfo("cmd=%d, bNormalFile=%d, storage_ip=%d, file_timestamp=%d\n",
+		 cmd, bNormalFile, storage_ip, file_timestamp);
+	*/
 
 	memset(szIpAddr, 0, sizeof(szIpAddr));
 	if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE)
@@ -4879,14 +4883,13 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 		ppStoreServers[(*server_count)++]=*((*ppGroup)->active_servers \
 				+ read_server_index);
 #endif
-
 		/*
-		//logInfo("filename=%s, pStorageServer ip=%s, " \
-		"file_timestamp=%d, " \
-		"last_synced_timestamp=%d\n", filename, \
-		ppStoreServers[0]->ip_addr, file_timestamp, \
+		//logInfo("filename=%s, storage server ip=%s, " \
+		"file_timestamp=%d, last_synced_timestamp=%d\n", 
+		filename, ppStoreServers[0]->ip_addr, file_timestamp, \
 		(int)ppStoreServers[0]->stat.last_synced_timestamp);
-		 */
+		*/
+
 		do
 		{
 			if (bNormalFile)

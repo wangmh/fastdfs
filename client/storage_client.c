@@ -1948,7 +1948,7 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	pFileInfo->create_timestamp = buff2int(buff + sizeof(int));
 	pFileInfo->file_size = buff2long(buff + sizeof(int) * 2);
 
-	if (IS_SLAVE_FILE(filename_len) || \
+	if (IS_SLAVE_FILE(filename_len, pFileInfo->file_size) || \
 	    IS_APPENDER_FILE(pFileInfo->file_size))
 	{ //slave file or appender file
 		if (get_from_server)
@@ -1979,6 +1979,12 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 		{
 			pFileInfo->file_size &= 0xFFFFFFFF;  //low 32 bits is file size
 		}
+		else if (IS_TRUNK_FILE(pFileInfo->file_size))
+		{
+			pFileInfo->file_size = FDFS_TRUNK_FILE_TRUE_SIZE( \
+							pFileInfo->file_size);
+		}
+
 		pFileInfo->crc32 = buff2int(buff+sizeof(int)*4);
 	}
 
