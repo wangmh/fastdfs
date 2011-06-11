@@ -4881,9 +4881,16 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 	}
 
 	pFileContext->fd = -1;
-	if ((result=trunk_file_stat_ex(store_path_index, \
+	result = trunk_file_stat_ex(store_path_index, \
 		true_filename, filename_len, &stat_buf, \
-		&trunkInfo, &trunkHeader, &pFileContext->fd)) == 0)
+		&trunkInfo, &trunkHeader, &pFileContext->fd);
+	if (IS_TRUNK_FILE_BY_ID(trunkInfo))
+	{
+		pthread_mutex_lock(&stat_count_thread_lock);
+		g_storage_stat.total_file_open_count++;
+		pthread_mutex_unlock(&stat_count_thread_lock);
+	}
+	if (result == 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))
 		{
@@ -4904,6 +4911,13 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 			__LINE__, pFileContext->filename, \
 			result, STRERROR(result));
 		return result;
+	}
+
+	if (IS_TRUNK_FILE_BY_ID(trunkInfo))
+	{
+		pthread_mutex_lock(&stat_count_thread_lock);
+		g_storage_stat.success_file_open_count++;
+		pthread_mutex_unlock(&stat_count_thread_lock);
 	}
 
 	if (download_bytes == 0)
