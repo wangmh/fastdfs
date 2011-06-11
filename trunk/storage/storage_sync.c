@@ -166,7 +166,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		}
 	}
 
-	if (STORAGE_IS_TRUNK_FILE(trunkInfo))
+	if (IS_TRUNK_FILE_BY_ID(trunkInfo))
 	{
 		file_offset = TRUNK_FILE_START_OFFSET(trunkInfo);
 		trunk_get_full_filename((&trunkInfo), full_filename, \

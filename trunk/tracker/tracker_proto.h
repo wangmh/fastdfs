@@ -13,6 +13,7 @@
 
 #include "tracker_types.h"
 #include "ini_file_reader.h"
+#include "trunk_define.h"
 
 #define TRACKER_PROTO_CMD_STORAGE_JOIN              81
 #define FDFS_PROTO_CMD_QUIT			    82
@@ -96,6 +97,16 @@
 
 #define STORAGE_TRUNK_ALLOC_CONFIRM_REQ_BODY_LEN  (FDFS_GROUP_NAME_MAX_LEN \
 			+ sizeof(FDFSTrunkInfoBuff))
+
+#define IS_APPENDER_FILE(file_size)   (file_size == INFINITE_FILE_SIZE)
+#define IS_TRUNK_FILE(file_size)     ((file_size & FDFS_TRUNK_FILE_MARK_SIZE) != 0)
+
+#define IS_SLAVE_FILE(filename_len, file_size) \
+	(filename_len > FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH+\
+		FDFS_FILE_EXT_NAME_MAX_LEN + 1 && !IS_TRUNK_FILE(file_size))
+
+#define FDFS_TRUNK_FILE_TRUE_SIZE(file_size) \
+	(file_size & (~(FDFS_TRUNK_FILE_MARK_SIZE)))
 
 typedef struct
 {
@@ -237,12 +248,6 @@ FDFSMetaData *fdfs_split_metadata_ex(char *meta_buff, \
 int fdfs_get_ini_context_from_tracker(TrackerServerGroup *pTrackerGroup, \
                 IniContext *iniContext, bool *continue_flag, \
                 const bool client_bind_addr, const char *bind_addr);
-
-#define IS_SLAVE_FILE(filename_len) \
-	(filename_len > FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH + \
-		FDFS_FILE_EXT_NAME_MAX_LEN + 1)
-
-#define IS_APPENDER_FILE(file_size)   (file_size == INFINITE_FILE_SIZE)
 
 #ifdef __cplusplus
 }

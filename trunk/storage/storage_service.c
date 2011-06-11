@@ -1772,7 +1772,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	else if (pFileContext->extra_info.upload.if_trunk_file)
 	{
 		end_time = pFileContext->extra_info.upload.start_time;
-		file_size_in_name = FDFS_TRUNK_FILE_SIZE | file_size;
+		file_size_in_name = FDFS_TRUNK_FILE_MARK_SIZE | file_size;
 	}
 	else
 	{
@@ -4054,7 +4054,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 		}
 
 		pFileContext->extra_info.upload.if_trunk_file = \
-				STORAGE_IS_TRUNK_FILE(pFileContext-> \
+				IS_TRUNK_FILE_BY_ID(pFileContext-> \
 					extra_info.upload.trunk_info);
 	}
 
@@ -4920,7 +4920,7 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
-	if (STORAGE_IS_TRUNK_FILE(trunkInfo))
+	if (IS_TRUNK_FILE_BY_ID(trunkInfo))
 	{
 		trunk_get_full_filename((&trunkInfo), pFileContext->filename, \
 				sizeof(pFileContext->filename));
@@ -5159,7 +5159,7 @@ static int storage_sync_delete_file(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
-	if (STORAGE_IS_TRUNK_FILE(pFileContext->extra_info.upload.trunk_info))
+	if (IS_TRUNK_FILE_BY_ID(pFileContext->extra_info.upload.trunk_info))
 	{
 		pClientInfo->deal_func = dio_delete_trunk_file;
 		trunk_get_full_filename((&pFileContext->extra_info.upload.\
@@ -5287,7 +5287,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
-	if (STORAGE_IS_TRUNK_FILE(pFileContext->extra_info.upload.trunk_info))
+	if (IS_TRUNK_FILE_BY_ID(pFileContext->extra_info.upload.trunk_info))
 	{
 		pFileContext->extra_info.upload.if_trunk_file = true;
 		pClientInfo->deal_func = dio_delete_trunk_file;
