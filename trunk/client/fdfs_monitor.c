@@ -233,7 +233,8 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 	int max_last_source_update;
 
 	printf( "group name = %s\n" \
-		"free space = "INT64_PRINTF_FORMAT" GB\n" \
+		"disk free space = "INT64_PRINTF_FORMAT" GB\n" \
+		"trunk free space = "INT64_PRINTF_FORMAT" GB\n" \
 		"storage server count = %d\n" \
 		"active server count = %d\n" \
 		"storage server port = %d\n" \
@@ -244,6 +245,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 		"current trunk file id = %d\n\n", \
 		pGroupStat->group_name, \
 		pGroupStat->free_mb / 1024, \
+		pGroupStat->trunk_free_mb / 1024, \
 		pGroupStat->count, \
 		pGroupStat->active_count, \
 		pGroupStat->storage_port, \

@@ -28,8 +28,9 @@
 #define TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ     77  //storage server request storage server's changelog
 #define TRACKER_PROTO_CMD_STORAGE_REPORT_STATUS     76  //report specified storage server status
 #define TRACKER_PROTO_CMD_STORAGE_PARAMETER_REQ	    75  //storage server request parameters
-#define TRACKER_PROTO_CMD_STORAGE_REPORT_TRUNK_FID  74  //storage report current trunk file id
-#define TRACKER_PROTO_CMD_STORAGE_FETCH_TRUNK_FID   73  //storage get current trunk file id
+#define TRACKER_PROTO_CMD_STORAGE_REPORT_TRUNK_FREE 74  //storage report trunk free space
+#define TRACKER_PROTO_CMD_STORAGE_REPORT_TRUNK_FID  73  //storage report current trunk file id
+#define TRACKER_PROTO_CMD_STORAGE_FETCH_TRUNK_FID   72  //storage get current trunk file id
 
 #define TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_START 61  //start of tracker get system data files
 #define TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_END   62  //end of tracker get system data files
@@ -140,6 +141,7 @@ typedef struct
 {
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char sz_free_mb[FDFS_PROTO_PKG_LEN_SIZE];  //free disk storage in MB
+	char sz_trunk_free_mb[FDFS_PROTO_PKG_LEN_SIZE];  //trunk free space in MB
 	char sz_count[FDFS_PROTO_PKG_LEN_SIZE];    //server count
 	char sz_storage_port[FDFS_PROTO_PKG_LEN_SIZE];
 	char sz_storage_http_port[FDFS_PROTO_PKG_LEN_SIZE];

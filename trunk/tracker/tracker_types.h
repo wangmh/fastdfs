@@ -103,6 +103,7 @@ typedef struct
 {
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	int64_t free_mb;  //free disk storage in MB
+	int64_t trunk_free_mb;  //trunk free disk storage in MB
 	int count;        //server count
 	int storage_port; //storage server port
 	int storage_http_port; //storage server http port
@@ -255,6 +256,7 @@ typedef struct
 {
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	int64_t free_mb;  //free disk storage in MB
+	int64_t trunk_free_mb;  //trunk free disk storage in MB
 	int alloc_size;  //alloc storage count
 	int count;    //total server count
 	int active_count; //active server count

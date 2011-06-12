@@ -450,6 +450,7 @@ int tracker_list_one_group(TrackerServerInfo *pTrackerServer, \
 	memset(pDest, 0, sizeof(FDFSGroupStat));
 	memcpy(pDest->group_name, src.group_name, FDFS_GROUP_NAME_MAX_LEN);
 	pDest->free_mb = buff2long(src.sz_free_mb);
+	pDest->trunk_free_mb = buff2long(src.sz_trunk_free_mb);
 	pDest->count= buff2long(src.sz_count);
 	pDest->storage_port= buff2long(src.sz_storage_port);
 	pDest->storage_http_port= buff2long(src.sz_storage_http_port);
@@ -540,6 +541,7 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 		memcpy(pDest->group_name, pSrc->group_name, \
 				FDFS_GROUP_NAME_MAX_LEN);
 		pDest->free_mb = buff2long(pSrc->sz_free_mb);
+		pDest->trunk_free_mb = buff2long(pSrc->sz_trunk_free_mb);
 		pDest->count= buff2long(pSrc->sz_count);
 		pDest->storage_port= buff2long(pSrc->sz_storage_port);
 		pDest->storage_http_port= buff2long(pSrc->sz_storage_http_port);
