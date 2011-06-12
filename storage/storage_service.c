@@ -3420,6 +3420,17 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 	}
 	else
 	{
+		if (g_path_free_mbs[store_path_index] - file_bytes <= \
+				g_avg_storage_reserved_mb)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"no space to upload file, "
+				"free space is too small, file bytes: " \
+				INT64_PRINTF_FORMAT, __LINE__, file_bytes);
+			pClientInfo->total_length = sizeof(TrackerHeader);
+			return ENOSPC;
+		}
+
 		crc32 = rand();
 		*filename = '\0';
 		filename_len = 0;
@@ -3752,6 +3763,17 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	{
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
+	}
+
+	if (g_path_free_mbs[store_path_index] - file_bytes <= \
+			g_avg_storage_reserved_mb)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"no space to upload file, "
+			"free space is too small, file bytes: " \
+			INT64_PRINTF_FORMAT, __LINE__, file_bytes);
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return ENOSPC;
 	}
 
 	if ((result=trunk_file_lstat(store_path_index, true_filename, \
