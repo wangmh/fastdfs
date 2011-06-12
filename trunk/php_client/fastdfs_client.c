@@ -662,6 +662,8 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 
 		add_assoc_long_ex(group_info_array, "free_space", \
 			sizeof("free_space"), pGroupStat->free_mb);
+		add_assoc_long_ex(group_info_array, "trunk_free_space", \
+			sizeof("trunk_free_space"), pGroupStat->trunk_free_mb);
 		add_assoc_long_ex(group_info_array, "server_count", \
 			sizeof("server_count"), pGroupStat->count);
 		add_assoc_long_ex(group_info_array, "active_count", \
