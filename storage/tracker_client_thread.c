@@ -1853,6 +1853,7 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
 	struct statvfs sbuf;
 	int body_len;
 	int total_len;
+	int store_path_index;
 	int i;
 	int result;
 
@@ -1914,15 +1915,19 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
 
 		/* find the max free space path */
 		max_free_mb = 0;
-		g_store_path_index = -1;
+		store_path_index = -1;
 		for (i=0; i<g_fdfs_path_count; i++)
 		{
 			if (g_path_free_mbs[i] > g_avg_storage_reserved_mb \
 			 && g_path_free_mbs[i] > max_free_mb)
 			{
-				g_store_path_index = i;
+				store_path_index = i;
 				max_free_mb = g_path_free_mbs[i];
 			}
+		}
+		if (g_store_path_index != store_path_index)
+		{
+			g_store_path_index = store_path_index;
 		}
 	}
 
