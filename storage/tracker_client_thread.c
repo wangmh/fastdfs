@@ -209,9 +209,6 @@ static void *tracker_report_thread_entrance(void *arg)
 
 	bServerPortChanged = (g_last_server_port != 0) && \
 				(g_server_port != g_last_server_port);
-	stat_chg_sync_count = 0;
-	last_trunk_file_id = 0;
-	last_trunk_total_free_space = 0;
 
 	pTrackerServer = (TrackerServerInfo *)arg;
 	pTrackerServer->sock = -1;
@@ -464,6 +461,9 @@ static void *tracker_report_thread_entrance(void *arg)
 		last_df_report_time = 0;
 		last_beat_time = 0;
 		last_sync_report_time = 0;
+		stat_chg_sync_count = 0;
+		last_trunk_file_id = 0;
+		last_trunk_total_free_space = -1;
 
 		while (g_continue_flag)
 		{
@@ -525,7 +525,7 @@ static void *tracker_report_thread_entrance(void *arg)
 				last_trunk_file_id = g_current_trunk_file_id;
 			}
 
-			if (last_trunk_total_free_space < g_trunk_total_free_space)
+			if (last_trunk_total_free_space != g_trunk_total_free_space)
 			{
 			if (tracker_report_trunk_free_space(pTrackerServer)!=0)
 			{
