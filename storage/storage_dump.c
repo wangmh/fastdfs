@@ -57,6 +57,11 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_dist_path_index_high=%d\n"
 		"g_dist_path_index_low=%d\n"
 		"g_dist_write_file_count=%d\n"
+		"g_disk_rw_direct=%d\n"
+		"g_disk_rw_separated=%d\n"
+		"g_disk_reader_threads=%d\n"
+		"g_disk_writer_threads=%d\n"
+		"g_extra_open_file_flags=%d\n"
 		"g_tracker_reporter_count=%d\n"
 		"g_heart_beat_interval=%d\n"
 		"g_stat_report_interval=%d\n"
@@ -100,6 +105,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_current_trunk_file_id=%d\n"
 		"g_trunk_sync_thread_count=%d\n"
 		"g_trunk_server=%s:%d\n"
+		"g_trunk_total_free_space="INT64_PRINTF_FORMAT"\n"
 	#ifdef WITH_HTTPD
 		"g_http_params.disabled=%d\n"
 		"g_http_params.anti_steal_token=%d\n"
@@ -140,6 +146,11 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_dist_path_index_high
 		, g_dist_path_index_low
 		, g_dist_write_file_count
+		, g_disk_rw_direct
+		, g_disk_rw_separated
+		, g_disk_reader_threads
+		, g_disk_writer_threads
+		, g_extra_open_file_flags
 		, g_tracker_reporter_count
 		, g_heart_beat_interval
 		, g_stat_report_interval
@@ -186,6 +197,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_current_trunk_file_id
 		, g_trunk_sync_thread_count
 		, g_trunk_server.ip_addr, g_trunk_server.port
+		, g_trunk_total_free_space
 	#ifdef WITH_HTTPD
 		, g_http_params.disabled
 		, g_http_params.anti_steal_token

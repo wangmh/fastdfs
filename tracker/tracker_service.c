@@ -45,6 +45,7 @@ static int lock_by_client_count = 0;
 
 static void *work_thread_entrance(void* arg);
 static void wait_for_work_threads_exit();
+static void tracker_find_max_free_space_group();
 
 int tracker_service_init()
 {
@@ -684,6 +685,14 @@ static int tracker_deal_report_trunk_fid(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
+	if (pClientInfo->pStorage != pClientInfo->pGroup->pTrunkServer)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, i am not the trunk server", \
+			__LINE__, pTask->client_ip);
+		return EINVAL;
+	}
+
 	if (pClientInfo->pGroup->current_trunk_file_id < current_trunk_fid)
 	{
 		pClientInfo->pGroup->current_trunk_file_id = current_trunk_fid;
@@ -693,6 +702,49 @@ static int tracker_deal_report_trunk_fid(struct fast_task_info *pTask)
 	{
 		return 0;
 	}
+}
+
+static int tracker_deal_report_trunk_free_space(struct fast_task_info *pTask)
+{
+	int trunk_free_space;
+	TrackerClientInfo *pClientInfo;
+	
+	pClientInfo = (TrackerClientInfo *)pTask->arg;
+	if (pTask->length - sizeof(TrackerHeader) != 8)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip addr: %s, " \
+			"package size "PKG_LEN_PRINTF_FORMAT" " \
+			"is not correct", __LINE__, \
+			TRACKER_PROTO_CMD_STORAGE_REPORT_TRUNK_FREE, \
+			pTask->client_ip, pTask->length - \
+			(int)sizeof(TrackerHeader));
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	pTask->length = sizeof(TrackerHeader);
+	trunk_free_space = buff2long(pTask->data + sizeof(TrackerHeader));
+	if (trunk_free_space < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid trunk free space: " \
+			INT64_PRINTF_FORMAT, __LINE__, pTask->client_ip, \
+			trunk_free_space);
+		return EINVAL;
+	}
+
+	if (pClientInfo->pStorage != pClientInfo->pGroup->pTrunkServer)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, i am not the trunk server", \
+			__LINE__, pTask->client_ip);
+		return EINVAL;
+	}
+
+	pClientInfo->pGroup->trunk_free_mb = trunk_free_space;
+	tracker_find_max_free_space_group();
+	return 0;
 }
 
 static int tracker_deal_notify_next_leader(struct fast_task_info *pTask)
@@ -1952,7 +2004,8 @@ static int tracker_deal_service_query_storage( \
 			return ENOENT;
 		}
 
-		if (pStoreGroup->free_mb <= g_storage_reserved_mb)
+		if (pStoreGroup->free_mb + pStoreGroup->trunk_free_mb <= 
+			g_storage_reserved_mb)
 		{
 			pTask->length = sizeof(TrackerHeader);
 			return ENOSPC;
@@ -1977,6 +2030,14 @@ static int tracker_deal_service_query_storage( \
 			bHaveActiveServer = true;
 			if ((*ppFoundGroup)->free_mb > \
 					g_storage_reserved_mb)
+			{
+				pStoreGroup = *ppFoundGroup;
+			}
+			else if (g_if_use_trunk_file && g_groups.store_lookup==
+				FDFS_STORE_LOOKUP_LOAD_BALANCE && \
+				(*ppFoundGroup)->free_mb + \
+				(*ppFoundGroup)->trunk_free_mb > 
+				g_storage_reserved_mb)
 			{
 				pStoreGroup = *ppFoundGroup;
 			}
@@ -2022,7 +2083,7 @@ static int tracker_deal_service_query_storage( \
 					{
 						pStoreGroup = *ppGroup;
 						g_groups.current_write_group = \
-						       ppGroup-g_groups.sorted_groups;
+						 ppGroup-g_groups.sorted_groups;
 						break;
 					}
 				}
@@ -2030,15 +2091,40 @@ static int tracker_deal_service_query_storage( \
 
 			if (pStoreGroup == NULL)
 			{
-				if (bHaveActiveServer)
+				if (!bHaveActiveServer)
+				{
+					pTask->length = sizeof(TrackerHeader);
+					return ENOENT;
+				}
+
+				if (!g_if_use_trunk_file)
 				{
 					pTask->length = sizeof(TrackerHeader);
 					return ENOSPC;
 				}
-				else
+
+				for (ppGroup=g_groups.sorted_groups; \
+						ppGroup<ppGroupEnd; ppGroup++)
+				{
+					if ((*ppGroup)->active_count == 0)
+					{
+						continue;
+					}
+					if ((*ppGroup)->free_mb + (*ppGroup)->\
+						trunk_free_mb > \
+						g_storage_reserved_mb)
+					{
+						pStoreGroup = *ppGroup;
+						g_groups.current_write_group = \
+						 ppGroup-g_groups.sorted_groups;
+						break;
+					}
+				}
+
+				if (pStoreGroup == NULL)
 				{
 					pTask->length = sizeof(TrackerHeader);
-					return ENOENT;
+					return ENOSPC;
 				}
 			}
 		}
@@ -2061,8 +2147,8 @@ static int tracker_deal_service_query_storage( \
 			return ENOENT;
 		}
 
-		if (g_groups.pStoreGroup->free_mb <= \
-				g_storage_reserved_mb)
+		if (g_groups.pStoreGroup->free_mb  + g_groups.pStoreGroup-> \
+			trunk_free_mb <= g_storage_reserved_mb)
 		{
 			pTask->length = sizeof(TrackerHeader);
 			return ENOSPC;
@@ -2105,8 +2191,7 @@ static int tracker_deal_service_query_storage( \
 
 	avg_reserved_mb = g_storage_reserved_mb / \
 			  pStoreGroup->store_path_count;
-	if (pStorageServer->path_free_mbs[write_path_index] <= \
-			avg_reserved_mb)
+	if (pStorageServer->path_free_mbs[write_path_index] <= avg_reserved_mb)
 	{
 		int i;
 		for (i=0; i<pStoreGroup->store_path_count; i++)
@@ -2121,8 +2206,42 @@ static int tracker_deal_service_query_storage( \
 
 		if (i == pStoreGroup->store_path_count)
 		{
-			pTask->length = sizeof(TrackerHeader);
-			return ENOSPC;
+			if (!g_if_use_trunk_file)
+			{
+				pTask->length = sizeof(TrackerHeader);
+				return ENOSPC;
+			}
+
+			for (i=write_path_index; i<pStoreGroup-> \
+				store_path_count; i++)
+			{
+				if (pStorageServer->path_free_mbs[i] + \
+				    pStoreGroup->trunk_free_mb > avg_reserved_mb)
+				{
+					pStorageServer->current_write_path = i;
+					write_path_index = i;
+					break;
+				}
+			}
+			if ( i == pStoreGroup->store_path_count)
+			{
+				for (i=0; i<write_path_index; i++)
+				{
+				if (pStorageServer->path_free_mbs[i] + \
+				    pStoreGroup->trunk_free_mb > avg_reserved_mb)
+				{
+					pStorageServer->current_write_path = i;
+					write_path_index = i;
+					break;
+				}
+				}
+
+				if (i == write_path_index)
+				{
+					pTask->length = sizeof(TrackerHeader);
+					return ENOSPC;
+				}
+			}
 		}
 	}
 
@@ -2225,6 +2344,7 @@ static int tracker_deal_server_list_one_group(struct fast_task_info *pTask)
 	memcpy(pDest->group_name, pGroup->group_name, \
 			FDFS_GROUP_NAME_MAX_LEN + 1);
 	long2buff(pGroup->free_mb, pDest->sz_free_mb);
+	long2buff(pGroup->trunk_free_mb, pDest->sz_trunk_free_mb);
 	long2buff(pGroup->count, pDest->sz_count);
 	long2buff(pGroup->storage_port, pDest->sz_storage_port);
 	long2buff(pGroup->storage_http_port, pDest->sz_storage_http_port);
@@ -2269,6 +2389,7 @@ static int tracker_deal_server_list_all_groups(struct fast_task_info *pTask)
 		memcpy(pDest->group_name, (*ppGroup)->group_name, \
 				FDFS_GROUP_NAME_MAX_LEN + 1);
 		long2buff((*ppGroup)->free_mb, pDest->sz_free_mb);
+		long2buff((*ppGroup)->trunk_free_mb, pDest->sz_trunk_free_mb);
 		long2buff((*ppGroup)->count, pDest->sz_count);
 		long2buff((*ppGroup)->storage_port, \
 				pDest->sz_storage_port);
@@ -2516,7 +2637,21 @@ static void tracker_find_max_free_space_group()
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppGroupEnd;
 	FDFSGroupInfo **ppMaxGroup;
+	int result;
 
+	if (g_groups.store_lookup != FDFS_STORE_LOOKUP_LOAD_BALANCE)
+	{
+		return;
+	}
+
+	if ((result=pthread_mutex_lock(&lb_thread_lock)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call pthread_mutex_lock fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, STRERROR(result));
+	}
+	
 	ppMaxGroup = NULL;
 	ppGroupEnd = g_groups.sorted_groups + g_groups.count;
 	for (ppGroup=g_groups.sorted_groups; \
@@ -2537,10 +2672,46 @@ static void tracker_find_max_free_space_group()
 
 	if (ppMaxGroup == NULL)
 	{
+		pthread_mutex_unlock(&lb_thread_lock);
 		return;
 	}
 
-	g_groups.current_write_group = ppMaxGroup - g_groups.sorted_groups;
+	if ((*ppMaxGroup)->free_mb > g_storage_reserved_mb \
+		|| !g_if_use_trunk_file)
+	{
+		g_groups.current_write_group = \
+			ppMaxGroup - g_groups.sorted_groups;
+		pthread_mutex_unlock(&lb_thread_lock);
+		return;
+	}
+
+	ppMaxGroup = NULL;
+	for (ppGroup=g_groups.sorted_groups; \
+		ppGroup<ppGroupEnd; ppGroup++)
+	{
+		if ((*ppGroup)->active_count > 0)
+		{
+			if (ppMaxGroup == NULL)
+			{
+				ppMaxGroup = ppGroup;
+			}
+			else if ((*ppGroup)->trunk_free_mb > \
+				(*ppMaxGroup)->trunk_free_mb)
+			{
+				ppMaxGroup = ppGroup;
+			}
+		}
+	}
+
+	if (ppMaxGroup == NULL)
+	{
+		pthread_mutex_unlock(&lb_thread_lock);
+		return;
+	}
+
+	g_groups.current_write_group = \
+			ppMaxGroup - g_groups.sorted_groups;
+	pthread_mutex_unlock(&lb_thread_lock);
 }
 
 static void tracker_find_min_free_space(FDFSGroupInfo *pGroup)
@@ -2725,7 +2896,6 @@ static int tracker_deal_storage_sync_report(struct fast_task_info *pTask)
 static int tracker_deal_storage_df_report(struct fast_task_info *pTask)
 {
 	int nPkgLen;
-	int result;
 	int i;
 	TrackerStatReportReqBody *pStatBuff;
 	int64_t *path_total_mbs;
@@ -2795,24 +2965,7 @@ static int tracker_deal_storage_df_report(struct fast_task_info *pTask)
 		tracker_find_min_free_space(pClientInfo->pGroup);
 	}
 
-	if (g_groups.store_lookup == FDFS_STORE_LOOKUP_LOAD_BALANCE)
-	{
-		if ((result=pthread_mutex_lock(&lb_thread_lock)) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"call pthread_mutex_lock fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, result, STRERROR(result));
-		}
-		tracker_find_max_free_space_group();
-		if ((result=pthread_mutex_unlock(&lb_thread_lock)) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"call pthread_mutex_unlock fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, result, STRERROR(result));
-		}
-	}
+	tracker_find_max_free_space_group();
 
 	/*
 	//logInfo("storage: %s:%d, total_mb=%dMB, free_mb=%dMB\n", \
@@ -2821,7 +2974,6 @@ static int tracker_deal_storage_df_report(struct fast_task_info *pTask)
 		pClientInfo->pStorage->total_mb, \
 		pClientInfo->pStorage->free_mb);
 	*/
-
 
 	tracker_mem_active_store_server(pClientInfo->pGroup, \
 				pClientInfo->pStorage);
@@ -3087,6 +3239,10 @@ int tracker_deal_task(struct fast_task_info *pTask)
 		case TRACKER_PROTO_CMD_STORAGE_FETCH_TRUNK_FID:
 			TRACKER_CHECK_LOGINED(pTask)
 			result = tracker_deal_get_trunk_fid(pTask);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_REPORT_TRUNK_FREE:
+			TRACKER_CHECK_LOGINED(pTask)
+			result = tracker_deal_report_trunk_free_space(pTask);
 			break;
 		case TRACKER_PROTO_CMD_TRACKER_PING_LEADER:
 			result = tracker_deal_ping_leader(pTask);

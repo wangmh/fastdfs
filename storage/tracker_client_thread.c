@@ -55,6 +55,7 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer);
 static int tracker_storage_changelog_req(TrackerServerInfo *pTrackerServer);
 static int tracker_report_trunk_fid(TrackerServerInfo *pTrackerServer);
 static int tracker_fetch_trunk_fid(TrackerServerInfo *pTrackerServer);
+static int tracker_report_trunk_free_space(TrackerServerInfo *pTrackerServer);
 
 static bool tracker_insert_into_sorted_servers( \
 		FDFSStorageServer *pInsertedServer);
@@ -203,12 +204,14 @@ static void *tracker_report_thread_entrance(void *arg)
 	int previousCode;
 	int nContinuousFail;
 	int tracker_index;
+	int64_t last_trunk_total_free_space;
 	bool bServerPortChanged;
 
 	bServerPortChanged = (g_last_server_port != 0) && \
 				(g_server_port != g_last_server_port);
 	stat_chg_sync_count = 0;
 	last_trunk_file_id = 0;
+	last_trunk_total_free_space = 0;
 
 	pTrackerServer = (TrackerServerInfo *)arg;
 	pTrackerServer->sock = -1;
@@ -511,15 +514,25 @@ static void *tracker_report_thread_entrance(void *arg)
 				last_df_report_time = current_time;
 			}
 
-			if (g_if_trunker_self && \
-				last_trunk_file_id < g_current_trunk_file_id)
+			if (g_if_trunker_self)
+			{
+			if (last_trunk_file_id < g_current_trunk_file_id)
 			{
 				if (tracker_report_trunk_fid(pTrackerServer)!=0)
 				{
 					break;
 				}
-
 				last_trunk_file_id = g_current_trunk_file_id;
+			}
+
+			if (last_trunk_total_free_space < g_trunk_total_free_space)
+			{
+			if (tracker_report_trunk_free_space(pTrackerServer)!=0)
+			{
+				break;
+			}
+			last_trunk_total_free_space = g_trunk_total_free_space;
+			}
 			}
 
 			sleep(1);
@@ -1450,6 +1463,49 @@ static int tracker_report_trunk_fid(TrackerServerInfo *pTrackerServer)
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_REPORT_TRUNK_FID;
 	int2buff(g_current_trunk_file_id, out_buff + sizeof(TrackerHeader));
 
+	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, send data fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	if ((result=fdfs_recv_header(pTrackerServer, &in_bytes)) != 0)
+	{
+		return result;
+	}
+
+	if (in_bytes != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d, recv body length: " \
+			INT64_PRINTF_FORMAT" != 0",  \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, in_bytes);
+		return EINVAL;
+	}
+
+	return 0;
+}
+
+static int tracker_report_trunk_free_space(TrackerServerInfo *pTrackerServer)
+{
+	char out_buff[sizeof(TrackerHeader) + 8];
+	TrackerHeader *pHeader;
+	int64_t in_bytes;
+	int result;
+
+	pHeader = (TrackerHeader *)out_buff;
+	memset(out_buff, 0, sizeof(out_buff));
+	long2buff(8, pHeader->pkg_len);
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_REPORT_TRUNK_FREE;
+	long2buff(g_trunk_total_free_space / FDFS_ONE_MB, \
+		out_buff + sizeof(TrackerHeader));
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
 	{
