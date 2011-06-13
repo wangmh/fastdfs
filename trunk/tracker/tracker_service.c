@@ -599,21 +599,23 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 	}
 
 	pTask->length = sizeof(TrackerHeader) + \
-		sprintf(pTask->data + sizeof(TrackerHeader), \
-			"storage_ip_changed_auto_adjust=%d\n" \
-			"storage_sync_file_max_delay=%d\n" \
-			"store_path=%d\n" \
-			"reserved_storage_space=%dMB\n" \
-			"use_trunk_file=%d\n" \
-			"slot_min_size=%d\n" \
-			"trunk_file_size=%d\n", \
-			g_storage_ip_changed_auto_adjust, \
-			g_storage_sync_file_max_delay, \
-			g_groups.store_path, \
-			g_storage_reserved_mb, \
-			g_if_use_trunk_file, \
-			g_slot_min_size, \
-			g_trunk_file_size);
+	sprintf(pTask->data + sizeof(TrackerHeader), \
+		"storage_ip_changed_auto_adjust=%d\n" \
+		"storage_sync_file_max_delay=%d\n" \
+		"store_path=%d\n" \
+		"reserved_storage_space=%dMB\n" \
+		"use_trunk_file=%d\n" \
+		"slot_min_size=%d\n" \
+		"slot_max_size=%d\n" \
+		"trunk_file_size=%d\n", \
+		g_storage_ip_changed_auto_adjust, \
+		g_storage_sync_file_max_delay, \
+		g_groups.store_path, \
+		g_storage_reserved_mb, \
+		g_if_use_trunk_file, \
+		g_slot_min_size, \
+		g_slot_max_size, \
+		g_trunk_file_size);
 
 	return 0;
 }

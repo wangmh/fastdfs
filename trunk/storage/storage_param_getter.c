@@ -65,7 +65,6 @@ int storage_get_params_from_tracker()
 	{
 		g_storage_reserved_mb = reserved_storage_space / FDFS_ONE_MB;
 	}
-
 	g_avg_storage_reserved_mb = g_storage_reserved_mb / g_fdfs_path_count;
 
 	use_trunk_file = iniGetBoolValue(NULL, "use_trunk_file", \
@@ -74,8 +73,8 @@ int storage_get_params_from_tracker()
 				&iniContext, 256);
 	g_trunk_file_size = iniGetIntValue(NULL, "trunk_file_size", \
 				&iniContext, 64 * 1024 * 1024);
-
-	g_slot_max_size = g_trunk_file_size / 2;
+	g_slot_max_size = iniGetIntValue(NULL, "slot_max_size", \
+				&iniContext, g_trunk_file_size / 2);
 
 	iniFreeContext(&iniContext);
 
@@ -94,12 +93,12 @@ int storage_get_params_from_tracker()
 		"reserved_storage_space=%d MB, " \
 		"use_trunk_file=%d, " \
 		"slot_min_size=%d, " \
+		"slot_max_size=%d MB, " \
 		"trunk_file_size=%d MB", __LINE__, \
 		g_storage_ip_changed_auto_adjust, \
-		g_store_path_mode, \
-		g_storage_reserved_mb, \
-		g_if_use_trunk_file, g_slot_min_size, \
-		g_trunk_file_size / (1024 * 1024));
+		g_store_path_mode, g_storage_reserved_mb, \
+		g_if_use_trunk_file, g_slot_min_size / FDFS_ONE_MB, \
+		g_slot_max_size, g_trunk_file_size / FDFS_ONE_MB);
 
 	return 0;
 }
