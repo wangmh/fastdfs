@@ -708,7 +708,7 @@ static int tracker_deal_report_trunk_fid(struct fast_task_info *pTask)
 
 static int tracker_deal_report_trunk_free_space(struct fast_task_info *pTask)
 {
-	int trunk_free_space;
+	int64_t trunk_free_space;
 	TrackerClientInfo *pClientInfo;
 	
 	pClientInfo = (TrackerClientInfo *)pTask->arg;
