@@ -491,7 +491,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			logError("file: "__FILE__", line: %d, " \
 				"item \"slot_max_size\" %d is invalid, " \
 				"which <= slot_min_size: %d", \
-				__LINE__, g_slot_min_size);
+				__LINE__, g_slot_max_size, g_slot_min_size);
 			result = EINVAL;
 			break;
 		}
