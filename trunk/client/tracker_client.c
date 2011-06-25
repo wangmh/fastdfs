@@ -100,6 +100,11 @@ TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
 		}
 	}
 
+	if (pResult != NULL)
+	{
+		break;
+	}
+
 	for (pServer=pTrackerGroup->servers; pServer<pCurrentServer; pServer++)
 	{
 		if (pServer->sock >= 0 || tracker_connect_server(pServer) == 0)
@@ -157,6 +162,11 @@ int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 							pTrackerGroup->servers;
 			break;
 		}
+	}
+
+	if (result == 0)
+	{
+		break;
 	}
 
 	for (pServer=pTrackerGroup->servers; pServer<pCurrentServer; pServer++)
