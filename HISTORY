@@ -1,4 +1,9 @@
 
+Version 3.01  2011-06-25
+ * bug fixed: tracker_get_connection_ex and tracker_get_connection_r_ex 
+   connect two times with multi tracker servers
+ * bug fixed: tracker_mem_check_add_tracker_servers condition not correct
+
 Version 3.00  2011-06-19
  * mass small files optimization
  * add fixed block memory pool: common/fast_mblock.c
