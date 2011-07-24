@@ -86,11 +86,11 @@ static int copy_tracker_servers(TrackerServerGroup *pTrackerGroup, \
 	{
 		if ((pSeperator=strchr(*ppSrc, ':')) == NULL)
 		{
-			logError( \
+			logError("file: "__FILE__", line: %d, " \
 				"conf file \"%s\", " \
 				"tracker_server \"%s\" is invalid, " \
 				"correct format is host:port", \
-				filename, *ppSrc);
+				__LINE__, filename, *ppSrc);
 			return EINVAL;
 		}
 
@@ -105,10 +105,10 @@ static int copy_tracker_servers(TrackerServerGroup *pTrackerGroup, \
 		if (getIpaddrByName(szHost, destServer.ip_addr, \
 			sizeof(destServer.ip_addr)) == INADDR_NONE)
 		{
-			logError( \
+			logError("file: "__FILE__", line: %d, " \
 				"conf file \"%s\", " \
 				"host \"%s\" is invalid", \
-				filename, szHost);
+				__LINE__, filename, szHost);
 			return EINVAL;
 		}
 		destServer.port = atoi(pSeperator+1);
@@ -151,8 +151,10 @@ int fdfs_load_tracker_group_ex(TrackerServerGroup *pTrackerGroup, \
 	if ((pTrackerGroup->server_count=iniGetValues(NULL, "tracker_server", \
 		pIniContext, ppTrackerServers, FDFS_MAX_TRACKERS)) <= 0)
 	{
-		logError("conf file \"%s\", " \
-			"get item \"tracker_server\" fail", conf_filename);
+		logError("file: "__FILE__", line: %d, " \
+			"conf file \"%s\", " \
+			"get item \"tracker_server\" fail", \
+			__LINE__, conf_filename);
 		return ENOENT;
 	}
 
@@ -190,8 +192,9 @@ int fdfs_load_tracker_group(TrackerServerGroup *pTrackerGroup, \
 
 	if ((result=iniLoadFromFile(conf_filename, &iniContext)) != 0)
 	{
-		logError("load conf file \"%s\" fail, ret code: %d", \
-			conf_filename, result);
+		logError("file: "__FILE__", line: %d, " \
+			"load conf file \"%s\" fail, ret code: %d", \
+			__LINE__, conf_filename, result);
 		return result;
 	}
 
@@ -220,13 +223,16 @@ static int fdfs_client_do_init_ex(TrackerServerGroup *pTrackerGroup, \
 		chopPath(g_fdfs_base_path);
 		if (!fileExists(g_fdfs_base_path))
 		{
-			logError("\"%s\" can't be accessed, error info: %s", \
-				g_fdfs_base_path, STRERROR(errno));
+			logError("file: "__FILE__", line: %d, " \
+				"\"%s\" can't be accessed, error info: %s", \
+				__LINE__, g_fdfs_base_path, STRERROR(errno));
 			return errno != 0 ? errno : ENOENT;
 		}
 		if (!isDir(g_fdfs_base_path))
 		{
-			logError("\"%s\" is not a directory!", g_fdfs_base_path);
+			logError("file: "__FILE__", line: %d, " \
+				"\"%s\" is not a directory!", \
+				__LINE__, g_fdfs_base_path);
 			return ENOTDIR;
 		}
 	}
@@ -306,7 +312,8 @@ int fdfs_client_init_from_buffer_ex(TrackerServerGroup *pTrackerGroup, \
 	new_buff = strdup(buffer);
 	if (new_buff == NULL)
 	{
-		logError("strdup %d bytes fail", (int)strlen(buffer));
+		logError("file: "__FILE__", line: %d, " \
+			"strdup %d bytes fail", __LINE__, (int)strlen(buffer));
 		return ENOMEM;
 	}
 
@@ -314,8 +321,9 @@ int fdfs_client_init_from_buffer_ex(TrackerServerGroup *pTrackerGroup, \
 	free(new_buff);
 	if (result != 0)
 	{
-		logError("load parameters from buffer fail, ret code: %d", \
-			 result);
+		logError("file: "__FILE__", line: %d, " \
+			"load parameters from buffer fail, ret code: %d", \
+			 __LINE__, result);
 		return result;
 	}
 
@@ -332,8 +340,9 @@ int fdfs_client_init_ex(TrackerServerGroup *pTrackerGroup, \
 
 	if ((result=iniLoadFromFile(conf_filename, &iniContext)) != 0)
 	{
-		logError("load conf file \"%s\" fail, ret code: %d", \
-			conf_filename, result);
+		logError("file: "__FILE__", line: %d, " \
+			"load conf file \"%s\" fail, ret code: %d", \
+			__LINE__, conf_filename, result);
 		return result;
 	}
 

@@ -250,8 +250,9 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + ip_len, \
 		g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to tracker server %s:%d fail, " \
-			"errno: %d, error info: %s", \
+		logError("file: "__FILE__", line: %d, " \
+		        "send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
 			result, STRERROR(result));
@@ -274,9 +275,10 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 
 	if (in_bytes % sizeof(TrackerStorageStat) != 0)
 	{
-		logError("tracker server %s:%d response data " \
-			"length: "INT64_PRINTF_FORMAT" is invalid.", \
-			pTrackerServer->ip_addr, \
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid", \
+			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes);
 		*storage_count = 0;
 		return EINVAL;
@@ -285,9 +287,10 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	*storage_count = in_bytes / sizeof(TrackerStorageStat);
 	if (*storage_count > max_storages)
 	{
-		logError("tracker server %s:%d insufficent space, " \
+		logError("file: "__FILE__", line: %d, " \
+		 	"tracker server %s:%d insufficent space, " \
 			"max storage count: %d, expect count: %d", \
-			pTrackerServer->ip_addr, \
+			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, max_storages, *storage_count);
 		*storage_count = 0;
 		return ENOSPC;
@@ -427,8 +430,9 @@ int tracker_list_one_group(TrackerServerInfo *pTrackerServer, \
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to tracker server %s:%d fail, " \
-			"errno: %d, error info: %s", \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
 			result, STRERROR(result));
@@ -450,9 +454,10 @@ int tracker_list_one_group(TrackerServerInfo *pTrackerServer, \
 
 	if (in_bytes != sizeof(TrackerGroupStat))
 	{
-		logError("tracker server %s:%d response data " \
-			"length: "INT64_PRINTF_FORMAT" is invalid.", \
-			pTrackerServer->ip_addr, \
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid", \
+			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes);
 		return EINVAL;
 	}
@@ -500,8 +505,9 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, \
 			sizeof(header), g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to tracker server %s:%d fail, " \
-			"errno: %d, error info: %s", \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
 			result, STRERROR(result));
@@ -524,9 +530,10 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 
 	if (in_bytes % sizeof(TrackerGroupStat) != 0)
 	{
-		logError("tracker server %s:%d response data " \
-			"length: "INT64_PRINTF_FORMAT" is invalid.", \
-			pTrackerServer->ip_addr, \
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid", \
+			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes);
 		*group_count = 0;
 		return EINVAL;
@@ -535,9 +542,10 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	*group_count = in_bytes / sizeof(TrackerGroupStat);
 	if (*group_count > max_groups)
 	{
-		logError("tracker server %s:%d insufficent space, " \
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d insufficent space, " \
 			"max group count: %d, expect count: %d", \
-			pTrackerServer->ip_addr, \
+			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, max_groups, *group_count);
 		*group_count = 0;
 		return ENOSPC;
@@ -609,8 +617,9 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
 		filename_len, g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to tracker server %s:%d fail, " \
-			"errno: %d, error info: %s", \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
 			result, STRERROR(result));
@@ -632,8 +641,10 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 
 	if (in_bytes != TRACKER_QUERY_STORAGE_FETCH_BODY_LEN)
 	{
-		logError("tracker server %s:%d response data " \
-			"length: "INT64_PRINTF_FORMAT" is invalid, expect length: %d.", \
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid, " \
+			"expect length: %d", __LINE__, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes, \
 			TRACKER_QUERY_STORAGE_FETCH_BODY_LEN);
@@ -688,8 +699,9 @@ int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
 		filename_len, g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to tracker server %s:%d fail, " \
-			"errno: %d, error info: %s", \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
 			result, STRERROR(result));
@@ -712,9 +724,10 @@ int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
 	if ((in_bytes - TRACKER_QUERY_STORAGE_FETCH_BODY_LEN) % \
 		(IP_ADDRESS_SIZE - 1) != 0)
 	{
-		logError("tracker server %s:%d response data " \
-			"length: "INT64_PRINTF_FORMAT" is invalid.", \
-			pTrackerServer->ip_addr, \
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid", \
+			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes);
 		return EINVAL;
 	}
@@ -723,8 +736,9 @@ int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
 			(IP_ADDRESS_SIZE - 1);
 	if (nMaxServerCount < *server_count)
 	{
-		logError("tracker server %s:%d response storage server " \
-			 "count: %d, exceeds max server count: %d!", \
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response storage server " \
+			 "count: %d, exceeds max server count: %d!", __LINE__, \
 			pTrackerServer->ip_addr, pTrackerServer->port, \
 			*server_count, nMaxServerCount);
 		return ENOSPC;
@@ -779,8 +793,9 @@ int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, \
 			sizeof(header), g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to tracker server %s:%d fail, " \
-			"errno: %d, error info: %s", \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
 			result, STRERROR(result));
@@ -802,11 +817,12 @@ int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 
 	if (in_bytes != TRACKER_QUERY_STORAGE_STORE_BODY_LEN)
 	{
-		logError("tracker server %s:%d response data " \
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response data " \
 			"length: "INT64_PRINTF_FORMAT" is invalid, " \
-			"expect length: %d.", pTrackerServer->ip_addr, \
-			pTrackerServer->port, in_bytes, \
-			TRACKER_QUERY_STORAGE_STORE_BODY_LEN);
+			"expect length: %d", __LINE__, \
+			pTrackerServer->ip_addr, pTrackerServer->port, \
+			in_bytes, TRACKER_QUERY_STORAGE_STORE_BODY_LEN);
 		return EINVAL;
 	}
 
@@ -856,8 +872,9 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
 			g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to tracker server %s:%d fail, " \
-			"errno: %d, error info: %s", \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
 			result, STRERROR(result));
@@ -879,11 +896,12 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 
 	if (in_bytes != TRACKER_QUERY_STORAGE_STORE_BODY_LEN)
 	{
-		logError("tracker server %s:%d response data " \
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response data " \
 			"length: "INT64_PRINTF_FORMAT" is invalid, " \
-			"expect length: %d.", pTrackerServer->ip_addr, \
-			pTrackerServer->port, in_bytes, \
-			TRACKER_QUERY_STORAGE_STORE_BODY_LEN);
+			"expect length: %d", __LINE__, \
+			pTrackerServer->ip_addr, pTrackerServer->port, \
+			in_bytes, TRACKER_QUERY_STORAGE_STORE_BODY_LEN);
 		return EINVAL;
 	}
 
@@ -947,8 +965,9 @@ int tracker_query_storage_store_list_with_group( \
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 		sizeof(TrackerHeader) + out_len, g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to tracker server %s:%d fail, " \
-			"errno: %d, error info: %s", \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
 			pTrackerServer->ip_addr, \
 			pTrackerServer->port, \
 			result, STRERROR(result));
@@ -970,11 +989,12 @@ int tracker_query_storage_store_list_with_group( \
 
 	if (in_bytes < TRACKER_QUERY_STORAGE_STORE_BODY_LEN)
 	{
-		logError("tracker server %s:%d response data " \
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response data " \
 			"length: "INT64_PRINTF_FORMAT" is invalid, " \
-			"expect length >= %d.", pTrackerServer->ip_addr, \
-			pTrackerServer->port, in_bytes, \
-			TRACKER_QUERY_STORAGE_STORE_BODY_LEN);
+			"expect length >= %d", __LINE__, \
+			pTrackerServer->ip_addr, pTrackerServer->port, \
+			in_bytes, TRACKER_QUERY_STORAGE_STORE_BODY_LEN);
 		return EINVAL;
 	}
 
@@ -983,9 +1003,10 @@ int tracker_query_storage_store_list_with_group( \
 	ipPortsLen = in_bytes - (FDFS_GROUP_NAME_MAX_LEN + 1);
 	if (ipPortsLen % RECORD_LENGTH != 0)
 	{
-		logError("tracker server %s:%d response data " \
-			"length: "INT64_PRINTF_FORMAT" is invalid." \
-			, pTrackerServer->ip_addr, \
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid", \
+			__LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, in_bytes);
 		return EINVAL;
 	}
@@ -993,10 +1014,11 @@ int tracker_query_storage_store_list_with_group( \
 	*storage_count = ipPortsLen / RECORD_LENGTH;
 	if (nMaxServerCount < *storage_count)
 	{
-		logError("tracker server %s:%d response storage server " \
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response storage server " \
 			 "count: %d, exceeds max server count: %d!", \
-			pTrackerServer->ip_addr, pTrackerServer->port, \
-			*storage_count, nMaxServerCount);
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, *storage_count, nMaxServerCount);
 		return ENOSPC;
 	}
 
@@ -1108,10 +1130,10 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
 			ipaddr_len, g_fdfs_network_timeout)) != 0)
 		{
-			logError("send data to tracker server %s:%d fail, " \
-				"errno: %d, error info: %s", \
-				tracker_server.ip_addr, \
-				tracker_server.port, \
+			logError("file: "__FILE__", line: %d, " \
+				"send data to tracker server %s:%d fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				tracker_server.ip_addr, tracker_server.port, \
 				result, STRERROR(result));
 		}
 		else
