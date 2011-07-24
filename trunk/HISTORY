@@ -4,6 +4,7 @@ Version 3.01  2011-07-24
    connect two times with multi tracker servers
  * bug fixed: tracker_mem_check_add_tracker_servers condition not correct
  * all logError add source filename and line
+ * php extension support callback
 
 Version 3.00  2011-06-19
  * mass small files optimization

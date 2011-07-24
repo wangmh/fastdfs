@@ -41,6 +41,8 @@ ZEND_FUNCTION(fastdfs_storage_upload_by_filename);
 ZEND_FUNCTION(fastdfs_storage_upload_by_filename1);
 ZEND_FUNCTION(fastdfs_storage_upload_by_filebuff);
 ZEND_FUNCTION(fastdfs_storage_upload_by_filebuff1);
+ZEND_FUNCTION(fastdfs_storage_upload_by_callback);
+ZEND_FUNCTION(fastdfs_storage_upload_by_callback1);
 ZEND_FUNCTION(fastdfs_storage_upload_appender_by_filename);
 ZEND_FUNCTION(fastdfs_storage_upload_appender_by_filename1);
 ZEND_FUNCTION(fastdfs_storage_upload_appender_by_filebuff);
