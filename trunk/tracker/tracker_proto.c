@@ -398,8 +398,9 @@ int tracker_connect_server_ex(TrackerServerInfo *pTrackerServer, \
 	pTrackerServer->sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(pTrackerServer->sock < 0)
 	{
-		logError("socket create failed, errno: %d, " \
-			"error info: %s", errno, STRERROR(errno));
+		logError("file: "__FILE__", line: %d, " \
+			"socket create failed, errno: %d, " \
+			"error info: %s", __LINE__, errno, STRERROR(errno));
 		return errno != 0 ? errno : EPERM;
 	}
 
@@ -414,8 +415,9 @@ int tracker_connect_server_ex(TrackerServerInfo *pTrackerServer, \
 		pTrackerServer->ip_addr, pTrackerServer->port, \
 		connect_timeout)) != 0)
 	{
-		logError("connect to %s:%d fail, errno: %d, " \
-			"error info: %s", pTrackerServer->ip_addr, \
+		logError("file: "__FILE__", line: %d, " \
+			"connect to %s:%d fail, errno: %d, " \
+			"error info: %s", __LINE__, pTrackerServer->ip_addr, \
 			pTrackerServer->port, result, STRERROR(result));
 
 		close(pTrackerServer->sock);

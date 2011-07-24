@@ -260,10 +260,10 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
 			filename_len, g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to storage server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pStorageServer->ip_addr, pStorageServer->port, \
 			result, STRERROR(result));
 
 		break;
@@ -363,10 +363,10 @@ int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \
 			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
 			filename_len, g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to storage server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pStorageServer->ip_addr, pStorageServer->port, \
 			result, STRERROR(result));
 
 		break;
@@ -381,10 +381,10 @@ int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \
 
 	if (in_bytes != sizeof(in_buff))
 	{
-		logError("recv data from storage server %s:%d fail, " \
-			"recv bytes: "INT64_PRINTF_FORMAT" != %d", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, \
+		logError("file: "__FILE__", line: %d, " \
+			"recv data from storage server %s:%d fail, " \
+			"recv bytes: "INT64_PRINTF_FORMAT" != %d", __LINE__, \
+			pStorageServer->ip_addr, pStorageServer->port, \
 			in_bytes, (int)sizeof(in_buff));
 		result = EINVAL;
 	}
@@ -467,10 +467,10 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
 		filename_len, g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to storage server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pStorageServer->ip_addr, pStorageServer->port, \
 			result, STRERROR(result));
 		break;
 	}
@@ -569,10 +569,10 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		out_bytes, g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to storage server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pStorageServer->ip_addr, pStorageServer->port, \
 			result, STRERROR(result));
 		break;
 	}
@@ -631,9 +631,10 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 			if ((result=tcprecvdata_nb(pStorageServer->sock, buff, \
 				recv_bytes, g_fdfs_network_timeout)) != 0)
 			{
-				logError("recv data from storage server " \
+				logError("file: "__FILE__", line: %d, " \
+					"recv data from storage server " \
 					"%s:%d fail, " \
-					"errno: %d, error info: %s", \
+					"errno: %d, error info: %s", __LINE__, \
 					pStorageServer->ip_addr, \
 					pStorageServer->port, \
 					result, STRERROR(result));
@@ -643,8 +644,9 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 			result = callback(arg, in_bytes, buff, recv_bytes);
 			if (result != 0)
 			{
-				logError("call callback function fail, " \
-					"error code: %d", result);
+				logError("file: "__FILE__", line: %d, " \
+					"call callback function fail, " \
+					"error code: %d", __LINE__, result);
 				break;
 			}
 
@@ -933,10 +935,10 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		p - out_buff, g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to storage server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pStorageServer->ip_addr, pStorageServer->port, \
 			result, STRERROR(result));
 		break;
 	}
@@ -953,12 +955,13 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	else if (upload_type == FDFS_UPLOAD_BY_BUFF)
 	{
 		if ((result=tcpsenddata_nb(pStorageServer->sock, \
-			(char *)file_buff, file_size, g_fdfs_network_timeout)) != 0)
+			(char *)file_buff, file_size, \
+			g_fdfs_network_timeout)) != 0)
 		{
-			logError("send data to storage server %s:%d fail, " \
-				"errno: %d, error info: %s", \
-				pStorageServer->ip_addr, \
-				pStorageServer->port, \
+			logError("file: "__FILE__", line: %d, " \
+				"send data to storage server %s:%d fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				pStorageServer->ip_addr, pStorageServer->port, \
 				result, STRERROR(result));
 			break;
 		}
@@ -982,8 +985,10 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 
 	if (in_bytes <= FDFS_GROUP_NAME_MAX_LEN)
 	{
-		logError("storage server %s:%d response data " \
-			"length: "INT64_PRINTF_FORMAT" is invalid, should > %d.", \
+		logError("file: "__FILE__", line: %d, " \
+			"storage server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid, " \
+			"should > %d", __LINE__, \
 			pStorageServer->ip_addr, pStorageServer->port, \
 			in_bytes, FDFS_GROUP_NAME_MAX_LEN);
 		result = EINVAL;
@@ -1217,10 +1222,10 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 			p - out_buff, g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to storage server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pStorageServer->ip_addr, pStorageServer->port, \
 			result, STRERROR(result));
 
 		break;
@@ -1229,12 +1234,11 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	if (meta_bytes > 0 && (result=tcpsenddata_nb(pStorageServer->sock, \
 			meta_buff, meta_bytes, g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to storage server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pStorageServer->ip_addr, pStorageServer->port, \
 			result, STRERROR(result));
-
 		break;
 	}
 
@@ -1435,10 +1439,10 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		p - out_buff, g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to storage server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pStorageServer->ip_addr, pStorageServer->port, \
 			result, STRERROR(result));
 		break;
 	}
@@ -1452,9 +1456,10 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 
 	if (in_bytes <= FDFS_GROUP_NAME_MAX_LEN)
 	{
-		logError("storage server %s:%d response data " \
+		logError("file: "__FILE__", line: %d, " \
+			"storage server %s:%d response data " \
 			"length: "INT64_PRINTF_FORMAT" is invalid, " \
-			"should > %d.", \
+			"should > %d", __LINE__, \
 			pStorageServer->ip_addr, pStorageServer->port, \
 			in_bytes, FDFS_GROUP_NAME_MAX_LEN);
 		result = EINVAL;
@@ -1736,10 +1741,10 @@ int storage_do_append_file(TrackerServerInfo *pTrackerServer, \
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		p - out_buff, g_fdfs_network_timeout)) != 0)
 	{
-		logError("send data to storage server %s:%d fail, " \
-			"errno: %d, error info: %s", \
-			pStorageServer->ip_addr, \
-			pStorageServer->port, \
+		logError("file: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pStorageServer->ip_addr, pStorageServer->port, \
 			result, STRERROR(result));
 		break;
 	}
@@ -1759,10 +1764,10 @@ int storage_do_append_file(TrackerServerInfo *pTrackerServer, \
 			(char *)file_buff, file_size, \
 			g_fdfs_network_timeout)) != 0)
 		{
-			logError("send data to storage server %s:%d fail, " \
-				"errno: %d, error info: %s", \
-				pStorageServer->ip_addr, \
-				pStorageServer->port, \
+			logError("file: "__FILE__", line: %d, " \
+				"send data to storage server %s:%d fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				pStorageServer->ip_addr, pStorageServer->port, \
 				result, STRERROR(result));
 			break;
 		}
@@ -1784,9 +1789,10 @@ int storage_do_append_file(TrackerServerInfo *pTrackerServer, \
 
 	if (in_bytes != 0)
 	{
-		logError("storage server %s:%d response data " \
+		logError("file: "__FILE__", line: %d, " \
+			"storage server %s:%d response data " \
 			"length: "INT64_PRINTF_FORMAT" is invalid, " \
-			"should == 0", pStorageServer->ip_addr, \
+			"should == 0", __LINE__, pStorageServer->ip_addr, \
 			pStorageServer->port, in_bytes);
 		result = EINVAL;
 		break;
@@ -1930,9 +1936,14 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	}
 
 	filename_len = strlen(remote_filename);
-	if (filename_len < FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
-			 + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
+	if (filename_len < FDFS_LOGIC_FILE_PATH_LEN \
+		+ FDFS_FILENAME_BASE64_LENGTH + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
 	{
+		logError("file: "__FILE__", line: %d, " \
+			"filename is too short, length: %d < %d", \
+			__LINE__, filename_len, FDFS_LOGIC_FILE_PATH_LEN \
+			+ FDFS_FILENAME_BASE64_LENGTH \
+			+ FDFS_FILE_EXT_NAME_MAX_LEN + 1);
 		return EINVAL;
 	}
 

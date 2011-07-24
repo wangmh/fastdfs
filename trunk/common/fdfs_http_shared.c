@@ -31,68 +31,53 @@ int fdfs_http_get_content_type_by_extname(FDFSHTTPParams *pParams, \
 	HashData *pHashData;
 	int  ext_len;
 
-	*content_type = '\0';
-	do
-	{
 	pExtName = strrchr(filename, '.');
 	if (pExtName == NULL)
 	{
-		/*
-		logError("file: "__FILE__", line: %d, " \
-			"token_check_fail file: %s does not have " \
-			"extension name", __LINE__, \
-			filename);
-		return ENOENT;
-		*/
-		break;
+		logWarning("file: "__FILE__", line: %d, " \
+			"file: %s does not have extension name, " \
+			"set to default content type: %s", \
+			__LINE__, filename, pParams->default_content_type);
+		strcpy(content_type, pParams->default_content_type);
+		return 0;
 	}
 
 	pExtName++;
 	ext_len = strlen(pExtName);
 	if (ext_len == 0)
 	{
-		/*
-		logError("file: "__FILE__", line: %d, " \
-			"token_check_fail file: %s 's " \
-			"extension name is empty", __LINE__, \
-			filename);
-		return EINVAL;
-		*/
-		break;
+		logWarning("file: "__FILE__", line: %d, " \
+			"file: %s 's extension name is empty, " \
+			"set to default content type: %s", \
+			__LINE__, filename, pParams->default_content_type);
+		strcpy(content_type, pParams->default_content_type);
+		return 0;
 	}
 
 	pHashData = hash_find_ex(&pParams->content_type_hash, \
 				pExtName, ext_len + 1);
 	if (pHashData == NULL)
 	{
-		/*
-		logError("file: "__FILE__", line: %d, " \
-			"token_check_fail file: %s 's " \
-			"extension name is invalid", __LINE__, \
-			filename);
-		return EINVAL;
-		*/
-		break;
+		logWarning("file: "__FILE__", line: %d, " \
+			"file: %s 's extension name is not supported, " \
+			"set to default content type: %s", \
+			__LINE__, filename, pParams->default_content_type);
+		strcpy(content_type, pParams->default_content_type);
+		return 0;
 	}
 
 	if (pHashData->value_len >= content_type_size)
 	{
+		*content_type = '\0';
 		logError("file: "__FILE__", line: %d, " \
 			"file: %s, extension name 's content type " \
 			"is too long", __LINE__, filename);
 		return EINVAL;
 	}
+
 	memcpy(content_type, pHashData->value, pHashData->value_len);
-	} while (0);
-
-	if (*content_type == '\0')
-	{
-		strcpy(content_type, pParams->default_content_type);
-	}
-
 	return 0;
 }
-
 
 int fdfs_http_params_load(IniContext *pIniContext, \
 		const char *conf_filename, FDFSHTTPParams *pParams)
@@ -342,7 +327,7 @@ int fdfs_http_check_token(const BufferInfo *secret_key, const char *file_id, \
 		return result;
 	}
 
-	return memcmp(token, true_token, 32);
+	return (memcmp(token, true_token, 32) == 0) ? 0 : EPERM;
 }
 
 char *fdfs_http_get_parameter(const char *param_name, KeyValuePair *params, \

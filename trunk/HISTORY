@@ -1,8 +1,9 @@
 
-Version 3.01  2011-06-25
+Version 3.01  2011-07-24
  * bug fixed: tracker_get_connection_ex and tracker_get_connection_r_ex 
    connect two times with multi tracker servers
  * bug fixed: tracker_mem_check_add_tracker_servers condition not correct
+ * all logError add source filename and line
 
 Version 3.00  2011-06-19
  * mass small files optimization
