@@ -61,6 +61,7 @@ ZEND_FUNCTION(fastdfs_http_gen_token);
 ZEND_FUNCTION(fastdfs_get_file_info);
 ZEND_FUNCTION(fastdfs_get_file_info1);
 ZEND_FUNCTION(fastdfs_gen_slave_filename);
+ZEND_FUNCTION(fastdfs_send_data);
 ZEND_FUNCTION(fastdfs_storage_upload_slave_by_filename);
 ZEND_FUNCTION(fastdfs_storage_upload_slave_by_filename1);
 ZEND_FUNCTION(fastdfs_storage_upload_slave_by_filebuff);
