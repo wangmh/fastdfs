@@ -76,6 +76,13 @@ return assoc array for success, false for error.
 		source_ip_addr: the source storage server ip address
 	
 
+bool fastdfs_send_data(int sock, string buff)
+parameters:
+	sock: the unix socket description
+	buff: the buff to send
+return true for success, false for error
+
+
 string fastdfs_gen_slave_filename(string master_filename, string prefix_name
                 [, string file_ext_name])
 generate slave filename by master filename, prefix name and file extension name
@@ -273,6 +280,51 @@ parameters:
 return file_id for success, false for error
 
 
+array fastdfs_storage_upload_appender_by_callback(array callback_array
+	[, string file_ext_name, string meta_list, string group_name, 
+	array tracker_server, array storage_server])
+upload file to storage server by callback as appender file
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. 
+       the returned array includes elements: group_name and filename
+
+
+string fastdfs_storage_upload_appender_by_callback1(array callback_array
+	[, string file_ext_name, string meta_list, string group_name, 
+	array tracker_server, array storage_server])
+upload file to storage server by callback as appender file
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return file_id for success, false for error
+
+
 boolean fastdfs_storage_append_by_filename(string local_filename, 
 	string group_name, appender_filename, 
 	[array tracker_server, array storage_server])
@@ -303,7 +355,7 @@ return true for success, false for error
 
 
 
-array fastdfs_storage_append_by_filebuff(string file_buff, 
+boolean fastdfs_storage_append_by_filebuff(string file_buff, 
 	[string group_name, string appender_filename,
 	array tracker_server, array storage_server])
 append file buff to the appender file of storage server
@@ -319,11 +371,51 @@ return true for success, false for error
 
 
 
-string fastdfs_storage_append_by_filebuff1(string file_buff, 
+boolean fastdfs_storage_append_by_filebuff1(string file_buff, 
 	[string appender_file_id, array tracker_server, array storage_server])
 append file buff to the appender file of storage server
 parameters:
 	file_buff: the file content
+	appender_file_id: the appender file id
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean fastdfs_storage_append_by_callback(array callback_array,
+	[string group_name, string appender_filename,
+	array tracker_server, array storage_server])
+append file to the appender file of storage server by callback
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean fastdfs_storage_append_by_callback1(array callback_array,
+	[string appender_file_id, array tracker_server, array storage_server])
+append file buff to the appender file of storage server
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
 	appender_file_id: the appender file id
 	tracker_server: the tracker server assoc array including elements: 
                         ip_addr, port and sock
@@ -401,6 +493,56 @@ string fastdfs_storage_upload_slave_by_filebuff1(string file_buff,
 upload file buff to storage server (slave file mode)
 parameters:
 	file_buff: the file content
+	master_file_id: the master file id to generate the slave file id
+	prefix_name: the prefix name to generage the slave file id
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return file_id for success, false for error
+
+
+array fastdfs_storage_upload_slave_by_callback(array callback_array,
+	string group_name, string master_filename, string prefix_name 
+	[, string file_ext_name, string meta_list, 
+	array tracker_server, array storage_server])
+upload file to storage server by callback (slave file mode)
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+	group_name: the group name of the master file
+	master_filename: the master filename to generate the slave file id
+	prefix_name: the prefix name to generage the slave file id
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. 
+       the returned array includes elements: group_name and filename
+
+
+string fastdfs_storage_upload_slave_by_callback1(array callback_array,
+	string master_file_id, string prefix_name
+	[, string file_ext_name, string meta_list, 
+	array tracker_server, array storage_server])
+upload file to storage server by callback (slave file mode)
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
 	master_file_id: the master file id to generate the slave file id
 	prefix_name: the prefix name to generage the slave file id
 	file_ext_name: the file extension name, do not include dot(.)
@@ -735,6 +877,12 @@ return last error no
 string FastDFS::get_last_error_info()
 return last error info
 
+bool FastDFS::send_data(int sock, string buff)
+parameters:
+	sock: the unix socket description
+	buff: the buff to send
+return true for success, false for error
+
 
 string FastDFS::http_gen_token(string file_id, int timestamp)
 generate anti-steal token for HTTP download
@@ -964,6 +1112,51 @@ parameters:
 return file_id for success, false for error
 
 
+array FastDFS::storage_upload_appender_by_callback(array callback_array
+	[, string file_ext_name, string meta_list, string group_name, 
+	array tracker_server, array storage_server])
+upload file to storage server by callback as appender file
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. 
+       the returned array includes elements: group_name and filename
+
+
+string FastDFS::storage_upload_appender_by_callback1(array callback_array
+	[, string file_ext_name, string meta_list, string group_name, 
+	array tracker_server, array storage_server])
+upload file to storage server by callback as appender file
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	group_name: specify the group name to store the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return file_id for success, false for error
+
+
 boolean FastDFS::storage_append_by_filename(string local_filename, 
 	string group_name, appender_filename, 
 	[array tracker_server, array storage_server])
@@ -994,7 +1187,7 @@ return true for success, false for error
 
 
 
-array FastDFS::storage_append_by_filebuff(string file_buff, 
+boolean FastDFS::storage_append_by_filebuff(string file_buff, 
 	[string group_name, string appender_filename,
 	array tracker_server, array storage_server])
 append file buff to the appender file of storage server
@@ -1010,11 +1203,51 @@ return true for success, false for error
 
 
 
-string FastDFS::storage_append_by_filebuff1(string file_buff, 
+boolean FastDFS::storage_append_by_filebuff1(string file_buff, 
 	[string appender_file_id, array tracker_server, array storage_server])
 append file buff to the appender file of storage server
 parameters:
 	file_buff: the file content
+	appender_file_id: the appender file id
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean FastDFS::storage_append_by_callback(array callback_array,
+	[string group_name, string appender_filename,
+	array tracker_server, array storage_server])
+append file to the appender file of storage server by callback
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean FastDFS::storage_append_by_callback1(array callback_array,
+	[string appender_file_id, array tracker_server, array storage_server])
+append file buff to the appender file of storage server
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
 	appender_file_id: the appender file id
 	tracker_server: the tracker server assoc array including elements: 
                         ip_addr, port and sock
@@ -1092,6 +1325,56 @@ string FastDFS::storage_upload_slave_by_filebuff1(string file_buff,
 upload file buff to storage server (slave file mode)
 parameters:
 	file_buff: the file content
+	master_file_id: the master file id to generate the slave file id
+	prefix_name: the prefix name to generage the slave file id
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return file_id for success, false for error
+
+
+array FastDFS::storage_upload_slave_by_callback(array callback_array,
+	string group_name, string master_filename, string prefix_name 
+	[, string file_ext_name, string meta_list, 
+	array tracker_server, array storage_server])
+upload file to storage server by callback (slave file mode)
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+	group_name: the group name of the master file
+	master_filename: the master filename to generate the slave file id
+	prefix_name: the prefix name to generage the slave file id
+	file_ext_name: the file extension name, do not include dot(.)
+	meta_list: meta data assoc array, such as
+                   array('width'=>1024, 'height'=>768)
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return assoc array for success, false for error. 
+       the returned array includes elements: group_name and filename
+
+
+string FastDFS::storage_upload_slave_by_callback1(array callback_array,
+	string master_file_id, string prefix_name
+	[, string file_ext_name, string meta_list, 
+	array tracker_server, array storage_server])
+upload file to storage server by callback (slave file mode)
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
 	master_file_id: the master file id to generate the slave file id
 	prefix_name: the prefix name to generage the slave file id
 	file_ext_name: the file extension name, do not include dot(.)
