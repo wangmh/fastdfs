@@ -55,6 +55,8 @@ ZEND_FUNCTION(fastdfs_storage_download_file_to_buff);
 ZEND_FUNCTION(fastdfs_storage_download_file_to_buff1);
 ZEND_FUNCTION(fastdfs_storage_download_file_to_file);
 ZEND_FUNCTION(fastdfs_storage_download_file_to_file1);
+ZEND_FUNCTION(fastdfs_storage_download_file_to_callback);
+ZEND_FUNCTION(fastdfs_storage_download_file_to_callback1);
 ZEND_FUNCTION(fastdfs_storage_set_metadata);
 ZEND_FUNCTION(fastdfs_storage_set_metadata1);
 ZEND_FUNCTION(fastdfs_storage_get_metadata);

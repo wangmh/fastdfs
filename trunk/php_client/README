@@ -648,6 +648,47 @@ parameters:
 return true for success, false for error
 
 
+boolean fastdfs_storage_download_file_to_callback(string group_name,
+	string remote_filename, array download_callback [, long file_offset, 
+	long download_bytes, array tracker_server, array storage_server])
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	download_callback: the download callback array, elements as:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function my_download_file_callback($args, $file_size, $data)
+			args      - use argument for callback function
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to 
+                        the file end
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+boolean fastdfs_storage_download_file_to_callback1(string file_id,
+	array download_callback [, long file_offset, long download_bytes, 
+	array tracker_server, array storage_server])
+parameters:
+	file_id: the file id of the file
+	download_callback: the download callback array, elements as:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function my_download_file_callback($args, $file_size, $data)
+			args      - use argument for callback function
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to 
+                        the file end
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
 boolean fastdfs_storage_set_metadata(string group_name, string remote_filename,
 	array meta_list [, string op_type, array tracker_server, 
 	array storage_server])
@@ -1470,6 +1511,47 @@ download file from storage server to local file
 parameters:
 	file_id: the file id of the file
 	local_filename: the local filename to save the file content
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to 
+                        the file end
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+boolean FastDFS::storage_download_file_to_callback(string group_name,
+	string remote_filename, array download_callback [, long file_offset, 
+	long download_bytes, array tracker_server, array storage_server])
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	download_callback: the download callback array, elements as:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function my_download_file_callback($args, $file_size, $data)
+			args      - use argument for callback function
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to 
+                        the file end
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+boolean FastDFS::storage_download_file_to_callback1(string file_id,
+	array download_callback [, long file_offset, long download_bytes, 
+	array tracker_server, array storage_server])
+parameters:
+	file_id: the file id of the file
+	download_callback: the download callback array, elements as:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function my_download_file_callback($args, $file_size, $data)
+			args      - use argument for callback function
 	file_offset: file start offset, default value is 0
 	download_bytes: 0 (default value) means from the file offset to 
                         the file end

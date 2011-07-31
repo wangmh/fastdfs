@@ -49,8 +49,16 @@ typedef struct
 {
 	zval *func_name;
 	zval *args;
-	int64_t file_size;
 } php_fdfs_callback_t;
+
+typedef struct
+{
+	php_fdfs_callback_t callback;
+	int64_t file_size;
+} php_fdfs_upload_callback_t;
+
+static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
+		const char *data, const int current_size);
 
 static FDFSConfigInfo *config_list = NULL;
 static int config_count = 0;
@@ -136,6 +144,8 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 		ZEND_FE(fastdfs_storage_download_file_to_buff1, NULL)
 		ZEND_FE(fastdfs_storage_download_file_to_file, NULL)
 		ZEND_FE(fastdfs_storage_download_file_to_file1, NULL)
+		ZEND_FE(fastdfs_storage_download_file_to_callback, NULL)
+		ZEND_FE(fastdfs_storage_download_file_to_callback1, NULL)
 		ZEND_FE(fastdfs_storage_set_metadata, NULL)
 		ZEND_FE(fastdfs_storage_set_metadata1, NULL)
 		ZEND_FE(fastdfs_storage_get_metadata, NULL)
@@ -489,7 +499,24 @@ static int php_fdfs_get_callback_from_hash(HashTable *callback_hash, \
 		pCallback->args = ((*data)->type == IS_NULL) ? NULL : *data;
 	}
 
+	return 0;
+}
+
+static int php_fdfs_get_upload_callback_from_hash(HashTable *callback_hash, \
+		php_fdfs_upload_callback_t *pUploadCallback)
+{
+	zval **data;
+	zval ***ppp;
+	int result;
+
+	if ((result=php_fdfs_get_callback_from_hash(callback_hash, \
+			&(pUploadCallback->callback))) != 0)
+	{
+		return result;
+	}
+
 	data = NULL;
+	ppp = &data;
 	if (zend_hash_find(callback_hash, "file_size", sizeof("file_size"), \
 			(void **)ppp) == FAILURE)
 	{
@@ -504,12 +531,12 @@ static int php_fdfs_get_callback_from_hash(HashTable *callback_hash, \
 			__LINE__, (*data)->type);
 		return EINVAL;
 	}
-	pCallback->file_size = (*data)->value.lval;
-	if (pCallback->file_size < 0)
+	pUploadCallback->file_size = (*data)->value.lval;
+	if (pUploadCallback->file_size < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"file_size: "INT64_PRINTF_FORMAT" is invalid!", \
-			__LINE__, pCallback->file_size);
+			__LINE__, pUploadCallback->file_size);
 		return EINVAL;
 	}
 
@@ -1560,6 +1587,178 @@ static void php_fdfs_storage_delete_file_impl( \
 	RETURN_BOOL(true);
 }
 
+static void php_fdfs_storage_download_file_to_callback_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext, \
+	const bool bFileId)
+{
+	int argc;
+	char *group_name;
+	char *remote_filename;
+	zval *download_callback;
+	int group_nlen;
+	int filename_len;
+	long file_offset;
+	long download_bytes;
+	int64_t file_size;
+	zval *tracker_obj;
+	zval *storage_obj;
+	HashTable *tracker_hash;
+	HashTable *storage_hash;
+	TrackerServerInfo tracker_server;
+	TrackerServerInfo storage_server;
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer;
+	HashTable *callback_hash;
+	php_fdfs_callback_t php_callback;
+	int result;
+	int min_param_count;
+	int max_param_count;
+	int saved_tracker_sock;
+	int saved_storage_sock;
+	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 128];
+
+	if (bFileId)
+	{
+		min_param_count = 2;
+		max_param_count = 6;
+	}
+	else
+	{
+		min_param_count = 3;
+		max_param_count = 7;
+	}
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc < min_param_count || argc > max_param_count)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"storage_download_file_to_buff parameters " \
+			"count: %d < %d or > %d", __LINE__, argc, \
+			min_param_count, max_param_count);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	file_offset = 0;
+	download_bytes = 0;
+	tracker_obj = NULL;
+	storage_obj = NULL;
+	if (bFileId)
+	{
+		char *pSeperator;
+		char *file_id;
+		int file_id_len;
+
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, \
+			"sa|llaa", &file_id, &file_id_len, \
+			&download_callback, &file_offset, &download_bytes, \
+			&tracker_obj, &storage_obj) == FAILURE)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"zend_parse_parameters fail!", __LINE__);
+			pContext->err_no = EINVAL;
+			RETURN_BOOL(false);
+		}
+
+		snprintf(new_file_id, sizeof(new_file_id), "%s", file_id);
+		pSeperator = strchr(new_file_id, FDFS_FILE_ID_SEPERATOR);
+		if (pSeperator == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"file_id is invalid, file_id=%s", \
+				__LINE__, file_id);
+			pContext->err_no = EINVAL;
+			RETURN_BOOL(false);
+		}
+
+		*pSeperator = '\0';
+		group_name = new_file_id;
+		remote_filename =  pSeperator + 1;
+	}
+	else if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ssa|llaa", \
+		&group_name, &group_nlen, &remote_filename, &filename_len, \
+		&download_callback, &file_offset, &download_bytes, \
+		&tracker_obj, &storage_obj) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (tracker_obj == NULL)
+	{
+		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		if (pTrackerServer == NULL)
+		{
+			pContext->err_no = ENOENT;
+			RETURN_BOOL(false);
+		}
+		saved_tracker_sock = -1;
+		tracker_hash = NULL;
+	}
+	else
+	{
+		pTrackerServer = &tracker_server;
+		tracker_hash = Z_ARRVAL_P(tracker_obj);
+		if ((result=php_fdfs_get_server_from_hash(tracker_hash, \
+				pTrackerServer)) != 0)
+		{
+			pContext->err_no = result;
+			RETURN_BOOL(false);
+		}
+		saved_tracker_sock = pTrackerServer->sock;
+	}
+
+	if (storage_obj == NULL)
+	{
+		pStorageServer = NULL;
+		storage_hash = NULL;
+		saved_storage_sock = -1;
+	}
+	else
+	{
+		pStorageServer = &storage_server;
+		storage_hash = Z_ARRVAL_P(storage_obj);
+		if ((result=php_fdfs_get_server_from_hash(storage_hash, \
+				pStorageServer)) != 0)
+		{
+			pContext->err_no = result;
+			RETURN_BOOL(false);
+		}
+		saved_storage_sock = pStorageServer->sock;
+	}
+
+	callback_hash = Z_ARRVAL_P(download_callback);
+	result = php_fdfs_get_callback_from_hash(callback_hash, \
+				&php_callback);
+	if (result != 0)
+	{
+		pContext->err_no = result;
+		RETURN_BOOL(false);
+	}
+
+	result = storage_download_file_ex(pTrackerServer, pStorageServer, \
+		group_name, remote_filename, file_offset, download_bytes, \
+		php_fdfs_download_callback, (void *)&php_callback, &file_size);
+	if (tracker_hash != NULL && pTrackerServer->sock != saved_tracker_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(tracker_hash)
+	}
+	if (pStorageServer != NULL && pStorageServer->sock != \
+		saved_storage_sock)
+	{
+		CLEAR_HASH_SOCK_FIELD(storage_hash)
+	}
+
+	if (result != 0)
+	{
+		pContext->err_no = result;
+		RETURN_BOOL(false);
+	}
+	RETURN_BOOL(true);
+}
+
 static void php_fdfs_storage_download_file_to_buff_impl( \
 	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext, \
 	const bool bFileId)
@@ -2222,7 +2421,7 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 
 static int php_fdfs_upload_callback(void *arg, const int64_t file_size, int sock)
 {
-	php_fdfs_callback_t *pCallback;
+	php_fdfs_upload_callback_t *pUploadCallback;
 	zval *args[2];
 	zval zsock;
 	zval ret;
@@ -2232,17 +2431,67 @@ static int php_fdfs_upload_callback(void *arg, const int64_t file_size, int sock
 	ZVAL_NULL(&ret);
 	ZVAL_LONG(&zsock, sock);
 
+	pUploadCallback = (php_fdfs_upload_callback_t *)arg;
+	if (pUploadCallback->callback.args == NULL)
+	{
+		ZVAL_NULL(&null_args);
+		pUploadCallback->callback.args = &null_args;
+	}
+	args[0] = &zsock;
+	args[1] = pUploadCallback->callback.args;
+
+	if (call_user_function(EG(function_table), NULL, \
+		pUploadCallback->callback.func_name, 
+		&ret, 2, args TSRMLS_CC) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call callback function: %s fail", __LINE__, \
+			Z_STRVAL_P(pUploadCallback->callback.func_name));
+		return EINVAL;
+	}
+
+	if (ret.type == IS_LONG || ret.type == IS_BOOL)
+	{
+		result = ret.value.lval == 0 ? EFAULT : 0;
+	}
+	else
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"callback function return invalid value type: %d", \
+			__LINE__, ret.type);
+		result = EINVAL;
+	}
+
+	return result;
+}
+
+static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
+		const char *data, const int current_size)
+{
+	php_fdfs_callback_t *pCallback;
+	zval *args[3];
+	zval zfilesize;
+	zval zdata;
+	zval ret;
+	zval null_args;
+	int result;
+
+	ZVAL_NULL(&ret);
+	ZVAL_LONG(&zfilesize, file_size);
+	ZVAL_STRINGL(&zdata, data, current_size, 0);
+
 	pCallback = (php_fdfs_callback_t *)arg;
 	if (pCallback->args == NULL)
 	{
 		ZVAL_NULL(&null_args);
 		pCallback->args = &null_args;
 	}
-	args[0] = &zsock;
-	args[1] = pCallback->args;
-
-	if (call_user_function(EG(function_table), NULL, pCallback->func_name, 
-		&ret, 2, args TSRMLS_CC) == FAILURE)
+	args[0] = pCallback->args;
+	args[1] = &zfilesize;
+	args[2] = &zdata;
+	if (call_user_function(EG(function_table), NULL, \
+		pCallback->func_name, 
+		&ret, 3, args TSRMLS_CC) == FAILURE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call callback function: %s fail", __LINE__, \
@@ -2489,10 +2738,10 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	else  //by callback
 	{
 		HashTable *callback_hash;
-		php_fdfs_callback_t php_callback;
+		php_fdfs_upload_callback_t php_callback;
 
 		callback_hash = Z_ARRVAL_P(callback_obj);
-		result = php_fdfs_get_callback_from_hash(callback_hash, \
+		result = php_fdfs_get_upload_callback_from_hash(callback_hash, \
 				&php_callback);
 		if (result != 0)
 		{
@@ -2825,10 +3074,10 @@ static void php_fdfs_storage_upload_slave_file_impl( \
 	else  //by callback
 	{
 		HashTable *callback_hash;
-		php_fdfs_callback_t php_callback;
+		php_fdfs_upload_callback_t php_callback;
 
 		callback_hash = Z_ARRVAL_P(callback_obj);
-		result = php_fdfs_get_callback_from_hash(callback_hash, \
+		result = php_fdfs_get_upload_callback_from_hash(callback_hash, \
 				&php_callback);
 		if (result != 0)
 		{
@@ -3107,10 +3356,10 @@ static void php_fdfs_storage_append_file_impl( \
 	else
 	{
 		HashTable *callback_hash;
-		php_fdfs_callback_t php_callback;
+		php_fdfs_upload_callback_t php_callback;
 
 		callback_hash = Z_ARRVAL_P(callback_obj);
-		result = php_fdfs_get_callback_from_hash(callback_hash, \
+		result = php_fdfs_get_upload_callback_from_hash(callback_hash, \
 				&php_callback);
 		if (result != 0)
 		{
@@ -4175,6 +4424,30 @@ ZEND_FUNCTION(fastdfs_storage_download_file_to_buff1)
 }
 
 /*
+boolean fastdfs_storage_download_file_to_callback(string group_name,
+	string remote_filename, array download_callback [, long file_offset, 
+	long download_bytes, array tracker_server, array storage_server])
+return true for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_storage_download_file_to_callback)
+{
+	php_fdfs_storage_download_file_to_callback_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &php_context, false);
+}
+
+/*
+boolean fastdfs_storage_download_file_to_callback1(string file_id,
+	array download_callback [, long file_offset, long download_bytes,
+	array tracker_server, array storage_server])
+return true for success, false for error
+*/
+ZEND_FUNCTION(fastdfs_storage_download_file_to_callback1)
+{
+	php_fdfs_storage_download_file_to_callback_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &php_context, true);
+}
+
+/*
 boolean fastdfs_storage_download_file_to_file(string group_name, 
 	string remote_filename, string local_filename [, long file_offset, 
 	long download_bytes, array tracker_server, array storage_server])
@@ -5097,6 +5370,38 @@ PHP_METHOD(FastDFS, storage_download_file_to_buff1)
 }
 
 /*
+boolean FastDFS::storage_download_file_to_callback(string group_name,
+	string remote_filename, array download_callback [, long file_offset, 
+	long download_bytes, array tracker_server, array storage_server])
+return true for success, false for error
+*/
+PHP_METHOD(FastDFS, storage_download_file_to_callback)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_storage_download_file_to_callback_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &(i_obj->context), false);
+}
+
+/*
+boolean FastDFS::storage_download_file_to_callback1(string file_id, 
+	array download_callback [, long file_offset, long download_bytes,
+	array tracker_server, array storage_server])
+return true for success, false for error
+*/
+PHP_METHOD(FastDFS, storage_download_file_to_callback1)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_fdfs_storage_download_file_to_callback_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &(i_obj->context), true);
+}
+
+/*
 boolean FastDFS::storage_download_file_to_file(string group_name, 
 	string remote_filename, string local_filename 
 	[, long file_offset, long download_bytes,
@@ -5626,6 +5931,25 @@ ZEND_ARG_INFO(0, tracker_server)
 ZEND_ARG_INFO(0, storage_server)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_download_file_to_callback, 0, 0, 3)
+ZEND_ARG_INFO(0, group_name)
+ZEND_ARG_INFO(0, remote_filename)
+ZEND_ARG_INFO(0, download_callback)
+ZEND_ARG_INFO(0, file_offset)
+ZEND_ARG_INFO(0, download_bytes)
+ZEND_ARG_INFO(0, tracker_server)
+ZEND_ARG_INFO(0, storage_server)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_download_file_to_callback1, 0, 0, 2)
+ZEND_ARG_INFO(0, file_id)
+ZEND_ARG_INFO(0, download_callback)
+ZEND_ARG_INFO(0, file_offset)
+ZEND_ARG_INFO(0, download_bytes)
+ZEND_ARG_INFO(0, tracker_server)
+ZEND_ARG_INFO(0, storage_server)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_storage_download_file_to_file, 0, 0, 3)
 ZEND_ARG_INFO(0, group_name)
 ZEND_ARG_INFO(0, remote_filename)
@@ -5759,6 +6083,8 @@ static zend_function_entry fdfs_class_methods[] = {
     FDFS_ME(storage_download_file_to_buff1,arginfo_storage_download_file_to_buff1)
     FDFS_ME(storage_download_file_to_file, arginfo_storage_download_file_to_file)
     FDFS_ME(storage_download_file_to_file1,arginfo_storage_download_file_to_file1)
+    FDFS_ME(storage_download_file_to_callback, arginfo_storage_download_file_to_callback)
+    FDFS_ME(storage_download_file_to_callback1, arginfo_storage_download_file_to_callback1)
     FDFS_ME(storage_set_metadata,  arginfo_storage_set_metadata)
     FDFS_ME(storage_set_metadata1, arginfo_storage_set_metadata1)
     FDFS_ME(storage_get_metadata,  arginfo_storage_get_metadata)
