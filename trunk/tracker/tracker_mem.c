@@ -3773,15 +3773,20 @@ static int tracker_mem_check_add_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 		for (pLocalTracker=g_tracker_servers.servers; \
 			pLocalTracker<pLocalEnd; pLocalTracker++)
 		{
-			if (!(pJoinTracker->port == pLocalTracker->port && \
+			if (pJoinTracker->port == pLocalTracker->port && \
 				strcmp(pJoinTracker->ip_addr, \
-					pLocalTracker->ip_addr) == 0))
+					pLocalTracker->ip_addr) == 0)
 			{
-				memcpy(pNewServer, pJoinTracker, \
-					sizeof(TrackerServerInfo));
-				pNewServer->sock = -1;
-				pNewServer++;
+				break;
 			}
+		}
+
+		if (pLocalTracker == pLocalEnd)
+		{
+			memcpy(pNewServer, pJoinTracker, \
+				sizeof(TrackerServerInfo));
+			pNewServer->sock = -1;
+			pNewServer++;
 		}
 	}
 
