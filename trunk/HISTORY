@@ -1,7 +1,8 @@
 
-Version 3.02  2011-08-15
+Version 3.02  2011-08-26
  * bug fixed: tracker_mem_check_add_tracker_servers add tracker server 
    correctly
+ * php client compile ok with php 5.2.17
 
 Version 3.01  2011-07-31
  * bug fixed: tracker_get_connection_ex and tracker_get_connection_r_ex 

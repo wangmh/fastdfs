@@ -2478,7 +2478,7 @@ static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
 
 	ZVAL_NULL(&ret);
 	ZVAL_LONG(&zfilesize, file_size);
-	ZVAL_STRINGL(&zdata, data, current_size, 0);
+	ZVAL_STRINGL(&zdata, (char *)data, current_size, 0);
 
 	pCallback = (php_fdfs_callback_t *)arg;
 	if (pCallback->args == NULL)
