@@ -699,8 +699,8 @@ parameters:
 	meta_list: meta data assoc array to be set, such as
                    array('width'=>1024, 'height'=>768)
 	op_type: operate flag, can be one of following flags:
-		STORAGE_SET_METADATA_FLAG_MERGE: combined with the old meta data
-		STORAGE_SET_METADATA_FLAG_OVERWRITE: overwrite the old meta data
+		FDFS_STORAGE_SET_METADATA_FLAG_MERGE: combined with the old meta data
+		FDFS_STORAGE_SET_METADATA_FLAG_OVERWRITE: overwrite the old meta data
 	tracker_server: the tracker server assoc array including elements: 
                         ip_addr, port and sock
 	storage_server: the storage server assoc array including elements:
@@ -716,8 +716,8 @@ parameters:
 	meta_list: meta data assoc array to be set, such as
                    array('width'=>1024, 'height'=>768)
 	op_type: operate flag, can be one of following flags:
-		STORAGE_SET_METADATA_FLAG_MERGE: combined with the old meta data
-		STORAGE_SET_METADATA_FLAG_OVERWRITE: overwrite the old meta data
+		FDFS_STORAGE_SET_METADATA_FLAG_MERGE: combined with the old meta data
+		FDFS_STORAGE_SET_METADATA_FLAG_OVERWRITE: overwrite the old meta data
 	tracker_server: the tracker server assoc array including elements: 
                         ip_addr, port and sock
 	storage_server: the storage server assoc array including elements:
@@ -1572,8 +1572,8 @@ parameters:
 	meta_list: meta data assoc array to be set, such as
                    array('width'=>1024, 'height'=>768)
 	op_type: operate flag, can be one of following flags:
-		STORAGE_SET_METADATA_FLAG_MERGE: combined with the old meta data
-		STORAGE_SET_METADATA_FLAG_OVERWRITE: overwrite the old meta data
+		FDFS_STORAGE_SET_METADATA_FLAG_MERGE: combined with the old meta data
+		FDFS_STORAGE_SET_METADATA_FLAG_OVERWRITE: overwrite the old meta data
 	tracker_server: the tracker server assoc array including elements: 
                         ip_addr, port and sock
 	storage_server: the storage server assoc array including elements:
@@ -1589,8 +1589,8 @@ parameters:
 	meta_list: meta data assoc array to be set, such as
                    array('width'=>1024, 'height'=>768)
 	op_type: operate flag, can be one of following flags:
-		STORAGE_SET_METADATA_FLAG_MERGE: combined with the old meta data
-		STORAGE_SET_METADATA_FLAG_OVERWRITE: overwrite the old meta data
+		FDFS_STORAGE_SET_METADATA_FLAG_MERGE: combined with the old meta data
+		FDFS_STORAGE_SET_METADATA_FLAG_OVERWRITE: overwrite the old meta data
 	tracker_server: the tracker server assoc array including elements: 
                         ip_addr, port and sock
 	storage_server: the storage server assoc array including elements:
