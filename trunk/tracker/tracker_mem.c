@@ -2867,8 +2867,7 @@ static int tracker_mem_realloc_store_servers(FDFSGroupInfo *pGroup, \
 	pGroup->last_sync_timestamps = new_last_sync_timestamps;
 
 	tracker_mem_find_store_server(pGroup);
-	if (g_if_leader_self && g_if_use_trunk_file && \
-		pGroup->pTrunkServer == NULL)
+	if (g_if_leader_self && g_if_use_trunk_file)
 	{
 		tracker_mem_find_trunk_server(pGroup, true);
 	}
@@ -5182,6 +5181,10 @@ int tracker_mem_check_alive(void *arg)
 		g_trunk_server_chg_count++;
 
 		tracker_save_groups();
+	}
+	else if ((*ppGroup)->pTrunkServer == NULL)
+	{
+		tracker_mem_find_trunk_server(*ppGroup, true);
 	}
 	}
 
