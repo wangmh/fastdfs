@@ -4532,13 +4532,24 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 	else if (symlink(src_full_filename, pFileContext->filename) != 0)
 	{
 		result = errno != 0 ? errno : EPERM;
-		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, link file %s to %s fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, \
-			src_full_filename, pFileContext->filename, \
-			result, STRERROR(result));
-		break;
+		if (result == EEXIST)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip: %s, data file: %s " \
+				"already exists, ignore it", __LINE__, \
+				pTask->client_ip, pFileContext->filename);
+			result = 0;
+		}
+		else
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, link file %s to %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pTask->client_ip, \
+				src_full_filename, pFileContext->filename, \
+				result, STRERROR(result));
+			break;
+		}
 	}
 
 	result = storage_binlog_write(pFileContext->timestamp2log, \
