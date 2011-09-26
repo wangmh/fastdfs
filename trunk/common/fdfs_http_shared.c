@@ -294,9 +294,9 @@ int fdfs_http_gen_token(const BufferInfo *secret_key, const char *file_id, \
 
 	memcpy(buff, file_id, id_len);
 	total_len = id_len;
-	memcpy(buff+total_len, secret_key->buff, secret_key->length);
+	memcpy(buff + total_len, secret_key->buff, secret_key->length);
 	total_len += secret_key->length;
-	total_len += sprintf(buff+total_len, "%d", timestamp);
+	total_len += sprintf(buff + total_len, "%d", timestamp);
 
 	MD5Buffer(buff, total_len, digit);
 	bin2hex((char *)digit, 16, token);
@@ -316,7 +316,7 @@ int fdfs_http_check_token(const BufferInfo *secret_key, const char *file_id, \
 		return EINVAL;
 	}
 
-	if (time(NULL) - timestamp > ttl)
+	if ((timestamp != 0) && (time(NULL) - timestamp > ttl))
 	{
 		return ETIMEDOUT;
 	}

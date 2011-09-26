@@ -61,7 +61,7 @@ generate anti-steal token
 params:
 	secret_key: secret key buffer
 	file_id: FastDFS file id
-	timestamp: current timestamp, unix timestamp (seconds)
+	timestamp: current timestamp, unix timestamp (seconds), 0 for never timeout
 	token: return token buffer
 return: 0 for success, != 0 fail
 **/
