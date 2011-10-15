@@ -61,6 +61,7 @@
 
 	var_dump($file_info);
 	var_dump(fastdfs_get_file_info($group_name, $remote_filename));
+	echo "file exist: " . fastdfs_storage_file_exist($group_name, $remote_filename) . "\n";
 
 	$master_filename = $remote_filename;
 	$prefix_name = '.part1';
@@ -121,6 +122,7 @@
 
 	var_dump($file_info);
 	var_dump(fastdfs_get_file_info($group_name, $remote_filename));
+	echo "file exist: " . fastdfs_storage_file_exist($group_name, $remote_filename) . "\n";
 
 	$ts = time();
 	$token = fastdfs_http_gen_token($group_name . FDFS_FILE_ID_SEPERATOR . $remote_filename, $ts);
@@ -242,6 +244,7 @@
 
 	var_dump($file_info);
 	var_dump($fdfs->get_file_info($group_name, $remote_filename));
+	echo "file exist: " . $fdfs->storage_file_exist($group_name, $remote_filename) . "\n";
 
 	$master_filename = $remote_filename;
 	$prefix_name = '.part1';
@@ -342,6 +345,7 @@
  if ($file_id)
  {
 	var_dump($fdfs->get_file_info1($file_id));
+	echo "file exist: " . $fdfs->storage_file_exist1($file_id) . "\n";
 
 	$ts = time();
 	$token = $fdfs->http_gen_token($file_id, $ts);

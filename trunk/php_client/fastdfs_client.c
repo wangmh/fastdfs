@@ -6691,9 +6691,12 @@ PHP_RSHUTDOWN_FUNCTION(fastdfs_client)
 
 PHP_MINFO_FUNCTION(fastdfs_client)
 {
-	php_info_print_table_start();
-	php_info_print_table_header(2, "fastdfs_client support", "enabled");
-	php_info_print_table_end();
+	char fastdfs_info[64];
+	sprintf(fastdfs_info, "fastdfs_client v%d.%02d support", 
+		g_fdfs_version.major, g_fdfs_version.minor);
 
+	php_info_print_table_start();
+	php_info_print_table_header(2, fastdfs_info, "enabled");
+	php_info_print_table_end();
 }
 
