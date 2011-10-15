@@ -449,6 +449,17 @@ int storage_query_file_info_ex1(TrackerServerInfo *pTrackerServer, \
 int fdfs_get_file_info_ex1(const char *file_id, const bool get_from_server, \
 		FDFSFileInfo *pFileInfo);
 
+/**
+* check if file exist
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       file_id: the file id return by storage server
+* return: 0 file exist, !=0 not exist, return the error code
+**/
+int storage_file_exist1(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer,  \
+			const char *file_id);
 #ifdef __cplusplus
 }
 #endif

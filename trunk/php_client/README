@@ -95,6 +95,30 @@ parameters:
 return slave filename string for success, false for error
 
 
+boolean fastdfs_storage_file_exist(string group_name, string remote_filename
+	[, array tracker_server, array storage_server])
+check file exist
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for exist, false for not exist
+
+
+boolean fastdfs_storage_file_exist1(string file_id
+	[, array tracker_server, array storage_server])
+parameters:
+	file_id: the file id of the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for exist, false for not exist
+
+
 array fastdfs_storage_upload_by_filename(string local_filename
 	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
@@ -966,6 +990,30 @@ parameters:
 	file_ext_name: slave file extension name, can be null or emtpy 
 			(do not including dot)
 return slave filename string for success, false for error
+
+
+boolean FastDFS::storage_file_exist(string group_name, string remote_filename
+	[, array tracker_server, array storage_server])
+check file exist
+parameters:
+	group_name: the group name of the file
+	remote_filename: the filename on the storage server
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for exist, false for not exist
+
+
+boolean FastDFS::storage_file_exist1(string file_id
+	[, array tracker_server, array storage_server])
+parameters:
+	file_id: the file id of the file
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for exist, false for not exist
 
 
 array FastDFS::storage_upload_by_filename(string local_filename

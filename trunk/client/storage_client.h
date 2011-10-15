@@ -468,6 +468,18 @@ int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \
 	fdfs_get_file_info_ex(group_name, remote_filename, true, pFileInfo)
 
 /**
+* check if file exist
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*	group_name: the group name of storage server
+*	remote_filename: filename on storage server
+* return: 0 file exist, !=0 not exist, return the error code
+**/
+int storage_file_exist(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer,  \
+			const char *group_name, const char *remote_filename);
+/**
 * get file info from the filename return by storage server
 * params:
 *	group_name: the group name of storage server

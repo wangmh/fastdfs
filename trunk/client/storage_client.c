@@ -2002,3 +2002,21 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	return 0;
 }
 
+int storage_file_exist(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer,  \
+			const char *group_name, const char *remote_filename)
+{
+	FDFSFileInfo file_info;
+	return storage_query_file_info(pTrackerServer, \
+			pStorageServer, group_name, remote_filename, &file_info);
+}
+
+int storage_file_exist1(TrackerServerInfo *pTrackerServer, \
+			TrackerServerInfo *pStorageServer,  \
+			const char *file_id)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
+	return storage_file_exist(pTrackerServer, pStorageServer,  \
+			group_name, filename);
+}
+
