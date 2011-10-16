@@ -22,7 +22,14 @@
 extern "C" {
 #endif
 
+struct tracker_thread_data
+{
+        struct event_base *ev_base;
+        int pipe_fds[2];
+};
+
 extern int g_tracker_thread_count;
+extern struct tracker_thread_data *g_thread_data;
 
 int tracker_service_init();
 int tracker_service_destroy();

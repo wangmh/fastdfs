@@ -83,8 +83,6 @@ extern bool g_http_servers_dirty;
 extern char g_exe_name[256];
 #endif
 
-extern struct tracker_thread_data *g_thread_data;
-
 #ifdef __cplusplus
 }
 #endif

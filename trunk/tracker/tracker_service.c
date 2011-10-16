@@ -41,6 +41,8 @@ static pthread_mutex_t tracker_thread_lock;
 static pthread_mutex_t lb_thread_lock;
 
 int g_tracker_thread_count = 0;
+struct tracker_thread_data *g_thread_data = NULL;
+
 static int lock_by_client_count = 0;
 
 static void *work_thread_entrance(void* arg);

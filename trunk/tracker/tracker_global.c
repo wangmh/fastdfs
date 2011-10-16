@@ -59,5 +59,3 @@ bool g_http_servers_dirty = false;
 char g_exe_name[256] = {0};
 #endif
 
-struct tracker_thread_data *g_thread_data = NULL;
-

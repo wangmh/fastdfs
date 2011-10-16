@@ -16,7 +16,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <time.h>
-#include <event.h>
 #include "fdfs_define.h"
 
 #define FDFS_ONE_MB	(1024 * 1024)
@@ -356,12 +355,6 @@ typedef struct
 	int tracker_count;
 	TrackerServerInfo tracker_servers[FDFS_MAX_TRACKERS];
 } FDFSStorageJoinBody;
-
-struct tracker_thread_data
-{
-        struct event_base *ev_base;
-        int pipe_fds[2];
-};
 
 typedef struct
 {

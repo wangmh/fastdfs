@@ -5,6 +5,7 @@ Version 3.03  2011-10-16
  * add functions: storage_file_exist and storage_file_exist1
  * php minfo add fastdfs version info
  * make.sh changed
+ * client move libevent dependency
 
 Version 3.02  2011-09-18
  * bug fixed: tracker_mem_check_add_tracker_servers add tracker server 
