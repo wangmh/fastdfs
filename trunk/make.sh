@@ -12,7 +12,7 @@ int main()
 EOF
 
 gcc -D_FILE_OFFSET_BITS=64 -o a.out $tmp_src_filename
-output=`./a.out`
+output=$(./a.out)
 
 if [ -f /bin/expr ]; then
   EXPR=/bin/expr
@@ -30,7 +30,7 @@ for col in $output; do
         off_bytes=$col
     fi
 
-    count=`$EXPR $count + 1`
+    count=$($EXPR $count + 1)
 done
 
 /bin/rm -f a.out $tmp_src_filename
@@ -74,7 +74,7 @@ else
 fi
 
 LIBS=''
-uname=`uname`
+uname=$(uname)
 if [ "$uname" = "Linux" ]; then
   CFLAGS="$CFLAGS -DOS_LINUX"
 elif [ "$uname" = "FreeBSD" ]; then
@@ -98,11 +98,21 @@ else
   STORAGE_HTTPD_OBJS=''
 fi
 
-if [ -f /usr/lib/libpthread.so ] || [ -f /usr/local/lib/libpthread.so ] || [ -f /usr/lib64/libpthread.so ] || [ -f /usr/lib/libpthread.a ] || [ -f /usr/local/lib/libpthread.a ] || [ -f /usr/lib64/libpthread.a ]; then
+if [ -f /usr/lib/libpthread.so ] || [ -f /usr/local/lib/libpthread.so ] || [ -f /lib64/libpthread.so ] || [ -f /usr/lib64/libpthread.so ] || [ -f /usr/lib/libpthread.a ] || [ -f /usr/local/lib/libpthread.a ] || [ -f /lib64/libpthread.a ] || [ -f /usr/lib64/libpthread.a ]; then
   LIBS="$LIBS -lpthread"
-else
-  line=`nm -D /usr/lib/libc_r.so | grep pthread_create | grep -w T`
-  if [ -n "$line" ]; then
+elif [ -f /usr/lib/libc_r.so ]; then
+  line=$(nm -D /usr/lib/libc_r.so | grep pthread_create | grep -w T)
+  if [ $? -eq 0 ]; then
+    LIBS="$LIBS -lc_r"
+  fi
+elif [ -f /lib64/libc_r.so ]; then
+  line=$(nm -D /lib64/libc_r.so | grep pthread_create | grep -w T)
+  if [ $? -eq 0 ]; then
+    LIBS="$LIBS -lc_r"
+  fi
+elif [ -f /usr/lib64/libc_r.so ]; then
+  line=$(nm -D /usr/lib64/libc_r.so | grep pthread_create | grep -w T)
+  if [ $? -eq 0 ]; then
     LIBS="$LIBS -lc_r"
   fi
 fi

@@ -1,9 +1,10 @@
 
-Version 3.03  2011-10-15
+Version 3.03  2011-10-16
  * ignore existed link when sync link file
  * http token checking support persistent token
  * add functions: storage_file_exist and storage_file_exist1
  * php minfo add fastdfs version info
+ * make.sh changed
 
 Version 3.02  2011-09-18
  * bug fixed: tracker_mem_check_add_tracker_servers add tracker server 
