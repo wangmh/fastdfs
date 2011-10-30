@@ -802,7 +802,7 @@ int dio_write_chunk_header(struct fast_task_info *pTask)
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 
-	trunkHeader.file_type = FDFS_TRUNK_FILE_TYPE_REGULAR;
+	trunkHeader.file_type = pFileContext->extra_info.upload.file_type;
 	trunkHeader.alloc_size = pFileContext->extra_info.upload.trunk_info.file.size;
 	trunkHeader.file_size = pFileContext->end - pFileContext->start;
 	trunkHeader.crc32 = pFileContext->crc32;

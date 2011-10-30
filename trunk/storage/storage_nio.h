@@ -52,6 +52,7 @@ typedef struct
 	bool if_appender_file;  //if upload appender file
 	bool if_trunk_file;     //if trunk file, since V3.0
 	bool if_sub_path_alloced; //if sub path alloced since V3.0
+	char file_type;           //regular or link file
 	char master_filename[128];
 	char file_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 1];
 	char formatted_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 2];

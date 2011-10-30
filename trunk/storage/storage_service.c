@@ -112,6 +112,9 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 		const char *prefix_name, const char *file_ext_name, \
 		char *filename, int *filename_len);
 
+static int storage_set_link_file_meta(struct fast_task_info *pTask, \
+		const SourceFileInfo *pSrcFileInfo, const char *link_filename);
+
 static FDFSStorageServer *get_storage_server(const char *ip_addr)
 {
 	FDFSStorageServer targetServer;
@@ -936,6 +939,88 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 	{
 		pthread_mutex_lock(&stat_count_thread_lock);
 		if (pFileContext->create_flag & STORAGE_CREATE_FLAG_FILE)
+		{
+			g_storage_stat.total_upload_count++;
+ 			g_storage_stat.total_upload_bytes += \
+				pClientInfo->total_offset;
+		}
+		pthread_mutex_unlock(&stat_count_thread_lock);
+
+		pClientInfo->total_length = sizeof(TrackerHeader);
+	}
+
+	pClientInfo->total_offset = 0;
+	pTask->length = pClientInfo->total_length;
+
+	pHeader = (TrackerHeader *)pTask->data;
+	pHeader->status = result;
+	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
+	long2buff(pClientInfo->total_length - sizeof(TrackerHeader), \
+			pHeader->pkg_len);
+
+	storage_nio_notify(pTask);
+}
+
+static void storage_trunk_create_link_file_done_callback( \
+		struct fast_task_info *pTask, const int err_no)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	TrackerHeader *pHeader;
+	int result;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+
+	result = trunk_client_trunk_alloc_confirm( \
+			&(pFileContext->extra_info.upload.trunk_info), err_no);
+	if (err_no != 0)
+	{
+		result = err_no;
+	}
+	if (result == 0)
+	{
+		result = storage_service_upload_file_done(pTask);
+		if (result == 0)
+		{
+		if (pFileContext->create_flag & STORAGE_CREATE_FLAG_LINK)
+		{
+			result = storage_binlog_write(\
+				pFileContext->timestamp2log, \
+				STORAGE_OP_TYPE_SOURCE_CREATE_FILE, \
+				pFileContext->fname2log);
+		}
+		}
+	}
+
+	if (result == 0)
+	{
+		int filename_len;
+		char *p;
+
+		if (pFileContext->create_flag & STORAGE_CREATE_FLAG_LINK)
+		{
+			CHECK_AND_WRITE_TO_STAT_FILE3_WITH_BYTES( \
+				g_storage_stat.total_upload_count, \
+				g_storage_stat.success_upload_count, \
+				g_storage_stat.last_source_update, \
+				g_storage_stat.total_upload_bytes, \
+				g_storage_stat.success_upload_bytes, \
+				pFileContext->end - pFileContext->start)
+		}
+
+		filename_len = strlen(pFileContext->fname2log);
+		pClientInfo->total_length = sizeof(TrackerHeader) + \
+					FDFS_GROUP_NAME_MAX_LEN + filename_len;
+		p = pTask->data + sizeof(TrackerHeader);
+		memcpy(p, g_group_name, FDFS_GROUP_NAME_MAX_LEN);
+		p += FDFS_GROUP_NAME_MAX_LEN;
+		memcpy(p, pFileContext->fname2log, filename_len);
+	}
+	else
+	{
+		pthread_mutex_lock(&stat_count_thread_lock);
+		if (pFileContext->create_flag & STORAGE_CREATE_FLAG_LINK)
 		{
 			g_storage_stat.total_upload_count++;
  			g_storage_stat.total_upload_bytes += \
@@ -1841,7 +1926,8 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 
 	pFileContext->timestamp2log = end_time;
 
-	if (g_check_file_duplicate)
+	if (g_check_file_duplicate && pFileContext->extra_info.upload.file_type == \
+		FDFS_TRUNK_FILE_TYPE_REGULAR)
 	{
 		GroupArray *pGroupArray;
 		char value[128];
@@ -2026,27 +2112,83 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	}
 	else
 	{
-		pFileContext->create_flag = STORAGE_CREATE_FLAG_FILE;
+		if (pFileContext->extra_info.upload.file_type == \
+				FDFS_TRUNK_FILE_TYPE_REGULAR)
+		{
+			pFileContext->create_flag = STORAGE_CREATE_FLAG_FILE;
+		}
+		else
+		{
+			pFileContext->create_flag = STORAGE_CREATE_FLAG_LINK;
+		}
 	}
 
 	return 0;
 }
 
+static int storage_trunk_create_link(struct fast_task_info *pTask, \
+		const char *src_filename)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	FDFSTrunkFullInfo *pTrunkInfo;
+	char *p;
+	int64_t file_offset;
+	int64_t file_bytes;
+	int result;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+	file_bytes = strlen(src_filename);
+
+	pFileContext->extra_info.upload.if_sub_path_alloced = true;
+	pTrunkInfo = &(pFileContext->extra_info.upload.trunk_info);
+	if ((result=trunk_client_trunk_alloc_space( \
+			TRUNK_CALC_SIZE(file_bytes), pTrunkInfo)) != 0)
+	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return result;
+	}
+
+	file_offset = TRUNK_FILE_START_OFFSET((*pTrunkInfo));
+	pFileContext->extra_info.upload.file_type = \
+				FDFS_TRUNK_FILE_TYPE_LINK;
+	trunk_get_full_filename(pTrunkInfo, pFileContext->filename, \
+			sizeof(pFileContext->filename));
+	pFileContext->extra_info.upload.before_open_callback = \
+				dio_check_trunk_file;
+	pFileContext->extra_info.upload.before_close_callback = \
+				dio_write_chunk_header;
+	pFileContext->open_flags = O_RDWR | g_extra_open_file_flags;
+
+	p = pTask->data + (pTask->size - file_bytes);
+	memcpy(p, src_filename, file_bytes);
+
+ 	return storage_write_to_file(pTask, file_offset, file_bytes, \
+			p - pTask->data, dio_write_file, \
+			storage_trunk_create_link_file_done_callback, \
+			dio_trunk_write_finish_clean_up, \
+			pFileContext->extra_info.upload.trunk_info. \
+			path.store_path_index);
+}
+
 static int storage_service_do_create_link(struct fast_task_info *pTask, \
-		const SourceFileInfo *pSrcFileInfo,\
+		const SourceFileInfo *pSrcFileInfo, \
 		const int64_t file_size, const char *master_filename, \
 		const char *prefix_name, const char *file_ext_name,  \
 		char *filename, int *filename_len)
 {
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
 	int result;
 	int crc32;
 	int store_path_index;
-	StorageClientInfo *pClientInfo;
 	char src_full_filename[MAX_PATH_SIZE+64];
 	char full_filename[MAX_PATH_SIZE+64];
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
-	store_path_index = pClientInfo->file_context.extra_info.
+	pFileContext =  &(pClientInfo->file_context);
+	store_path_index = pFileContext->extra_info. \
 				upload.trunk_info.path.store_path_index;
 	if (*filename_len == 0)
 	{
@@ -2069,8 +2211,8 @@ static int storage_service_do_create_link(struct fast_task_info *pTask, \
 	}
 
 	sprintf(src_full_filename, "%s/data/%s", \
-			g_fdfs_store_paths[store_path_index], \
-			pSrcFileInfo->src_true_filename);
+		g_fdfs_store_paths[store_path_index], \
+		pSrcFileInfo->src_true_filename);
 	if (symlink(src_full_filename, full_filename) != 0)
 	{
 		result = errno != 0 ? errno : ENOENT;
@@ -2090,69 +2232,79 @@ static int storage_service_do_create_link(struct fast_task_info *pTask, \
 			store_path_index, filename);
 	memcpy(filename, full_filename, (*filename_len) + 1);
 
-	if (g_check_file_duplicate)
+	return storage_set_link_file_meta(pTask, pSrcFileInfo, filename);
+}
+
+static int storage_set_link_file_meta(struct fast_task_info *pTask, \
+		const SourceFileInfo *pSrcFileInfo, const char *link_filename)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	GroupArray *pGroupArray;
+	FDHTKeyInfo key_info;
+	char value[128];
+	int value_len;
+	int result;
+
+	if (!g_check_file_duplicate)
 	{
-		GroupArray *pGroupArray;
-		FDHTKeyInfo key_info;
-		char value[128];
-		int value_len;
+		return 0;
+	}
 
-		memset(&key_info, 0, sizeof(key_info));
-		key_info.namespace_len = g_namespace_len;
-		memcpy(key_info.szNameSpace, g_key_namespace, g_namespace_len);
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
 
-		pGroupArray=&((g_nio_thread_data + pClientInfo->nio_thread_index) \
+	memset(&key_info, 0, sizeof(key_info));
+	key_info.namespace_len = g_namespace_len;
+	memcpy(key_info.szNameSpace, g_key_namespace, g_namespace_len);
+
+	pGroupArray=&((g_nio_thread_data + pClientInfo->nio_thread_index) \
 				->group_array);
 
-		key_info.obj_id_len = snprintf(key_info.szObjectId, \
-			sizeof(key_info.szObjectId), \
-			"%s/%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
-			g_group_name, FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
-			store_path_index, pSrcFileInfo->src_true_filename);
+	key_info.obj_id_len = snprintf(key_info.szObjectId, \
+		sizeof(key_info.szObjectId), \
+		"%s/%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
+		g_group_name, FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
+		pFileContext->extra_info.upload.trunk_info.path.store_path_index, \
+		pSrcFileInfo->src_true_filename);
 
-		key_info.key_len = sizeof(FDHT_KEY_NAME_REF_COUNT) - 1;
-		memcpy(key_info.szKey, FDHT_KEY_NAME_REF_COUNT, \
-			key_info.key_len);
-		value_len = sizeof(value) - 1;
-		if ((result=fdht_inc_ex(pGroupArray, g_keep_alive, &key_info, \
-			FDHT_EXPIRES_NEVER, 1, value, &value_len)) != 0)
-		{
-			logWarning("file: "__FILE__", line: %d, " \
-				"client ip: %s, fdht_inc fail," \
-				"errno: %d, error info: %s", \
-				__LINE__, pTask->client_ip, \
-				result, STRERROR(result));
-		}
-		else
-		{
-		//*(value + value_len) = '\0';
-
-		key_info.obj_id_len = snprintf(key_info.szObjectId, \
-			sizeof(key_info.szObjectId), \
-			"%s/%s", g_group_name, filename);
-		key_info.key_len = sizeof(FDHT_KEY_NAME_FILE_SIG) - 1;
-		memcpy(key_info.szKey, FDHT_KEY_NAME_FILE_SIG, \
-			key_info.key_len);
-		if ((result=fdht_set_ex(pGroupArray, g_keep_alive, \
-			&key_info, FDHT_EXPIRES_NEVER, \
-			pSrcFileInfo->src_file_sig, \
-			pSrcFileInfo->src_file_sig_len)) != 0)
-		{
-			logWarning("file: "__FILE__", line: %d, " \
-				"client ip: %s, fdht_set fail," \
-				"errno: %d, error info: %s", \
-				__LINE__, pTask->client_ip, \
-				result, STRERROR(result));
-		}
-
-		/*
-		logInfo("create link, counter=%s, object_id=%s(%d), key=%s, file_sig_len=(%d)", \
-			value, key_info.szObjectId, key_info.obj_id_len, \
-			FDHT_KEY_NAME_FILE_SIG, \
-			pSrcFileInfo->src_file_sig_len);
-		*/
-		}
+	key_info.key_len = sizeof(FDHT_KEY_NAME_REF_COUNT) - 1;
+	memcpy(key_info.szKey, FDHT_KEY_NAME_REF_COUNT, key_info.key_len);
+	value_len = sizeof(value) - 1;
+	if ((result=fdht_inc_ex(pGroupArray, g_keep_alive, &key_info, \
+		FDHT_EXPIRES_NEVER, 1, value, &value_len)) != 0)
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"client ip: %s, fdht_inc fail," \
+			"errno: %d, error info: %s", \
+			__LINE__, pTask->client_ip, \
+			result, STRERROR(result));
+		return 0;
 	}
+
+	key_info.obj_id_len = snprintf(key_info.szObjectId, \
+			sizeof(key_info.szObjectId), \
+			"%s/%s", g_group_name, link_filename);
+	key_info.key_len = sizeof(FDHT_KEY_NAME_FILE_SIG) - 1;
+	memcpy(key_info.szKey, FDHT_KEY_NAME_FILE_SIG, key_info.key_len);
+	if ((result=fdht_set_ex(pGroupArray, g_keep_alive, \
+		&key_info, FDHT_EXPIRES_NEVER, \
+		pSrcFileInfo->src_file_sig, \
+		pSrcFileInfo->src_file_sig_len)) != 0)
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"client ip: %s, fdht_set fail," \
+			"errno: %d, error info: %s", \
+			__LINE__, pTask->client_ip, \
+			result, STRERROR(result));
+	}
+
+	/*
+	logInfo("create link, counter=%s, object_id=%s(%d), key=%s, file_sig_len=(%d)", \
+		value, key_info.szObjectId, key_info.obj_id_len, \
+		FDHT_KEY_NAME_FILE_SIG, \
+		pSrcFileInfo->src_file_sig_len);
+	*/
 
 	return 0;
 }
@@ -3411,6 +3563,8 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 		clean_func = dio_trunk_write_finish_clean_up;
 		file_offset = TRUNK_FILE_START_OFFSET((*pTrunkInfo));
         	pFileContext->extra_info.upload.if_gen_filename = true;
+		pFileContext->extra_info.upload.file_type = \
+				FDFS_TRUNK_FILE_TYPE_REGULAR;
 		trunk_get_full_filename(pTrunkInfo, pFileContext->filename, \
 				sizeof(pFileContext->filename));
 		pFileContext->extra_info.upload.before_open_callback = \
@@ -4090,6 +4244,8 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	{
 		pFileContext->crc32 = trunkHeader.crc32;
 		pFileContext->extra_info.upload.start_time = trunkHeader.mtime;
+		pFileContext->extra_info.upload.file_type = \
+				FDFS_TRUNK_FILE_TYPE_REGULAR;
        		snprintf(pFileContext->extra_info.upload.formatted_ext_name, \
 		sizeof(pFileContext->extra_info.upload.formatted_ext_name), 
 			"%s", trunkHeader.formatted_ext_name);
@@ -5398,13 +5554,12 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 			pSourceFileInfo->src_true_filename, \
 			strlen(pSourceFileInfo->src_true_filename), \
 			&stat_buf, pTrunkInfo, &trunk_header);
-
 	if (result != 0 || !S_ISREG(stat_buf.st_mode))
 	{
 		FDHTKeyInfo key_info;
 		GroupArray *pGroupArray;
 
-		result = errno != 0 ? errno : EINVAL;
+		result = result != 0 ? result : EINVAL;
 		logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, file: %s call stat fail " \
 				"or it is not a regular file, " \
@@ -5446,11 +5601,33 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 
 	if (IS_TRUNK_FILE_BY_ID((*pTrunkInfo)))
 	{
+		if (!g_if_use_trunk_file)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, invalid trunked src file: %s, "\
+				"because i don't support trunked file!", \
+				__LINE__, pTask->client_ip, src_filename);
+			result = EINVAL;
+			break;
+		}
+
+		if (master_filename_len > 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, invalid trunked src file: %s, "\
+				"because slave file can't be a trunked file!", \
+				__LINE__, pTask->client_ip, src_filename);
+			result = EINVAL;
+			break;
+		}
+
+		pFileContext->extra_info.upload.if_trunk_file = true;
 		trunk_get_full_filename(pTrunkInfo, src_full_filename, \
 				sizeof(src_full_filename));
 	}
 	else
 	{
+		pFileContext->extra_info.upload.if_trunk_file = false;
 		sprintf(src_full_filename, "%s/data/%s", \
 			g_fdfs_store_paths[store_path_index], \
 			pSourceFileInfo->src_true_filename);
@@ -5513,10 +5690,24 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 
 	pClientInfo->file_context.extra_info.upload.trunk_info.path. \
 			store_path_index = store_path_index;
+	if (pFileContext->extra_info.upload.if_trunk_file)
+	{
+	pFileContext->calc_crc32 = false;
+	pFileContext->calc_file_hash = false;
+	pFileContext->extra_info.upload.if_appender_file = false;
+	pFileContext->extra_info.upload.if_gen_filename = true;
+	pFileContext->extra_info.upload.start_time = time(NULL);
+	pFileContext->crc32 = rand();
+	strcpy(pFileContext->extra_info.upload.file_ext_name, file_ext_name);
+	storage_format_ext_name(file_ext_name, \
+			pFileContext->extra_info.upload.formatted_ext_name);
+	return storage_trunk_create_link(pTask, src_filename);
+	}
+
 	pClientInfo->file_context.extra_info.upload.if_sub_path_alloced = false;
 	result = storage_service_do_create_link(pTask, pSourceFileInfo, \
-			stat_buf.st_size, master_filename, prefix_name, \
-			file_ext_name, filename, filename_len);
+			stat_buf.st_size, master_filename, \
+			prefix_name, file_ext_name, filename, filename_len);
 	if (result != 0)
 	{
 		break;
