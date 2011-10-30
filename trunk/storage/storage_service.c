@@ -1830,6 +1830,7 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 
 		if (is_local_host_ip(pStorageServer->ip_addr))
 		{
+			/*
 			if (storage_judge_file_type_by_size(src_filename, \
 				src_filename_len, FDFS_TRUNK_FILE_MARK_SIZE))
 			{
@@ -1839,6 +1840,8 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 			{
 				bCreateDirectly = true;
 			}
+			*/
+			bCreateDirectly = true;
 		}
 		else
 		{
@@ -6030,7 +6033,7 @@ static int storage_do_create_link(struct fast_task_info *pTask)
 			filename, &filename_len);
 	if (result == STORAGE_STATUE_DEAL_FILE)
 	{
-		return 0;
+		return STORAGE_STATUE_DEAL_FILE;
 	}
 	} while (0);
 
@@ -6042,6 +6045,7 @@ static int storage_do_create_link(struct fast_task_info *pTask)
 		memcpy(p + FDFS_GROUP_NAME_MAX_LEN, filename, filename_len);
 	}
 
+	/*
 	pClientInfo->total_offset = 0;
 	pTask->length = pClientInfo->total_length;
 	pHeader = (TrackerHeader *)pTask->data;
@@ -6051,6 +6055,8 @@ static int storage_do_create_link(struct fast_task_info *pTask)
 			pHeader->pkg_len);
 
 	storage_nio_notify(pTask);
+	*/
+
 	return result;
 }
 
@@ -6114,6 +6120,7 @@ static int storage_create_link(struct fast_task_info *pTask)
 		return result;
 	}
 
+	/*
 	pClientInfo->deal_func = storage_do_create_link;
 
 	pFileContext->fd = -1;
@@ -6128,8 +6135,10 @@ static int storage_create_link(struct fast_task_info *pTask)
 	}
 
 	logInfo("file: "__FILE__", line: %d, nInPackLen=%d", __LINE__, (int)nInPackLen);
-
 	return STORAGE_STATUE_DEAL_FILE;
+	*/
+
+	return storage_do_create_link(pTask);
 }
 
 int fdfs_stat_file_sync_func(void *args)
