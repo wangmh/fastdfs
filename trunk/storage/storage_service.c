@@ -235,6 +235,33 @@ static int storage_delete_file_auto(StorageFileContext *pFileContext)
 	}
 }
 
+static bool storage_judge_file_type_by_size(const char *remote_filename, \
+		const int filename_len, const int64_t type_mask)
+{
+	int buff_len;
+	char buff[64];
+	int64_t file_size;
+
+	if (filename_len < FDFS_LOGIC_FILE_PATH_LEN \
+		+ FDFS_FILENAME_BASE64_LENGTH + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"filename is too short, length: %d < %d", \
+			__LINE__, filename_len, FDFS_LOGIC_FILE_PATH_LEN \
+			+ FDFS_FILENAME_BASE64_LENGTH \
+			+ FDFS_FILE_EXT_NAME_MAX_LEN + 1);
+		return 0;
+	}
+
+	memset(buff, 0, sizeof(buff));
+	base64_decode_auto(&g_fdfs_base64_context, (char *)remote_filename + \
+		FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
+		buff, &buff_len);
+
+	file_size = buff2long(buff + sizeof(int) * 2);
+	return (file_size & type_mask) ? true : false;
+}
+
 static void storage_delete_file_log_error(struct fast_task_info *pTask, \
 			const int err_no)
 {
@@ -1803,11 +1830,23 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 
 		if (is_local_host_ip(pStorageServer->ip_addr))
 		{
-			bCreateDirectly = true;
+			if (storage_judge_file_type_by_size(src_filename, \
+				src_filename_len, FDFS_TRUNK_FILE_MARK_SIZE))
+			{
+				bCreateDirectly = false;
+			}
+			else
+			{
+				bCreateDirectly = true;
+			}
 		}
 		else
 		{
 			bCreateDirectly = false;
+		}
+
+		if (!bCreateDirectly)
+		{
 			if ((result=tracker_connect_server(pStorageServer)) != 0)
 			{
 				tracker_disconnect_server(&trackerServer);
@@ -1815,6 +1854,8 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 			}
 		}
 	}
+
+	logInfo("file: "__FILE__", line: %d, bCreateDirectly=%d", __LINE__, bCreateDirectly);
 
 	if (bCreateDirectly)
 	{
@@ -2177,6 +2218,8 @@ static int storage_trunk_create_link(struct fast_task_info *pTask, \
 	pFileContext =  &(pClientInfo->file_context);
 	file_bytes = strlen(src_filename);
 
+	logInfo("file: "__FILE__", line: %d, file_bytes=%d", __LINE__, (int)file_bytes);
+
 	pFileContext->extra_info.upload.if_sub_path_alloced = true;
 	pTrunkInfo = &(pFileContext->extra_info.upload.trunk_info);
 	if ((result=trunk_client_trunk_alloc_space( \
@@ -2210,12 +2253,21 @@ static int storage_trunk_create_link(struct fast_task_info *pTask, \
 	p += sizeof(SourceFileInfo);
 	memcpy(p, src_filename, file_bytes);
 
- 	return storage_write_to_file(pTask, file_offset, file_bytes, \
-			p - pTask->data, dio_write_file, \
-			storage_trunk_create_link_file_done_callback, \
-			dio_trunk_write_finish_clean_up, \
-			pFileContext->extra_info.upload.trunk_info. \
-			path.store_path_index);
+	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
+	pFileContext->fd = -1;
+	pFileContext->buff_offset = p - pTask->data;
+	pFileContext->offset = file_offset;
+	pFileContext->start = file_offset;
+	pFileContext->end = file_offset + file_bytes;
+	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
+		pTask, pFileContext->extra_info.upload.trunk_info.path. \
+		store_path_index, pFileContext->op);
+
+	pFileContext->done_callback = storage_trunk_create_link_file_done_callback;
+	pClientInfo->clean_func = dio_trunk_write_finish_clean_up;
+
+	dio_write_file(pTask);
+	return STORAGE_STATUE_DEAL_FILE;
 }
 
 static int storage_service_do_create_link(struct fast_task_info *pTask, \
@@ -5592,6 +5644,9 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 	pFileContext =  &(pClientInfo->file_context);
 	store_path_index = pFileContext->extra_info.
 				upload.trunk_info.path.store_path_index;
+
+	logInfo("file: "__FILE__", line: %d", __LINE__);
+
 	do
 	{
 	pTrunkInfo = &(pFileContext->extra_info.upload.trunk_info);
@@ -5732,6 +5787,8 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 		*filename = '\0';
 		*filename_len = 0;
 	}
+
+	logInfo("file: "__FILE__", line: %d", __LINE__);
 
 	pClientInfo->file_context.extra_info.upload.trunk_info.path. \
 			store_path_index = store_path_index;
@@ -5964,6 +6021,10 @@ static int storage_do_create_link(struct fast_task_info *pTask)
 			master_filename, master_filename_len, \
 			prefix_name, file_ext_name, \
 			filename, &filename_len);
+	if (result == STORAGE_STATUE_DEAL_FILE)
+	{
+		return 0;
+	}
 	} while (0);
 
 	if (result == 0)
