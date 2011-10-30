@@ -244,8 +244,12 @@ static void client_sock_read(int sock, short event, void *arg)
 			recv_bytes = pTask->length - pTask->offset;
 		}
 
-		//logInfo("recv_bytes=%d, pTask->length=%d, pTask->offset=%d",
-		//		recv_bytes, pTask->length, pTask->offset);
+		/*
+		logInfo("total_length="INT64_PRINTF_FORMAT", recv_bytes=%d, "
+			"pTask->length=%d, pTask->offset=%d",
+			pClientInfo->total_length, recv_bytes, 
+			pTask->length, pTask->offset);
+		*/
 
 		bytes = recv(sock, pTask->data + pTask->offset, recv_bytes, 0);
 		if (bytes < 0)

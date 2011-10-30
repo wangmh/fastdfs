@@ -1883,12 +1883,14 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 	}
 	else
 	{
+	logInfo("file: "__FILE__", line: %d, bCreateDirectly=%d", __LINE__, bCreateDirectly);
 		result = storage_client_create_link(&trackerServer, \
 				pStorageServer, master_filename, \
 				src_filename, src_filename_len, \
 				src_file_sig, src_file_sig_len, \
 				group_name, prefix_name, \
 				file_ext_name, remote_filename, filename_len);
+	logInfo("file: "__FILE__", line: %d, bCreateDirectly=%d", __LINE__, bCreateDirectly);
 		if (pStorageServer != NULL)
 		{
 			fdfs_quit(pStorageServer);
@@ -1896,6 +1898,7 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 		}
 	}
 
+	logInfo("file: "__FILE__", line: %d, bCreateDirectly=%d", __LINE__, bCreateDirectly);
 	fdfs_quit(&trackerServer);
 	tracker_disconnect_server(&trackerServer);
 
@@ -2218,8 +2221,6 @@ static int storage_trunk_create_link(struct fast_task_info *pTask, \
 	pFileContext =  &(pClientInfo->file_context);
 	file_bytes = strlen(src_filename);
 
-	logInfo("file: "__FILE__", line: %d, file_bytes=%d", __LINE__, (int)file_bytes);
-
 	pFileContext->extra_info.upload.if_sub_path_alloced = true;
 	pTrunkInfo = &(pFileContext->extra_info.upload.trunk_info);
 	if ((result=trunk_client_trunk_alloc_space( \
@@ -2266,7 +2267,11 @@ static int storage_trunk_create_link(struct fast_task_info *pTask, \
 	pFileContext->done_callback = storage_trunk_create_link_file_done_callback;
 	pClientInfo->clean_func = dio_trunk_write_finish_clean_up;
 
+	logInfo("file: "__FILE__", line: %d, file_bytes=%d", __LINE__, (int)file_bytes);
+
 	dio_write_file(pTask);
+	logInfo("file: "__FILE__", line: %d, file_bytes=%d", __LINE__, (int)file_bytes);
+
 	return STORAGE_STATUE_DEAL_FILE;
 }
 
@@ -5876,6 +5881,8 @@ static int storage_do_create_link(struct fast_task_info *pTask)
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 	pClientInfo->total_length = sizeof(TrackerHeader);
 
+	logInfo("file: "__FILE__", line: %d, storage_do_create_link, nInPackLen=%d", __LINE__, (int)nInPackLen);
+
 	do
 	{
 	if (nInPackLen <= 3 * FDFS_PROTO_PKG_LEN_SIZE + \
@@ -6064,6 +6071,8 @@ static int storage_create_link(struct fast_task_info *pTask)
 
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 
+	logInfo("file: "__FILE__", line: %d, nInPackLen=%d", __LINE__, (int)nInPackLen);
+
 	if (nInPackLen <= 3 * FDFS_PROTO_PKG_LEN_SIZE + \
 		FDFS_GROUP_NAME_MAX_LEN + FDFS_FILE_PREFIX_MAX_LEN + \
 		FDFS_FILE_EXT_NAME_MAX_LEN)
@@ -6117,6 +6126,8 @@ static int storage_create_link(struct fast_task_info *pTask)
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
+
+	logInfo("file: "__FILE__", line: %d, nInPackLen=%d", __LINE__, (int)nInPackLen);
 
 	return STORAGE_STATUE_DEAL_FILE;
 }
