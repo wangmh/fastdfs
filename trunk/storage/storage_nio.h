@@ -79,7 +79,7 @@ typedef struct
 	bool calc_crc32;    //if calculate file content hash code
 	bool calc_file_hash;      //if calculate file content hash code
 	int open_flags;           //open file flags
-	int file_hash_codes[4];  //file hash code
+	int file_hash_codes[4];   //file hash code
 	int crc32;   //file content crc32 signature
 
 	union
