@@ -215,6 +215,26 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 		++g_stat_change_count;  \
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
+static int storage_delete_file_auto(StorageFileContext *pFileContext)
+{
+	if (pFileContext->extra_info.upload.if_trunk_file)
+	{
+		return trunk_file_delete(pFileContext->filename,
+                        &(pFileContext->extra_info.upload.trunk_info));
+	}
+	else
+	{
+		if (unlink(pFileContext->filename) == 0)
+		{
+			return 0;
+		}
+		else
+		{
+			return errno != 0 ? errno : ENOENT;
+		}
+	}
+}
+
 static void storage_delete_file_log_error(struct fast_task_info *pTask, \
 			const int err_no)
 {
@@ -552,7 +572,6 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 	GroupArray *pGroupArray;
 	char meta_filename[MAX_PATH_SIZE + 256];
 	char true_filename[128];
-	char full_filename[MAX_PATH_SIZE + 256];
 	char value[128];
 	FDHTKeyInfo key_info_fid;
 	FDHTKeyInfo key_info_ref;
@@ -696,6 +715,8 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 	if (g_check_file_duplicate)
 	{
 		char *pSeperator;
+		struct stat stat_buf;
+		FDFSTrunkHeader trunkHeader;
 
 		pGroupArray=&((g_nio_thread_data+pClientInfo->nio_thread_index)\
 				->group_array);
@@ -772,15 +793,26 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 			return result;
 		}
 
-		sprintf(full_filename, "%s/data/%s", \
-				g_fdfs_store_paths[store_path_index], true_filename);
-		if (unlink(full_filename) != 0)
+		if ((result=trunk_file_lstat(store_path_index, true_filename, \
+			value_len, &stat_buf, \
+			&(pFileContext->extra_info.upload.trunk_info), \
+			&trunkHeader)) != 0)
+		{
+		logWarning("file: "__FILE__", line: %d, " \
+			"client ip:%s, call lstat logic file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, pTask->client_ip, value, \
+			result, STRERROR(result));
+		return 0;
+		}
+
+		if ((result=storage_delete_file_auto(pFileContext)) != 0)
 		{
 			logWarning("file: "__FILE__", line: %d, " \
-				"client ip: %s, delete source file " \
+				"client ip: %s, delete logic source file " \
 				"%s fail, errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, \
-				full_filename, errno, STRERROR(errno));
+				value, errno, STRERROR(errno));
 			return 0;
 		}
 
@@ -1829,27 +1861,6 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 	return result;
 }
 
-
-static int storage_delete_file_auto(StorageFileContext *pFileContext)
-{
-	if (pFileContext->extra_info.upload.if_trunk_file)
-	{
-		return trunk_file_delete(pFileContext->filename,
-                        &(pFileContext->extra_info.upload.trunk_info));
-	}
-	else
-	{
-		if (unlink(pFileContext->filename) == 0)
-		{
-			return 0;
-		}
-		else
-		{
-			return errno != 0 ? errno : ENOENT;
-		}
-	}
-}
-
 static int storage_service_upload_file_done(struct fast_task_info *pTask)
 {
 	int result;
@@ -1989,9 +2000,8 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 			char *pSrcFilename;
 			char *pSeperator;
 
-			if (storage_delete_file_auto(pFileContext) != 0)
+			if ((result=storage_delete_file_auto(pFileContext)) != 0)
 			{
-				result = errno != 0 ? errno : EPERM;
 				logError("file: "__FILE__", line: %d, "\
 					"unlink %s fail, errno: %d, " \
 					"error info: %s", __LINE__, \
