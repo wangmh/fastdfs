@@ -1,4 +1,7 @@
 
+Version 3.04  2011-10-29
+ * bug fixed: duplicate files only save one entry ok
+
 Version 3.03  2011-10-16
  * ignore existed link when sync link file
  * http token checking support persistent token

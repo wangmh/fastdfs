@@ -396,7 +396,6 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 		(filename_len - (FDFS_FILE_EXT_NAME_MAX_LEN + 1)), \
 		FDFS_FILE_EXT_NAME_MAX_LEN + 2); //include tailing '\0'
 	pTrunkHeader->alloc_size = pTrunkInfo->file.size;
-	pTrunkHeader->file_type = FDFS_TRUNK_FILE_TYPE_REGULAR;
 
 	pTrunkInfo->path.store_path_index = store_path_index;
 	pTrunkInfo->path.sub_path_high = strtol(true_filename, NULL, 16);
@@ -425,6 +424,22 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 		return result != 0 ? errno : EINVAL;
 	}
 
+	memset(pStat, 0, sizeof(struct stat));
+	pTrunkHeader->file_type = *(buff + FDFS_TRUNK_FILE_FILE_TYPE_OFFSET);
+	if (pTrunkHeader->file_type == FDFS_TRUNK_FILE_TYPE_REGULAR)
+	{
+		pStat->st_mode = S_IFREG;
+	}
+	else if (pTrunkHeader->file_type == FDFS_TRUNK_FILE_TYPE_LINK)
+	{
+		pStat->st_mode = S_IFLNK;
+	}
+	else
+	{
+		close(fd);
+		return EINVAL;
+	}
+
 	trunk_pack_header(pTrunkHeader, pack_buff);
 
 	/*
@@ -447,16 +462,14 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	}
 	*/
 
-	if (memcmp(pack_buff+1, buff+1, FDFS_TRUNK_FILE_HEADER_SIZE - 1) != 0)
+	if (memcmp(pack_buff, buff, FDFS_TRUNK_FILE_HEADER_SIZE) != 0)
 	{
 		close(fd);
 		return ENOENT;
 	}
 
-	memset(pStat, 0, sizeof(struct stat));
 	pStat->st_size = pTrunkHeader->file_size;
 	pStat->st_mtime = pTrunkHeader->mtime;
-	pStat->st_mode = S_IFREG;
 
 	if (pfd != NULL)
 	{
