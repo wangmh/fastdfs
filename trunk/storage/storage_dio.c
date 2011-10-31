@@ -490,9 +490,10 @@ int dio_write_file(struct fast_task_info *pTask)
 	{
 		result = errno != 0 ? errno : EIO;
 		logError("file: "__FILE__", line: %d, " \
-			"write to file: %s fail, " \
+			"write to file: %s fail, fd=%d, write_bytes=%d, " \
 			"errno: %d, error info: %s", \
 			__LINE__, pFileContext->filename, \
+			pFileContext->fd, write_bytes, \
 			result, STRERROR(result));
 	}
 
