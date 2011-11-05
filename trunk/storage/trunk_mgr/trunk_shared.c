@@ -335,7 +335,8 @@ void trunk_file_info_decode(const char *str, FDFSTrunkFileInfo *pTrunkFile)
 	pTrunkFile->size = buff2int(buff + sizeof(int) * 2);
 }
 
-int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, int *pfd, \
+int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, \
+		const int file_size, int *pfd, \
 		char *buff, const int buff_size)
 {
 	char full_filename[MAX_PATH_SIZE];
@@ -343,7 +344,7 @@ int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, int *pfd, \
 	int result;
 	int read_bytes;
 
-	if (pTrunkInfo->file.size > buff_size)
+	if (file_size > buff_size)
 	{
 		return ENOSPC;
 	}
@@ -371,8 +372,8 @@ int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, int *pfd, \
 		}
 	}
 
-	read_bytes = read(fd, buff, pTrunkInfo->file.size);
-	if (read_bytes == pTrunkInfo->file.size)
+	read_bytes = read(fd, buff, file_size);
+	if (read_bytes == file_size)
 	{
 		result = 0;
 	}
@@ -416,14 +417,14 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 
 	do
 	{
-		result = trunk_file_get_content(pTrunkInfo, pfd, \
-        	        	src_filename, sizeof(src_filename) - 1);
+		result = trunk_file_get_content(pTrunkInfo, pStat->st_size, \
+				pfd, src_filename, sizeof(src_filename) - 1);
 		if (result != 0)
 		{
 			break;
 		}
 
-		src_filename_len = pTrunkInfo->file.size;
+		src_filename_len = pStat->st_size;
 		*(src_filename + src_filename_len) = '\0';
 		if ((result=storage_split_filename_ex(src_filename, \
 			&src_filename_len, src_true_filename, \
