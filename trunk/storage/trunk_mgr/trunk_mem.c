@@ -1170,7 +1170,7 @@ bool trunk_check_size(const int64_t file_size)
 }
 
 int trunk_file_delete(const char *trunk_filename, \
-			FDFSTrunkFullInfo *pTrunkInfo)
+		const FDFSTrunkFullInfo *pTrunkInfo)
 {
 	char pack_buff[FDFS_TRUNK_FILE_HEADER_SIZE];
 	char buff[64 * 1024];

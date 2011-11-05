@@ -335,12 +335,71 @@ void trunk_file_info_decode(const char *str, FDFSTrunkFileInfo *pTrunkFile)
 	pTrunkFile->size = buff2int(buff + sizeof(int) * 2);
 }
 
+int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, int *pfd, \
+		char *buff, const int buff_size)
+{
+	char full_filename[MAX_PATH_SIZE];
+	int fd;
+	int result;
+	int read_bytes;
+
+	if (pTrunkInfo->file.size > buff_size)
+	{
+		return ENOSPC;
+	}
+
+	if (pfd != NULL)
+	{
+		fd = *pfd;
+	}
+	else
+	{
+		trunk_get_full_filename(pTrunkInfo, full_filename, \
+				sizeof(full_filename));
+		fd = open(full_filename, O_RDONLY);
+		if (fd < 0)
+		{
+			return errno != 0 ? errno : EIO;
+		}
+
+		if (lseek(fd, pTrunkInfo->file.offset + \
+			FDFS_TRUNK_FILE_HEADER_SIZE, SEEK_SET) < 0)
+		{
+			result = errno != 0 ? errno : EIO;
+			close(fd);
+			return result;
+		}
+	}
+
+	read_bytes = read(fd, buff, pTrunkInfo->file.size);
+	if (read_bytes == pTrunkInfo->file.size)
+	{
+		result = 0;
+	}
+	else
+	{
+		result = errno != 0 ? errno : EINVAL;
+	}
+
+	if (pfd == NULL)
+	{
+		close(fd);
+	}
+
+	return result;
+}
+
 int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	const int filename_len, stat_func statfunc, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
 	FDFSTrunkHeader *pTrunkHeader, int *pfd)
 {
 	int result;
+	int src_store_path_index;
+	int src_filename_len;
+	char src_filename[128];
+	char src_true_filename[128];
+
 	result = trunk_file_do_lstat_func(store_path_index, \
 		true_filename, filename_len, statfunc, \
 		pStat, pTrunkInfo, pTrunkHeader, pfd);
@@ -355,7 +414,42 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 		return 0;
 	}
 
-	return 0;
+	do
+	{
+		result = trunk_file_get_content(pTrunkInfo, pfd, \
+        	        	src_filename, sizeof(src_filename) - 1);
+		if (result != 0)
+		{
+			break;
+		}
+
+		src_filename_len = pTrunkInfo->file.size;
+		*(src_filename + src_filename_len) = '\0';
+		if ((result=storage_split_filename_ex(src_filename, \
+			&src_filename_len, src_true_filename, \
+			&src_store_path_index)) != 0)
+		{
+			break;
+		}
+
+		if (pfd != NULL)
+		{
+			close(*pfd);
+			*pfd = -1;
+		}
+
+		result = trunk_file_do_lstat_func(src_store_path_index, \
+				src_true_filename, src_filename_len, statfunc, \
+				pStat, pTrunkInfo, pTrunkHeader, pfd);
+	} while (0);
+
+	if (result != 0 && pfd != NULL && *pfd >= 0)
+	{
+		close(*pfd);
+		*pfd = -1;
+	}
+
+	return result;
 }
 
 int trunk_file_do_lstat_func(const int store_path_index, \
@@ -441,11 +535,15 @@ int trunk_file_do_lstat_func(const int store_path_index, \
 	}
 
 	read_bytes = read(fd, buff, FDFS_TRUNK_FILE_HEADER_SIZE);
-	result = errno;
-	if (read_bytes != FDFS_TRUNK_FILE_HEADER_SIZE)
+	if (read_bytes == FDFS_TRUNK_FILE_HEADER_SIZE)
 	{
+		result = 0;
+	}
+	else
+	{
+		result = errno;
 		close(fd);
-		return result != 0 ? errno : EINVAL;
+		return result != 0 ? result : EINVAL;
 	}
 
 	memset(pStat, 0, sizeof(struct stat));

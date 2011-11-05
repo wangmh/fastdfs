@@ -110,6 +110,9 @@ char *trunk_get_full_filename(const FDFSTrunkFullInfo *pTrunkInfo, \
 void trunk_pack_header(const FDFSTrunkHeader *pTrunkHeader, char *buff);
 void trunk_unpack_header(const char *buff, FDFSTrunkHeader *pTrunkHeader);
 
+int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, int *pfd, \
+		char *buff, const int buff_size);
+
 #define trunk_file_stat(store_path_index, true_filename, filename_len, \
 			pStat, pTrunkInfo, pTrunkHeader) \
 	trunk_file_stat_func(store_path_index, true_filename, filename_len, \

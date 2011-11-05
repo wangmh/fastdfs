@@ -75,7 +75,7 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size);
 int trunk_check_and_init_file_ex(const char *filename, const int64_t file_size);
 
 int trunk_file_delete(const char *trunk_filename, \
-			FDFSTrunkFullInfo *pTrunkInfo);
+		const FDFSTrunkFullInfo *pTrunkInfo);
 
 #ifdef __cplusplus
 }
