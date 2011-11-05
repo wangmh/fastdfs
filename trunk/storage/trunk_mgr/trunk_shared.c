@@ -340,6 +340,30 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
 	FDFSTrunkHeader *pTrunkHeader, int *pfd)
 {
+	int result;
+	result = trunk_file_do_lstat_func(store_path_index, \
+		true_filename, filename_len, statfunc, \
+		pStat, pTrunkInfo, pTrunkHeader, pfd);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	if (!(statfunc == stat && IS_TRUNK_FILE_BY_ID((*pTrunkInfo)) \
+		&& S_ISLNK(pStat->st_mode)))
+	{
+		return 0;
+	}
+
+	return 0;
+}
+
+int trunk_file_do_lstat_func(const int store_path_index, \
+	const char *true_filename, \
+	const int filename_len, stat_func statfunc, \
+	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
+	FDFSTrunkHeader *pTrunkHeader, int *pfd)
+{
 	char full_filename[MAX_PATH_SIZE];
 	char buff[128];
 	char pack_buff[FDFS_TRUNK_FILE_HEADER_SIZE];

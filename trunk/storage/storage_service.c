@@ -2014,7 +2014,10 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	}
 	else
 	{
-		strcpy(pFileContext->filename, new_full_filename);
+		if (!pFileContext->extra_info.upload.if_trunk_file)
+		{
+			strcpy(pFileContext->filename, new_full_filename);
+		}
 		strcpy(pFileContext->fname2log, new_fname2log);
 	}
 
