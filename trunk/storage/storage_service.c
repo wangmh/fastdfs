@@ -2292,10 +2292,7 @@ static int storage_trunk_create_link(struct fast_task_info *pTask, \
 	pFileContext->done_callback = storage_trunk_create_link_file_done_callback;
 	pClientInfo->clean_func = dio_trunk_write_finish_clean_up;
 
-	logInfo("file: "__FILE__", line: %d, file_bytes=%d", __LINE__, (int)file_bytes);
-
 	dio_write_file(pTask);
-	logInfo("file: "__FILE__", line: %d, file_bytes=%d", __LINE__, (int)file_bytes);
 
 	return STORAGE_STATUE_DEAL_FILE;
 }
