@@ -1,6 +1,7 @@
 
-Version 3.04  2011-11-05
+Version 3.04  2011-11-07
  * bug fixed: duplicate files only save one entry ok
+ * bug fixed: sync correctly with more binlog files
 
 Version 3.03  2011-10-16
  * ignore existed link when sync link file

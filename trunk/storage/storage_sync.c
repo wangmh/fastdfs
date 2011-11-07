@@ -2041,6 +2041,7 @@ int storage_binlog_read(StorageBinLogReader *pReader, \
 
 		pReader->binlog_index++;
 		pReader->binlog_offset = 0;
+		pReader->binlog_buff.version = 0;
 		if ((result=storage_open_readable_binlog(pReader, \
 				get_binlog_readable_filename, pReader)) != 0)
 		{
