@@ -55,8 +55,10 @@ typedef struct
 	char op_type;
 	char filename[128];  //filename with path index prefix which should be trimed
 	char true_filename[128]; //pure filename
+	char src_filename[128];  //src filename with path index prefix
 	int filename_len;
 	int true_filename_len;
+	int src_filename_len;
 	int store_path_index;
 } StorageBinLogRecord;
 

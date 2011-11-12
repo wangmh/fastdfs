@@ -569,46 +569,43 @@ dest filename length: dest filename
 source filename length: source filename
 **/
 static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
-		const StorageBinLogRecord *pRecord)
+		StorageBinLogRecord *pRecord)
 {
 	TrackerHeader *pHeader;
 	int result;
-	char full_filename[MAX_PATH_SIZE];
 	char out_buff[sizeof(TrackerHeader) + 2 * FDFS_PROTO_PKG_LEN_SIZE + \
 			4 + FDFS_GROUP_NAME_MAX_LEN + 256];
 	char in_buff[1];
-	char src_full_filename[MAX_PATH_SIZE];
-	char *pSrcFilename;
-	char *p;
-	int src_filename_len;
+	FDFSTrunkFullInfo trunkInfo;
+	FDFSTrunkHeader trunkHeader;
 	int out_body_len;
 	int64_t in_bytes;
 	char *pBuff;
 	struct stat stat_buf;
-	int src_path_index;
+	int fd;
 
-	snprintf(full_filename, sizeof(full_filename), \
-		"%s/data/%s", g_fdfs_store_paths[pRecord->store_path_index], \
-		pRecord->true_filename);
-	if (lstat(full_filename, &stat_buf) != 0)
+	fd = -1;
+	if ((result=trunk_file_lstat_ex(pRecord->store_path_index, \
+		pRecord->true_filename, pRecord->true_filename_len, \
+		&stat_buf, &trunkInfo, &trunkHeader, &fd)) != 0)
 	{
-		if (errno == ENOENT)
+		if (result == ENOENT)
 		{
 		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK)
 		{
 			logDebug("file: "__FILE__", line: %d, " \
-				"sync data file, file: %s does not exist, " \
-				"maybe delete later?", \
-				__LINE__, full_filename);
+				"sync data file, logic file: %s does not " \
+				"exist, maybe delete later?", \
+				__LINE__, pRecord->filename);
 		}
 		}
 		else
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"call stat fail, file: %s, "\
+				"call stat fail, logic file: %s, "\
 				"error no: %d, error info: %s", \
-				__LINE__, full_filename, \
-				errno, STRERROR(errno));
+				__LINE__, pRecord->filename, \
+				result, STRERROR(result));
 		}
 
 		return 0;
@@ -616,17 +613,61 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 
 	if (!S_ISLNK(stat_buf.st_mode))
 	{
+		if (fd >= 0)
+		{
+			close(fd);
+		}
+
 		if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK)
 		{
 			logWarning("file: "__FILE__", line: %d, " \
-				"sync data file, file %s is not a symbol link,"\
-				" maybe create later?", \
-				__LINE__, full_filename);
+				"sync data file, logic file %s is not " \
+				"a symbol link, maybe create later?", \
+				__LINE__, pRecord->filename);
 		}
 
 		return 0;
 	}
 
+	if (pRecord->src_filename_len > 0)
+	{
+		if (fd >= 0)
+		{
+			close(fd);
+		}
+	}
+	else if (IS_TRUNK_FILE_BY_ID(trunkInfo))
+	{
+		result = trunk_file_get_content(&trunkInfo, \
+                	stat_buf.st_size, &fd, pRecord->src_filename, \
+			sizeof(pRecord->src_filename));
+		close(fd);
+
+		if (result != 0)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"logic file: %s, get file content fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pRecord->filename, \
+				result, STRERROR(result));
+			return 0;
+		}
+
+		pRecord->src_filename_len = stat_buf.st_size;
+		*(pRecord->src_filename + pRecord->src_filename_len) = '\0';
+	}
+	else
+	{
+	char full_filename[MAX_PATH_SIZE];
+	char src_full_filename[MAX_PATH_SIZE];
+	char *p;
+	char *pSrcFilename;
+	int src_path_index;
+	int src_filename_len;
+
+	snprintf(full_filename, sizeof(full_filename), \
+		"%s/data/%s", g_fdfs_store_paths[pRecord->store_path_index], \
+		pRecord->true_filename);
 	src_filename_len = readlink(full_filename, src_full_filename, \
 				sizeof(src_full_filename) - 1);
 	if (src_filename_len <= 0)
@@ -683,9 +724,9 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 		}
 	}
 
-	pSrcFilename -= 4;
-	src_filename_len -= (pSrcFilename - src_full_filename);
-	if (src_filename_len >= 128)
+	pRecord->src_filename_len = src_filename_len - (pSrcFilename - \
+					src_full_filename) - 4;
+	if (pRecord->src_filename_len >= sizeof(pRecord->src_filename))
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"source data file: %s is invalid", \
@@ -693,14 +734,15 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 		return EINVAL;
 	}
 
-	sprintf(out_buff, "%c"FDFS_STORAGE_DATA_DIR_FORMAT"/", \
-			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, src_path_index);
-	memcpy(pSrcFilename, out_buff, 4);
+	sprintf(pRecord->src_filename, "%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
+			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
+			src_path_index, pSrcFilename);
+	}
 
 	pHeader = (TrackerHeader *)out_buff;
 	memset(out_buff, 0, sizeof(out_buff));
 	long2buff(pRecord->filename_len, out_buff + sizeof(TrackerHeader));
-	long2buff(src_filename_len, out_buff + sizeof(TrackerHeader) + \
+	long2buff(pRecord->src_filename_len, out_buff + sizeof(TrackerHeader) + \
 			FDFS_PROTO_PKG_LEN_SIZE);
 	int2buff(pRecord->timestamp, out_buff + sizeof(TrackerHeader) + \
 			2 * FDFS_PROTO_PKG_LEN_SIZE);
@@ -711,11 +753,11 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 		pRecord->filename, pRecord->filename_len);
 	memcpy(out_buff + sizeof(TrackerHeader) + 2 * FDFS_PROTO_PKG_LEN_SIZE \
 		+ 4 + FDFS_GROUP_NAME_MAX_LEN + pRecord->filename_len, \
-		pSrcFilename, src_filename_len);
+		pRecord->src_filename, pRecord->src_filename_len);
 
 	out_body_len = 2 * FDFS_PROTO_PKG_LEN_SIZE + 4 + \
 		FDFS_GROUP_NAME_MAX_LEN + pRecord->filename_len + \
-		src_filename_len;
+		pRecord->src_filename_len;
 	long2buff(out_body_len, pHeader->pkg_len);
 	pHeader->cmd = STORAGE_PROTO_CMD_SYNC_CREATE_LINK;
 
@@ -2082,6 +2124,36 @@ int storage_binlog_read(StorageBinLogReader *pReader, \
 
 	memcpy(pRecord->filename, cols[2], pRecord->filename_len);
 	*(pRecord->filename + pRecord->filename_len) = '\0';
+	if (pRecord->op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK || \
+	    pRecord->op_type == STORAGE_OP_TYPE_REPLICA_CREATE_LINK)
+	{
+		char *p;
+
+		p = strchr(pRecord->filename, ' ');
+		if (p == NULL)
+		{
+			*(pRecord->src_filename) = '\0';
+			pRecord->src_filename_len = 0;
+		}
+		else
+		{
+			pRecord->src_filename_len = pRecord->filename_len - \
+						(p - pRecord->filename) - 1;
+			pRecord->filename_len = p - pRecord->filename;
+			*p = '\0';
+
+			memcpy(pRecord->src_filename, p + 1, \
+				pRecord->src_filename_len);
+			*(pRecord->src_filename + \
+				pRecord->src_filename_len) = '\0';
+		}
+	}
+	else
+	{
+		*(pRecord->src_filename) = '\0';
+		pRecord->src_filename_len = 0;
+	}
+
 	pRecord->true_filename_len = pRecord->filename_len;
 	if ((result=storage_split_filename_ex(pRecord->filename, \
 			&pRecord->true_filename_len, pRecord->true_filename, \
