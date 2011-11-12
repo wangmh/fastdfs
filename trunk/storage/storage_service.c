@@ -4831,7 +4831,7 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 	}
 
 	if (trunk_file_lstat(dest_store_path_index, dest_true_filename, \
-			dest_filename_len, &stat_buf, \
+			dest_true_filename_len, &stat_buf, \
 			&(pFileContext->extra_info.upload.trunk_info), \
 			&trunkHeader) == 0)
 	{
@@ -4845,7 +4845,7 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 	{
 		FDFSTrunkFullInfo trunkInfo;
 		if (trunk_file_lstat(src_store_path_index, src_true_filename, \
-			src_filename_len, &stat_buf, \
+			src_true_filename_len, &stat_buf, \
 			&trunkInfo, &trunkHeader) != 0)
 		{
 			need_create_link = false;
