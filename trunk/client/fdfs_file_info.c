@@ -19,6 +19,7 @@
 
 int main(int argc, char *argv[])
 {
+	TrackerServerInfo *pTrackerServer;
 	char *conf_filename;
 	char file_id[128];
 	int result;
@@ -39,12 +40,20 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
+	pTrackerServer = tracker_get_connection();
+	if (pTrackerServer == NULL)
+	{
+		fdfs_client_destroy();
+		return errno != 0 ? errno : ECONNREFUSED;
+	}
+
 	snprintf(file_id, sizeof(file_id), "%s", argv[2]);
 
-	result = fdfs_get_file_info1(file_id, &file_info);
+	result = storage_query_file_info_ex1(pTrackerServer, NULL, \
+				file_id, &file_info, false);
 	if (result != 0)
 	{
-		printf("get file info fail, " \
+		printf("query file info fail, " \
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
 	}
@@ -62,6 +71,7 @@ int main(int argc, char *argv[])
 			file_info.crc32, file_info.crc32);
 	}
 
+	tracker_close_all_connections();
 	fdfs_client_destroy();
 
 	return 0;

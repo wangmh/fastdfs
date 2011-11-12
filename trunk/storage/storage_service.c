@@ -2933,6 +2933,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	char true_filename[128];
 	char src_filename[MAX_PATH_SIZE + 128];
 	char decode_buff[64];
+	struct stat file_lstat;
 	struct stat file_stat;
 	FDFSTrunkFullInfo trunkInfo;
 	FDFSTrunkHeader trunkHeader;
@@ -3004,7 +3005,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	}
 
 	if ((result=trunk_file_lstat(store_path_index, true_filename, \
-			true_filename_len, &file_stat, \
+			true_filename_len, &file_lstat, \
 			&trunkInfo, &trunkHeader)) != 0)
 	{
 		if ((!bSilence) || (result != ENOENT))
@@ -3019,36 +3020,91 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 		return result;
 	}
 
-	if (S_ISLNK(file_stat.st_mode))
+	if (S_ISLNK(file_lstat.st_mode))
 	{
-		char full_filename[MAX_PATH_SIZE + 128];
-
-		sprintf(full_filename, "%s/data/%s", \
-			g_fdfs_store_paths[store_path_index], true_filename);
-		if ((len=readlink(full_filename, src_filename, \
-			sizeof(src_filename))) < 0)
+		if (IS_TRUNK_FILE_BY_ID(trunkInfo))
 		{
-			result = errno != 0 ? errno : EPERM;
+		char src_filename[128];
+		char src_true_filename[128];
+		int src_filename_len;
+		int src_store_path_index;
+
+		result = trunk_file_get_content(&trunkInfo, file_lstat.st_size, \
+				NULL, src_filename, sizeof(src_filename) - 1);
+		if (result != 0)
+		{
+			if (!bSilence)
+			{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, call readlink file %s fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, true_filename, 
 				result, STRERROR(result));
+			}
 			return result;
 		}
 
-		*(src_filename + len) = '\0';
-		strcpy(full_filename, src_filename);
-		if (stat(full_filename, &file_stat) != 0)
+		src_filename_len = file_lstat.st_size;
+		*(src_filename + src_filename_len) = '\0';
+		if ((result=storage_split_filename_ex(src_filename, \
+			&src_filename_len, src_true_filename, \
+			&src_store_path_index)) != 0)
 		{
-			result = errno != 0 ? errno : ENOENT;
-			logError("file: "__FILE__", line: %d, " \
-				"client ip:%s, call stat file %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, pTask->client_ip, true_filename, 
-				result, STRERROR(result));
 			return result;
 		}
+
+		result = trunk_file_lstat(src_store_path_index, \
+				src_true_filename, src_filename_len, \
+				&file_stat, &trunkInfo, &trunkHeader);
+		if (result != 0)
+		{
+			if (!bSilence)
+			{
+				logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, call lstat logic file: %s " \
+				"fail, errno: %d, error info: %s", \
+				__LINE__, pTask->client_ip, src_filename, \
+				result, STRERROR(result));
+			}
+			return result;
+		}
+		}
+		else
+		{
+			char full_filename[MAX_PATH_SIZE + 128];
+
+			sprintf(full_filename, "%s/data/%s", \
+				g_fdfs_store_paths[store_path_index], \
+				true_filename);
+			if ((len=readlink(full_filename, src_filename, \
+					sizeof(src_filename))) < 0)
+			{
+				result = errno != 0 ? errno : EPERM;
+				logError("file: "__FILE__", line: %d, " \
+					"client ip:%s, call readlink file %s " \
+					"fail, errno: %d, error info: %s", \
+					__LINE__, pTask->client_ip, \
+					true_filename, result, STRERROR(result));
+				return result;
+			}
+
+			*(src_filename + len) = '\0';
+			strcpy(full_filename, src_filename);
+			if (stat(full_filename, &file_stat) != 0)
+			{
+				result = errno != 0 ? errno : ENOENT;
+				logError("file: "__FILE__", line: %d, " \
+					"client ip:%s, call stat file %s " \
+					"fail, errno: %d, error info: %s", \
+					__LINE__, pTask->client_ip, \
+					true_filename, result, STRERROR(result));
+				return result;
+			}
+		}
+	}
+	else
+	{
+		memcpy(&file_stat, &file_lstat, sizeof(struct stat));
 	}
 
 	if (filename_len < FDFS_LOGIC_FILE_PATH_LEN + \
@@ -3071,7 +3127,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	p = pTask->data + sizeof(TrackerHeader);
 	long2buff(file_stat.st_size, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
-	long2buff(file_stat.st_mtime, p);
+	long2buff(file_lstat.st_mtime, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 	long2buff(crc32, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;

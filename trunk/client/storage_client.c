@@ -32,6 +32,9 @@
 #include "client_global.h"
 #include "base64.h"
 
+static struct base64_context the_base64_context;
+static int the_base64_context_inited = 0;
+
 #define FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id) \
 	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
 	char *group_name; \
@@ -326,8 +329,11 @@ int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \
 	TrackerServerInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
 	char in_buff[3 * FDFS_PROTO_PKG_LEN_SIZE];
+	char buff[64];
 	int64_t in_bytes;
+	struct in_addr ip_addr;
 	int filename_len;
+	int buff_len;
 	char *pInBuff;
 	bool new_connection;
 
@@ -388,6 +394,25 @@ int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \
 			in_bytes, (int)sizeof(in_buff));
 		result = EINVAL;
 	}
+
+	if (!the_base64_context_inited)
+	{
+		the_base64_context_inited = 1;
+		base64_init_ex(&the_base64_context, 0, '-', '_', '.');
+	}
+
+	memset(buff, 0, sizeof(buff));
+	if (filename_len >= FDFS_LOGIC_FILE_PATH_LEN \
+		+ FDFS_FILENAME_BASE64_LENGTH + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
+	{
+		base64_decode_auto(&the_base64_context, (char *)filename + \
+			FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
+			buff, &buff_len);
+	}
+
+	memset(&ip_addr, 0, sizeof(ip_addr));
+	ip_addr.s_addr = ntohl(buff2int(buff));
+	inet_ntop(AF_INET,&ip_addr,pFileInfo->source_ip_addr,IP_ADDRESS_SIZE);
 
         pFileInfo->file_size = buff2long(in_buff);
 	pFileInfo->create_timestamp = buff2long(in_buff + \
@@ -1920,8 +1945,6 @@ int fdfs_get_file_info_ex1(const char *file_id, const bool get_from_server, \
 int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	const bool get_from_server, FDFSFileInfo *pFileInfo)
 {
-	static struct base64_context context;
-	static int context_inited = 0;
 	struct in_addr ip_addr;
 	int filename_len;
 	int buff_len;
@@ -1929,10 +1952,10 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	char buff[64];
 
 	memset(pFileInfo, 0, sizeof(FDFSFileInfo));
-	if (!context_inited)
+	if (!the_base64_context_inited)
 	{
-		context_inited = 1;
-		base64_init_ex(&context, 0, '-', '_', '.');
+		the_base64_context_inited = 1;
+		base64_init_ex(&the_base64_context, 0, '-', '_', '.');
 	}
 
 	filename_len = strlen(remote_filename);
@@ -1948,7 +1971,7 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	}
 
 	memset(buff, 0, sizeof(buff));
-	base64_decode_auto(&context, (char *)remote_filename + \
+	base64_decode_auto(&the_base64_context, (char *)remote_filename + \
 		FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
 		buff, &buff_len);
 

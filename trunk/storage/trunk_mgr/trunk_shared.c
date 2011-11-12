@@ -573,6 +573,7 @@ int trunk_file_do_lstat_func(const int store_path_index, \
 
 	trunk_pack_header(pTrunkHeader, pack_buff);
 
+	/*
 	{
 	char temp[265];
 	char szHexBuff[2 * FDFS_TRUNK_FILE_HEADER_SIZE + 1];
@@ -590,6 +591,7 @@ int trunk_file_do_lstat_func(const int store_path_index, \
 		trunk_info_dump(pTrunkInfo, temp, sizeof(temp)), \
 		trunk_header_dump(pTrunkHeader, full_filename, sizeof(full_filename)));
 	}
+	*/
 
 	if (memcmp(pack_buff, buff, FDFS_TRUNK_FILE_HEADER_SIZE) != 0)
 	{
