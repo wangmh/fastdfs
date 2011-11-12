@@ -778,6 +778,7 @@ int dio_check_trunk_file(struct fast_task_info *pTask)
 		trunk_unpack_header(old_header, &oldTrunkHeader);
 		old_file_size = oldTrunkHeader.file_size;
 		oldTrunkHeader.alloc_size = 0;
+		oldTrunkHeader.file_size = 0;
 		oldTrunkHeader.file_type = 0;
 		trunk_pack_header(&oldTrunkHeader, old_header);
 		if (memcmp(old_header, expect_header, \
