@@ -725,7 +725,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	}
 
 	pRecord->src_filename_len = src_filename_len - (pSrcFilename - \
-					src_full_filename) - 4;
+					src_full_filename) + 4;
 	if (pRecord->src_filename_len >= sizeof(pRecord->src_filename))
 	{
 		logError("file: "__FILE__", line: %d, " \
