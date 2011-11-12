@@ -5303,10 +5303,9 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 	{
 		file_bytes = 0;
 		logError("file: "__FILE__", line: %d, " \
-			"call stat fail, file: %s, "\
+			"call stat fail, logic file: %s, "\
 			"error no: %d, error info: %s", \
-			__LINE__, pFileContext->filename, \
-			result, STRERROR(result));
+			__LINE__, filename, result, STRERROR(result));
 		return result;
 	}
 
