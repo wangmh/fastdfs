@@ -4727,7 +4727,8 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 	TrackerHeader *pHeader;
 	char *p;
 	struct stat stat_buf;
-	FDFSTrunkHeader trunkHeader;
+	FDFSTrunkHeader srcTrunkHeader;
+	FDFSTrunkHeader destTrunkHeader;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char dest_filename[128];
 	char dest_true_filename[128];
@@ -4830,10 +4831,11 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 		break;
 	}
 
+	memset(&destTrunkHeader, 0, sizeof(destTrunkHeader));
 	if (trunk_file_lstat(dest_store_path_index, dest_true_filename, \
 			dest_true_filename_len, &stat_buf, \
 			&(pFileContext->extra_info.upload.trunk_info), \
-			&trunkHeader) == 0)
+			&destTrunkHeader) == 0)
 	{
 		need_create_link = false;
 		logWarning("file: "__FILE__", line: %d, " \
@@ -4846,7 +4848,7 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 		FDFSTrunkFullInfo trunkInfo;
 		if (trunk_file_lstat(src_store_path_index, src_true_filename, \
 			src_true_filename_len, &stat_buf, \
-			&trunkInfo, &trunkHeader) != 0)
+			&trunkInfo, &srcTrunkHeader) != 0)
 		{
 			need_create_link = false;
 			logWarning("file: "__FILE__", line: %d, " \
@@ -4864,6 +4866,15 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 	{
 		if (IS_TRUNK_FILE_BY_ID(pFileContext->extra_info.upload.trunk_info))
 		{
+			pFileContext->extra_info.upload.file_type = \
+						FDFS_TRUNK_FILE_TYPE_LINK;
+			pFileContext->extra_info.upload.start_time = \
+						destTrunkHeader.mtime;
+			pFileContext->crc32 = destTrunkHeader.crc32;
+			strcpy(pFileContext->extra_info.upload. \
+				formatted_ext_name, \
+				destTrunkHeader.formatted_ext_name);
+
 			pTask->length = pTask->size;
 			p = pTask->data + (pTask->length - src_filename_len);
 			if (p < pTask->data + sizeof(TrackerHeader))
