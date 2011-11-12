@@ -556,7 +556,10 @@ int dio_write_file(struct fast_task_info *pTask)
 		close(pFileContext->fd);
 		pFileContext->fd = -1;
 
-		pFileContext->done_callback(pTask, result);
+		if (pFileContext->done_callback != NULL)
+		{
+			pFileContext->done_callback(pTask, result);
+		}
 	}
 
 	return 0;
@@ -564,7 +567,10 @@ int dio_write_file(struct fast_task_info *pTask)
 
 	pClientInfo->clean_func(pTask);
 
-	pFileContext->done_callback(pTask, result);
+	if (pFileContext->done_callback != NULL)
+	{
+		pFileContext->done_callback(pTask, result);
+	}
 	return result;
 }
 
