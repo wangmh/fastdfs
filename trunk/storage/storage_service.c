@@ -4734,10 +4734,13 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 	char src_filename[128];
 	char src_true_filename[128];
 	char src_full_filename[MAX_PATH_SIZE];
+	char binlog_buff[256];
 	bool need_create_link;
 	int64_t nInPackLen;
 	int dest_filename_len;
+	int dest_true_filename_len;
 	int src_filename_len;
+	int src_true_filename_len;
 	int result;
 	int dest_store_path_index;
 	int src_store_path_index;
@@ -4806,15 +4809,18 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 	*(src_filename + src_filename_len) = '\0';
 	p += src_filename_len;
 
+	dest_true_filename_len = dest_filename_len;
 	if ((result=storage_split_filename_ex(dest_filename, \
-		&dest_filename_len, dest_true_filename, \
+		&dest_true_filename_len, dest_true_filename, \
 		&dest_store_path_index)) != 0)
 	{
 		break;
 	}
 
-	if ((result=storage_split_filename_ex(src_filename, &src_filename_len,
-			 src_true_filename, &src_store_path_index)) != 0)
+	src_true_filename_len = src_filename_len;
+	if ((result=storage_split_filename_ex(src_filename, \
+			&src_true_filename_len, src_true_filename, \
+			&src_store_path_index)) != 0)
 	{
 		break;
 	}
@@ -4858,6 +4864,23 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 	{
 		if (IS_TRUNK_FILE_BY_ID(pFileContext->extra_info.upload.trunk_info))
 		{
+			pTask->length = pTask->size;
+			p = pTask->data + (pTask->length - src_filename_len);
+			if (p < pTask->data + sizeof(TrackerHeader))
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"task buffer size: %d is too small", \
+					__LINE__, pTask->size);
+				break;
+			}
+
+			memcpy(p, src_filename, src_filename_len);
+			result = storage_trunk_do_create_link(pTask, \
+					src_filename_len, p - pTask->data, NULL);
+			if (result != 0)
+			{
+				break;
+			}
 		}
 		else
 		{
@@ -4893,13 +4916,11 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 		}
 	}
 
-	sprintf(pFileContext->fname2log, "%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
-		FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
-		dest_store_path_index, dest_true_filename);
-
+	snprintf(binlog_buff, sizeof(binlog_buff), "%s %s", \
+		dest_filename, src_filename);
 	result = storage_binlog_write(pFileContext->timestamp2log, \
 			STORAGE_OP_TYPE_REPLICA_CREATE_LINK, \
-			pFileContext->fname2log);
+			binlog_buff);
 	} while (0);
 
 	CHECK_AND_WRITE_TO_STAT_FILE1
