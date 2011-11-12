@@ -557,10 +557,18 @@ int trunk_file_do_lstat_func(const int store_path_index, \
 	{
 		pStat->st_mode = S_IFLNK;
 	}
+	else if (pTrunkHeader->file_type == FDFS_TRUNK_FILE_TYPE_NONE)
+	{
+		close(fd);
+		return ENOENT;
+	}
 	else
 	{
 		close(fd);
-		return EINVAL;
+		logError("file: "__FILE__", line: %d, " \
+			"Invalid file type: %d", __LINE__, \
+			pTrunkHeader->file_type);
+		return ENOENT;
 	}
 
 	trunk_pack_header(pTrunkHeader, pack_buff);
