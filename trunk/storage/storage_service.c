@@ -1065,8 +1065,8 @@ static void storage_trunk_create_link_file_done_callback( \
 				path.store_path_index, \
 				pSourceFileInfo->src_true_filename);
 
-			sprintf(binlog_msg, "%s %s", src_filename, \
-				pFileContext->fname2log);
+			sprintf(binlog_msg, "%s %s", \
+				pFileContext->fname2log, src_filename);
 			result = storage_binlog_write( \
 				pFileContext->timestamp2log, \
 				STORAGE_OP_TYPE_SOURCE_CREATE_LINK, \
@@ -2193,10 +2193,13 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 				new_fname2log);
 		if (result == 0)
 		{
+			char binlog_buff[256];
+			snprintf(binlog_buff, sizeof(binlog_buff), "%s %s", \
+				pFileContext->fname2log, new_fname2log);
 			result = storage_binlog_write( \
 				pFileContext->timestamp2log, \
 				STORAGE_OP_TYPE_SOURCE_CREATE_LINK, \
-				pFileContext->fname2log);
+				binlog_buff);
 		}
 
 		if (result != 0)
@@ -2224,6 +2227,42 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	return 0;
 }
 
+static int storage_trunk_do_create_link(struct fast_task_info *pTask, \
+		const int64_t file_bytes, const int buff_offset, \
+		FileDealDoneCallback done_callback)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	int64_t file_offset;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext =  &(pClientInfo->file_context);
+
+	file_offset = TRUNK_FILE_START_OFFSET( \
+			pFileContext->extra_info.upload.trunk_info);
+	trunk_get_full_filename(&(pFileContext->extra_info.upload.trunk_info), 
+			pFileContext->filename, sizeof(pFileContext->filename));
+	pFileContext->extra_info.upload.before_open_callback = \
+				dio_check_trunk_file;
+	pFileContext->extra_info.upload.before_close_callback = \
+				dio_write_chunk_header;
+	pFileContext->open_flags = O_RDWR | g_extra_open_file_flags;
+	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
+	pFileContext->fd = -1;
+	pFileContext->buff_offset = buff_offset;
+	pFileContext->offset = file_offset;
+	pFileContext->start = file_offset;
+	pFileContext->end = file_offset + file_bytes;
+	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
+		pTask, pFileContext->extra_info.upload.trunk_info.path. \
+		store_path_index, pFileContext->op);
+
+	pFileContext->done_callback = done_callback;
+	pClientInfo->clean_func = dio_trunk_write_finish_clean_up;
+
+	return dio_write_file(pTask);
+}
+
 static int storage_trunk_create_link(struct fast_task_info *pTask, \
 	const char *src_filename, const SourceFileInfo *pSourceFileInfo, \
 	const bool bNeedReponse)
@@ -2233,7 +2272,6 @@ static int storage_trunk_create_link(struct fast_task_info *pTask, \
 	FDFSTrunkFullInfo *pTrunkInfo;
 	TrunkCreateLinkArg *pCreateLinkArg;
 	char *p;
-	int64_t file_offset;
 	int64_t file_bytes;
 	int result;
 
@@ -2249,15 +2287,6 @@ static int storage_trunk_create_link(struct fast_task_info *pTask, \
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
-
-	file_offset = TRUNK_FILE_START_OFFSET((*pTrunkInfo));
-	trunk_get_full_filename(pTrunkInfo, pFileContext->filename, \
-			sizeof(pFileContext->filename));
-	pFileContext->extra_info.upload.before_open_callback = \
-				dio_check_trunk_file;
-	pFileContext->extra_info.upload.before_close_callback = \
-				dio_write_chunk_header;
-	pFileContext->open_flags = O_RDWR | g_extra_open_file_flags;
 
 	pTask->length = pTask->size;
 	p = pTask->data + (pTask->length - sizeof(TrunkCreateLinkArg) \
@@ -2279,21 +2308,8 @@ static int storage_trunk_create_link(struct fast_task_info *pTask, \
 	p += sizeof(TrunkCreateLinkArg);
 	memcpy(p, src_filename, file_bytes);
 
-	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
-	pFileContext->fd = -1;
-	pFileContext->buff_offset = p - pTask->data;
-	pFileContext->offset = file_offset;
-	pFileContext->start = file_offset;
-	pFileContext->end = file_offset + file_bytes;
-	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
-		pTask, pFileContext->extra_info.upload.trunk_info.path. \
-		store_path_index, pFileContext->op);
-
-	pFileContext->done_callback = storage_trunk_create_link_file_done_callback;
-	pClientInfo->clean_func = dio_trunk_write_finish_clean_up;
-
-	dio_write_file(pTask);
-
+	storage_trunk_do_create_link(pTask, file_bytes, p - pTask->data, \
+			storage_trunk_create_link_file_done_callback);
 	return STORAGE_STATUE_DEAL_FILE;
 }
 
@@ -4710,14 +4726,20 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 	StorageFileContext *pFileContext;
 	TrackerHeader *pHeader;
 	char *p;
+	struct stat stat_buf;
+	FDFSTrunkHeader trunkHeader;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char dest_filename[128];
+	char dest_true_filename[128];
 	char src_filename[128];
 	char src_true_filename[128];
 	char src_full_filename[MAX_PATH_SIZE];
+	bool need_create_link;
 	int64_t nInPackLen;
 	int dest_filename_len;
 	int src_filename_len;
 	int result;
+	int dest_store_path_index;
 	int src_store_path_index;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
@@ -4776,11 +4798,20 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 		break;
 	}
 
+	memcpy(dest_filename, p, dest_filename_len);
+	*(dest_filename + dest_filename_len) = '\0';
 	p += dest_filename_len;
 
 	memcpy(src_filename, p, src_filename_len);
 	*(src_filename + src_filename_len) = '\0';
 	p += src_filename_len;
+
+	if ((result=storage_split_filename_ex(dest_filename, \
+		&dest_filename_len, dest_true_filename, \
+		&dest_store_path_index)) != 0)
+	{
+		break;
+	}
 
 	if ((result=storage_split_filename_ex(src_filename, &src_filename_len,
 			 src_true_filename, &src_store_path_index)) != 0)
@@ -4792,37 +4823,64 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 	{
 		break;
 	}
-	snprintf(src_full_filename, sizeof(src_full_filename), \
+
+	if (trunk_file_lstat(dest_store_path_index, dest_true_filename, \
+			dest_filename_len, &stat_buf, \
+			&(pFileContext->extra_info.upload.trunk_info), \
+			&trunkHeader) == 0)
+	{
+		need_create_link = false;
+		logWarning("file: "__FILE__", line: %d, " \
+			"client ip: %s, logic link file: %s " \
+			"already exists, ignore it", __LINE__, \
+			pTask->client_ip, dest_filename);
+	}
+	else
+	{
+		FDFSTrunkFullInfo trunkInfo;
+		if (trunk_file_lstat(src_store_path_index, src_true_filename, \
+			src_filename_len, &stat_buf, \
+			&trunkInfo, &trunkHeader) != 0)
+		{
+			need_create_link = false;
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip: %s, logic source file: %s " \
+				"not exists, ignore it", __LINE__, \
+				pTask->client_ip, src_filename);
+		}
+		else
+		{
+			need_create_link = true;
+		}
+	}
+
+	if (need_create_link)
+	{
+		if (IS_TRUNK_FILE_BY_ID(pFileContext->extra_info.upload.trunk_info))
+		{
+		}
+		else
+		{
+		snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
+			"%s/data/%s", g_fdfs_store_paths[dest_store_path_index], \
+			dest_true_filename);
+
+		snprintf(src_full_filename, sizeof(src_full_filename), \
 			"%s/data/%s", g_fdfs_store_paths[src_store_path_index], \
 			src_true_filename);
-
-	if (fileExists(pFileContext->filename))
-	{
-		logWarning("file: "__FILE__", line: %d, " \
-			"client ip: %s, data file: %s " \
-			"already exists, ignore it", __LINE__, \
-			pTask->client_ip, pFileContext->filename);
-	}
-	else if (!fileExists(src_full_filename))
-	{
-		logWarning("file: "__FILE__", line: %d, " \
-			"client ip: %s, source data file: %s " \
-			"not exists, ignore it", __LINE__, \
-			pTask->client_ip, src_full_filename);
-	}
-	else if (symlink(src_full_filename, pFileContext->filename) != 0)
-	{
-		result = errno != 0 ? errno : EPERM;
-		if (result == EEXIST)
+		if (symlink(src_full_filename, pFileContext->filename) != 0)
 		{
+			result = errno != 0 ? errno : EPERM;
+			if (result == EEXIST)
+			{
 			logWarning("file: "__FILE__", line: %d, " \
 				"client ip: %s, data file: %s " \
 				"already exists, ignore it", __LINE__, \
 				pTask->client_ip, pFileContext->filename);
 			result = 0;
-		}
-		else
-		{
+			}
+			else
+			{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, link file %s to %s fail, " \
 				"errno: %d, error info: %s", \
@@ -4830,14 +4888,19 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 				src_full_filename, pFileContext->filename, \
 				result, STRERROR(result));
 			break;
+			}
+		}
 		}
 	}
+
+	sprintf(pFileContext->fname2log, "%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
+		FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
+		dest_store_path_index, dest_true_filename);
 
 	result = storage_binlog_write(pFileContext->timestamp2log, \
 			STORAGE_OP_TYPE_REPLICA_CREATE_LINK, \
 			pFileContext->fname2log);
 	} while (0);
-
 
 	CHECK_AND_WRITE_TO_STAT_FILE1
 
@@ -4939,13 +5002,8 @@ static int storage_sync_link_file(struct fast_task_info *pTask)
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
-	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-			"%s/data/%s", g_fdfs_store_paths[dest_store_path_index], \
-			dest_true_filename);
-
-	sprintf(pFileContext->fname2log, "%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
-		FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
-		dest_store_path_index, dest_true_filename);
+	pFileContext->extra_info.upload.trunk_info.path.store_path_index = \
+				dest_store_path_index;
 
 	pClientInfo->deal_func = storage_do_sync_link_file;
 
@@ -5664,6 +5722,7 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 	char true_filename[128];
 	char src_full_filename[MAX_PATH_SIZE+64];
 	char full_filename[MAX_PATH_SIZE];
+	char binlog_buff[256];
 	int store_path_index;
 	FDFSTrunkHeader trunk_header;
 
@@ -5692,7 +5751,6 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 				__LINE__, pTask->client_ip, \
 				src_full_filename, \
 				result, STRERROR(result));
-
 
 		if (g_check_file_duplicate)
 		{
@@ -5831,8 +5889,10 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 		break;
 	}
 
+	snprintf(binlog_buff, sizeof(binlog_buff), "%s %s", \
+		filename, src_filename);
 	result = storage_binlog_write(time(NULL), \
-			STORAGE_OP_TYPE_SOURCE_CREATE_LINK, filename);
+			STORAGE_OP_TYPE_SOURCE_CREATE_LINK, binlog_buff);
 	} while (0);
 
 	if (result == 0)
