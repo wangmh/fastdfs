@@ -241,7 +241,6 @@ static int storage_delete_file_auto(StorageFileContext *pFileContext)
 	}
 }
 
-/*
 static bool storage_judge_file_type_by_size(const char *remote_filename, \
 		const int filename_len, const int64_t type_mask)
 {
@@ -268,7 +267,6 @@ static bool storage_judge_file_type_by_size(const char *remote_filename, \
 	file_size = buff2long(buff + sizeof(int) * 2);
 	return (file_size & type_mask) ? true : false;
 }
-*/
 
 static void storage_delete_file_log_error(struct fast_task_info *pTask, \
 			const int err_no)
@@ -1845,17 +1843,6 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 
 		if (is_local_host_ip(pStorageServer->ip_addr))
 		{
-			/*
-			if (storage_judge_file_type_by_size(src_filename, \
-				src_filename_len, FDFS_TRUNK_FILE_MARK_SIZE))
-			{
-				bCreateDirectly = false;
-			}
-			else
-			{
-				bCreateDirectly = true;
-			}
-			*/
 			bCreateDirectly = true;
 		}
 		else
@@ -2016,10 +2003,6 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	}
 	else
 	{
-		if (!(pFileContext->extra_info.upload.file_type & FDFS_FILE_TYPE_TRUNK))
-		{
-			strcpy(pFileContext->filename, new_full_filename);
-		}
 		strcpy(pFileContext->fname2log, new_fname2log);
 	}
 
@@ -2064,6 +2047,50 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 			char *pSrcFilename;
 			char *pSeperator;
 
+			*(value + value_len) = '\0';
+			pSeperator = strchr(value, '/');
+			if (pSeperator == NULL)
+			{
+				logError("file: "__FILE__", line: %d, "\
+					"value %s is invalid", \
+					__LINE__, value);
+
+				return EINVAL;
+			}
+
+			*pSeperator = '\0';
+			pGroupName = value;
+			pSrcFilename = pSeperator + 1;
+
+			if ((pFileContext->extra_info.upload.file_type & \
+				FDFS_FILE_TYPE_SLAVE) && \
+				storage_judge_file_type_by_size(pSrcFilename, \
+				value_len - (pSrcFilename - value), \
+				FDFS_TRUNK_FILE_MARK_SIZE))
+			{
+				if (symlink(new_full_filename, \
+					pFileContext->filename) != 0)
+				{
+					result = errno != 0 ? errno : ENOENT;
+					logError("file: "__FILE__", line: %d, "\
+						"link file %s to %s fail, " \
+						"errno: %d, error info: %s", \
+						__LINE__, new_full_filename, \
+						pFileContext->filename, \
+						result, STRERROR(result));
+
+					unlink(new_full_filename);
+					return result;
+				}
+			}
+			else
+			{
+
+			if (!(pFileContext->extra_info.upload.file_type & \
+						FDFS_FILE_TYPE_TRUNK))
+			{
+				strcpy(pFileContext->filename, new_full_filename);
+			}
 			if ((result=storage_delete_file_auto(pFileContext)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, "\
@@ -2078,21 +2105,6 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 				return result;
 			}
 
-			*(value + value_len) = '\0';
-
-			pSeperator = strchr(value, '/');
-			if (pSeperator == NULL)
-			{
-				logError("file: "__FILE__", line: %d, "\
-					"value %s is invalid", \
-					__LINE__, value);
-
-				return EINVAL;
-			}
-
-			*pSeperator = '\0';
-			pGroupName = value;
-			pSrcFilename = pSeperator + 1;
 			result = storage_client_create_link_wrapper(pTask, \
 				pFileContext->extra_info.upload.master_filename, \
 				pSrcFilename, value_len-(pSrcFilename-value),\
@@ -2102,14 +2114,20 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 				pFileContext->extra_info.upload.file_ext_name,\
 				pFileContext->fname2log, &filename_len);
 
-
 			pFileContext->create_flag = STORAGE_CREATE_FLAG_LINK;
 			return result;
+			}
 		}
 		else if (result == ENOENT)
 		{
 			char src_filename[128];
 			FDHTKeyInfo ref_count_key;
+
+			if (!(pFileContext->extra_info.upload.file_type & \
+						FDFS_FILE_TYPE_TRUNK))
+			{
+				strcpy(pFileContext->filename, new_full_filename);
+			}
 
 			filename_len = sprintf(src_filename, "%s", \
 					pFileContext->fname2log);
