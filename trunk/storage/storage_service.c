@@ -223,7 +223,7 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 
 static int storage_delete_file_auto(StorageFileContext *pFileContext)
 {
-	if (pFileContext->extra_info.upload.if_trunk_file)
+	if (pFileContext->extra_info.upload.file_type & FDFS_FILE_TYPE_TRUNK)
 	{
 		return trunk_file_delete(pFileContext->filename,
                         &(pFileContext->extra_info.upload.trunk_info));
@@ -395,7 +395,8 @@ static void storage_sync_copy_file_done_callback(struct fast_task_info *pTask, \
 	{
 		if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE) 
 		{
-			if (!pFileContext->extra_info.upload.if_trunk_file)
+			if (!(pFileContext->extra_info.upload.file_type & \
+					FDFS_FILE_TYPE_TRUNK))
 			{
 			result = storage_sync_copy_file_rename_filename( \
 					pFileContext);
@@ -872,7 +873,8 @@ static void storage_delete_fdfs_file_done_callback( \
 
 	if (err_no == 0)
 	{
-		if (pFileContext->extra_info.upload.if_trunk_file)
+		if (pFileContext->extra_info.upload.file_type & \
+				FDFS_FILE_TYPE_TRUNK)
 		{
 			trunk_client_trunk_free_space( \
 				&(pFileContext->extra_info.upload.trunk_info));
@@ -949,7 +951,7 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
-	if (pFileContext->extra_info.upload.if_trunk_file)
+	if (pFileContext->extra_info.upload.file_type & FDFS_FILE_TYPE_TRUNK)
 	{
 		result = trunk_client_trunk_alloc_confirm( \
 			&(pFileContext->extra_info.upload.trunk_info), err_no);
@@ -1942,12 +1944,12 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	*new_filename = '\0';
 	new_filename_len = 0;
 
-	if (pFileContext->extra_info.upload.if_appender_file)
+	if (pFileContext->extra_info.upload.file_type & FDFS_FILE_TYPE_APPENDER)
 	{
 		end_time = time(NULL);
 		file_size_in_name = FDFS_APPENDER_FILE_SIZE;
 	}
-	else if (pFileContext->extra_info.upload.if_trunk_file)
+	else if (pFileContext->extra_info.upload.file_type & FDFS_FILE_TYPE_TRUNK)
 	{
 		end_time = pFileContext->extra_info.upload.start_time;
 		file_size_in_name = FDFS_TRUNK_FILE_MARK_SIZE | file_size;
@@ -1969,10 +1971,10 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 
 	sprintf(new_fname2log, "%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
 		FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
-		pFileContext->extra_info.upload.trunk_info.path.store_path_index, \
-		new_filename);
+		pFileContext->extra_info.upload.trunk_info.path. \
+		store_path_index, new_filename);
 
-	if (pFileContext->extra_info.upload.if_trunk_file)
+	if (pFileContext->extra_info.upload.file_type & FDFS_FILE_TYPE_TRUNK)
 	{
 		char trunk_buff[FDFS_TRUNK_FILE_INFO_LEN + 1];
 		trunk_file_info_encode(&(pFileContext->extra_info.upload. \
@@ -1996,8 +1998,8 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		return result;
 	}
 
-	if ((!pFileContext->extra_info.upload.if_gen_filename) && \
-		(!g_check_file_duplicate))
+	if ((pFileContext->extra_info.upload.file_type & FDFS_FILE_TYPE_SLAVE) \
+		&& (!g_check_file_duplicate))
 	{   //upload slave file
 		if (symlink(new_full_filename, pFileContext->filename) != 0)
 		{
@@ -2014,7 +2016,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	}
 	else
 	{
-		if (!pFileContext->extra_info.upload.if_trunk_file)
+		if (!(pFileContext->extra_info.upload.file_type & FDFS_FILE_TYPE_TRUNK))
 		{
 			strcpy(pFileContext->filename, new_full_filename);
 		}
@@ -2023,8 +2025,8 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 
 	pFileContext->timestamp2log = end_time;
 
-	if (g_check_file_duplicate && pFileContext->extra_info.upload.file_type == \
-		FDFS_TRUNK_FILE_TYPE_REGULAR)
+	if (g_check_file_duplicate && (pFileContext->extra_info.upload.file_type & \
+		FDFS_TRUNK_FILE_TYPE_REGULAR))
 	{
 		GroupArray *pGroupArray;
 		char value[128];
@@ -2067,8 +2069,9 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 				logError("file: "__FILE__", line: %d, "\
 					"unlink %s fail, errno: %d, " \
 					"error info: %s", __LINE__, \
-					(pFileContext->extra_info.upload. \
-					if_trunk_file ? pFileContext->fname2log\
+					((pFileContext->extra_info.upload. \
+					file_type & FDFS_FILE_TYPE_TRUNK) ? \
+					pFileContext->fname2log \
 					: pFileContext->filename), \
 					result, STRERROR(result));
 
@@ -2185,8 +2188,8 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		}
 	}
 
-	if (!pFileContext->extra_info.upload.if_gen_filename) //upload slave file
-	{
+	if (pFileContext->extra_info.upload.file_type & FDFS_FILE_TYPE_SLAVE)
+	{  //upload slave file
 		result = storage_binlog_write( \
 				pFileContext->timestamp2log, \
 				STORAGE_OP_TYPE_SOURCE_CREATE_FILE, \
@@ -2213,7 +2216,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	}
 	else
 	{
-		if (pFileContext->extra_info.upload.file_type == \
+		if (pFileContext->extra_info.upload.file_type & \
 				FDFS_TRUNK_FILE_TYPE_REGULAR)
 		{
 			pFileContext->create_flag = STORAGE_CREATE_FLAG_FILE;
@@ -3732,20 +3735,23 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 	pFileContext->extra_info.upload.file_type = FDFS_TRUNK_FILE_TYPE_REGULAR;
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
-	pFileContext->extra_info.upload.if_appender_file = bAppenderFile;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 	if (bAppenderFile)
 	{
-		pFileContext->extra_info.upload.if_trunk_file = false;
+		pFileContext->extra_info.upload.file_type |= \
+					FDFS_FILE_TYPE_APPENDER;
 	}
 	else
 	{
-		pFileContext->extra_info.upload.if_trunk_file = \
-			g_if_use_trunk_file && trunk_check_size( \
-			TRUNK_CALC_SIZE(file_bytes));
+		if (g_if_use_trunk_file && trunk_check_size( \
+			TRUNK_CALC_SIZE(file_bytes)))
+		{
+			pFileContext->extra_info.upload.file_type |= \
+						FDFS_FILE_TYPE_TRUNK;
+		}
 	}
 
-	if (pFileContext->extra_info.upload.if_trunk_file)
+	if (pFileContext->extra_info.upload.file_type & FDFS_FILE_TYPE_TRUNK)
 	{
 		FDFSTrunkFullInfo *pTrunkInfo;
 
@@ -4001,8 +4007,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_APPEND_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
-	pFileContext->extra_info.upload.if_appender_file = true;
-	pFileContext->extra_info.upload.if_trunk_file = false;
+	pFileContext->extra_info.upload.file_type = FDFS_FILE_TYPE_APPENDER;
 	pFileContext->extra_info.upload.before_open_callback = NULL;
 	pFileContext->extra_info.upload.before_close_callback = NULL;
 	pFileContext->extra_info.upload.trunk_info.path.store_path_index = store_path_index;
@@ -4206,16 +4211,16 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	strcpy(pFileContext->extra_info.upload.master_filename, master_filename);
 	strcpy(pFileContext->extra_info.upload.prefix_name, prefix_name);
 
-	pFileContext->extra_info.upload.file_type = FDFS_TRUNK_FILE_TYPE_REGULAR;
+	pFileContext->extra_info.upload.file_type = FDFS_FILE_TYPE_SLAVE | \
+						FDFS_TRUNK_FILE_TYPE_REGULAR;
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
-	pFileContext->extra_info.upload.if_appender_file = false;
-	pFileContext->extra_info.upload.if_trunk_file = false;
 	pFileContext->extra_info.upload.before_open_callback = NULL;
 	pFileContext->extra_info.upload.before_close_callback = NULL;
 	pFileContext->extra_info.upload.trunk_info.path.store_path_index = store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
-	pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC | g_extra_open_file_flags;
+	pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC \
+				| g_extra_open_file_flags;
 
  	return storage_write_to_file(pTask, 0, file_bytes, p - pTask->data, \
 			dio_write_file, storage_upload_file_done_callback, \
@@ -4379,7 +4384,8 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 		*(pFileContext->filename) = '\0';
 	}
 
-	pFileContext->extra_info.upload.if_trunk_file = false;
+	pFileContext->extra_info.upload.file_type = \
+				FDFS_TRUNK_FILE_TYPE_REGULAR;
 	if (proto_cmd == STORAGE_PROTO_CMD_SYNC_CREATE_FILE && \
 		have_file_content)
 	{
@@ -4429,19 +4435,20 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 			*(pFileContext->filename) = '\0';
 		}
 
-		pFileContext->extra_info.upload.if_trunk_file = \
-				IS_TRUNK_FILE_BY_ID(pFileContext-> \
-					extra_info.upload.trunk_info);
+		if (IS_TRUNK_FILE_BY_ID(pFileContext->extra_info. \
+					upload.trunk_info))
+		{
+			pFileContext->extra_info.upload.file_type |= \
+						FDFS_FILE_TYPE_TRUNK;
+		}
 	}
 
 	if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
 	{
-	if (pFileContext->extra_info.upload.if_trunk_file)
+	if (pFileContext->extra_info.upload.file_type & FDFS_FILE_TYPE_TRUNK)
 	{
 		pFileContext->crc32 = trunkHeader.crc32;
 		pFileContext->extra_info.upload.start_time = trunkHeader.mtime;
-		pFileContext->extra_info.upload.file_type = \
-				FDFS_TRUNK_FILE_TYPE_REGULAR;
        		snprintf(pFileContext->extra_info.upload.formatted_ext_name, \
 		sizeof(pFileContext->extra_info.upload.formatted_ext_name), 
 			"%s", trunkHeader.formatted_ext_name);
@@ -5757,10 +5764,13 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 	}
 	if (S_ISREG(stat_buf.st_mode))
 	{
+		pFileContext->extra_info.upload.file_type = \
+					FDFS_FILE_TYPE_REGULAR;
 		pFileContext->delete_flag |= STORAGE_DELETE_FLAG_FILE;
 	}
 	else if (S_ISLNK(stat_buf.st_mode))
 	{
+		pFileContext->extra_info.upload.file_type = FDFS_FILE_TYPE_LINK;
 		pFileContext->delete_flag |= STORAGE_DELETE_FLAG_LINK;
 	}
 	else
@@ -5774,7 +5784,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 
 	if (IS_TRUNK_FILE_BY_ID(pFileContext->extra_info.upload.trunk_info))
 	{
-		pFileContext->extra_info.upload.if_trunk_file = true;
+		pFileContext->extra_info.upload.file_type |= FDFS_FILE_TYPE_TRUNK;
 		pClientInfo->deal_func = dio_delete_trunk_file;
 		trunk_get_full_filename((&pFileContext->extra_info.upload.\
 				trunk_info), pFileContext->filename, \
@@ -5782,7 +5792,6 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 	}
 	else
 	{
-		pFileContext->extra_info.upload.if_trunk_file = false;
 		pClientInfo->deal_func = dio_delete_normal_file;
 		sprintf(pFileContext->filename, "%s/data/%s", \
 			g_fdfs_store_paths[store_path_index], true_filename);
@@ -5881,13 +5890,12 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 			break;
 		}
 
-		pFileContext->extra_info.upload.if_trunk_file = true;
+		pFileContext->extra_info.upload.file_type |= FDFS_FILE_TYPE_TRUNK;
 		trunk_get_full_filename(pTrunkInfo, src_full_filename, \
 				sizeof(src_full_filename));
 	}
 	else
 	{
-		pFileContext->extra_info.upload.if_trunk_file = false;
 		sprintf(src_full_filename, "%s/data/%s", \
 			g_fdfs_store_paths[store_path_index], \
 			pSourceFileInfo->src_true_filename);
@@ -5950,12 +5958,11 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 
 	pClientInfo->file_context.extra_info.upload.trunk_info.path. \
 			store_path_index = store_path_index;
-	if (pFileContext->extra_info.upload.if_trunk_file)
+	if (pFileContext->extra_info.upload.file_type & FDFS_FILE_TYPE_TRUNK)
 	{
 	pFileContext->calc_crc32 = false;
 	pFileContext->calc_file_hash = false;
-	pFileContext->extra_info.upload.file_type = FDFS_TRUNK_FILE_TYPE_LINK;
-	pFileContext->extra_info.upload.if_appender_file = false;
+	pFileContext->extra_info.upload.file_type |= FDFS_TRUNK_FILE_TYPE_LINK;
 	pFileContext->extra_info.upload.if_gen_filename = true;
 	pFileContext->extra_info.upload.start_time = time(NULL);
 	pFileContext->crc32 = rand();
@@ -5966,7 +5973,7 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 			pSourceFileInfo, bNeedReponse);
 	}
 
-	pFileContext->extra_info.upload.file_type = FDFS_TRUNK_FILE_TYPE_REGULAR;
+	pFileContext->extra_info.upload.file_type |= FDFS_TRUNK_FILE_TYPE_REGULAR;
 	pClientInfo->file_context.extra_info.upload.if_sub_path_alloced = false;
 	result = storage_service_do_create_link(pTask, pSourceFileInfo, \
 			stat_buf.st_size, master_filename, \

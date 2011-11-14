@@ -46,13 +46,17 @@ typedef void (*FileDealDoneCallback)(struct fast_task_info *pTask, \
 typedef int (*FileBeforeOpenCallback)(struct fast_task_info *pTask);
 typedef int (*FileBeforeCloseCallback)(struct fast_task_info *pTask);
 
+#define FDFS_FILE_TYPE_APPENDER  1
+#define FDFS_FILE_TYPE_TRUNK     2   //if trunk file, since V3.0
+#define FDFS_FILE_TYPE_SLAVE     4
+#define FDFS_FILE_TYPE_REGULAR   8
+#define FDFS_FILE_TYPE_LINK     16
+
 typedef struct
 {
-	bool if_gen_filename;	//if upload generate filename
-	bool if_appender_file;  //if upload appender file
-	bool if_trunk_file;     //if trunk file, since V3.0
-	bool if_sub_path_alloced; //if sub path alloced since V3.0
+	bool if_gen_filename;	  //if upload generate filename
 	char file_type;           //regular or link file
+	bool if_sub_path_alloced; //if sub path alloced since V3.0
 	char master_filename[128];
 	char file_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 1];
 	char formatted_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 2];
