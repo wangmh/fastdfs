@@ -46,11 +46,11 @@ typedef void (*FileDealDoneCallback)(struct fast_task_info *pTask, \
 typedef int (*FileBeforeOpenCallback)(struct fast_task_info *pTask);
 typedef int (*FileBeforeCloseCallback)(struct fast_task_info *pTask);
 
-#define FDFS_FILE_TYPE_APPENDER  1
-#define FDFS_FILE_TYPE_TRUNK     2   //if trunk file, since V3.0
-#define FDFS_FILE_TYPE_SLAVE     4
-#define FDFS_FILE_TYPE_REGULAR   8
-#define FDFS_FILE_TYPE_LINK     16
+#define _FILE_TYPE_APPENDER  1
+#define _FILE_TYPE_TRUNK     2   //if trunk file, since V3.0
+#define _FILE_TYPE_SLAVE     4
+#define _FILE_TYPE_REGULAR   8
+#define _FILE_TYPE_LINK     16
 
 typedef struct
 {
