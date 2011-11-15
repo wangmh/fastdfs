@@ -1,5 +1,5 @@
 
-Version 3.04  2011-11-14
+Version 3.04  2011-11-16
  * bug fixed: duplicate files only save one entry ok with trunk file mode
  * bug fixed: sync correctly with more binlog files
  * fdfs_file_info query file info from storage server

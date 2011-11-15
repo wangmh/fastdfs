@@ -1985,20 +1985,51 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		return result;
 	}
 
-	if ((pFileContext->extra_info.upload.file_type & _FILE_TYPE_SLAVE) \
-		&& (!g_check_file_duplicate))
-	{   //upload slave file
-		if (symlink(new_full_filename, pFileContext->filename) != 0)
+	if ((pFileContext->extra_info.upload.file_type & _FILE_TYPE_SLAVE))
+	{
+		char true_filename[128];
+		char filename[128];
+		int master_store_path_index;
+		int master_filename_len = strlen(pFileContext->extra_info. \
+						upload.master_filename);
+		if ((result=storage_split_filename_ex(pFileContext->extra_info.\
+			upload.master_filename, &master_filename_len, \
+			true_filename, &master_store_path_index)) != 0)
 		{
-			result = errno != 0 ? errno : ENOENT;
-			logError("file: "__FILE__", line: %d, " \
-				"link file %s to %s fail, " \
-				"errno: %d, error info: %s", __LINE__, \
-				new_full_filename, pFileContext->filename, \
-				result, STRERROR(result));
-
 			unlink(new_full_filename);
 			return result;
+		}
+		if ((result=fdfs_gen_slave_filename(true_filename, \
+			pFileContext->extra_info.upload.prefix_name, \
+			pFileContext->extra_info.upload.file_ext_name, \
+			filename, &filename_len)) != 0)
+		{
+			unlink(new_full_filename);
+			return result;
+		}
+
+		snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
+			"%s/data/%s", g_fdfs_store_paths[master_store_path_index], \
+			filename);
+		sprintf(pFileContext->fname2log, \
+			"%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
+			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
+			master_store_path_index, filename);
+
+		if (!g_check_file_duplicate)
+		{
+			if (symlink(new_full_filename, pFileContext->filename) != 0)
+			{
+				result = errno != 0 ? errno : ENOENT;
+				logError("file: "__FILE__", line: %d, " \
+					"link file %s to %s fail, " \
+					"errno: %d, error info: %s", __LINE__, \
+					new_full_filename, pFileContext->filename, \
+					result, STRERROR(result));
+
+				unlink(new_full_filename);
+				return result;
+			}
 		}
 	}
 	else
@@ -2007,9 +2038,8 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	}
 
 	pFileContext->timestamp2log = end_time;
-
-	if (g_check_file_duplicate && (pFileContext->extra_info.upload.file_type & \
-		_FILE_TYPE_REGULAR))
+	if (g_check_file_duplicate && !(pFileContext->extra_info.upload.file_type & \
+		_FILE_TYPE_LINK))
 	{
 		GroupArray *pGroupArray;
 		char value[128];
@@ -2068,7 +2098,6 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 				value_len - (pSrcFilename - value), \
 				FDFS_TRUNK_FILE_MARK_SIZE))
 			{
-				logInfo("pFileContext->extra_info.upload.file_type=%d", pFileContext->extra_info.upload.file_type);
 				if (symlink(new_full_filename, \
 					pFileContext->filename) != 0)
 				{
@@ -2086,9 +2115,8 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 			}
 			else
 			{
-
 			if (!(pFileContext->extra_info.upload.file_type & \
-						_FILE_TYPE_TRUNK))
+					_FILE_TYPE_TRUNK))
 			{
 				strcpy(pFileContext->filename, new_full_filename);
 			}
@@ -2125,7 +2153,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 			FDHTKeyInfo ref_count_key;
 
 			if (!(pFileContext->extra_info.upload.file_type & \
-						_FILE_TYPE_TRUNK))
+					_FILE_TYPE_TRUNK))
 			{
 				strcpy(pFileContext->filename, new_full_filename);
 			}
@@ -2236,13 +2264,13 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	else
 	{
 		if (pFileContext->extra_info.upload.file_type & \
-				_FILE_TYPE_REGULAR)
+				_FILE_TYPE_LINK)
 		{
-			pFileContext->create_flag = STORAGE_CREATE_FLAG_FILE;
+			pFileContext->create_flag = STORAGE_CREATE_FLAG_LINK;
 		}
 		else
 		{
-			pFileContext->create_flag = STORAGE_CREATE_FLAG_LINK;
+			pFileContext->create_flag = STORAGE_CREATE_FLAG_FILE;
 		}
 	}
 
@@ -4173,34 +4201,9 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 			pFileContext->extra_info.upload.formatted_ext_name);
 	pFileContext->extra_info.upload.start_time = time(NULL);
 	pFileContext->extra_info.upload.if_gen_filename = g_check_file_duplicate;
-	if (pFileContext->extra_info.upload.if_gen_filename)
-	{
-	crc32 = rand();
-	*filename = '\0';
-	filename_len = 0;
 	pFileContext->extra_info.upload.if_sub_path_alloced = false;
 	pFileContext->extra_info.upload.trunk_info.path. \
 				store_path_index = store_path_index;
-	if ((result=storage_get_filename(pClientInfo, \
-			pFileContext->extra_info.upload.start_time, \
-			file_bytes, crc32, \
-			pFileContext->extra_info.upload.formatted_ext_name, \
-			filename, &filename_len, pFileContext->filename)) != 0)
-	{
-		pClientInfo->total_length = sizeof(TrackerHeader);
-		return result;
-	}
-
-	if (*pFileContext->filename == '\0')
-	{
-		logWarning("file: "__FILE__", line: %d, " \
-			"Can't generate uniq filename", __LINE__);
-		pClientInfo->total_length = sizeof(TrackerHeader);
-		return EBUSY;
-	}
-	}
-	else
-	{
 	if ((result=fdfs_gen_slave_filename(true_filename, \
 		prefix_name, file_ext_name, filename, &filename_len)) != 0)
 	{
@@ -4218,11 +4221,26 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EEXIST;
 	}
-	}
 
-	sprintf(pFileContext->fname2log, "%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
-			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
-			store_path_index, filename);
+	crc32 = rand();
+	*filename = '\0';
+	filename_len = 0;
+	if ((result=storage_get_filename(pClientInfo, \
+			pFileContext->extra_info.upload.start_time, \
+			file_bytes, crc32, \
+			pFileContext->extra_info.upload.formatted_ext_name, \
+			filename, &filename_len, pFileContext->filename)) != 0)
+	{
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return result;
+	}
+	if (*pFileContext->filename == '\0')
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"Can't generate uniq filename", __LINE__);
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return EBUSY;
+	}
 
 	pFileContext->calc_crc32 = true;
 	pFileContext->calc_file_hash = g_check_file_duplicate;
@@ -5864,7 +5882,6 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 				"errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, \
 				src_filename, result, STRERROR(result));
-
 		if (g_check_file_duplicate)
 		{
 			pGroupArray=&((g_nio_thread_data+pClientInfo->nio_thread_index)\
@@ -5965,13 +5982,13 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 		*filename_len = 0;
 	}
 
+	pFileContext->extra_info.upload.file_type |= _FILE_TYPE_LINK;
 	pClientInfo->file_context.extra_info.upload.trunk_info.path. \
 			store_path_index = store_path_index;
 	if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_TRUNK)
 	{
 	pFileContext->calc_crc32 = false;
 	pFileContext->calc_file_hash = false;
-	pFileContext->extra_info.upload.file_type |= _FILE_TYPE_LINK;
 	pFileContext->extra_info.upload.if_gen_filename = true;
 	pFileContext->extra_info.upload.start_time = time(NULL);
 	pFileContext->crc32 = rand();
@@ -5982,7 +5999,6 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 			pSourceFileInfo, bNeedReponse);
 	}
 
-	pFileContext->extra_info.upload.file_type |= _FILE_TYPE_REGULAR;
 	pClientInfo->file_context.extra_info.upload.if_sub_path_alloced = false;
 	result = storage_service_do_create_link(pTask, pSourceFileInfo, \
 			stat_buf.st_size, master_filename, \
