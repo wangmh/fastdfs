@@ -2985,7 +2985,6 @@ static void php_fdfs_storage_upload_slave_file_impl( \
 	int group_name_len;
 	int master_filename_len;
 	int prefix_name_len;
-	int store_path_index;
 	int saved_tracker_sock;
 	int saved_storage_sock;
 	int min_param_count;
@@ -3149,15 +3148,11 @@ static void php_fdfs_storage_upload_slave_file_impl( \
 	if (storage_obj == NULL)
 	{
 		pStorageServer = NULL;
-		store_path_index = 0;
 		storage_hash = NULL;
 		saved_storage_sock = -1;
 	}
 	else
 	{
-		zval **data;
-		zval ***ppp;
-
 		pStorageServer = &storage_server;
 		storage_hash = Z_ARRVAL_P(storage_obj);
 		if ((result=php_fdfs_get_server_from_hash(storage_hash, \
@@ -3167,34 +3162,6 @@ static void php_fdfs_storage_upload_slave_file_impl( \
 			RETURN_BOOL(false);
 		}
 
-		data = NULL;
-		ppp = &data;
-		if (zend_hash_find(storage_hash, "store_path_index", \
-			sizeof("store_path_index"), (void **)ppp) == FAILURE)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"key \"store_path_index\" not exist!", \
-				__LINE__);
-			pContext->err_no = ENOENT;
-			RETURN_BOOL(false);
-		}
-
-		if ((*data)->type == IS_LONG)
-		{
-			store_path_index = (*data)->value.lval;
-		}
-		else if ((*data)->type == IS_STRING)
-		{
-			store_path_index = atoi(Z_STRVAL_PP(data));
-		}
-		else
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"key \"store_path_index\" is invalid, " \
-				"type=%d!", __LINE__, (*data)->type);
-			pContext->err_no = EINVAL;
-			RETURN_BOOL(false);
-		}
 		saved_storage_sock = pStorageServer->sock;
 	}
 
@@ -3321,7 +3288,6 @@ static void php_fdfs_storage_append_file_impl( \
 	int filename_len;
 	int group_name_len;
 	int appender_filename_len;
-	int store_path_index;
 	int saved_tracker_sock;
 	int saved_storage_sock;
 	int min_param_count;
@@ -3450,15 +3416,11 @@ static void php_fdfs_storage_append_file_impl( \
 	if (storage_obj == NULL)
 	{
 		pStorageServer = NULL;
-		store_path_index = 0;
 		storage_hash = NULL;
 		saved_storage_sock = -1;
 	}
 	else
 	{
-		zval **data;
-		zval ***ppp;
-
 		pStorageServer = &storage_server;
 		storage_hash = Z_ARRVAL_P(storage_obj);
 		if ((result=php_fdfs_get_server_from_hash(storage_hash, \
@@ -3468,34 +3430,6 @@ static void php_fdfs_storage_append_file_impl( \
 			RETURN_BOOL(false);
 		}
 
-		data = NULL;
-		ppp = &data;
-		if (zend_hash_find(storage_hash, "store_path_index", \
-			sizeof("store_path_index"), (void **)ppp) == FAILURE)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"key \"store_path_index\" not exist!", \
-				__LINE__);
-			pContext->err_no = ENOENT;
-			RETURN_BOOL(false);
-		}
-
-		if ((*data)->type == IS_LONG)
-		{
-			store_path_index = (*data)->value.lval;
-		}
-		else if ((*data)->type == IS_STRING)
-		{
-			store_path_index = atoi(Z_STRVAL_PP(data));
-		}
-		else
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"key \"store_path_index\" is invalid, " \
-				"type=%d!", __LINE__, (*data)->type);
-			pContext->err_no = EINVAL;
-			RETURN_BOOL(false);
-		}
 		saved_storage_sock = pStorageServer->sock;
 	}
 
