@@ -619,8 +619,24 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
-	sprintf(meta_filename, "%s"FDFS_STORAGE_META_FILE_EXT, \
-			pFileContext->filename);
+	if (pFileContext->extra_info.upload.file_type & \
+				_FILE_TYPE_TRUNK)
+	{
+		int filename_len = strlen(pFileContext->fname2log);
+		if ((result=storage_split_filename_ex(pFileContext->fname2log, \
+			&filename_len, true_filename, &store_path_index)) != 0)
+		{
+			return result;
+		}
+
+		sprintf(meta_filename, "%s/data/%s"FDFS_STORAGE_META_FILE_EXT, \
+			g_fdfs_store_paths[store_path_index], true_filename);
+	}
+	else
+	{
+		sprintf(meta_filename, "%s"FDFS_STORAGE_META_FILE_EXT, \
+				pFileContext->filename);
+	}
 	if (fileExists(meta_filename))
 	{
 		if (unlink(meta_filename) != 0)
