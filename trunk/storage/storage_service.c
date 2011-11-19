@@ -2015,6 +2015,14 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		return result;
 	}
 
+	pFileContext->timestamp2log = end_time;
+	if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_APPENDER)
+	{
+		strcpy(pFileContext->fname2log, new_fname2log);
+		pFileContext->create_flag = STORAGE_CREATE_FLAG_FILE;
+		return 0;
+	}
+
 	if ((pFileContext->extra_info.upload.file_type & _FILE_TYPE_SLAVE))
 	{
 		char true_filename[128];
@@ -2067,7 +2075,6 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		strcpy(pFileContext->fname2log, new_fname2log);
 	}
 
-	pFileContext->timestamp2log = end_time;
 	if (g_check_file_duplicate && !(pFileContext->extra_info.upload.file_type & \
 		_FILE_TYPE_LINK))
 	{

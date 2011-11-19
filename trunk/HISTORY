@@ -6,6 +6,7 @@ Version 3.04  2011-11-19
  * bug fixed: php extension compile error using gcc 4.6.1 as:
    variable 'store_path_index' set but not used
  * bug fixed: delete the metadata of trunked file correctly
+ * bug fixed: append file ok when check duplicate is on
 
 Version 3.03  2011-10-16
  * ignore existed link when sync link file
