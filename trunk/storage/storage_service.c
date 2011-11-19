@@ -848,12 +848,26 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 			&(pFileContext->extra_info.upload.trunk_info), \
 			&trunkHeader)) != 0)
 		{
-		logWarning("file: "__FILE__", line: %d, " \
-			"client ip:%s, call lstat logic file: %s fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, value, \
-			result, STRERROR(result));
-		return 0;
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip:%s, call lstat logic file: %s " \
+				"fail, errno: %d, error info: %s", \
+				__LINE__, pTask->client_ip, value, \
+				result, STRERROR(result));
+			return 0;
+		}
+
+		if (IS_TRUNK_FILE_BY_ID(pFileContext->extra_info. \
+					upload.trunk_info))
+		{
+			trunk_get_full_filename(&(pFileContext->extra_info. \
+				upload.trunk_info), pFileContext->filename, \
+				sizeof(pFileContext->filename));
+		}
+		else
+		{
+			sprintf(pFileContext->filename, "%s/data/%s", \
+				g_fdfs_store_paths[store_path_index], \
+				true_filename);
 		}
 
 		if ((result=storage_delete_file_auto(pFileContext)) != 0)
@@ -2174,10 +2188,9 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 				strcpy(pFileContext->filename, new_full_filename);
 			}
 
-			filename_len = sprintf(src_filename, "%s", \
-					pFileContext->fname2log);
+			filename_len = sprintf(src_filename, "%s", new_fname2log);
 			value_len = sprintf(value, "%s/%s", \
-					g_group_name, pFileContext->fname2log);
+					g_group_name, new_fname2log);
 			if ((result=fdht_set_ex(pGroupArray, g_keep_alive, \
 						&key_info, FDHT_EXPIRES_NEVER, \
 						value, value_len)) != 0)
