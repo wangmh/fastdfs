@@ -1959,14 +1959,12 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	}
 
 	filename_len = strlen(remote_filename);
-	if (filename_len < FDFS_LOGIC_FILE_PATH_LEN \
-		+ FDFS_FILENAME_BASE64_LENGTH + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
+	if (filename_len < NORMAL_LOGIC_FILENAME_LENGTH)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"filename is too short, length: %d < %d", \
-			__LINE__, filename_len, FDFS_LOGIC_FILE_PATH_LEN \
-			+ FDFS_FILENAME_BASE64_LENGTH \
-			+ FDFS_FILE_EXT_NAME_MAX_LEN + 1);
+			__LINE__, filename_len, \
+			NORMAL_LOGIC_FILENAME_LENGTH);
 		return EINVAL;
 	}
 

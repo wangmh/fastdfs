@@ -256,7 +256,7 @@ static bool storage_judge_file_type_by_size(const char *remote_filename, \
 			__LINE__, filename_len, FDFS_LOGIC_FILE_PATH_LEN \
 			+ FDFS_FILENAME_BASE64_LENGTH \
 			+ FDFS_FILE_EXT_NAME_MAX_LEN + 1);
-		return 0;
+		return false;
 	}
 
 	memset(buff, 0, sizeof(buff));
@@ -266,6 +266,37 @@ static bool storage_judge_file_type_by_size(const char *remote_filename, \
 
 	file_size = buff2long(buff + sizeof(int) * 2);
 	return (file_size & type_mask) ? true : false;
+}
+
+static bool storage_is_slave_file(const char *remote_filename, \
+		const int filename_len)
+{
+	int buff_len;
+	char buff[64];
+	int64_t file_size;
+
+	if (filename_len < NORMAL_LOGIC_FILENAME_LENGTH)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"filename is too short, length: %d < %d", \
+			__LINE__, filename_len, FDFS_LOGIC_FILE_PATH_LEN \
+			+ FDFS_FILENAME_BASE64_LENGTH \
+			+ FDFS_FILE_EXT_NAME_MAX_LEN + 1);
+		return false;
+	}
+
+	memset(buff, 0, sizeof(buff));
+	base64_decode_auto(&g_fdfs_base64_context, (char *)remote_filename + \
+		FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
+		buff, &buff_len);
+
+	file_size = buff2long(buff + sizeof(int) * 2);
+	if (file_size & FDFS_TRUNK_FILE_MARK_SIZE)
+	{
+		return filename_len > FDFS_TRUNK_LOGIC_FILENAME_LENGTH;
+	}
+
+	return filename_len > NORMAL_LOGIC_FILENAME_LENGTH;
 }
 
 static void storage_delete_file_log_error(struct fast_task_info *pTask, \
@@ -5760,6 +5791,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 	char true_filename[128];
 	char *filename;
 	int filename_len;
+	int true_filename_len;
 	struct stat stat_buf;
 	int result;
 	int store_path_index;
@@ -5813,18 +5845,20 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 	filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
 	*(filename + filename_len) = '\0';
 
+	true_filename_len = filename_len;
 	if ((result=storage_split_filename_ex(filename, \
-		&filename_len, true_filename, &store_path_index)) != 0)
+		&true_filename_len, true_filename, &store_path_index)) != 0)
 	{
 		return result;
 	}
-	if ((result=fdfs_check_data_filename(true_filename, filename_len)) != 0)
+	if ((result=fdfs_check_data_filename(true_filename, \
+				true_filename_len)) != 0)
 	{
 		return result;
 	}
 
 	if ((result=trunk_file_lstat(store_path_index, true_filename, \
-			filename_len, &stat_buf, \
+			true_filename_len, &stat_buf, \
 			&(pFileContext->extra_info.upload.trunk_info), \
 			&trunkHeader)) != 0)
 	{
@@ -5868,6 +5902,11 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 		pClientInfo->deal_func = dio_delete_normal_file;
 		sprintf(pFileContext->filename, "%s/data/%s", \
 			g_fdfs_store_paths[store_path_index], true_filename);
+	}
+
+	if ((pFileContext->extra_info.upload.file_type & _FILE_TYPE_LINK) && \
+		storage_is_slave_file(filename, filename_len))
+	{
 	}
 
 	strcpy(pFileContext->fname2log, filename);

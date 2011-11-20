@@ -98,16 +98,6 @@
 #define STORAGE_TRUNK_ALLOC_CONFIRM_REQ_BODY_LEN  (FDFS_GROUP_NAME_MAX_LEN \
 			+ sizeof(FDFSTrunkInfoBuff))
 
-#define IS_APPENDER_FILE(file_size)   (file_size == INFINITE_FILE_SIZE)
-#define IS_TRUNK_FILE(file_size)     ((file_size & FDFS_TRUNK_FILE_MARK_SIZE) != 0)
-
-#define IS_SLAVE_FILE(filename_len, file_size) \
-	(filename_len > FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH+\
-		FDFS_FILE_EXT_NAME_MAX_LEN + 1 && !IS_TRUNK_FILE(file_size))
-
-#define FDFS_TRUNK_FILE_TRUE_SIZE(file_size) \
-	(file_size & (~(FDFS_TRUNK_FILE_MARK_SIZE)))
-
 typedef struct
 {
 	char pkg_len[FDFS_PROTO_PKG_LEN_SIZE];  //body length, not including header
