@@ -1959,12 +1959,12 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	}
 
 	filename_len = strlen(remote_filename);
-	if (filename_len < NORMAL_LOGIC_FILENAME_LENGTH)
+	if (filename_len < FDFS_NORMAL_LOGIC_FILENAME_LENGTH)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"filename is too short, length: %d < %d", \
 			__LINE__, filename_len, \
-			NORMAL_LOGIC_FILENAME_LENGTH);
+			FDFS_NORMAL_LOGIC_FILENAME_LENGTH);
 		return EINVAL;
 	}
 

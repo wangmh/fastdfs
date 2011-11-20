@@ -275,7 +275,7 @@ static bool storage_is_slave_file(const char *remote_filename, \
 	char buff[64];
 	int64_t file_size;
 
-	if (filename_len < NORMAL_LOGIC_FILENAME_LENGTH)
+	if (filename_len < FDFS_NORMAL_LOGIC_FILENAME_LENGTH)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"filename is too short, length: %d < %d", \
@@ -296,7 +296,7 @@ static bool storage_is_slave_file(const char *remote_filename, \
 		return filename_len > FDFS_TRUNK_LOGIC_FILENAME_LENGTH;
 	}
 
-	return filename_len > NORMAL_LOGIC_FILENAME_LENGTH;
+	return filename_len > FDFS_NORMAL_LOGIC_FILENAME_LENGTH;
 }
 
 static void storage_delete_file_log_error(struct fast_task_info *pTask, \
@@ -3214,7 +3214,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 					"client ip:%s, call stat file %s " \
 					"fail, errno: %d, error info: %s", \
 					__LINE__, pTask->client_ip, \
-					true_filename, result, STRERROR(result));
+					full_filename, result, STRERROR(result));
 				return result;
 			}
 		}
@@ -5907,6 +5907,89 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 	if ((pFileContext->extra_info.upload.file_type & _FILE_TYPE_LINK) && \
 		storage_is_slave_file(filename, filename_len))
 	{
+		char full_filename[MAX_PATH_SIZE + 128];
+		char src_filename[MAX_PATH_SIZE + 128];
+		char src_fname2log[128];
+		char *src_true_filename;
+		int src_filename_len;
+		int base_path_len;
+		int src_store_path_index;
+		int i;
+
+		sprintf(full_filename, "%s/data/%s", \
+			g_fdfs_store_paths[store_path_index], true_filename);
+		do
+		{
+			if ((src_filename_len=readlink(full_filename, \
+				src_filename, sizeof(src_filename))) < 0)
+			{
+				result = errno != 0 ? errno : EPERM;
+				logError("file: "__FILE__", line: %d, " \
+					"client ip:%s, call readlink file %s " \
+					"fail, errno: %d, error info: %s", \
+					__LINE__, pTask->client_ip, \
+					true_filename, result, STRERROR(result));
+				return result;
+			}
+
+			*(src_filename + src_filename_len) = '\0';
+			if (unlink(src_filename) != 0)
+			{
+				result = errno != 0 ? errno : ENOENT;
+				logWarning("file: "__FILE__", line: %d, " \
+					"client ip:%s, unlink file %s " \
+					"fail, errno: %d, error info: %s", \
+					__LINE__, pTask->client_ip, \
+					src_filename, result, STRERROR(result));
+				if (result == ENOENT)
+				{
+					break;
+				}
+				return result;
+			}
+
+			base_path_len = strlen(g_fdfs_store_paths \
+						[store_path_index]);
+			if (src_filename_len > base_path_len && memcmp( \
+				src_filename, g_fdfs_store_paths \
+				[store_path_index], base_path_len) == 0)
+			{
+				src_store_path_index = store_path_index;
+			}
+			else
+			{
+			src_store_path_index = -1;
+			for (i=0; i<g_fdfs_path_count; i++)
+			{
+				base_path_len = strlen(g_fdfs_store_paths[i]);
+				if (src_filename_len > base_path_len && \
+					memcmp(src_filename, g_fdfs_store_paths\
+					[i], base_path_len) == 0)
+				{
+					src_store_path_index = i;
+					break;
+				}
+			}
+			if (src_store_path_index < 0)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"client ip:%s, can't get store base " \
+					"path of file %s", __LINE__, \
+					pTask->client_ip, src_filename);
+				break;
+			}
+			}
+
+			src_true_filename = src_filename + (base_path_len + \
+						(sizeof("/data/") -1));
+			snprintf(src_fname2log, sizeof(src_fname2log), \
+				"%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
+				FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
+				src_store_path_index, src_true_filename);
+			storage_binlog_write(time(NULL), \
+				STORAGE_OP_TYPE_SOURCE_DELETE_FILE, \
+				src_fname2log);
+		} while (0);
 	}
 
 	strcpy(pFileContext->fname2log, filename);
