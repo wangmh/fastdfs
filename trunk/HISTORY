@@ -1,5 +1,5 @@
 
-Version 3.04  2011-11-19
+Version 3.04  2011-11-20
  * bug fixed: duplicate files only save one entry ok with trunk file mode
  * bug fixed: sync correctly with more binlog files
  * fdfs_file_info query file info from storage server
@@ -7,6 +7,8 @@ Version 3.04  2011-11-19
    variable 'store_path_index' set but not used
  * bug fixed: delete the metadata of trunked file correctly
  * bug fixed: append file ok when check duplicate is on
+ * storage/trunk_mgr/trunk_shared.[hc]: trunk_file_stat_func do not 
+   use function pointer
 
 Version 3.03  2011-10-16
  * ignore existed link when sync link file

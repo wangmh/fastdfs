@@ -28,6 +28,9 @@
 #define FDFS_TRUNK_FILE_TYPE_REGULAR  'F'
 #define FDFS_TRUNK_FILE_TYPE_LINK     'L'
 
+#define FDFS_STAT_FUNC_STAT     0
+#define FDFS_STAT_FUNC_LSTAT    1
+
 #define FDFS_TRUNK_FILE_INFO_LEN  16
 
 #define FDFS_TRUNK_FILE_FILE_TYPE_OFFSET	0
@@ -115,33 +118,33 @@ int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, \
 		char *buff, const int buff_size);
 
 #define trunk_file_stat(store_path_index, true_filename, filename_len, \
-			pStat, pTrunkInfo, pTrunkHeader) \
+		pStat, pTrunkInfo, pTrunkHeader) \
 	trunk_file_stat_func(store_path_index, true_filename, filename_len, \
-			stat, pStat, pTrunkInfo, pTrunkHeader, NULL)
+		FDFS_STAT_FUNC_STAT, pStat, pTrunkInfo, pTrunkHeader, NULL)
 
 #define trunk_file_lstat(store_path_index, true_filename, filename_len, \
-			pStat, pTrunkInfo, pTrunkHeader) \
+		pStat, pTrunkInfo, pTrunkHeader) \
 	trunk_file_do_lstat_func(store_path_index, true_filename, filename_len, \
-			lstat, pStat, pTrunkInfo, pTrunkHeader, NULL)
+		FDFS_STAT_FUNC_LSTAT, pStat, pTrunkInfo, pTrunkHeader, NULL)
 
 #define trunk_file_lstat_ex(store_path_index, true_filename, filename_len, \
-			pStat, pTrunkInfo, pTrunkHeader, pfd) \
+		pStat, pTrunkInfo, pTrunkHeader, pfd) \
 	trunk_file_do_lstat_func(store_path_index, true_filename, filename_len, \
-			lstat, pStat, pTrunkInfo, pTrunkHeader, pfd)
+		FDFS_STAT_FUNC_LSTAT, pStat, pTrunkInfo, pTrunkHeader, pfd)
 
 #define trunk_file_stat_ex(store_path_index, true_filename, filename_len, \
-			pStat, pTrunkInfo, pTrunkHeader, pfd) \
+		pStat, pTrunkInfo, pTrunkHeader, pfd) \
 	trunk_file_stat_func(store_path_index, true_filename, filename_len, \
-			stat, pStat, pTrunkInfo, pTrunkHeader, pfd)
+		FDFS_STAT_FUNC_STAT, pStat, pTrunkInfo, pTrunkHeader, pfd)
 
 int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
-	const int filename_len, stat_func statfunc, \
+	const int filename_len, const int stat_func, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
 	FDFSTrunkHeader *pTrunkHeader, int *pfd);
 
 int trunk_file_do_lstat_func(const int store_path_index, \
 	const char *true_filename, \
-	const int filename_len, stat_func statfunc, \
+	const int filename_len, const int stat_func, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
 	FDFSTrunkHeader *pTrunkHeader, int *pfd);
 

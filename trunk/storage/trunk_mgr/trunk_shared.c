@@ -391,7 +391,7 @@ int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, \
 }
 
 int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
-	const int filename_len, stat_func statfunc, \
+	const int filename_len, const int stat_func, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
 	FDFSTrunkHeader *pTrunkHeader, int *pfd)
 {
@@ -402,15 +402,15 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	char src_true_filename[128];
 
 	result = trunk_file_do_lstat_func(store_path_index, \
-		true_filename, filename_len, statfunc, \
+		true_filename, filename_len, stat_func, \
 		pStat, pTrunkInfo, pTrunkHeader, pfd);
 	if (result != 0)
 	{
 		return result;
 	}
 
-	if (!(statfunc == stat && IS_TRUNK_FILE_BY_ID((*pTrunkInfo)) \
-		&& S_ISLNK(pStat->st_mode)))
+	if (!(stat_func == FDFS_STAT_FUNC_STAT && IS_TRUNK_FILE_BY_ID( \
+		(*pTrunkInfo)) && S_ISLNK(pStat->st_mode)))
 	{
 		return 0;
 	}
@@ -440,7 +440,7 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 		}
 
 		result = trunk_file_do_lstat_func(src_store_path_index, \
-				src_true_filename, src_filename_len, statfunc, \
+				src_true_filename, src_filename_len, stat_func, \
 				pStat, pTrunkInfo, pTrunkHeader, pfd);
 	} while (0);
 
@@ -455,7 +455,7 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 
 int trunk_file_do_lstat_func(const int store_path_index, \
 	const char *true_filename, \
-	const int filename_len, stat_func statfunc, \
+	const int filename_len, const int stat_func, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
 	FDFSTrunkHeader *pTrunkHeader, int *pfd)
 {
@@ -474,7 +474,15 @@ int trunk_file_do_lstat_func(const int store_path_index, \
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
 			g_fdfs_store_paths[store_path_index], true_filename);
 
-		if (statfunc(full_filename, pStat) == 0)
+		if (stat_func == FDFS_STAT_FUNC_STAT)
+		{
+			result = stat(full_filename, pStat);
+		}
+		else
+		{
+			result = lstat(full_filename, pStat);
+		}
+		if (result == 0)
 		{
 			return 0;
 		}
@@ -495,7 +503,15 @@ int trunk_file_do_lstat_func(const int store_path_index, \
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
 			g_fdfs_store_paths[store_path_index], true_filename);
 
-		if (statfunc(full_filename, pStat) == 0)
+		if (stat_func == FDFS_STAT_FUNC_STAT)
+		{
+			result = stat(full_filename, pStat);
+		}
+		else
+		{
+			result = lstat(full_filename, pStat);
+		}
+		if (result == 0)
 		{
 			return 0;
 		}
