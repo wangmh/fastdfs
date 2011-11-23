@@ -324,7 +324,7 @@ void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str)
 
 void trunk_file_info_decode(const char *str, FDFSTrunkFileInfo *pTrunkFile)
 {
-	char buff[sizeof(int) * 3];
+	char buff[FDFS_TRUNK_FILE_INFO_LEN];
 	int len;
 
 	base64_decode_auto(&g_fdfs_base64_context, str, FDFS_TRUNK_FILE_INFO_LEN, \
