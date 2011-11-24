@@ -1,4 +1,4 @@
-Version 3.04  2011-11-23
+Version 3.04  2011-11-24
  * bug fixed: duplicate files only save one entry ok with trunk file mode
  * bug fixed: sync correctly with more binlog files
  * fdfs_file_info query file info from storage server
@@ -8,9 +8,9 @@ Version 3.04  2011-11-23
  * bug fixed: append file ok when check duplicate is on
  * storage/trunk_mgr/trunk_shared.[hc]: trunk_file_stat_func do not 
    use function pointer
- * bug fixed: delete slave file correctly
  * bug fixed: storage/trunk_mgr/trunk_shared.c base64_decode_auto 
    overflow 1 byte
+ * bug fixed: delete slave file correctly
 
 Version 3.03  2011-10-16
  * ignore existed link when sync link file

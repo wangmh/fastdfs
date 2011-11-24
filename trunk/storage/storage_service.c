@@ -241,6 +241,7 @@ static int storage_delete_file_auto(StorageFileContext *pFileContext)
 	}
 }
 
+/*
 static bool storage_judge_file_type_by_size(const char *remote_filename, \
 		const int filename_len, const int64_t type_mask)
 {
@@ -267,6 +268,7 @@ static bool storage_judge_file_type_by_size(const char *remote_filename, \
 	file_size = buff2long(buff + sizeof(int) * 2);
 	return (file_size & type_mask) ? true : false;
 }
+*/
 
 static bool storage_is_slave_file(const char *remote_filename, \
 		const int filename_len)
@@ -2085,25 +2087,49 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
 			master_store_path_index, filename);
 
-		if (!g_check_file_duplicate)
+		if (symlink(new_full_filename, pFileContext->filename) != 0)
 		{
-			if (symlink(new_full_filename, pFileContext->filename) != 0)
-			{
-				result = errno != 0 ? errno : ENOENT;
-				logError("file: "__FILE__", line: %d, " \
-					"link file %s to %s fail, " \
-					"errno: %d, error info: %s", __LINE__, \
-					new_full_filename, pFileContext->filename, \
-					result, STRERROR(result));
+			result = errno != 0 ? errno : ENOENT;
+			logError("file: "__FILE__", line: %d, " \
+				"link file %s to %s fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				new_full_filename, pFileContext->filename, \
+				result, STRERROR(result));
 
-				unlink(new_full_filename);
-				return result;
-			}
+			unlink(new_full_filename);
+			return result;
 		}
+
+		result = storage_binlog_write( \
+				pFileContext->timestamp2log, \
+				STORAGE_OP_TYPE_SOURCE_CREATE_FILE, \
+				new_fname2log);
+		if (result == 0)
+		{
+			char binlog_buff[256];
+			snprintf(binlog_buff, sizeof(binlog_buff), "%s %s", \
+				pFileContext->fname2log, new_fname2log);
+			result = storage_binlog_write( \
+				pFileContext->timestamp2log, \
+				STORAGE_OP_TYPE_SOURCE_CREATE_LINK, \
+				binlog_buff);
+		}
+
+		if (result != 0)
+		{
+			unlink(new_full_filename);
+			unlink(pFileContext->filename);
+			return result;
+		}
+
+		pFileContext->create_flag = STORAGE_CREATE_FLAG_LINK;
+		return 0;
 	}
-	else
+
+	strcpy(pFileContext->fname2log, new_fname2log);
+	if (!(pFileContext->extra_info.upload.file_type & _FILE_TYPE_TRUNK))
 	{
-		strcpy(pFileContext->fname2log, new_fname2log);
+		strcpy(pFileContext->filename, new_full_filename);
 	}
 
 	if (g_check_file_duplicate && !(pFileContext->extra_info.upload.file_type & \
@@ -2160,34 +2186,6 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 			pGroupName = value;
 			pSrcFilename = pSeperator + 1;
 
-			if ((pFileContext->extra_info.upload.file_type & \
-				_FILE_TYPE_SLAVE) && \
-				storage_judge_file_type_by_size(pSrcFilename, \
-				value_len - (pSrcFilename - value), \
-				FDFS_TRUNK_FILE_MARK_SIZE))
-			{
-				if (symlink(new_full_filename, \
-					pFileContext->filename) != 0)
-				{
-					result = errno != 0 ? errno : ENOENT;
-					logError("file: "__FILE__", line: %d, "\
-						"link file %s to %s fail, " \
-						"errno: %d, error info: %s", \
-						__LINE__, new_full_filename, \
-						pFileContext->filename, \
-						result, STRERROR(result));
-
-					unlink(new_full_filename);
-					return result;
-				}
-			}
-			else
-			{
-			if (!(pFileContext->extra_info.upload.file_type & \
-					_FILE_TYPE_TRUNK))
-			{
-				strcpy(pFileContext->filename, new_full_filename);
-			}
 			if ((result=storage_delete_file_auto(pFileContext)) != 0)
 			{
 				logError("file: "__FILE__", line: %d, "\
@@ -2213,18 +2211,11 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 
 			pFileContext->create_flag = STORAGE_CREATE_FLAG_LINK;
 			return result;
-			}
 		}
 		else if (result == ENOENT)
 		{
 			char src_filename[128];
 			FDHTKeyInfo ref_count_key;
-
-			if (!(pFileContext->extra_info.upload.file_type & \
-					_FILE_TYPE_TRUNK))
-			{
-				strcpy(pFileContext->filename, new_full_filename);
-			}
 
 			filename_len = sprintf(src_filename, "%s", new_fname2log);
 			value_len = sprintf(value, "%s/%s", \
@@ -2302,43 +2293,13 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		}
 	}
 
-	if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_SLAVE)
-	{  //upload slave file
-		result = storage_binlog_write( \
-				pFileContext->timestamp2log, \
-				STORAGE_OP_TYPE_SOURCE_CREATE_FILE, \
-				new_fname2log);
-		if (result == 0)
-		{
-			char binlog_buff[256];
-			snprintf(binlog_buff, sizeof(binlog_buff), "%s %s", \
-				pFileContext->fname2log, new_fname2log);
-			result = storage_binlog_write( \
-				pFileContext->timestamp2log, \
-				STORAGE_OP_TYPE_SOURCE_CREATE_LINK, \
-				binlog_buff);
-		}
-
-		if (result != 0)
-		{
-			unlink(new_full_filename);
-			unlink(pFileContext->filename);
-			return result;
-		}
-
+	if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_LINK)
+	{
 		pFileContext->create_flag = STORAGE_CREATE_FLAG_LINK;
 	}
 	else
 	{
-		if (pFileContext->extra_info.upload.file_type & \
-				_FILE_TYPE_LINK)
-		{
-			pFileContext->create_flag = STORAGE_CREATE_FLAG_LINK;
-		}
-		else
-		{
-			pFileContext->create_flag = STORAGE_CREATE_FLAG_FILE;
-		}
+		pFileContext->create_flag = STORAGE_CREATE_FLAG_FILE;
 	}
 
 	return 0;

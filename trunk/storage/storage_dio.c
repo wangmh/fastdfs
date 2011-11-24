@@ -228,41 +228,6 @@ int dio_delete_normal_file(struct fast_task_info *pTask)
 	int result;
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
-	if ((pFileContext->delete_flag & STORAGE_DELETE_FLAG_LINK) && \
-			(!g_check_file_duplicate))
-	{
-		int len;
-		char full_filename[MAX_PATH_SIZE + 128];
-
-		if ((len=readlink(pFileContext->filename, \
-			full_filename, sizeof(full_filename))) < 0)
-		{
-			result = errno != 0 ? errno : EACCES;
-			logError("file: "__FILE__", line: %d, " \
-				"readlink file: %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, pFileContext->filename, \
-				result, STRERROR(result));
-
-			pFileContext->done_callback(pTask, result);
-			return result;
-		}
-
-		*(full_filename + len) = '\0';
-		if (unlink(full_filename) != 0)
-		{
-			result = errno != 0 ? errno : EACCES;
-			logError("file: "__FILE__", line: %d, " \
-				"unlink file: %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, full_filename, \
-				result, STRERROR(result));
-
-			pFileContext->done_callback(pTask, result);
-			return result;
-		}
-	}
-
 	if (unlink(pFileContext->filename) != 0)
 	{
 		result = errno != 0 ? errno : EACCES;
