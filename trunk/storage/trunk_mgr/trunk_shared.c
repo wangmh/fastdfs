@@ -541,9 +541,6 @@ int trunk_file_do_lstat_func(const int store_path_index, \
 	fd = open(full_filename, O_RDONLY);
 	if (fd < 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"file: %s not exist", __LINE__, \
-			full_filename);
 		return errno != 0 ? errno : EIO;
 	}
 
