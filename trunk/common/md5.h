@@ -22,7 +22,7 @@ extern "C" {
  *           digest: store the md5 digest
  *  return: 0 for success, != 0 fail
 */
-int MD5String(char *string, unsigned char digest[16]);
+int my_md5_string(char *string, unsigned char digest[16]);
 
 /** md5 for file
  *  parameters:
@@ -30,7 +30,7 @@ int MD5String(char *string, unsigned char digest[16]);
  *           digest: store the md5 digest
  *  return: 0 for success, != 0 fail
 */
-int MD5File(char *filename, unsigned char digest[16]);
+int my_md5_file(char *filename, unsigned char digest[16]);
 
 /** md5 for buffer
  *  parameters:
@@ -39,13 +39,13 @@ int MD5File(char *filename, unsigned char digest[16]);
  *           digest: store the md5 digest
  *  return: 0 for success, != 0 fail
 */
-int MD5Buffer(char *buffer, unsigned int len, unsigned char digest[16]);
+int my_md5_buffer(char *buffer, unsigned int len, unsigned char digest[16]);
 
-void MD5Init (MD5_CTX *);
+void my_md5_init (MD5_CTX *);
 
-void MD5Update (MD5_CTX *, unsigned char *, unsigned int);
+void my_md5_update (MD5_CTX *, unsigned char *, unsigned int);
 
-void MD5Final (unsigned char [16], MD5_CTX *);
+void my_md5_final (unsigned char [16], MD5_CTX *);
 
 #ifdef __cplusplus
 }

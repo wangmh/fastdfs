@@ -298,7 +298,7 @@ int fdfs_http_gen_token(const BufferInfo *secret_key, const char *file_id, \
 	total_len += secret_key->length;
 	total_len += sprintf(buff + total_len, "%d", timestamp);
 
-	MD5Buffer(buff, total_len, digit);
+	my_md5_buffer(buff, total_len, digit);
 	bin2hex((char *)digit, 16, token);
 	return 0;
 }

@@ -74,7 +74,7 @@ static unsigned char PADDING[64] = {
  * MD5 initialization. Begins an MD5 operation, writing a new context.
  */
 void 
-MD5Init(MD5_CTX *context)
+my_md5_init(MD5_CTX *context)
 {
 	context->count[0] = context->count[1] = 0;
 	/*
@@ -91,7 +91,7 @@ MD5Init(MD5_CTX *context)
  * processing another message block, and updating the context.
  */
 void 
-MD5Update(MD5_CTX        *context, unsigned char  *input, unsigned int    inputLen)
+my_md5_update(MD5_CTX        *context, unsigned char  *input, unsigned int    inputLen)
 {
 	unsigned int    i, index, partLen;
 
@@ -131,7 +131,7 @@ MD5Update(MD5_CTX        *context, unsigned char  *input, unsigned int    inputL
  * message digest and zeroizing the context.
  */
 void 
-MD5Final(unsigned char   digest[16], MD5_CTX        *context)
+my_md5_final(unsigned char   digest[16], MD5_CTX        *context)
 {
 	unsigned char   bits[8];
 	unsigned int    index, padLen;
@@ -144,10 +144,10 @@ MD5Final(unsigned char   digest[16], MD5_CTX        *context)
 	 */
 	index = (unsigned int) ((context->count[0] >> 3) & 0x3f);
 	padLen = (index < 56) ? (56 - index) : (120 - index);
-	MD5Update(context, PADDING, padLen);
+	my_md5_update(context, PADDING, padLen);
 
 	/* Append length (before padding) */
-	MD5Update(context, bits, 8);
+	my_md5_update(context, bits, 8);
 	/* Store state in digest */
 	Encode(digest, context->state, 16);
 
@@ -311,28 +311,28 @@ MD5_memset(POINTER         output, int             value, unsigned int    len)
 /*
  * Digests a string
  */
-int MD5String(char *string,unsigned char digest[16])
+int my_md5_string(char *string,unsigned char digest[16])
 {
 	MD5_CTX	context;
 	unsigned int len = strlen(string);
 
-	MD5Init(&context);
-	MD5Update(&context, (unsigned char *)string, len);
-	MD5Final(digest, &context);
+	my_md5_init(&context);
+	my_md5_update(&context, (unsigned char *)string, len);
+	my_md5_final(digest, &context);
 	return 0;
 }
 
-int MD5Buffer(char *buffer, unsigned int len, unsigned char digest[16])
+int my_md5_buffer(char *buffer, unsigned int len, unsigned char digest[16])
 {
 	MD5_CTX	context;
 
-	MD5Init(&context);
-	MD5Update(&context, (unsigned char *)buffer, len);
-	MD5Final(digest, &context);
+	my_md5_init(&context);
+	my_md5_update(&context, (unsigned char *)buffer, len);
+	my_md5_final(digest, &context);
 	return 0;
 }
 
-int MD5File(char *filename,unsigned char digest[16])	
+int my_md5_file(char *filename,unsigned char digest[16])	
 {
 	FILE           *file;
 	MD5_CTX         context;
@@ -342,12 +342,12 @@ int MD5File(char *filename,unsigned char digest[16])
 	if ((file = fopen(filename, "rb")) == NULL)
 		return -1;
 	else {
-		MD5Init(&context);
+		my_md5_init(&context);
 		while ((len = fread(buffer, 1, 1024, file)) > 0)
 		{
-			MD5Update(&context, buffer, len);
+			my_md5_update(&context, buffer, len);
 		}
-		MD5Final(digest, &context);
+		my_md5_final(digest, &context);
 
 		fclose(file);
 	}
