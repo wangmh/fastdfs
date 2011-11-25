@@ -11,7 +11,7 @@ Version 3.04  2011-11-25
  * bug fixed: storage/trunk_mgr/trunk_shared.c base64_decode_auto 
    overflow 1 byte
  * bug fixed: delete slave file correctly
- * buf fixed: remove debug info
+ * bug fixed: remove debug info
  * md5 function name changed to avoid conflict
 
 Version 3.03  2011-10-16
