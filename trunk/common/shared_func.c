@@ -463,7 +463,13 @@ void daemon_init(bool bCloseFiles)
 			errno, STRERROR(errno));
 	}
 #else
-	chdir("/");
+	if (chdir("/") != 0)
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"change directory to / fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, errno, STRERROR(errno));
+	}
 #endif
 
 	if (bCloseFiles)

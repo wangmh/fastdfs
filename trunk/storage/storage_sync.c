@@ -50,7 +50,7 @@
 #define MARK_ITEM_UNTIL_TIMESTAMP	"until_timestamp"
 #define MARK_ITEM_SCAN_ROW_COUNT	"scan_row_count"
 #define MARK_ITEM_SYNC_ROW_COUNT	"sync_row_count"
-#define SYNC_BINLOG_WRITE_BUFF_SIZE	16 * 1024
+#define SYNC_BINLOG_WRITE_BUFF_SIZE	(16 * 1024)
 
 int g_binlog_fd = -1;
 int g_binlog_index = 0;
