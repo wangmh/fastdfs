@@ -4260,17 +4260,17 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 				"are same, adjust to %d", \
 				__LINE__, pJoinBody->store_path_count);
 			}
-			else
+			else if (pJoinBody->store_path_count < \
+				pClientInfo->pGroup->store_path_count)
 			{
 				logError("file: "__FILE__", line: %d, " \
-				"client ip: %s, store_path_count %d is not " \
-				"same in the group \"%s\", " \
-				"group store_path_count is %d", \
+				"client ip: %s, store_path_count %d less " \
+				"than that of the group \"%s\", " \
+				"the group store_path_count is %d", \
 				__LINE__, ip_addr, \
 				pJoinBody->store_path_count, \
 				pJoinBody->group_name, \
 				pClientInfo->pGroup->store_path_count);
-
 				return EINVAL;
 			}
 		}
