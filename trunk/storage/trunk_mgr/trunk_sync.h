@@ -18,7 +18,7 @@
 #define TRUNK_OP_TYPE_ADD_SPACE		'A'
 #define TRUNK_OP_TYPE_DEL_SPACE		'D'
 
-#define TRUNK_BINLOG_BUFFER_SIZE	8 * 1024
+#define TRUNK_BINLOG_BUFFER_SIZE	(8 * 1024)
 #define TRUNK_BINLOG_LINE_SIZE		128
 
 #ifdef __cplusplus
