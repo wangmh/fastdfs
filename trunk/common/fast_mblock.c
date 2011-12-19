@@ -59,7 +59,7 @@ static int fast_mblock_prealloc(struct fast_mblock_man *mblock)
 	int alloc_size;
 
 	block_size = sizeof(struct fast_mblock_node) + mblock->element_size;
-	alloc_size = sizeof(struct fast_mblock_malloc) + mblock->element_size * \
+	alloc_size = sizeof(struct fast_mblock_malloc) + block_size * \
 			mblock->alloc_elements_once;
 
 	pNew = (char *)malloc(alloc_size);
