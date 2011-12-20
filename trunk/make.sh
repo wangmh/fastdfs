@@ -86,6 +86,8 @@ elif [ "$uname" = "SunOS" ]; then
 elif [ "$uname" = "AIX" ]; then
   CFLAGS="$CFLAGS -DOS_AIX"
   export CC=gcc
+elif [ "$uname" = "HP-UX" ]; then
+  CFLAGS="$CFLAGS -DOS_HPUX"
 fi
 
 if [ "$WITH_HTTPD" = "1" ]; then
@@ -100,20 +102,27 @@ fi
 
 if [ -f /usr/lib/libpthread.so ] || [ -f /usr/local/lib/libpthread.so ] || [ -f /lib64/libpthread.so ] || [ -f /usr/lib64/libpthread.so ] || [ -f /usr/lib/libpthread.a ] || [ -f /usr/local/lib/libpthread.a ] || [ -f /lib64/libpthread.a ] || [ -f /usr/lib64/libpthread.a ]; then
   LIBS="$LIBS -lpthread"
-elif [ -f /usr/lib/libc_r.so ]; then
-  line=$(nm -D /usr/lib/libc_r.so | grep pthread_create | grep -w T)
-  if [ $? -eq 0 ]; then
-    LIBS="$LIBS -lc_r"
+elif [ "$uname" = "HP-UX" ]; then
+  lib_path="/usr/lib/hpux$OS_BITS"
+  if [ -f $lib_path/libpthread.so ]; then
+    LIBS="-L$lib_path -lpthread"
   fi
-elif [ -f /lib64/libc_r.so ]; then
-  line=$(nm -D /lib64/libc_r.so | grep pthread_create | grep -w T)
-  if [ $? -eq 0 ]; then
-    LIBS="$LIBS -lc_r"
-  fi
-elif [ -f /usr/lib64/libc_r.so ]; then
-  line=$(nm -D /usr/lib64/libc_r.so | grep pthread_create | grep -w T)
-  if [ $? -eq 0 ]; then
-    LIBS="$LIBS -lc_r"
+elif [ "$uname" = "FreeBSD" ]; then
+  if [ -f /usr/lib/libc_r.so ]; then
+    line=$(nm -D /usr/lib/libc_r.so | grep pthread_create | grep -w T)
+    if [ $? -eq 0 ]; then
+      LIBS="$LIBS -lc_r"
+    fi
+  elif [ -f /lib64/libc_r.so ]; then
+    line=$(nm -D /lib64/libc_r.so | grep pthread_create | grep -w T)
+    if [ $? -eq 0 ]; then
+      LIBS="$LIBS -lc_r"
+    fi
+  elif [ -f /usr/lib64/libc_r.so ]; then
+    line=$(nm -D /usr/lib64/libc_r.so | grep pthread_create | grep -w T)
+    if [ $? -eq 0 ]; then
+      LIBS="$LIBS -lc_r"
+    fi
   fi
 fi
 

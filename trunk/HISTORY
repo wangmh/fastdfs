@@ -1,8 +1,9 @@
 
-Version 3.05  2011-12-19
+Version 3.05  2011-12-20
  * remove compile warnings
  * storage server's store_path_count can be more than that of group
  * bug fixed: common/fast_mblock.c malloc bytes are not enough
+ * make.sh support OS: HP-UX
 
 Version 3.04  2011-11-25
  * bug fixed: duplicate files only save one entry ok with trunk file mode
