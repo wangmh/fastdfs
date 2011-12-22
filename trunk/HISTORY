@@ -1,4 +1,7 @@
 
+Version 3.06  2011-12-22
+ * add common/avl_tree.h and common/avl_tree.c
+
 Version 3.05  2011-12-20
  * remove compile warnings
  * storage server's store_path_count can be more than that of group

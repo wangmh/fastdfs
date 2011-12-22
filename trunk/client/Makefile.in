@@ -15,7 +15,8 @@ FAST_STATIC_OBJS = ../common/hash.o ../common/chain.o \
                    ../common/logger.o ../common/sockopt.o \
                    ../common/base64.o ../common/sched_thread.o \
                    ../common/http_func.o ../common/md5.o \
-                   ../common/pthread_func.o ../common/local_ip_func.o
+                   ../common/pthread_func.o ../common/local_ip_func.o \
+                   ../common/avl_tree.o
 
 FDFS_STATIC_OBJS = ../common/fdfs_global.o ../common/fdfs_http_shared.o \
                    ../common/mime_file_parser.o ../tracker/tracker_proto.o \
@@ -31,7 +32,8 @@ FAST_SHARED_OBJS = ../common/hash.lo ../common/chain.lo \
                    ../common/logger.lo ../common/sockopt.lo \
                    ../common/base64.lo ../common/sched_thread.lo \
                    ../common/http_func.lo ../common/md5.lo \
-                   ../common/pthread_func.lo ../common/local_ip_func.lo
+                   ../common/pthread_func.lo ../common/local_ip_func.lo \
+                   ../common/avl_tree.lo
 
 FDFS_SHARED_OBJS = ../common/fdfs_global.lo ../common/fdfs_http_shared.lo \
                    ../common/mime_file_parser.lo ../tracker/tracker_proto.lo \
