@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include "common_define.h"
 
 typedef struct tagAVLTreeNode {
@@ -20,13 +21,14 @@ typedef struct tagAVLTreeInfo {
 	int count;
 	FreeDataFunc free_data_func;
 	CompareFunc compare_func;
+	pthread_rwlock_t rwlock;
 } AVLTreeInfo;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void avl_tree_init(AVLTreeInfo *tree, FreeDataFunc free_data_func, \
+int avl_tree_init(AVLTreeInfo *tree, FreeDataFunc free_data_func, \
 	CompareFunc compare_func);
 void avl_tree_destroy(AVLTreeInfo *tree);
 

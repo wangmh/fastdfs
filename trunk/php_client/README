@@ -1822,3 +1822,6 @@ parameters:
 	storage_ip: the ip address of the storage server to be deleted
 return true for success, false for error
 
+void FastDFS::close()
+close tracker connections
+

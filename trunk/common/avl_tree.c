@@ -1,12 +1,13 @@
 #include "avl_tree.h"
 
-void avl_tree_init(AVLTreeInfo *tree, FreeDataFunc free_data_func, \
+int avl_tree_init(AVLTreeInfo *tree, FreeDataFunc free_data_func, \
 	CompareFunc compare_func)
 {
 	tree->root = NULL;
 	tree->count = 0;
 	tree->free_data_func = free_data_func;
 	tree->compare_func = compare_func;
+	return pthread_rwlock_init(&(tree->rwlock), NULL);
 }
 
 static void avl_tree_destroy_loop(FreeDataFunc free_data_func, \
@@ -30,15 +31,19 @@ static void avl_tree_destroy_loop(FreeDataFunc free_data_func, \
 
 void avl_tree_destroy(AVLTreeInfo *tree)
 {
-	if (tree == NULL || tree->root == NULL)
+	if (tree == NULL)
 	{
 		return;
 	}
-	
-	avl_tree_destroy_loop(tree->free_data_func, tree->root);
 
-	tree->root = NULL;
-	tree->count = 0;
+	if (tree->root != NULL)
+	{
+		avl_tree_destroy_loop(tree->free_data_func, tree->root);
+		tree->root = NULL;
+		tree->count = 0;
+	}
+
+	pthread_rwlock_destroy(&(tree->rwlock));
 }
 
 static AVLTreeNode *createTreeNode(AVLTreeNode *pParentNode, void *target_data)
@@ -229,17 +234,16 @@ int avl_tree_insert(AVLTreeInfo *tree, void *data)
 	int success;
 
 	taller = 0;
+
+	pthread_rwlock_wrlock(&(tree->rwlock));
 	success = avl_tree_insert_loop(tree->compare_func, &(tree->root), \
 					data, &taller);
 	if (success)
 	{
 		tree->count++;
-		return 1;
 	}
-	else
-	{
-		return 0;
-	}
+	pthread_rwlock_unlock(&(tree->rwlock));
+	return success;
 }
 
 static int avl_tree_replace_loop(CompareFunc compare_func, \
@@ -325,17 +329,17 @@ int avl_tree_replace(AVLTreeInfo *tree, void *data)
 	int success;
 
 	taller = 0;
+
+	pthread_rwlock_wrlock(&(tree->rwlock));
 	success = avl_tree_replace_loop(tree->compare_func, \
 			tree->free_data_func, &(tree->root), data, &taller);
 	if (success)
 	{
 		tree->count++;
-		return 1;
 	}
-	else
-	{
-		return 0;
-	}
+	pthread_rwlock_unlock(&(tree->rwlock));
+
+	return success;
 }
 
 static void *avl_tree_find_loop(CompareFunc compare_func, \
@@ -375,15 +379,21 @@ static void *avl_tree_find_loop(CompareFunc compare_func, \
 
 void *avl_tree_find(AVLTreeInfo *tree, void *target_data)
 {
+	void *found;
+
+	pthread_rwlock_rdlock(&(tree->rwlock));
 	if (tree->root == NULL)
 	{
-		return NULL;
+		found = NULL;
 	}
 	else
 	{
-		return avl_tree_find_loop(tree->compare_func, \
+		found = avl_tree_find_loop(tree->compare_func, \
 			tree->root, target_data);
 	}
+	pthread_rwlock_unlock(&(tree->rwlock));
+
+	return found;
 }
 
 static void avlLeftBalanceWhenDelete(AVLTreeNode **pTreeNode, int *shorter)
@@ -600,12 +610,16 @@ void *avl_tree_delete(AVLTreeInfo *tree, void *data)
 	int shorter;
 
 	shorter = 0;
+
+	pthread_rwlock_wrlock (&(tree->rwlock));
 	pResultData = avl_tree_delete_loop(tree->compare_func, \
 			&(tree->root), data, &shorter, NULL);
 	if (pResultData != NULL)
 	{
 		tree->count--;
 	}
+	pthread_rwlock_unlock(&(tree->rwlock));
+
 	return pResultData;
 }
 
@@ -635,11 +649,12 @@ static void avl_tree_walk_loop(DataOpFunc data_op_func, AVLTreeNode *pCurrentNod
 
 void avl_tree_walk(AVLTreeInfo *tree, DataOpFunc data_op_func)
 {
+	pthread_rwlock_rdlock(&(tree->rwlock));
 	if (tree->root == NULL)
 	{
 		return;
 	}
-	
 	avl_tree_walk_loop(data_op_func, tree->root);
+	pthread_rwlock_unlock(&(tree->rwlock));
 }
 
