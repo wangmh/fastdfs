@@ -11,12 +11,12 @@ Chinese language: http://www.csource.org/
 #step 2. download FastDFS source package and unpack it, 
 tar xzf FastDFS_v3.x.tar.gz
 #for example:
-tar xzf FastDFS_v3.04.tar.gz
+tar xzf FastDFS_v3.05.tar.gz
 
 #step 3. enter the FastDFS dir
 cd FastDFS
 
-#step 4. if HTTP supported, modify make.sh, uncomment the line:
+#step 4. if build-in HTTP supported, modify make.sh, uncomment the line:
 # WITH_HTTPD=1, then execute:
 ./make.sh
 

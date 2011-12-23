@@ -138,7 +138,7 @@ return assoc array for success, false for error.
 
 
 string fastdfs_storage_upload_by_filename1(string local_filename
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload local file to storage server
 parameters:
@@ -155,7 +155,7 @@ return file_id for success, false for error.
 
 
 array fastdfs_storage_upload_by_filebuff(string file_buff
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file buff to storage server
 parameters:
@@ -173,7 +173,7 @@ return assoc array for success, false for error.
 
 
 string fastdfs_storage_upload_by_filebuff1(string file_buff
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file buff to storage server
 parameters:
@@ -190,7 +190,7 @@ return file_id for success, false for error
 
 
 array fastdfs_storage_upload_by_callback(array callback_array
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file to storage server by callback
 parameters:
@@ -213,7 +213,7 @@ return assoc array for success, false for error.
 
 
 array fastdfs_storage_upload_by_callback1(array callback_array
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file to storage server by callback
 parameters:
@@ -253,7 +253,7 @@ return assoc array for success, false for error.
 
 
 string fastdfs_storage_upload_appender_by_filename1(string local_filename
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload local file to storage server as appender file
 parameters:
@@ -270,7 +270,7 @@ return file_id for success, false for error.
 
 
 array fastdfs_storage_upload_appender_by_filebuff(string file_buff
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file buff to storage server as appender file
 parameters:
@@ -288,7 +288,7 @@ return assoc array for success, false for error.
 
 
 string fastdfs_storage_upload_appender_by_filebuff1(string file_buff
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file buff to storage server as appender file
 parameters:
@@ -305,7 +305,7 @@ return file_id for success, false for error
 
 
 array fastdfs_storage_upload_appender_by_callback(array callback_array
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file to storage server by callback as appender file
 parameters:
@@ -328,7 +328,7 @@ return assoc array for success, false for error.
 
 
 string fastdfs_storage_upload_appender_by_callback1(array callback_array
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file to storage server by callback as appender file
 parameters:
@@ -472,7 +472,7 @@ return assoc array for success, false for error.
 
 string fastdfs_storage_upload_slave_by_filename1(string local_filename, 
 	string master_file_id, string prefix_name 
-	[, string file_ext_name, string meta_list, 
+	[, string file_ext_name, array meta_list, 
 	array tracker_server, array storage_server])
 upload local file to storage server (slave file mode)
 parameters:
@@ -491,7 +491,7 @@ return file_id for success, false for error.
 
 array fastdfs_storage_upload_slave_by_filebuff(string file_buff, 
 	string group_name, string master_filename, string prefix_name 
-	[, string file_ext_name, string meta_list, 
+	[, string file_ext_name, array meta_list, 
 	array tracker_server, array storage_server])
 upload file buff to storage server (slave file mode)
 parameters:
@@ -512,7 +512,7 @@ return assoc array for success, false for error.
 
 string fastdfs_storage_upload_slave_by_filebuff1(string file_buff, 
 	string master_file_id, string prefix_name
-	[, string file_ext_name, string meta_list, 
+	[, string file_ext_name, array meta_list, 
 	array tracker_server, array storage_server])
 upload file buff to storage server (slave file mode)
 parameters:
@@ -531,7 +531,7 @@ return file_id for success, false for error
 
 array fastdfs_storage_upload_slave_by_callback(array callback_array,
 	string group_name, string master_filename, string prefix_name 
-	[, string file_ext_name, string meta_list, 
+	[, string file_ext_name, array meta_list, 
 	array tracker_server, array storage_server])
 upload file to storage server by callback (slave file mode)
 parameters:
@@ -557,7 +557,7 @@ return assoc array for success, false for error.
 
 string fastdfs_storage_upload_slave_by_callback1(array callback_array,
 	string master_file_id, string prefix_name
-	[, string file_ext_name, string meta_list, 
+	[, string file_ext_name, array meta_list, 
 	array tracker_server, array storage_server])
 upload file to storage server by callback (slave file mode)
 parameters:
@@ -1035,7 +1035,7 @@ return assoc array for success, false for error.
 
 
 string FastDFS::storage_upload_by_filename1(string local_filename
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload local file to storage server
 parameters:
@@ -1052,7 +1052,7 @@ return file_id for success, false for error.
 
 
 array FastDFS::storage_upload_by_filebuff(string file_buff
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file buff to storage server
 parameters:
@@ -1070,7 +1070,7 @@ return assoc array for success, false for error.
 
 
 string FastDFS::storage_upload_by_filebuff1(string file_buff
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file buff to storage server
 parameters:
@@ -1087,7 +1087,7 @@ return file_id for success, false for error
 
 
 array FastDFS::storage_upload_by_callback(array callback_array
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file to storage server by callback
 parameters:
@@ -1110,7 +1110,7 @@ return assoc array for success, false for error.
 
 
 array FastDFS::storage_upload_by_callback1(array callback_array
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file to storage server by callback
 parameters:
@@ -1150,7 +1150,7 @@ return assoc array for success, false for error.
 
 
 string FastDFS::storage_upload_appender_by_filename1(string local_filename
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload local file to storage server as appender file
 parameters:
@@ -1167,7 +1167,7 @@ return file_id for success, false for error.
 
 
 array FastDFS::storage_upload_appender_by_filebuff(string file_buff
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file buff to storage server as appender file
 parameters:
@@ -1185,7 +1185,7 @@ return assoc array for success, false for error.
 
 
 string FastDFS::storage_upload_appender_by_filebuff1(string file_buff
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file buff to storage server as appender file
 parameters:
@@ -1202,7 +1202,7 @@ return file_id for success, false for error
 
 
 array FastDFS::storage_upload_appender_by_callback(array callback_array
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file to storage server by callback as appender file
 parameters:
@@ -1225,7 +1225,7 @@ return assoc array for success, false for error.
 
 
 string FastDFS::storage_upload_appender_by_callback1(array callback_array
-	[, string file_ext_name, string meta_list, string group_name, 
+	[, string file_ext_name, array meta_list, string group_name, 
 	array tracker_server, array storage_server])
 upload file to storage server by callback as appender file
 parameters:
@@ -1369,7 +1369,7 @@ return assoc array for success, false for error.
 
 string FastDFS::storage_upload_slave_by_filename1(string local_filename, 
 	string master_file_id, string prefix_name 
-	[, string file_ext_name, string meta_list, 
+	[, string file_ext_name, array meta_list, 
 	array tracker_server, array storage_server])
 upload local file to storage server (slave file mode)
 parameters:
@@ -1388,7 +1388,7 @@ return file_id for success, false for error.
 
 array FastDFS::storage_upload_slave_by_filebuff(string file_buff, 
 	string group_name, string master_filename, string prefix_name 
-	[, file_ext_name, string meta_list, 
+	[, file_ext_name, array meta_list, 
 	array tracker_server, array storage_server])
 upload file buff to storage server (slave file mode)
 parameters:
@@ -1409,7 +1409,7 @@ return assoc array for success, false for error.
 
 string FastDFS::storage_upload_slave_by_filebuff1(string file_buff, 
 	string master_file_id, string prefix_name
-	[, string file_ext_name, string meta_list, 
+	[, string file_ext_name, array meta_list, 
 	array tracker_server, array storage_server])
 upload file buff to storage server (slave file mode)
 parameters:
@@ -1428,7 +1428,7 @@ return file_id for success, false for error
 
 array FastDFS::storage_upload_slave_by_callback(array callback_array,
 	string group_name, string master_filename, string prefix_name 
-	[, string file_ext_name, string meta_list, 
+	[, string file_ext_name, array meta_list, 
 	array tracker_server, array storage_server])
 upload file to storage server by callback (slave file mode)
 parameters:
@@ -1454,7 +1454,7 @@ return assoc array for success, false for error.
 
 string FastDFS::storage_upload_slave_by_callback1(array callback_array,
 	string master_file_id, string prefix_name
-	[, string file_ext_name, string meta_list, 
+	[, string file_ext_name, array meta_list, 
 	array tracker_server, array storage_server])
 upload file to storage server by callback (slave file mode)
 parameters:
