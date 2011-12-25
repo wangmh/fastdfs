@@ -4,10 +4,9 @@ int avl_tree_init(AVLTreeInfo *tree, FreeDataFunc free_data_func, \
 	CompareFunc compare_func)
 {
 	tree->root = NULL;
-	tree->count = 0;
 	tree->free_data_func = free_data_func;
 	tree->compare_func = compare_func;
-	return pthread_rwlock_init(&(tree->rwlock), NULL);
+	return 0;
 }
 
 static void avl_tree_destroy_loop(FreeDataFunc free_data_func, \
@@ -40,10 +39,7 @@ void avl_tree_destroy(AVLTreeInfo *tree)
 	{
 		avl_tree_destroy_loop(tree->free_data_func, tree->root);
 		tree->root = NULL;
-		tree->count = 0;
 	}
-
-	pthread_rwlock_destroy(&(tree->rwlock));
 }
 
 static AVLTreeNode *createTreeNode(AVLTreeNode *pParentNode, void *target_data)
@@ -231,19 +227,10 @@ static int avl_tree_insert_loop(CompareFunc compare_func, AVLTreeNode **pCurrent
 int avl_tree_insert(AVLTreeInfo *tree, void *data)
 {
 	int taller;
-	int success;
 
 	taller = 0;
-
-	pthread_rwlock_wrlock(&(tree->rwlock));
-	success = avl_tree_insert_loop(tree->compare_func, &(tree->root), \
+	return avl_tree_insert_loop(tree->compare_func, &(tree->root), \
 					data, &taller);
-	if (success)
-	{
-		tree->count++;
-	}
-	pthread_rwlock_unlock(&(tree->rwlock));
-	return success;
 }
 
 static int avl_tree_replace_loop(CompareFunc compare_func, \
@@ -326,20 +313,10 @@ static int avl_tree_replace_loop(CompareFunc compare_func, \
 int avl_tree_replace(AVLTreeInfo *tree, void *data)
 {
 	int taller;
-	int success;
 
 	taller = 0;
-
-	pthread_rwlock_wrlock(&(tree->rwlock));
-	success = avl_tree_replace_loop(tree->compare_func, \
+	return avl_tree_replace_loop(tree->compare_func, \
 			tree->free_data_func, &(tree->root), data, &taller);
-	if (success)
-	{
-		tree->count++;
-	}
-	pthread_rwlock_unlock(&(tree->rwlock));
-
-	return success;
 }
 
 static void *avl_tree_find_loop(CompareFunc compare_func, \
@@ -377,11 +354,46 @@ static void *avl_tree_find_loop(CompareFunc compare_func, \
 	}
 }
 
+static void *avl_tree_find_ge_loop(CompareFunc compare_func, \
+		AVLTreeNode *pCurrentNode, void *target_data)
+{
+	int nCompRes;
+	void *found;
+
+	nCompRes = compare_func(pCurrentNode->data, target_data);
+	if (nCompRes > 0)
+	{
+		if (pCurrentNode->left == NULL)
+		{
+			return pCurrentNode->data;
+		}
+
+		found = avl_tree_find_ge_loop(compare_func, \
+				pCurrentNode->left, target_data);
+		return found != NULL ? found : pCurrentNode->data;
+	}
+	else if (nCompRes < 0)
+	{
+		if (pCurrentNode->right == NULL)
+		{
+			return NULL;
+		}
+		else
+		{
+			return avl_tree_find_ge_loop(compare_func, \
+				pCurrentNode->right, target_data);
+		}
+	}
+	else
+	{
+		return pCurrentNode->data;
+	}
+}
+
 void *avl_tree_find(AVLTreeInfo *tree, void *target_data)
 {
 	void *found;
 
-	pthread_rwlock_rdlock(&(tree->rwlock));
 	if (tree->root == NULL)
 	{
 		found = NULL;
@@ -391,7 +403,23 @@ void *avl_tree_find(AVLTreeInfo *tree, void *target_data)
 		found = avl_tree_find_loop(tree->compare_func, \
 			tree->root, target_data);
 	}
-	pthread_rwlock_unlock(&(tree->rwlock));
+
+	return found;
+}
+
+void *avl_tree_find_ge(AVLTreeInfo *tree, void *target_data)
+{
+	void *found;
+
+	if (tree->root == NULL)
+	{
+		found = NULL;
+	}
+	else
+	{
+		found = avl_tree_find_ge_loop(tree->compare_func, \
+			tree->root, target_data);
+	}
 
 	return found;
 }
@@ -606,21 +634,11 @@ static void *avl_tree_delete_loop(CompareFunc compare_func, \
 
 void *avl_tree_delete(AVLTreeInfo *tree, void *data)
 {
-	void *pResultData;
 	int shorter;
 
 	shorter = 0;
-
-	pthread_rwlock_wrlock (&(tree->rwlock));
-	pResultData = avl_tree_delete_loop(tree->compare_func, \
+	return avl_tree_delete_loop(tree->compare_func, \
 			&(tree->root), data, &shorter, NULL);
-	if (pResultData != NULL)
-	{
-		tree->count--;
-	}
-	pthread_rwlock_unlock(&(tree->rwlock));
-
-	return pResultData;
 }
 
 static int avl_tree_walk_loop(DataOpFunc data_op_func, \
@@ -663,19 +681,41 @@ static int avl_tree_walk_loop(DataOpFunc data_op_func, \
 
 int avl_tree_walk(AVLTreeInfo *tree, DataOpFunc data_op_func, void *args)
 {
-	int result;
-
-	pthread_rwlock_rdlock(&(tree->rwlock));
 	if (tree->root == NULL)
 	{
-		result = 0;
+		return 0;
 	}
 	else
 	{
-		result = avl_tree_walk_loop(data_op_func, tree->root, args);
+		return avl_tree_walk_loop(data_op_func, tree->root, args);
 	}
-	pthread_rwlock_unlock(&(tree->rwlock));
+}
 
-	return result;
+static void avl_tree_count_loop(AVLTreeNode *pCurrentNode, int *count)
+{
+	if (pCurrentNode->left != NULL)
+	{
+		avl_tree_count_loop(pCurrentNode->left, count);
+	}
+
+	(*count)++;
+
+	if (pCurrentNode->right != NULL)
+	{
+		avl_tree_count_loop(pCurrentNode->right, count);
+	}
+}
+
+int avl_tree_count(AVLTreeInfo *tree)
+{
+	int count;
+	if (tree->root == NULL)
+	{
+		return 0;
+	}
+
+	count = 0;
+	avl_tree_count_loop(tree->root, &count);
+	return count;
 }
 

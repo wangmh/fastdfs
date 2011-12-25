@@ -51,7 +51,7 @@ bool g_if_trunker_self = false;
 int64_t g_trunk_total_free_space = 0;
 
 static pthread_mutex_t trunk_file_lock;
-static pthread_mutex_t free_chain_lock;
+static pthread_mutex_t trunk_mem_lock;
 static struct fast_mblock_man free_blocks_man;
 static struct fast_mblock_man tree_nodes_man;
 static AVLTreeInfo tree_info;
@@ -110,7 +110,7 @@ int storage_trunk_init()
 		return result;
 	}
 
-	if ((result=init_pthread_lock(&free_chain_lock)) != 0)
+	if ((result=init_pthread_lock(&trunk_mem_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"init_pthread_lock fail, " \
@@ -146,6 +146,8 @@ int storage_trunk_init()
 		return result;
 	}
 
+	logInfo("tree node count: %d", avl_tree_count(&tree_info));
+
 	return 0;
 }
 
@@ -159,7 +161,7 @@ int storage_trunk_destroy()
 	fast_mblock_destroy(&free_blocks_man);
 	fast_mblock_destroy(&tree_nodes_man);
 	pthread_mutex_destroy(&trunk_file_lock);
-	pthread_mutex_destroy(&free_chain_lock);
+	pthread_mutex_destroy(&trunk_mem_lock);
 
 	return result;
 }
@@ -278,7 +280,7 @@ static int storage_trunk_save()
 			trunk_binlog_size);
 	callback_args.pCurrent += len;
 
-	pthread_mutex_lock(&trunk_file_lock);
+	pthread_mutex_lock(&trunk_mem_lock);
 	result = avl_tree_walk(&tree_info, tree_walk_callback, &callback_args);
 
 	len = callback_args.pCurrent - callback_args.buff;
@@ -306,7 +308,7 @@ static int storage_trunk_save()
 	}
 
 	close(callback_args.fd);
-	pthread_mutex_unlock(&trunk_file_lock);
+	pthread_mutex_unlock(&trunk_mem_lock);
 
 	if (result != 0)
 	{
@@ -575,6 +577,8 @@ static int storage_trunk_load()
 		return EINVAL;
 	}
 
+	logInfo("line_count=%d", line_count);
+
 	return storage_trunk_restore(restore_offset);
 }
 
@@ -612,6 +616,7 @@ int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 
 	pTrunkNode->pMblockNode = pMblockNode;
 	pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
+	pTrunkNode->next = NULL;
 	return trunk_add_node(pTrunkNode, bWriteBinLog);
 }
 
@@ -625,8 +630,8 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 	target_slot.size = pNode->trunk.file.size;
 	target_slot.head = NULL;
 
-	pthread_mutex_lock(&free_chain_lock);
-	chain = (FDFSTrunkSlot *)avl_tree_find_ge(&tree_info, &target_slot);
+	pthread_mutex_lock(&trunk_mem_lock);
+	chain = (FDFSTrunkSlot *)avl_tree_find(&tree_info, &target_slot);
 	if (chain == NULL)
 	{
 		pMblockNode = fast_mblock_alloc(&tree_nodes_man);
@@ -638,7 +643,7 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 				"errno: %d, error info: %s", \
 				__LINE__, (int)sizeof(FDFSTrunkSlot), \
 				result, STRERROR(result));
-			pthread_mutex_unlock(&free_chain_lock);
+			pthread_mutex_unlock(&trunk_mem_lock);
 			return result;
 		}
 
@@ -649,16 +654,13 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 	}
 	else
 	{
-		if (chain->head == NULL)
+		if (chain->head != NULL)
 		{
-			chain->head = pNode;
+			pNode->next = chain->head;
 		}
-		else
-		{
-			chain->head->next = pNode;
-		}
+		chain->head = pNode;
 	}
-	pthread_mutex_unlock(&free_chain_lock);
+	pthread_mutex_unlock(&trunk_mem_lock);
 
 	if (bWriteBinLog)
 	{
@@ -689,11 +691,11 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 	target_slot.size = pTrunkInfo->file.size;
 	target_slot.head = NULL;
 
-	pthread_mutex_lock(&free_chain_lock);
+	pthread_mutex_lock(&trunk_mem_lock);
 	pSlot = (FDFSTrunkSlot *)avl_tree_find(&tree_info, &target_slot);
 	if (pSlot == NULL)
 	{
-		pthread_mutex_unlock(&free_chain_lock);
+		pthread_mutex_unlock(&trunk_mem_lock);
 		logError("file: "__FILE__", line: %d, " \
 			"can't find trunk entry: %s", __LINE__, \
 			trunk_info_dump(pTrunkInfo, buff, sizeof(buff)));
@@ -711,7 +713,7 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 
 	if (pCurrent == NULL)
 	{
-		pthread_mutex_unlock(&free_chain_lock);
+		pthread_mutex_unlock(&trunk_mem_lock);
 		logError("file: "__FILE__", line: %d, " \
 			"can't find trunk entry: %s", __LINE__, \
 			trunk_info_dump(pTrunkInfo, buff, sizeof(buff)));
@@ -731,8 +733,7 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 	{
 		pPrevious->next = pCurrent->next;
 	}
-
-	pthread_mutex_unlock(&free_chain_lock);
+	pthread_mutex_unlock(&trunk_mem_lock);
 
 	if (bWriteBinLog)
 	{
@@ -761,11 +762,11 @@ static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
 	target_slot.size = pTrunkInfo->file.size;
 	target_slot.head = NULL;
 
-	pthread_mutex_lock(&free_chain_lock);
+	pthread_mutex_lock(&trunk_mem_lock);
 	pSlot = (FDFSTrunkSlot *)avl_tree_find(&tree_info, &target_slot);
 	if (pSlot == NULL)
 	{
-		pthread_mutex_unlock(&free_chain_lock);
+		pthread_mutex_unlock(&trunk_mem_lock);
 		logError("file: "__FILE__", line: %d, " \
 			"can't find trunk entry: %s", __LINE__, \
 			trunk_info_dump(pTrunkInfo, buff, sizeof(buff)));
@@ -781,7 +782,7 @@ static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
 
 	if (pCurrent == NULL)
 	{
-		pthread_mutex_unlock(&free_chain_lock);
+		pthread_mutex_unlock(&trunk_mem_lock);
 
 		logError("file: "__FILE__", line: %d, " \
 			"can't find trunk entry: %s", __LINE__, \
@@ -790,7 +791,7 @@ static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
 	}
 
 	pCurrent->trunk.status = FDFS_TRUNK_STATUS_FREE;
-	pthread_mutex_unlock(&free_chain_lock);
+	pthread_mutex_unlock(&trunk_mem_lock);
 
 	return 0;
 }
@@ -826,6 +827,7 @@ static int trunk_split(FDFSTrunkNode *pNode, const int size)
 	pTrunkNode->trunk.file.offset = pNode->trunk.file.offset + size;
 	pTrunkNode->trunk.file.size = pNode->trunk.file.size - size;
 	pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
+	pTrunkNode->next = NULL;
 
 	result = trunk_add_node(pTrunkNode, true);
 	if (result != 0)
@@ -864,7 +866,7 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 
 	pPreviousNode = NULL;
 	pTrunkNode = NULL;
-	pthread_mutex_lock(&free_chain_lock);
+	pthread_mutex_lock(&trunk_mem_lock);
 	while (1)
 	{
 		pSlot = (FDFSTrunkSlot *)avl_tree_find_ge(&tree_info, \
@@ -919,7 +921,7 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 				"errno: %d, error info: %s", \
 				__LINE__, (int)sizeof(FDFSTrunkNode), \
 				result, STRERROR(result));
-			pthread_mutex_unlock(&free_chain_lock);
+			pthread_mutex_unlock(&trunk_mem_lock);
 			return result;
 		}
 		pTrunkNode = (FDFSTrunkNode *)pMblockNode->data;
@@ -928,11 +930,12 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 		pTrunkNode->trunk.file.offset = 0;
 		pTrunkNode->trunk.file.size = g_trunk_file_size;
 		pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
+		pTrunkNode->next = NULL;
 
 		result = trunk_create_next_file(&(pTrunkNode->trunk));
 		if (result != 0)
 		{
-			pthread_mutex_unlock(&free_chain_lock);
+			pthread_mutex_unlock(&trunk_mem_lock);
 			fast_mblock_free(&free_blocks_man, pMblockNode);
 			return result;
 		}
@@ -940,7 +943,7 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 		trunk_mem_binlog_write(time(NULL), \
 			TRUNK_OP_TYPE_ADD_SPACE, &(pTrunkNode->trunk));
 	}
-	pthread_mutex_unlock(&free_chain_lock);
+	pthread_mutex_unlock(&trunk_mem_lock);
 
 	result = trunk_split(pTrunkNode, size);
 	if (result != 0)
