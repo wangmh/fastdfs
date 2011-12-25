@@ -626,7 +626,7 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 	target_slot.head = NULL;
 
 	pthread_mutex_lock(&free_chain_lock);
-	chain = (FDFSTrunkSlot *)avl_tree_find(&tree_info, &target_slot);
+	chain = (FDFSTrunkSlot *)avl_tree_find_ge(&tree_info, &target_slot);
 	if (chain == NULL)
 	{
 		pMblockNode = fast_mblock_alloc(&tree_nodes_man);
@@ -649,7 +649,14 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 	}
 	else
 	{
-		chain->head->next = pNode;
+		if (chain->head == NULL)
+		{
+			chain->head = pNode;
+		}
+		else
+		{
+			chain->head->next = pNode;
+		}
 	}
 	pthread_mutex_unlock(&free_chain_lock);
 
@@ -714,6 +721,11 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 	if (pPrevious == NULL)
 	{
 		pSlot->head = pCurrent->next;
+		if (pSlot->head == NULL)
+		{
+			avl_tree_delete(&tree_info, pSlot);
+			fast_mblock_free(&tree_nodes_man, pSlot->pMblockNode);
+		}
 	}
 	else
 	{
@@ -721,6 +733,7 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 	}
 
 	pthread_mutex_unlock(&free_chain_lock);
+
 	if (bWriteBinLog)
 	{
 		result = trunk_mem_binlog_write(time(NULL), \
@@ -854,7 +867,8 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	pthread_mutex_lock(&free_chain_lock);
 	while (1)
 	{
-		pSlot = (FDFSTrunkSlot *)avl_tree_find(&tree_info, &target_slot);
+		pSlot = (FDFSTrunkSlot *)avl_tree_find_ge(&tree_info, \
+						&target_slot);
 		if (pSlot == NULL)
 		{
 			break;
@@ -882,6 +896,12 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 		if (pPreviousNode == NULL)
 		{
 			pSlot->head = pTrunkNode->next;
+			if (pSlot->head == NULL)
+			{
+				avl_tree_delete(&tree_info, pSlot);
+				fast_mblock_free(&tree_nodes_man, \
+					pSlot->pMblockNode);
+			}
 		}
 		else
 		{
