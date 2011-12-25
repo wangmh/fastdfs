@@ -46,8 +46,8 @@ typedef struct tagFDFSTrunkNode {
 
 typedef struct {
 	int size;
-	FDFSTrunkNode *free_trunk_head;
-	pthread_mutex_t lock;
+	FDFSTrunkNode *head;
+	struct fast_mblock_node *pMblockNode;   //for free
 } FDFSTrunkSlot;
 
 int storage_trunk_init();
