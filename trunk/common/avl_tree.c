@@ -48,7 +48,7 @@ static AVLTreeNode *createTreeNode(AVLTreeNode *pParentNode, void *target_data)
 	pNewNode = (AVLTreeNode *)malloc(sizeof(AVLTreeNode));
 	if (pNewNode == NULL)
 	{
-		printf("malloc fail!\n");
+		printf("malloc %d bytes fail!\n", (int)sizeof(AVLTreeNode));
 		return NULL;
 	}
 
@@ -87,7 +87,6 @@ static void avlLeftBalanceWhenInsert(AVLTreeNode **pTreeNode, int *taller)
 			*taller = 0;
 			break;
 		case 0 :
-			printf("树已经平衡化!!!!!!!\n");
 			break;
 		case 1 :
 			rightsub = leftsub->right;
@@ -127,7 +126,6 @@ static void avlRightBalanceWhenInsert(AVLTreeNode **pTreeNode, int *taller)
 			*taller = 0;
 			break;
 		case 0: 
-			printf("树已经平衡化!!!!!!!\n");
 			break; 
 		case -1:
 			leftsub = rightsub->left;
@@ -230,7 +228,7 @@ int avl_tree_insert(AVLTreeInfo *tree, void *data)
 
 	taller = 0;
 	return avl_tree_insert_loop(tree->compare_func, &(tree->root), \
-					data, &taller);
+				data, &taller);
 }
 
 static int avl_tree_replace_loop(CompareFunc compare_func, \
@@ -534,7 +532,7 @@ static void *avl_tree_delete_loop(CompareFunc compare_func, \
 			return pResultData;
 		}
 
-		nCompRes = -1;	//在右分支中寻找直接前驱结点
+		nCompRes = -1;
 	}
 	else
 	{
@@ -604,7 +602,6 @@ static void *avl_tree_delete_loop(CompareFunc compare_func, \
 		}
 		else
 		{
-			//printf("find the prior.\n");
 			avl_tree_delete_loop(compare_func, \
 				&((*pCurrentNode)->left), target_data, \
 				shorter, *pCurrentNode);
@@ -661,6 +658,7 @@ static int avl_tree_walk_loop(DataOpFunc data_op_func, \
 		return result;
 	}
 
+	/*
 	if (pCurrentNode->balance >= -1 && pCurrentNode->balance <= 1)
 	{
 		//printf("==%d\n", pCurrentNode->balance);
@@ -669,6 +667,7 @@ static int avl_tree_walk_loop(DataOpFunc data_op_func, \
 	{
 		printf("==bad %d!!!!!!!!!!!!\n", pCurrentNode->balance);
 	}
+	*/
 
 	if (pCurrentNode->right != NULL)
 	{

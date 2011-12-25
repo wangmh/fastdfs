@@ -146,7 +146,7 @@ int storage_trunk_init()
 		return result;
 	}
 
-	logInfo("tree node count: %d", avl_tree_count(&tree_info));
+	//logInfo("tree node count: %d", avl_tree_count(&tree_info));
 
 	return 0;
 }
@@ -650,7 +650,16 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 		chain->size = pNode->trunk.file.size;
 		chain->head = pNode;
 
-		avl_tree_insert(&tree_info, chain);
+		if (avl_tree_insert(&tree_info, chain) != 1)
+		{
+			result = errno != 0 ? errno : ENOMEM;
+			logError("file: "__FILE__", line: %d, " \
+				"avl_tree_insert fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
+			pthread_mutex_unlock(&trunk_mem_lock);
+			return result;
+		}
 	}
 	else
 	{
