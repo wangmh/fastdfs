@@ -14,7 +14,7 @@ typedef struct tagAVLTreeNode {
 	byte balance;
 } AVLTreeNode;
 
-typedef void (*DataOpFunc) (void *data);
+typedef int (*DataOpFunc) (void *data, void *args);
 
 typedef struct tagAVLTreeInfo {
 	AVLTreeNode *root;
@@ -36,7 +36,7 @@ int avl_tree_insert(AVLTreeInfo *tree, void *data);
 int avl_tree_replace(AVLTreeInfo *tree, void *data);
 void *avl_tree_delete(AVLTreeInfo *tree, void *data);
 void *avl_tree_find(AVLTreeInfo *tree, void *target_data);
-void avl_tree_walk(AVLTreeInfo *tree, DataOpFunc data_op_func);
+int avl_tree_walk(AVLTreeInfo *tree, DataOpFunc data_op_func, void *args);
 
 #ifdef __cplusplus
 }

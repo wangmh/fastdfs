@@ -9,9 +9,11 @@ CONFIG_PATH = $(TARGET_CONF_PATH)
 SHARED_OBJS = ../common/hash.o ../common/chain.o \
               ../common/shared_func.o ../common/ini_file_reader.o \
               ../common/logger.o ../common/sockopt.o ../common/fdfs_global.o \
-              ../common/base64.o ../common/sched_thread.o ../common/local_ip_func.o \
-              ../common/http_func.o ../common/md5.o ../common/pthread_func.o \
-              ../common/fast_mblock.o ../tracker/fdfs_shared_func.o \
+              ../common/base64.o ../common/sched_thread.o \
+	      ../common/local_ip_func.o ../common/http_func.o \
+              ../common/md5.o ../common/pthread_func.o \
+              ../common/fast_mblock.o ../common/avl_tree.o \
+              ../tracker/fdfs_shared_func.o \
               ../tracker/tracker_proto.o ../tracker/fast_task_queue.o \
               tracker_client_thread.o storage_global.o storage_func.o \
               storage_service.o storage_sync.o storage_nio.o storage_dio.o \

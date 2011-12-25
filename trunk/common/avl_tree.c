@@ -623,38 +623,59 @@ void *avl_tree_delete(AVLTreeInfo *tree, void *data)
 	return pResultData;
 }
 
-static void avl_tree_walk_loop(DataOpFunc data_op_func, AVLTreeNode *pCurrentNode)
+static int avl_tree_walk_loop(DataOpFunc data_op_func, \
+		AVLTreeNode *pCurrentNode, void *args)
 {
+	int result;
+
 	if (pCurrentNode->left != NULL)
 	{
-		avl_tree_walk_loop(data_op_func, pCurrentNode->left);
+		result = avl_tree_walk_loop(data_op_func, \
+				pCurrentNode->left, args);
+		if (result != 0)
+		{
+			return result;
+		}
+	}
+
+	if ((result=data_op_func(pCurrentNode->data, args)) != 0)
+	{
+		return result;
 	}
 
 	if (pCurrentNode->balance >= -1 && pCurrentNode->balance <= 1)
 	{
-		data_op_func(pCurrentNode->data);
 		//printf("==%d\n", pCurrentNode->balance);
 	}
 	else
 	{
-		data_op_func(pCurrentNode->data);
 		printf("==bad %d!!!!!!!!!!!!\n", pCurrentNode->balance);
 	}
 
 	if (pCurrentNode->right != NULL)
 	{
-		avl_tree_walk_loop(data_op_func, pCurrentNode->right);
+		result = avl_tree_walk_loop(data_op_func, \
+				pCurrentNode->right, args);
 	}
+
+	return result;
 }
 
-void avl_tree_walk(AVLTreeInfo *tree, DataOpFunc data_op_func)
+int avl_tree_walk(AVLTreeInfo *tree, DataOpFunc data_op_func, void *args)
 {
+	int result;
+
 	pthread_rwlock_rdlock(&(tree->rwlock));
 	if (tree->root == NULL)
 	{
-		return;
+		result = 0;
 	}
-	avl_tree_walk_loop(data_op_func, tree->root);
+	else
+	{
+		result = avl_tree_walk_loop(data_op_func, tree->root, args);
+	}
 	pthread_rwlock_unlock(&(tree->rwlock));
+
+	return result;
 }
 
