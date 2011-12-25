@@ -577,8 +577,6 @@ static int storage_trunk_load()
 		return EINVAL;
 	}
 
-	logInfo("line_count=%d", line_count);
-
 	return storage_trunk_restore(restore_offset);
 }
 
@@ -651,6 +649,8 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 		chain->pMblockNode = pMblockNode;
 		chain->size = pNode->trunk.file.size;
 		chain->head = pNode;
+
+		avl_tree_insert(&tree_info, chain);
 	}
 	else
 	{
