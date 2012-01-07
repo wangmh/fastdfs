@@ -4689,6 +4689,28 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 	return 0;
 }
 
+void tracker_mem_find_trunk_servers()
+{
+	FDFSGroupInfo **ppGroup;
+	FDFSGroupInfo **ppGroupEnd;
+
+	if (!(g_if_leader_self && g_if_use_trunk_file))
+	{
+		return;
+	}
+
+	pthread_mutex_lock(&mem_thread_lock);
+	ppGroupEnd = g_groups.groups + g_groups.count;
+	for (ppGroup=g_groups.groups; ppGroup<ppGroupEnd; ppGroup++)
+	{
+		if ((*ppGroup)->pTrunkServer == NULL)
+		{
+			tracker_mem_find_trunk_server(*ppGroup, true);
+		}
+	}
+	pthread_mutex_unlock(&mem_thread_lock);
+}
+
 int tracker_mem_offline_store_server(FDFSGroupInfo *pGroup, \
 			FDFSStorageDetail *pStorage)
 {

@@ -1,7 +1,8 @@
 
-Version 3.06  2011-12-25
+Version 3.06  2012-01-07
  * add common/avl_tree.h and common/avl_tree.c
  * organize trunk free blocks using AVL tree
+ * find the trunk server for each group when current tracker be a leader
 
 Version 3.05  2011-12-20
  * remove compile warnings

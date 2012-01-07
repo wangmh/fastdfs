@@ -388,6 +388,8 @@ static int relationship_select_leader()
 			"I am the new tracker leader %s:%d", \
 			__LINE__, trackerStatus.pTrackerServer->ip_addr, \
 			trackerStatus.pTrackerServer->port);
+
+		tracker_mem_find_trunk_servers();
 	}
 	else
 	{

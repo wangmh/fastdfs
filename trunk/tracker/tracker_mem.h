@@ -123,6 +123,8 @@ int tracker_mem_get_status(TrackerServerInfo *pTrackerServer, \
 
 int tracker_save_groups();
 
+void tracker_mem_find_trunk_servers();
+
 #ifdef __cplusplus
 }
 #endif
