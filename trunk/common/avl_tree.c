@@ -48,7 +48,9 @@ static AVLTreeNode *createTreeNode(AVLTreeNode *pParentNode, void *target_data)
 	pNewNode = (AVLTreeNode *)malloc(sizeof(AVLTreeNode));
 	if (pNewNode == NULL)
 	{
-		printf("malloc %d bytes fail!\n", (int)sizeof(AVLTreeNode));
+		fprintf(stderr, "file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail!\n", __LINE__, \
+			(int)sizeof(AVLTreeNode));
 		return NULL;
 	}
 
@@ -317,7 +319,7 @@ int avl_tree_replace(AVLTreeInfo *tree, void *data)
 			tree->free_data_func, &(tree->root), data, &taller);
 }
 
-static void *avl_tree_find_loop(CompareFunc compare_func, \
+static AVLTreeNode *avl_tree_find_loop(CompareFunc compare_func, \
 		AVLTreeNode *pCurrentNode, void *target_data)
 {
 	int nCompRes;
@@ -348,7 +350,7 @@ static void *avl_tree_find_loop(CompareFunc compare_func, \
 	}
 	else
 	{
-		return pCurrentNode->data;
+		return pCurrentNode;
 	}
 }
 
@@ -390,19 +392,17 @@ static void *avl_tree_find_ge_loop(CompareFunc compare_func, \
 
 void *avl_tree_find(AVLTreeInfo *tree, void *target_data)
 {
-	void *found;
+	AVLTreeNode *found;
 
 	if (tree->root == NULL)
 	{
-		found = NULL;
-	}
-	else
-	{
-		found = avl_tree_find_loop(tree->compare_func, \
-			tree->root, target_data);
+		return NULL;
 	}
 
-	return found;
+	found = avl_tree_find_loop(tree->compare_func, \
+			tree->root, target_data);
+
+	return found != NULL ? found->data : NULL;
 }
 
 void *avl_tree_find_ge(AVLTreeInfo *tree, void *target_data)
@@ -504,32 +504,26 @@ static void avlRightBalanceWhenDelete(AVLTreeNode **pTreeNode, int *shorter)
 	}
 }
 
-static void *avl_tree_delete_loop(CompareFunc compare_func, \
+static int avl_tree_delete_loop(CompareFunc compare_func, \
 		AVLTreeNode **pCurrentNode, void *target_data, int *shorter, \
 		AVLTreeNode *pDeletedDataNode)
 {
 	int nCompRes;
-	void *pResultData;
+	bool result;
 	AVLTreeNode *leftsub;
 	AVLTreeNode *rightsub;
-
-	if (*pCurrentNode == NULL)
-	{
-		return NULL;
-	}
 
 	if (pDeletedDataNode != NULL)
 	{
 		if ((*pCurrentNode)->right == NULL)
 		{
-			pResultData = pDeletedDataNode->data;
 			pDeletedDataNode->data = (*pCurrentNode)->data;
 			leftsub = (*pCurrentNode)->left;
 
 			free(*pCurrentNode);
 			*pCurrentNode = leftsub;
 			*shorter = 1;
-			return pResultData;
+			return 1;
 		}
 
 		nCompRes = -1;
@@ -541,7 +535,12 @@ static void *avl_tree_delete_loop(CompareFunc compare_func, \
 
 	if (nCompRes > 0)
 	{
-		pResultData = avl_tree_delete_loop(compare_func, \
+		if ((*pCurrentNode)->left == NULL)
+		{
+			return 0;
+		}
+
+		result = avl_tree_delete_loop(compare_func, \
 				&((*pCurrentNode)->left), target_data, \
 				shorter, pDeletedDataNode);
 		if (*shorter != 0)
@@ -560,36 +559,40 @@ static void *avl_tree_delete_loop(CompareFunc compare_func, \
 				break;
 			}
 		}
-		return pResultData;
+		return result;
 	}
 	else if (nCompRes < 0)
 	{
-		pResultData = avl_tree_delete_loop(compare_func, \
+		if ((*pCurrentNode)->right == NULL)
+		{
+			return 0;
+		}
+
+		result = avl_tree_delete_loop(compare_func, \
 				&((*pCurrentNode)->right), target_data, \
 				shorter, pDeletedDataNode);
 		if (*shorter != 0)
 		{
-		    switch ((*pCurrentNode)->balance)
+			switch ((*pCurrentNode)->balance)
 			{
-		        case -1:
-		          avlLeftBalanceWhenDelete(pCurrentNode, shorter);
-		          break;
-		        case 0:
-		          (*pCurrentNode)->balance = -1;
-				  *shorter = 0;
-		          break;
-		        case 1:
-		          (*pCurrentNode)->balance = 0;
-		          break;
-		    }
+				case -1:
+		          		avlLeftBalanceWhenDelete(pCurrentNode, shorter);
+		          		break;
+		        	case 0:
+		          		(*pCurrentNode)->balance = -1;
+				  	*shorter = 0;
+		          		break;
+		        	case 1:
+		  	        	(*pCurrentNode)->balance = 0;
+		        	  	break;
+		    	}
 		}
-		return pResultData;
+		return result;
 	}
 	else
-	{		
-		leftsub= (*pCurrentNode)->left;
+	{
+		leftsub = (*pCurrentNode)->left;
 		rightsub = (*pCurrentNode)->right;
-		pResultData = (*pCurrentNode)->data;
 		if (leftsub == NULL)
 		{
 			free(*pCurrentNode);
@@ -605,6 +608,7 @@ static void *avl_tree_delete_loop(CompareFunc compare_func, \
 			avl_tree_delete_loop(compare_func, \
 				&((*pCurrentNode)->left), target_data, \
 				shorter, *pCurrentNode);
+
 			if (*shorter != 0)
 			{
 				switch ((*pCurrentNode)->balance)
@@ -621,17 +625,22 @@ static void *avl_tree_delete_loop(CompareFunc compare_func, \
 					break;
 				}
 			}
-			return pResultData;
+			return 1;
 		}
 
 		*shorter = 1;
-		return pResultData;
+		return 1;
 	}
 }
 
-void *avl_tree_delete(AVLTreeInfo *tree, void *data)
+int avl_tree_delete(AVLTreeInfo *tree, void *data)
 {
 	int shorter;
+
+	if (tree->root == NULL)
+	{
+		return 0;
+	}
 
 	shorter = 0;
 	return avl_tree_delete_loop(tree->compare_func, \

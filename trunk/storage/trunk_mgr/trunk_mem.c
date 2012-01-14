@@ -663,10 +663,7 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 	}
 	else
 	{
-		if (chain->head != NULL)
-		{
-			pNode->next = chain->head;
-		}
+		pNode->next = chain->head;
 		chain->head = pNode;
 	}
 	pthread_mutex_unlock(&trunk_mem_lock);
