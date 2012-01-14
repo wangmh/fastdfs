@@ -684,6 +684,21 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 	return result;
 }
 
+static void trunk_delete_tree_node(FDFSTrunkSlot *pSlot)
+{
+	if (avl_tree_delete(&tree_info, pSlot) == 1)
+	{
+		fast_mblock_free(&tree_nodes_man, \
+				pSlot->pMblockNode);
+	}
+	else
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"can't delete slot entry: %s", \
+			__LINE__, pSlot->size);
+	}
+}
+
 static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 		const bool bWriteBinLog)
 {
@@ -731,8 +746,7 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 		pSlot->head = pCurrent->next;
 		if (pSlot->head == NULL)
 		{
-			avl_tree_delete(&tree_info, pSlot);
-			fast_mblock_free(&tree_nodes_man, pSlot->pMblockNode);
+			trunk_delete_tree_node(pSlot);
 		}
 	}
 	else
@@ -906,9 +920,7 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 			pSlot->head = pTrunkNode->next;
 			if (pSlot->head == NULL)
 			{
-				avl_tree_delete(&tree_info, pSlot);
-				fast_mblock_free(&tree_nodes_man, \
-					pSlot->pMblockNode);
+				trunk_delete_tree_node(pSlot);
 			}
 		}
 		else
