@@ -97,7 +97,7 @@ int storage_get_params_from_tracker()
 		"trunk_file_size=%d MB", __LINE__, \
 		g_storage_ip_changed_auto_adjust, \
 		g_store_path_mode, g_storage_reserved_mb, \
-		g_if_use_trunk_file, g_slot_min_size / FDFS_ONE_MB, \
+		g_if_use_trunk_file, g_slot_min_size, \
 		g_slot_max_size / FDFS_ONE_MB, \
 		g_trunk_file_size / FDFS_ONE_MB);
 
