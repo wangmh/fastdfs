@@ -648,6 +648,7 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 		chain = (FDFSTrunkSlot *)pMblockNode->data;
 		chain->pMblockNode = pMblockNode;
 		chain->size = pNode->trunk.file.size;
+		pNode->next = NULL;
 		chain->head = pNode;
 
 		if (avl_tree_insert(&tree_info, chain) != 1)
