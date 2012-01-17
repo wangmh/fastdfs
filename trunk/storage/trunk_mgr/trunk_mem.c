@@ -146,7 +146,9 @@ int storage_trunk_init()
 		return result;
 	}
 
-	//logInfo("tree node count: %d", avl_tree_count(&tree_info));
+	logInfo("tree node count: %d, trunk_total_free_space: " \
+		INT64_PRINTF_FORMAT, avl_tree_count(&tree_info), \
+		g_trunk_total_free_space);
 
 	return 0;
 }
