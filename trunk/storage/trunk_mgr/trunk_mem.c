@@ -48,6 +48,7 @@ int g_current_trunk_file_id = 0;
 TrackerServerInfo g_trunk_server = {-1, 0};
 bool g_if_use_trunk_file = false;
 bool g_if_trunker_self = false;
+static bool if_trunk_inited = false;
 int64_t g_trunk_total_free_space = 0;
 
 static pthread_mutex_t trunk_file_lock;
@@ -94,6 +95,13 @@ int storage_trunk_init()
 
 	if (!g_if_trunker_self)
 	{
+		return 0;
+	}
+
+	if (if_trunk_inited)
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"trunk already inited!", __LINE__);
 		return 0;
 	}
 
@@ -146,6 +154,7 @@ int storage_trunk_init()
 		return result;
 	}
 
+	if_trunk_inited = true;
 	logInfo("tree node count: %d, trunk_total_free_space: " \
 		INT64_PRINTF_FORMAT, avl_tree_count(&tree_info), \
 		g_trunk_total_free_space);
@@ -165,6 +174,7 @@ int storage_trunk_destroy()
 	pthread_mutex_destroy(&trunk_file_lock);
 	pthread_mutex_destroy(&trunk_mem_lock);
 
+	if_trunk_inited = false;
 	return result;
 }
 
@@ -589,7 +599,7 @@ int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 	struct fast_mblock_node *pMblockNode;
 	FDFSTrunkNode *pTrunkNode;
 
-	if (!g_if_trunker_self)
+	if (!g_if_trunker_self || !if_trunk_inited)
 	{
 		return EINVAL;
 	}
@@ -879,7 +889,7 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	struct fast_mblock_node *pMblockNode;
 	int result;
 
-	if (!g_if_trunker_self)
+	if (!g_if_trunker_self || !if_trunk_inited)
 	{
 		return EINVAL;
 	}
@@ -985,7 +995,7 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 
 int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status)
 {
-	if (!g_if_trunker_self)
+	if (!g_if_trunker_self || !if_trunk_inited)
 	{
 		return EINVAL;
 	}
