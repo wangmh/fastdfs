@@ -727,3 +727,61 @@ int avl_tree_count(AVLTreeInfo *tree)
 	return count;
 }
 
+int avl_tree_depth(AVLTreeInfo *tree)
+{
+	int depth;
+	AVLTreeNode *pNode;
+
+	if (tree->root == NULL)
+	{
+		return 0;
+	}
+
+	depth = 0;
+	pNode = tree->root;
+	while (pNode != NULL)
+	{
+		if (pNode->balance == -1)
+		{
+			pNode = pNode->left;
+		}
+		else
+		{
+			pNode = pNode->right;
+		}
+		depth++;
+	}
+
+	return depth;
+}
+
+/*
+static void avl_tree_print_loop(AVLTreeNode *pCurrentNode)
+{
+	printf("%ld  left: %ld, right: %ld, balance: %d\n", pCurrentNode->data, 
+		pCurrentNode->left != NULL ? pCurrentNode->left->data : 0,
+		pCurrentNode->right != NULL ? pCurrentNode->right->data : 0,
+		pCurrentNode->balance);
+
+	if (pCurrentNode->left != NULL)
+	{
+		avl_tree_print_loop(pCurrentNode->left);
+	}
+
+	if (pCurrentNode->right != NULL)
+	{
+		avl_tree_print_loop(pCurrentNode->right);
+	}
+}
+
+void avl_tree_print(AVLTreeInfo *tree)
+{
+	if (tree->root == NULL)
+	{
+		return;
+	}
+
+	avl_tree_print_loop(tree->root);
+}
+*/
+

@@ -67,17 +67,63 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 static int storage_trunk_save();
 static int storage_trunk_load();
 
+struct walk_callback_test {
+	int64_t total_size;
+};
+
+static int tree_walk_test(void *data, void *args)
+{
+	struct walk_callback_test *pCallbackArgs;
+	FDFSTrunkNode *pCurrent;
+
+	pCallbackArgs = (struct walk_callback_test *)args;
+	pCurrent = ((FDFSTrunkSlot *)data)->head;
+	while (pCurrent != NULL)
+	{
+		pCurrent = pCurrent->next;
+		pCallbackArgs->total_size += pCurrent->trunk.file.size;
+	}
+
+	return 0;
+}
+
+static void trunk_mem_inc_free_space(const FDFSTrunkFullInfo *pTrunk, const int size)
+{
+	//pthread_mutex_lock(&trunk_file_lock);
+	g_trunk_total_free_space += size;
+
+	if (g_trunk_total_free_space < 0)
+	{
+		struct walk_callback_test callback_args;
+		char buff[256];
+
+		pthread_mutex_lock (&trunk_mem_lock);
+		//if_trunk_inited = false;
+		callback_args.total_size = 0;
+		avl_tree_walk(&tree_info, tree_walk_test, &callback_args);
+		pthread_mutex_unlock (&trunk_mem_lock);
+
+		logInfo("tree total size: "INT64_PRINTF_FORMAT", trunk info: %s", 
+			callback_args.total_size,
+			trunk_info_dump(pTrunk, buff, sizeof(buff)));
+	}
+
+	//pthread_mutex_unlock(&trunk_file_lock);
+}
+
 static int trunk_mem_binlog_write(const int timestamp, const char op_type, \
 		const FDFSTrunkFullInfo *pTrunk)
 {
 	pthread_mutex_lock(&trunk_file_lock);
 	if (op_type == TRUNK_OP_TYPE_ADD_SPACE)
 	{
-		g_trunk_total_free_space += pTrunk->file.size;
+		trunk_mem_inc_free_space(pTrunk, pTrunk->file.size);
+		//g_trunk_total_free_space += pTrunk->file.size;
 	}
 	else if (op_type == TRUNK_OP_TYPE_DEL_SPACE)
 	{
-		g_trunk_total_free_space -= pTrunk->file.size;
+		trunk_mem_inc_free_space(pTrunk, -1 * pTrunk->file.size);
+		//g_trunk_total_free_space -= pTrunk->file.size;
 	}
 	pthread_mutex_unlock(&trunk_file_lock);
 
@@ -95,6 +141,8 @@ int storage_trunk_init()
 
 	if (!g_if_trunker_self)
 	{
+		logError("file: "__FILE__", line: %d, " \
+			"I am not trunk server!", __LINE__);
 		return 0;
 	}
 
@@ -104,6 +152,9 @@ int storage_trunk_init()
 			"trunk already inited!", __LINE__);
 		return 0;
 	}
+
+	logDebug("file: "__FILE__", line: %d, " \
+		"storage trunk init ...", __LINE__);
 
 	memset(&g_trunk_server, 0, sizeof(g_trunk_server));
 	g_trunk_server.sock = -1;
@@ -166,7 +217,18 @@ int storage_trunk_destroy()
 {
 	int result;
 
-	result = storage_trunk_save();
+	logDebug("file: "__FILE__", line: %d, " \
+		"storage trunk destroy", __LINE__);
+
+	if (if_trunk_inited)
+	{
+		result = storage_trunk_save();
+		if_trunk_inited = false;
+	}
+	else
+	{
+		result = 0;
+	}
 
 	avl_tree_destroy(&tree_info);
 	fast_mblock_destroy(&free_blocks_man);
@@ -174,7 +236,6 @@ int storage_trunk_destroy()
 	pthread_mutex_destroy(&trunk_file_lock);
 	pthread_mutex_destroy(&trunk_mem_lock);
 
-	if_trunk_inited = false;
 	return result;
 }
 
@@ -345,6 +406,7 @@ static int storage_trunk_save()
 static int storage_trunk_restore(const int64_t restore_offset)
 {
 	int64_t trunk_binlog_size;
+	int64_t line_count;
 	TrunkBinLogReader reader;
 	TrunkBinLogRecord record;
 	char trunk_mark_filename[MAX_PATH_SIZE];
@@ -384,6 +446,7 @@ static int storage_trunk_restore(const int64_t restore_offset)
 		return result;
 	}
 
+	line_count = 0;
 	while (1)
 	{
 		result = trunk_binlog_read(&reader, &record, &record_length);
@@ -397,6 +460,7 @@ static int storage_trunk_restore(const int64_t restore_offset)
 			break;
 		}
 
+		line_count++;
 		if (record.op_type == TRUNK_OP_TYPE_ADD_SPACE)
 		{
 			record.trunk.status = FDFS_TRUNK_STATUS_FREE;
@@ -412,6 +476,11 @@ static int storage_trunk_restore(const int64_t restore_offset)
 			{
 				if (result == ENOENT)
 				{
+					logDebug("file: "__FILE__", line: %d, "\
+						"trunk dat line: " \
+						INT64_PRINTF_FORMAT, \
+						__LINE__, line_count);
+
 					result = 0;
 				}
 				else
@@ -599,9 +668,21 @@ int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 	struct fast_mblock_node *pMblockNode;
 	FDFSTrunkNode *pTrunkNode;
 
-	if (!g_if_trunker_self || !if_trunk_inited)
+	if (!g_if_trunker_self)
 	{
+		logError("file: "__FILE__", line: %d, " \
+			"I am not trunk server!", __LINE__);
 		return EINVAL;
+	}
+
+	if (!if_trunk_inited)
+	{
+		if (bWriteBinLog)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"I am not inited!", __LINE__);
+			return EINVAL;
+		}
 	}
 
 	if (pTrunkInfo->file.size < g_slot_min_size)
@@ -689,7 +770,8 @@ static int trunk_add_node(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 	else
 	{
 		pthread_mutex_lock(&trunk_file_lock);
-		g_trunk_total_free_space += pNode->trunk.file.size;
+		//g_trunk_total_free_space += pNode->trunk.file.size;
+		trunk_mem_inc_free_space(&(pNode->trunk), pNode->trunk.file.size);
 		pthread_mutex_unlock(&trunk_file_lock);
 		result = 0;
 	}
@@ -754,6 +836,14 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 		return ENOENT;
 	}
 
+	if (pCurrent->trunk.file.size != pTrunkInfo->file.size)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"target file size: %d, trunk entry: %s", __LINE__, \
+			pTrunkInfo->file.size, trunk_info_dump(pTrunkInfo, 
+			buff, sizeof(buff)));
+	}
+
 	if (pPrevious == NULL)
 	{
 		pSlot->head = pCurrent->next;
@@ -776,7 +866,8 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 	else
 	{
 		pthread_mutex_lock(&trunk_file_lock);
-		g_trunk_total_free_space -= pCurrent->trunk.file.size;
+		//g_trunk_total_free_space -= pCurrent->trunk.file.size;
+		trunk_mem_inc_free_space(&(pCurrent->trunk), -1 * pCurrent->trunk.file.size);
 		pthread_mutex_unlock(&trunk_file_lock);
 		result = 0;
 	}

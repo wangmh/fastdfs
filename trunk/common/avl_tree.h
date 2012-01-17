@@ -37,6 +37,8 @@ void *avl_tree_find(AVLTreeInfo *tree, void *target_data);
 void *avl_tree_find_ge(AVLTreeInfo *tree, void *target_data);
 int avl_tree_walk(AVLTreeInfo *tree, DataOpFunc data_op_func, void *args);
 int avl_tree_count(AVLTreeInfo *tree);
+int avl_tree_depth(AVLTreeInfo *tree);
+//void avl_tree_print(AVLTreeInfo *tree);
 
 #ifdef __cplusplus
 }
