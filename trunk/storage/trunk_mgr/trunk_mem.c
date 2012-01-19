@@ -110,7 +110,6 @@ int storage_trunk_init()
 	logDebug("file: "__FILE__", line: %d, " \
 		"storage trunk init ...", __LINE__);
 
-	memset(&g_trunk_server, 0, sizeof(g_trunk_server));
 	g_trunk_server.sock = -1;
 	g_trunk_server.port = g_server_port;
 
@@ -929,7 +928,7 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 		return EINVAL;
 	}
 
-	target_slot.size = size;
+	target_slot.size = (size > g_slot_min_size) ? size : g_slot_min_size;
 	target_slot.head = NULL;
 
 	pPreviousNode = NULL;
