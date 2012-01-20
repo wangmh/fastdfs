@@ -17,7 +17,7 @@
 
 bool g_schedule_flag = false;
 
-static ScheduleArray waitingScheduleArray = {NULL, 0};
+static ScheduleArray waiting_schedule_array = {NULL, 0};
 
 static int sched_cmp_by_next_call_time(const void *p1, const void *p2)
 {
@@ -39,7 +39,7 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 		logError("file: "__FILE__", line: %d, " \
 			"schedule count %d < 0",  \
 			__LINE__, pScheduleArray->count);
-		return ENOENT;
+		return EINVAL;
 	}
 	if (pScheduleArray->count == 0)
 	{
@@ -139,14 +139,14 @@ static int sched_check_waiting(ScheduleContext *pContext)
 	int newCount;
 	int result;
 
-	if (waitingScheduleArray.count == 0)
+	if (waiting_schedule_array.count == 0)
 	{
 		return ENOENT;
 	}
 
 	pScheduleArray = &(pContext->scheduleArray);
 
-	allocCount = pScheduleArray->count + waitingScheduleArray.count;
+	allocCount = pScheduleArray->count + waiting_schedule_array.count;
 	newEntries = (ScheduleEntry *)malloc(sizeof(ScheduleEntry) * allocCount);
 	if (newEntries == NULL)
 	{
@@ -165,8 +165,8 @@ static int sched_check_waiting(ScheduleContext *pContext)
 			sizeof(ScheduleEntry) * pScheduleArray->count);
 	}
 	newCount = pScheduleArray->count;
-	pWaitingEnd = waitingScheduleArray.entries + waitingScheduleArray.count;
-	for (pWaitingEntry=waitingScheduleArray.entries; \
+	pWaitingEnd = waiting_schedule_array.entries + waiting_schedule_array.count;
+	for (pWaitingEntry=waiting_schedule_array.entries; \
 		pWaitingEntry<pWaitingEnd; pWaitingEntry++)
 	{
 		pSchedEnd = newEntries + newCount;
@@ -189,6 +189,11 @@ static int sched_check_waiting(ScheduleContext *pContext)
 		}
 	}
 
+	logDebug("file: "__FILE__", line: %d, " \
+		"schedule add entries: %d, replace entries: %d", 
+		__LINE__, newCount - pScheduleArray->count, \
+		waiting_schedule_array.count - (newCount - pScheduleArray->count));
+
 	if (pScheduleArray->entries != NULL)
 	{
 		free(pScheduleArray->entries);
@@ -196,9 +201,9 @@ static int sched_check_waiting(ScheduleContext *pContext)
 	pScheduleArray->entries = newEntries;
 	pScheduleArray->count = newCount;
 
-	free(waitingScheduleArray.entries);
-	waitingScheduleArray.entries = NULL;
-	waitingScheduleArray.count = 0;
+	free(waiting_schedule_array.entries);
+	waiting_schedule_array.count = 0;
+	waiting_schedule_array.entries = NULL;
 
 	sched_make_chain(pContext);
 
@@ -230,7 +235,7 @@ static void *sched_thread_entrance(void *args)
 	while (*(pContext->pcontinue_flag))
 	{
 		sched_check_waiting(pContext);
-		if (pContext->head == NULL)  //no schedule entry
+		if (pContext->scheduleArray.count == 0)  //no schedule entry
 		{
 			sleep(1);
 			continue;
@@ -243,7 +248,7 @@ static void *sched_thread_entrance(void *args)
 		//fprintf(stderr, "count=%d, sleep_time=%d\n", \
 			pContext->scheduleArray.count, sleep_time);
 		*/
-		while (sleep_time > 0)
+		while (sleep_time > 0 && *(pContext->pcontinue_flag))
 		{
 			sleep(1);
 			if (sched_check_waiting(pContext) == 0)
@@ -251,6 +256,11 @@ static void *sched_thread_entrance(void *args)
 				break;
 			}
 			sleep_time--;
+		}
+
+		if (!(*(pContext->pcontinue_flag)))
+		{
+			break;
 		}
 
 		current_time = time(NULL);
@@ -360,22 +370,24 @@ int sched_add_entries(const ScheduleArray *pScheduleArray)
 
 	if (pScheduleArray->count == 0)
 	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"no schedule entry", __LINE__);
 		return 0;
 	}
 
-	while (waitingScheduleArray.entries != NULL)
+	while (waiting_schedule_array.entries != NULL)
 	{
 		logDebug("file: "__FILE__", line: %d, " \
 			"waiting for schedule array ready ...", __LINE__);
 		sleep(1);
 	}
 
-	if ((result=sched_dup_array(pScheduleArray, &waitingScheduleArray))!=0)
+	if ((result=sched_dup_array(pScheduleArray, &waiting_schedule_array))!=0)
 	{
 		return result;
 	}
 
-	return sched_init_entries(&waitingScheduleArray);
+	return sched_init_entries(&waiting_schedule_array);
 }
 
 int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid, \
