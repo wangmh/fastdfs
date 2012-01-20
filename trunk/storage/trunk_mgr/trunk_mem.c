@@ -638,8 +638,11 @@ int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 		}
 	}
 
-	if (pTrunkInfo->file.size <= 0)
+	if (pTrunkInfo->file.size < g_slot_min_size)
 	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"space: %d is too small, do not need recycle!", \
+			__LINE__, pTrunkInfo->file.size);
 		return 0;
 	}
 

@@ -17,6 +17,8 @@
 
 bool g_schedule_flag = false;
 
+static ScheduleArray waitingScheduleArray = {NULL, 0};
+
 static int sched_cmp_by_next_call_time(const void *p1, const void *p2)
 {
 	return ((ScheduleEntry *)p1)->next_call_time - \
@@ -32,12 +34,16 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 	struct tm tm_current;
 	struct tm tm_base;
 
-	if (pScheduleArray->count <= 0)
+	if (pScheduleArray->count < 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"schedule count %d <= 0",  \
+			"schedule count %d < 0",  \
 			__LINE__, pScheduleArray->count);
 		return ENOENT;
+	}
+	if (pScheduleArray->count == 0)
+	{
+		return 0;
 	}
 
 	current_time = time(NULL);
@@ -96,27 +102,112 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 	return 0;
 }
 
-static void sched_make_chain(ScheduleArray *pScheduleArray)
+static void sched_make_chain(ScheduleContext *pContext)
 {
+	ScheduleArray *pScheduleArray;
 	ScheduleEntry *pEntry;
-	ScheduleEntry *pLast;
+
+	pScheduleArray = &(pContext->scheduleArray);
+	if (pScheduleArray->count == 0)
+	{
+		pContext->head = NULL;
+		pContext->tail = NULL;
+		return;
+	}
 
 	qsort(pScheduleArray->entries, pScheduleArray->count, \
 		sizeof(ScheduleEntry), sched_cmp_by_next_call_time);
 
-	pLast = pScheduleArray->entries + (pScheduleArray->count - 1);
-	for (pEntry=pScheduleArray->entries; pEntry<pLast; pEntry++)
+	pContext->head = pScheduleArray->entries;
+	pContext->tail = pScheduleArray->entries + (pScheduleArray->count - 1);
+	for (pEntry=pScheduleArray->entries; pEntry<pContext->tail; pEntry++)
 	{
 		pEntry->next = pEntry + 1;
 	}
-	pLast->next = NULL;
+	pContext->tail->next = NULL;
+}
+
+static int sched_check_waiting(ScheduleContext *pContext)
+{
+	ScheduleArray *pScheduleArray;
+	ScheduleEntry *newEntries;
+	ScheduleEntry *pWaitingEntry;
+	ScheduleEntry *pWaitingEnd;
+	ScheduleEntry *pSchedEntry;
+	ScheduleEntry *pSchedEnd;
+	int allocCount;
+	int newCount;
+	int result;
+
+	if (waitingScheduleArray.count == 0)
+	{
+		return ENOENT;
+	}
+
+	pScheduleArray = &(pContext->scheduleArray);
+
+	allocCount = pScheduleArray->count + waitingScheduleArray.count;
+	newEntries = (ScheduleEntry *)malloc(sizeof(ScheduleEntry) * allocCount);
+	if (newEntries == NULL)
+	{
+		result = errno != 0 ? errno : ENOMEM;
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes failed, " \
+			"errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(ScheduleEntry) * allocCount, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	if (pScheduleArray->count > 0)
+	{
+		memcpy(newEntries, pScheduleArray->entries, \
+			sizeof(ScheduleEntry) * pScheduleArray->count);
+	}
+	newCount = pScheduleArray->count;
+	pWaitingEnd = waitingScheduleArray.entries + waitingScheduleArray.count;
+	for (pWaitingEntry=waitingScheduleArray.entries; \
+		pWaitingEntry<pWaitingEnd; pWaitingEntry++)
+	{
+		pSchedEnd = newEntries + newCount;
+		for (pSchedEntry=newEntries; pSchedEntry<pSchedEnd; \
+			pSchedEntry++)
+		{
+			if (pWaitingEntry->id == pSchedEntry->id)
+			{
+				memcpy(pSchedEntry, pWaitingEntry, \
+					sizeof(ScheduleEntry));
+				break;
+			}
+		}
+
+		if (pSchedEntry == pSchedEnd)
+		{
+			memcpy(pSchedEntry, pWaitingEntry, \
+				sizeof(ScheduleEntry));
+			newCount++;
+		}
+	}
+
+	if (pScheduleArray->entries != NULL)
+	{
+		free(pScheduleArray->entries);
+	}
+	pScheduleArray->entries = newEntries;
+	pScheduleArray->count = newCount;
+
+	free(waitingScheduleArray.entries);
+	waitingScheduleArray.entries = NULL;
+	waitingScheduleArray.count = 0;
+
+	sched_make_chain(pContext);
+
+	return 0;
 }
 
 static void *sched_thread_entrance(void *args)
 {
-	ScheduleArray *pScheduleArray;
-	ScheduleEntry *pHead;
-	ScheduleEntry *pTail;
+	ScheduleContext *pContext;
 	ScheduleEntry *pPrevious;
 	ScheduleEntry *pCurrent;
 	ScheduleEntry *pSaveNext;
@@ -127,35 +218,45 @@ static void *sched_thread_entrance(void *args)
 	time_t current_time;
 	int sleep_time;
 
-	pScheduleArray = (ScheduleArray *)args;
-	if (sched_init_entries(pScheduleArray) != 0)
+	pContext = (ScheduleContext *)args;
+	if (sched_init_entries(&(pContext->scheduleArray)) != 0)
 	{
+		free(pContext);
 		return NULL;
 	}
-	sched_make_chain(pScheduleArray);
+	sched_make_chain(pContext);
 
 	g_schedule_flag = true;
-
-	pHead = pScheduleArray->entries;
-	pTail = pScheduleArray->entries + (pScheduleArray->count - 1);
-	while (*(pScheduleArray->pcontinue_flag))
+	while (*(pContext->pcontinue_flag))
 	{
+		sched_check_waiting(pContext);
+		if (pContext->head == NULL)  //no schedule entry
+		{
+			sleep(1);
+			continue;
+		}
+
 		current_time = time(NULL);
-		sleep_time = pHead->next_call_time - current_time;
+		sleep_time = pContext->head->next_call_time - current_time;
 
 		/*
 		//fprintf(stderr, "count=%d, sleep_time=%d\n", \
-			pScheduleArray->count, sleep_time);
+			pContext->scheduleArray.count, sleep_time);
 		*/
-		if (sleep_time > 0)
+		while (sleep_time > 0)
 		{
-			sleep(sleep_time);
+			sleep(1);
+			if (sched_check_waiting(pContext) == 0)
+			{
+				break;
+			}
+			sleep_time--;
 		}
 
 		current_time = time(NULL);
 		exec_count = 0;
-		pCurrent = pHead;
-		while (*(pScheduleArray->pcontinue_flag) && (pCurrent != NULL \
+		pCurrent = pContext->head;
+		while (*(pContext->pcontinue_flag) && (pCurrent != NULL \
 			&& pCurrent->next_call_time <= current_time))
 		{
 			//fprintf(stderr, "exec task id=%d\n", pCurrent->id);
@@ -166,35 +267,32 @@ static void *sched_thread_entrance(void *args)
 			exec_count++;
 		}
 
-		if (pScheduleArray->count == 1)
+		if (exec_count == 0 || pContext->scheduleArray.count == 1)
 		{
 			continue;
 		}
 
-		if (exec_count > pScheduleArray->count / 2)
+		if (exec_count > pContext->scheduleArray.count / 2)
 		{
-			sched_make_chain(pScheduleArray);
-			pHead = pScheduleArray->entries;
-			pTail = pScheduleArray->entries + \
-				(pScheduleArray->count - 1);
+			sched_make_chain(pContext);
 			continue;
 		}
 
-		pNode = pHead;
-		pHead = pCurrent;  //new chain head
+		pNode = pContext->head;
+		pContext->head = pCurrent;  //new chain head
 		for (i=0; i<exec_count; i++)
 		{
-			if (pNode->next_call_time >= pTail->next_call_time)
+			if (pNode->next_call_time >= pContext->tail->next_call_time)
 			{
-				pTail->next = pNode;
-				pTail = pNode;
+				pContext->tail->next = pNode;
+				pContext->tail = pNode;
 				pNode = pNode->next;
-				pTail->next = NULL;
+				pContext->tail->next = NULL;
 				continue;
 			}
 
 			pPrevious = NULL;
-			pUntil = pHead;
+			pUntil = pContext->head;
 			while (pUntil != NULL && \
 				pNode->next_call_time > pUntil->next_call_time)
 			{
@@ -205,7 +303,7 @@ static void *sched_thread_entrance(void *args)
 			pSaveNext = pNode->next;
 			if (pPrevious == NULL)
 			{
-				pHead = pNode;
+				pContext->head = pNode;
 			}
 			else
 			{
@@ -222,7 +320,62 @@ static void *sched_thread_entrance(void *args)
 	logDebug("file: "__FILE__", line: %d, " \
 		"schedule thread exit", __LINE__);
 
+	free(pContext);
 	return NULL;
+}
+
+static int sched_dup_array(const ScheduleArray *pSrcArray, \
+		ScheduleArray *pDestArray)
+{
+	int result;
+	int bytes;
+
+	if (pSrcArray->count == 0)
+	{
+		pDestArray->entries = NULL;
+		pDestArray->count = 0;
+		return 0;
+	}
+
+	bytes = sizeof(ScheduleEntry) * pSrcArray->count;
+	pDestArray->entries = (ScheduleEntry *)malloc(bytes);
+	if (pDestArray->entries == NULL)
+	{
+		result = errno != 0 ? errno : ENOMEM;
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes failed, " \
+			"errno: %d, error info: %s", \
+			__LINE__, bytes, result, STRERROR(result));
+		return result;
+	}
+
+	memcpy(pDestArray->entries, pSrcArray->entries, bytes);
+	pDestArray->count = pSrcArray->count;
+	return 0;
+}
+
+int sched_add_entries(const ScheduleArray *pScheduleArray)
+{
+	int result;
+
+	if (pScheduleArray->count == 0)
+	{
+		return 0;
+	}
+
+	while (waitingScheduleArray.entries != NULL)
+	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"waiting for schedule array ready ...", __LINE__);
+		sleep(1);
+	}
+
+	if ((result=sched_dup_array(pScheduleArray, &waitingScheduleArray))!=0)
+	{
+		return result;
+	}
+
+	return sched_init_entries(&waitingScheduleArray);
 }
 
 int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid, \
@@ -230,16 +383,38 @@ int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid, \
 {
 	int result;
 	pthread_attr_t thread_attr;
+	ScheduleContext *pContext;
 
-	if ((result=init_pthread_attr(&thread_attr, stack_size)) != 0)
+	pContext = (ScheduleContext *)malloc(sizeof(ScheduleContext));
+	if (pContext == NULL)
 	{
+		result = errno != 0 ? errno : ENOMEM;
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes failed, " \
+			"errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(ScheduleContext), \
+			result, STRERROR(result));
 		return result;
 	}
 
-	pScheduleArray->pcontinue_flag = pcontinue_flag;
-	if ((result=pthread_create(ptid, &thread_attr, \
-		sched_thread_entrance, pScheduleArray)) != 0)
+	if ((result=init_pthread_attr(&thread_attr, stack_size)) != 0)
 	{
+		free(pContext);
+		return result;
+	}
+
+	if ((result=sched_dup_array(pScheduleArray, \
+			&(pContext->scheduleArray))) != 0)
+	{
+		free(pContext);
+		return result;
+	}
+
+	pContext->pcontinue_flag = pcontinue_flag;
+	if ((result=pthread_create(ptid, &thread_attr, \
+		sched_thread_entrance, pContext)) != 0)
+	{
+		free(pContext);
 		logError("file: "__FILE__", line: %d, " \
 			"create thread failed, " \
 			"errno: %d, error info: %s", \
