@@ -744,7 +744,7 @@ static void trunk_delete_tree_node(FDFSTrunkSlot *pSlot)
 	else
 	{
 		logWarning("file: "__FILE__", line: %d, " \
-			"can't delete slot entry: %s", \
+			"can't delete slot entry, size: %d", \
 			__LINE__, pSlot->size);
 	}
 }
