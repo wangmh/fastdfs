@@ -52,6 +52,7 @@ extern "C" {
 extern bool g_schedule_flag; //schedule continue running flag
 
 int sched_add_entries(const ScheduleArray *pScheduleArray);
+int sched_del_entry(const int id);
 
 /** execute the schedule thread
  *  parameters:

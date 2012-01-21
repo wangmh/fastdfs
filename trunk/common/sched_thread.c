@@ -18,6 +18,7 @@
 bool g_schedule_flag = false;
 
 static ScheduleArray waiting_schedule_array = {NULL, 0};
+static int waiting_del_id = -1;
 
 static int sched_cmp_by_next_call_time(const void *p1, const void *p2)
 {
@@ -138,13 +139,54 @@ static int sched_check_waiting(ScheduleContext *pContext)
 	int allocCount;
 	int newCount;
 	int result;
+	int deleteCount;
+
+	pScheduleArray = &(pContext->scheduleArray);
+	deleteCount = 0;
+	if (waiting_del_id >= 0)
+	{
+		pSchedEnd = pScheduleArray->entries + pScheduleArray->count;
+		for (pSchedEntry=pScheduleArray->entries; \
+			pSchedEntry<pSchedEnd; pSchedEntry++)
+		{
+			if (pSchedEntry->id == waiting_del_id)
+			{
+				break;
+			}
+		}
+
+		if (pSchedEntry < pSchedEnd)
+		{
+			pSchedEntry++;
+			while (pSchedEntry < pSchedEnd)
+			{
+				memcpy(pSchedEntry - 1, pSchedEntry, \
+					sizeof(ScheduleEntry));
+				pSchedEntry++;
+			}
+
+			deleteCount++;
+			pScheduleArray->count--;
+
+			logDebug("file: "__FILE__", line: %d, " \
+				"delete task id: %d, " \
+				"current schedule count: %d", __LINE__, \
+				waiting_del_id, pScheduleArray->count);
+		}
+
+		waiting_del_id = -1;
+	}
 
 	if (waiting_schedule_array.count == 0)
 	{
+		if (deleteCount > 0)
+		{
+			sched_make_chain(pContext);
+			return 0;
+		}
+
 		return ENOENT;
 	}
-
-	pScheduleArray = &(pContext->scheduleArray);
 
 	allocCount = pScheduleArray->count + waiting_schedule_array.count;
 	newEntries = (ScheduleEntry *)malloc(sizeof(ScheduleEntry) * allocCount);
@@ -156,6 +198,11 @@ static int sched_check_waiting(ScheduleContext *pContext)
 			"errno: %d, error info: %s", \
 			__LINE__, (int)sizeof(ScheduleEntry) * allocCount, \
 			result, STRERROR(result));
+
+		if (deleteCount > 0)
+		{
+			sched_make_chain(pContext);
+		}
 		return result;
 	}
 
@@ -372,7 +419,7 @@ int sched_add_entries(const ScheduleArray *pScheduleArray)
 	{
 		logDebug("file: "__FILE__", line: %d, " \
 			"no schedule entry", __LINE__);
-		return 0;
+		return ENOENT;
 	}
 
 	while (waiting_schedule_array.entries != NULL)
@@ -388,6 +435,26 @@ int sched_add_entries(const ScheduleArray *pScheduleArray)
 	}
 
 	return sched_init_entries(&waiting_schedule_array);
+}
+
+int sched_del_entry(const int id)
+{
+	if (id < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"id: %d is invalid!", __LINE__, id);
+		return EINVAL;
+	}
+
+	while (waiting_del_id >= 0)
+	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"waiting for delete ready ...", __LINE__);
+		sleep(1);
+	}
+
+	waiting_del_id = id;
+	return 0;
 }
 
 int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid, \
