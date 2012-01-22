@@ -917,13 +917,49 @@ static int trunk_split(FDFSTrunkNode *pNode, const int size)
 	return 0;
 }
 
+static FDFSTrunkNode *trunk_create_trunk_file(int *err_no)
+{
+	FDFSTrunkNode *pTrunkNode;
+	struct fast_mblock_node *pMblockNode;
+
+	pMblockNode = fast_mblock_alloc(&free_blocks_man);
+	if (pMblockNode == NULL)
+	{
+		*err_no = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(FDFSTrunkNode), \
+			*err_no, STRERROR(*err_no));
+		return NULL;
+	}
+
+	pTrunkNode = (FDFSTrunkNode *)pMblockNode->data;
+	pTrunkNode->pMblockNode = pMblockNode;
+
+	pTrunkNode->trunk.file.offset = 0;
+	pTrunkNode->trunk.file.size = g_trunk_file_size;
+	pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
+	pTrunkNode->next = NULL;
+
+	*err_no = trunk_create_next_file(&(pTrunkNode->trunk));
+	if (*err_no != 0)
+	{
+		fast_mblock_free(&free_blocks_man, pMblockNode);
+		return NULL;
+	}
+
+	*err_no = trunk_mem_binlog_write(time(NULL), \
+			TRUNK_OP_TYPE_ADD_SPACE, &(pTrunkNode->trunk));
+	return pTrunkNode;
+}
+
 int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 {
 	FDFSTrunkSlot target_slot;
 	FDFSTrunkSlot *pSlot;
 	FDFSTrunkNode *pPreviousNode;
 	FDFSTrunkNode *pTrunkNode;
-	struct fast_mblock_node *pMblockNode;
 	int result;
 
 	if (!g_if_trunker_self || !if_trunk_inited)
@@ -980,36 +1016,12 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	}
 	else
 	{
-		pMblockNode = fast_mblock_alloc(&free_blocks_man);
-		if (pMblockNode == NULL)
+		pTrunkNode = trunk_create_trunk_file(&result);
+		if (pTrunkNode == NULL)
 		{
-			result = errno != 0 ? errno : EIO;
-			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, (int)sizeof(FDFSTrunkNode), \
-				result, STRERROR(result));
 			pthread_mutex_unlock(&trunk_mem_lock);
 			return result;
 		}
-		pTrunkNode = (FDFSTrunkNode *)pMblockNode->data;
-		pTrunkNode->pMblockNode = pMblockNode;
-
-		pTrunkNode->trunk.file.offset = 0;
-		pTrunkNode->trunk.file.size = g_trunk_file_size;
-		pTrunkNode->trunk.status = FDFS_TRUNK_STATUS_FREE;
-		pTrunkNode->next = NULL;
-
-		result = trunk_create_next_file(&(pTrunkNode->trunk));
-		if (result != 0)
-		{
-			pthread_mutex_unlock(&trunk_mem_lock);
-			fast_mblock_free(&free_blocks_man, pMblockNode);
-			return result;
-		}
-
-		trunk_mem_binlog_write(time(NULL), \
-			TRUNK_OP_TYPE_ADD_SPACE, &(pTrunkNode->trunk));
 	}
 	pthread_mutex_unlock(&trunk_mem_lock);
 
