@@ -1,10 +1,11 @@
 
-Version 3.06  2012-01-21
+Version 3.06  2012-01-22
  * add common/avl_tree.h and common/avl_tree.c
  * organize trunk free blocks using AVL tree
  * find the trunk server for each group when current tracker be a leader
  * common/sched_thread.c can add schedule entry dynamicly
- 
+ * support creating trunk file advancely
+
 Version 3.05  2011-12-20
  * remove compile warnings
  * storage server's store_path_count can be more than that of group

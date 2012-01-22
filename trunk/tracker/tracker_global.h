@@ -64,9 +64,13 @@ extern int g_storage_sync_file_max_delay;
 extern int g_storage_sync_file_max_time;
 
 extern bool g_if_use_trunk_file;   //if use trunk file
+extern bool g_trunk_create_file_advance;
 extern int g_slot_min_size;    //slot min size, such as 256 bytes
 extern int g_slot_max_size;    //slot max size, such as 16MB
 extern int g_trunk_file_size;  //the trunk file size, such as 64MB
+extern TimeInfo g_trunk_create_file_time_base;
+extern int g_trunk_create_file_interval;
+extern int64_t g_trunk_create_file_space_threshold;
 
 extern time_t g_up_time;
 extern TrackerStatus g_tracker_last_status;  //the status of last running

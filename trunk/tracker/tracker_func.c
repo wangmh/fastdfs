@@ -105,6 +105,7 @@ int tracker_load_from_conf_file(const char *filename, \
 	char *pThreadStackSize;
 	char *pSlotMinSize;
 	char *pSlotMaxSize;
+	char *pSpaceThreshold;
 	char *pTrunkFileSize;
 #ifdef WITH_HTTPD
 	char *pHttpCheckUri;
@@ -504,6 +505,30 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_slot_max_size = g_trunk_file_size / 2;
 		}
 
+		g_trunk_create_file_advance = iniGetBoolValue(NULL, \
+			"trunk_create_file_advance", &iniContext, false);
+		if ((result=get_time_item_from_conf(&iniContext, \
+                	"trunk_create_file_time_base", \
+			&g_trunk_create_file_time_base, 2, 0)) != 0)
+		{
+			return result;
+		}
+
+		g_trunk_create_file_interval = iniGetIntValue(NULL, \
+				"trunk_create_file_interval", &iniContext, \
+				86400);
+		pSpaceThreshold = iniGetStrValue(NULL, \
+			"trunk_create_file_space_threshold", &iniContext);
+		if (pSpaceThreshold == NULL)
+		{
+			g_trunk_create_file_space_threshold = 0;
+		}
+		else if ((result=parse_bytes(pSpaceThreshold, 1, \
+				&g_trunk_create_file_space_threshold)) != 0)
+		{
+			return result;
+		}
+
 #ifdef WITH_HTTPD
 		if ((result=fdfs_http_params_load(&iniContext, \
 				filename, &g_http_params)) != 0)
@@ -567,7 +592,11 @@ int tracker_load_from_conf_file(const char *filename, \
 			"use_trunk_file=%d, " \
 			"slot_min_size=%d, " \
 			"slot_max_size=%d MB, " \
-			"trunk_file_size=%d MB", \
+			"trunk_file_size=%d MB, " \
+			"trunk_create_file_advance=%d, " \
+			"trunk_create_file_time_base=%02d:%02d, " \
+			"trunk_create_file_interval=%d, " \
+			"trunk_create_file_space_threshold=%d GB", \
 			g_fdfs_version.major, g_fdfs_version.minor,  \
 			g_fdfs_base_path, g_run_by_group, g_run_by_user, \
 			g_fdfs_connect_timeout, \
@@ -583,7 +612,13 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_storage_sync_file_max_time, \
 			g_if_use_trunk_file, g_slot_min_size, \
 			g_slot_max_size / FDFS_ONE_MB, \
-			g_trunk_file_size / FDFS_ONE_MB);
+			g_trunk_file_size / FDFS_ONE_MB, \
+			g_trunk_create_file_advance, \
+			g_trunk_create_file_time_base.hour, \
+			g_trunk_create_file_time_base.minute, \
+			g_trunk_create_file_interval, \
+			g_trunk_create_file_space_threshold / \
+			(FDFS_ONE_MB * 1024));
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)
