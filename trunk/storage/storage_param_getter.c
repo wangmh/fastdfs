@@ -59,6 +59,7 @@ int storage_get_params_from_tracker()
 	else if ((result=parse_bytes(pSpaceSize, 1, \
 			&reserved_storage_space)) != 0)
 	{
+		iniFreeContext(&iniContext);
 		return result;
 	}
 	else
@@ -75,6 +76,22 @@ int storage_get_params_from_tracker()
 				&iniContext, 64 * 1024 * 1024);
 	g_slot_max_size = iniGetIntValue(NULL, "slot_max_size", \
 				&iniContext, g_trunk_file_size / 2);
+
+	g_trunk_create_file_advance = iniGetBoolValue(NULL, \
+			"trunk_create_file_advance", &iniContext, false);
+	if ((result=get_time_item_from_conf(&iniContext, \
+               	"trunk_create_file_time_base", \
+		&g_trunk_create_file_time_base, 2, 0)) != 0)
+	{
+		iniFreeContext(&iniContext);
+		return result;
+	}
+	g_trunk_create_file_interval = iniGetIntValue(NULL, \
+			"trunk_create_file_interval", &iniContext, \
+			86400);
+	g_trunk_create_file_space_threshold = iniGetInt64Value(NULL, \
+			"trunk_create_file_space_threshold", \
+			&iniContext, 0);
 
 	iniFreeContext(&iniContext);
 
@@ -94,12 +111,22 @@ int storage_get_params_from_tracker()
 		"use_trunk_file=%d, " \
 		"slot_min_size=%d, " \
 		"slot_max_size=%d MB, " \
-		"trunk_file_size=%d MB", __LINE__, \
-		g_storage_ip_changed_auto_adjust, \
+		"trunk_file_size=%d MB, " \
+		"trunk_create_file_advance=%d, " \
+		"trunk_create_file_time_base=%02d:%02d, " \
+		"trunk_create_file_interval=%d, " \
+		"trunk_create_file_space_threshold=%d GB", \
+		__LINE__, g_storage_ip_changed_auto_adjust, \
 		g_store_path_mode, g_storage_reserved_mb, \
 		g_if_use_trunk_file, g_slot_min_size, \
 		g_slot_max_size / FDFS_ONE_MB, \
-		g_trunk_file_size / FDFS_ONE_MB);
+		g_trunk_file_size / FDFS_ONE_MB, \
+		g_trunk_create_file_advance, \
+		g_trunk_create_file_time_base.hour, \
+		g_trunk_create_file_time_base.minute, \
+		g_trunk_create_file_interval, \
+		(int)(g_trunk_create_file_space_threshold / \
+		(FDFS_ONE_MB * 1024)));
 
 	return 0;
 }

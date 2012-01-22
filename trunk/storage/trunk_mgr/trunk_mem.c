@@ -45,11 +45,15 @@ int g_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
 int g_avg_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
 int g_store_path_index = 0;
 int g_current_trunk_file_id = 0;
+TimeInfo g_trunk_create_file_time_base = {0, 0};
+int g_trunk_create_file_interval = 86400;
 TrackerServerInfo g_trunk_server = {-1, 0};
 bool g_if_use_trunk_file = false;
 bool g_if_trunker_self = false;
+bool g_trunk_create_file_advance = false;
 static bool if_trunk_inited = false;
 int64_t g_trunk_total_free_space = 0;
+int64_t g_trunk_create_file_space_threshold = 0;
 
 static pthread_mutex_t trunk_file_lock;
 static pthread_mutex_t trunk_mem_lock;
@@ -1307,6 +1311,75 @@ int trunk_file_delete(const char *trunk_filename, \
 	}
 
 	close(fd);
+	return result;
+}
+
+int trunk_create_trunk_file_advance(void *args)
+{
+	int64_t total_free_mbs;
+	int64_t alloc_space;
+	FDFSTrunkNode *pTrunkNode;
+	int result;
+	int i;
+	int file_count;
+
+	if (!g_trunk_create_file_advance)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"do not need create trunk file advancely!", __LINE__);
+		return EINVAL;
+	}
+
+	if (!g_if_trunker_self)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"I am not trunk server!", __LINE__);
+		return ENOENT;
+	}
+
+	alloc_space = g_trunk_create_file_space_threshold - \
+			g_trunk_total_free_space;
+	if (alloc_space <= 0)
+	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"do not need create trunk file!", __LINE__);
+		return 0;
+	}
+
+	total_free_mbs = 0;
+	for (i=0; i<g_fdfs_path_count; i++)
+	{
+		total_free_mbs += g_path_free_mbs[i];
+	}
+
+	if (alloc_space >= total_free_mbs * FDFS_ONE_MB)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"free space is not enough!", __LINE__);
+		return ENOSPC;
+	}
+
+	result = 0;
+	file_count = alloc_space / g_trunk_file_size;
+	for (i=0; i<file_count; i++)
+	{
+		pTrunkNode = trunk_create_trunk_file(&result);
+		if (pTrunkNode != NULL)
+		{
+			result = trunk_add_node(pTrunkNode, false);
+			if (result != 0)
+			{
+				break;
+			}
+		}
+	}
+
+	if (result == 0)
+	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"create trunk file count: %d", __LINE__, file_count);
+	}
+ 
 	return result;
 }
 

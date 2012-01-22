@@ -24,6 +24,7 @@
 #include "sockopt.h"
 #include "shared_func.h"
 #include "pthread_func.h"
+#include "sched_thread.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
 #include "tracker_client_thread.h"
@@ -34,6 +35,8 @@
 #include "trunk_mem.h"
 #include "trunk_sync.h"
 #include "storage_param_getter.h"
+
+#define TRUNK_FILE_CREATOR_TASK_ID   88
 
 static pthread_mutex_t reporter_thread_lock;
 
@@ -1168,6 +1171,24 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 			{
 				return result;
 			}
+
+			if (g_trunk_create_file_advance && \
+				g_trunk_create_file_interval > 0)
+			{
+			ScheduleArray scheduleArray;
+			ScheduleEntry entries[1];
+
+			entries[0].id = TRUNK_FILE_CREATOR_TASK_ID;
+			entries[0].time_base = g_trunk_create_file_time_base;
+			entries[0].interval = g_trunk_create_file_interval;
+			entries[0].task_func = trunk_create_trunk_file_advance;
+			entries[0].func_args = NULL;
+
+			scheduleArray.count = 1;
+			scheduleArray.entries = entries;
+			sched_add_entries(&scheduleArray);
+			}
+
 			trunk_sync_thread_start_all();
 			}
 		}
@@ -1214,6 +1235,11 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 				}
 				
 				storage_trunk_destroy();
+				if (g_trunk_create_file_advance && \
+					g_trunk_create_file_interval > 0)
+				{
+				sched_del_entry(TRUNK_FILE_CREATOR_TASK_ID);
+				}
 			}
 		}
 		}

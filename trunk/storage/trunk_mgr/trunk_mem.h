@@ -33,9 +33,13 @@ extern int g_storage_reserved_mb;  //fetch from tracker
 extern int g_avg_storage_reserved_mb;  //calc by above var: g_storage_reserved_mb
 extern int g_store_path_index;  //store to which path
 extern int g_current_trunk_file_id;  //current trunk file id
+extern TimeInfo g_trunk_create_file_time_base;
+extern int g_trunk_create_file_interval;
 extern TrackerServerInfo g_trunk_server;  //the trunk server
 extern bool g_if_use_trunk_file;   //if use trunk file
+extern bool g_trunk_create_file_advance;
 extern bool g_if_trunker_self;   //if am i trunk server
+extern int64_t g_trunk_create_file_space_threshold;
 extern int64_t g_trunk_total_free_space;  //trunk total free space in bytes
 
 typedef struct tagFDFSTrunkNode {
@@ -76,6 +80,8 @@ int trunk_check_and_init_file_ex(const char *filename, const int64_t file_size);
 
 int trunk_file_delete(const char *trunk_filename, \
 		const FDFSTrunkFullInfo *pTrunkInfo);
+
+int trunk_create_trunk_file_advance(void *args);
 
 #ifdef __cplusplus
 }
