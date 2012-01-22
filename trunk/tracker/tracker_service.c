@@ -609,7 +609,11 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 		"use_trunk_file=%d\n" \
 		"slot_min_size=%d\n" \
 		"slot_max_size=%d\n" \
-		"trunk_file_size=%d\n", \
+		"trunk_file_size=%d\n" \
+		"trunk_create_file_advance=%d\n" \
+		"trunk_create_file_time_base=%02d:%02d\n" \
+		"trunk_create_file_interval=%d\n" \
+		"trunk_create_file_space_threshold="INT64_PRINTF_FORMAT"\n", \
 		g_storage_ip_changed_auto_adjust, \
 		g_storage_sync_file_max_delay, \
 		g_groups.store_path, \
@@ -617,7 +621,12 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 		g_if_use_trunk_file, \
 		g_slot_min_size, \
 		g_slot_max_size, \
-		g_trunk_file_size);
+		g_trunk_file_size, \
+		g_trunk_create_file_advance, \
+		g_trunk_create_file_time_base.hour, \
+		g_trunk_create_file_time_base.minute, \
+		g_trunk_create_file_interval, \
+		g_trunk_create_file_space_threshold);
 
 	return 0;
 }

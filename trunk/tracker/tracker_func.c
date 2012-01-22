@@ -617,8 +617,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_trunk_create_file_time_base.hour, \
 			g_trunk_create_file_time_base.minute, \
 			g_trunk_create_file_interval, \
-			g_trunk_create_file_space_threshold / \
-			(FDFS_ONE_MB * 1024));
+			(int)(g_trunk_create_file_space_threshold / \
+			(FDFS_ONE_MB * 1024)));
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)
