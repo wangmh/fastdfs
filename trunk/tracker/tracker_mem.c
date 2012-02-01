@@ -3330,6 +3330,13 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 {
 	int result;
 
+	if (*ip_addr == '\0')
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"ip address is empty!", __LINE__);
+		return EINVAL;
+	}
+
 	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
