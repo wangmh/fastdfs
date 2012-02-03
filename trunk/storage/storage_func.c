@@ -1178,8 +1178,10 @@ int storage_func_init(const char *filename, \
 			break;
 		}
 
+		/*
 		g_disk_rw_direct = iniGetBoolValue(NULL, \
 				"disk_rw_direct", &iniContext, false);
+		*/
 
 		pRunByGroup = iniGetStrValue(NULL, "run_by_group", &iniContext);
 		pRunByUser = iniGetStrValue(NULL, "run_by_user", &iniContext);
@@ -1443,7 +1445,7 @@ int storage_func_init(const char *filename, \
 			"port=%d, bind_addr=%s, client_bind=%d, " \
 			"max_connections=%d, work_threads=%d, "    \
 			"disk_rw_separated=%d, disk_reader_threads=%d, " \
-			"disk_writer_threads=%d, disk_rw_direct=%d, " \
+			"disk_writer_threads=%d, " \
 			"buff_size=%dKB, heart_beat_interval=%ds, " \
 			"stat_report_interval=%ds, tracker_server_count=%d, " \
 			"sync_wait_msec=%dms, sync_interval=%dms, " \
@@ -1470,7 +1472,7 @@ int storage_func_init(const char *filename, \
 			g_client_bind_addr, g_max_connections, \
 			g_work_threads, g_disk_rw_separated, \
 			g_disk_reader_threads, g_disk_writer_threads, \
-			g_disk_rw_direct, g_buff_size / 1024, \
+			g_buff_size / 1024, \
 			g_heart_beat_interval, g_stat_report_interval, \
 			g_tracker_group.server_count, g_sync_wait_usec / 1000, \
 			g_sync_interval / 1000, \
