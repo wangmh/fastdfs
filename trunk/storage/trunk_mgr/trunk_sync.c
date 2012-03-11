@@ -680,6 +680,11 @@ static int trunk_binlog_preread(TrunkBinLogReader *pReader)
 		return ENOENT;
 	}
 
+	if (pReader->binlog_buff.length == TRUNK_BINLOG_BUFFER_SIZE)
+	{
+		return 0;
+	}
+
 	saved_trunk_binlog_write_version = trunk_binlog_write_version;
 	if (pReader->binlog_buff.current != pReader->binlog_buff.buffer)
 	{
@@ -950,6 +955,9 @@ static int trunk_sync_data(TrunkBinLogReader *pReader, \
 	length = p - pReader->binlog_buff.buffer;
 	if (length == 0)
 	{
+		logError("FILE: "__FILE__", line: %d, " \
+			"no buffer to sync, buffer length: %d!", \
+			__LINE__, pReader->binlog_buff.length);
 		return ENOENT;
 	}
 	length++;
@@ -987,9 +995,9 @@ static int trunk_sync_data(TrunkBinLogReader *pReader, \
 
 	pReader->binlog_offset += length;
 	pReader->binlog_buff.length -= length;
-	if (pReader->binlog_buff.length == 0)
+	if (pReader->binlog_buff.length > 0)
 	{
-		pReader->binlog_buff.current = pReader->binlog_buff.buffer;
+		pReader->binlog_buff.current = pReader->binlog_buff.buffer + length;
 	}
 
 	return 0;
@@ -1189,8 +1197,6 @@ static void* trunk_sync_thread_entrance(void* arg)
 			pStorage->status != FDFS_STORAGE_STATUS_IP_CHANGED && \
 			pStorage->status != FDFS_STORAGE_STATUS_NONE)
 		{
-			if (reader.binlog_buff.length == 0)
-			{
 			read_result = trunk_binlog_preread(&reader);
 			if (read_result == ENOENT)
 			{
@@ -1232,7 +1238,6 @@ static void* trunk_sync_thread_entrance(void* arg)
 			{
 				sleep(5);
 				continue;
-			}
 			}
 
 			if ((sync_result=trunk_sync_data(&reader, \
