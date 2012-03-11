@@ -1132,6 +1132,11 @@ static void* trunk_sync_thread_entrance(void* arg)
 			pStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED || \
 			pStorage->status == FDFS_STORAGE_STATUS_NONE)
 		{
+			logError("file: "__FILE__", line: %d, break loop." \
+				"g_continue_flag: %d, g_if_trunker_self: %d, " \
+				"dest storage status: %d", __LINE__, \
+				g_continue_flag, g_if_trunker_self, \
+				pStorage->status);
 			break;
 		}
 
