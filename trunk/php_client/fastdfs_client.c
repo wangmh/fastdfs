@@ -94,7 +94,7 @@ const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, N
 	}
 
 // Every user visible function must have an entry in fastdfs_client_functions[].
-	function_entry fastdfs_client_functions[] = {
+	zend_function_entry fastdfs_client_functions[] = {
 		ZEND_FE(fastdfs_client_version, NULL)
 		ZEND_FE(fastdfs_active_test, NULL)
 		ZEND_FE(fastdfs_connect_server, NULL)
@@ -6271,14 +6271,10 @@ zend_object_value php_fdfs_new(zend_class_entry *ce TSRMLS_DC)
 {
 	zend_object_value retval;
 	php_fdfs_t *i_obj;
-	zval *tmp;
 
 	i_obj = (php_fdfs_t *)ecalloc(1, sizeof(php_fdfs_t));
 
-	zend_object_std_init( &i_obj->zo, ce TSRMLS_CC );
-	zend_hash_copy(i_obj->zo.properties, &ce->default_properties, \
-		(copy_ctor_func_t) zval_add_ref, (void *)&tmp, sizeof(zval *));
-
+	zend_object_std_init(&i_obj->zo, ce TSRMLS_CC);
 	retval.handle = zend_objects_store_put(i_obj, \
 		(zend_objects_store_dtor_t)zend_objects_destroy_object, \
 		(zend_objects_free_object_storage_t)php_fdfs_free_storage, \

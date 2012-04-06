@@ -1,8 +1,9 @@
 
-Version 3.07  2012-03-11
+Version 3.07  2012-04-06
  * tracker/tracker_mem.c: check storage ip address is not empty
  * remove direct IO support
  * trunk binlog sync optimization
+ * php extension compile passed in PHP 5.4.0
 
 Version 3.06  2012-01-22
  * add common/avl_tree.h and common/avl_tree.c
